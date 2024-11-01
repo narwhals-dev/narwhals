@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import IBIS_VERSION
 
 
 def test_interchange_schema() -> None:
@@ -116,7 +116,7 @@ def test_interchange_schema_ibis(
     tbl = ibis.read_parquet(filepath)
     df = nw.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    if parse_version(ibis.__version__) > (6, 0, 0):
+    if IBIS_VERSION > (6, 0, 0):
         expected = {
             "a": nw.Int64,
             "b": nw.Int32,
@@ -156,6 +156,7 @@ def test_interchange_schema_ibis(
         }
     assert result == expected
     assert df["a"].dtype == nw.Int64
+    assert df.columns == list(expected.keys())
 
 
 def test_interchange_schema_duckdb() -> None:
@@ -220,6 +221,7 @@ def test_interchange_schema_duckdb() -> None:
     }
     assert result == expected
     assert df["a"].dtype == nw.Int64
+    assert df.columns == list(expected.keys())
 
 
 def test_invalid() -> None:
@@ -227,7 +229,7 @@ def test_invalid() -> None:
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(df, eager_or_interchange_only=True).select("a")
+        nw.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
         nw.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):

@@ -7,7 +7,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 2, None],
@@ -30,10 +30,10 @@ def test_drop_nulls(constructor: Constructor) -> None:
     expected_c = {"c": []}  # type: ignore[var-annotated]
     expected_d = {"d": [6]}
 
-    compare_dicts(result_a, expected_a)
-    compare_dicts(result_b, expected_b)
-    compare_dicts(result_c, expected_c)
-    compare_dicts(result_d, expected_d)
+    assert_equal_data(result_a, expected_a)
+    assert_equal_data(result_b, expected_b)
+    assert_equal_data(result_c, expected_c)
+    assert_equal_data(result_d, expected_d)
 
 
 def test_drop_nulls_broadcast(
@@ -46,7 +46,7 @@ def test_drop_nulls_broadcast(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").drop_nulls(), nw.col("d").drop_nulls())
     expected = {"a": [1.0, 2.0], "d": [6, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_drop_nulls_invalid(constructor: Constructor) -> None:
@@ -68,7 +68,7 @@ def test_drop_nulls_series(constructor_eager: ConstructorEager) -> None:
     expected_c = {"c": []}  # type: ignore[var-annotated]
     expected_d = {"d": [6]}
 
-    compare_dicts(result_a, expected_a)
-    compare_dicts(result_b, expected_b)
-    compare_dicts(result_c, expected_c)
-    compare_dicts(result_d, expected_d)
+    assert_equal_data(result_a, expected_a)
+    assert_equal_data(result_b, expected_b)
+    assert_equal_data(result_c, expected_c)
+    assert_equal_data(result_d, expected_d)

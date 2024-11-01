@@ -11,7 +11,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -68,7 +68,7 @@ def test_cast_date_datetime_pyarrow() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
+    PANDAS_VERSION < (2, 0, 0),
     reason="pyarrow dtype not available",
 )
 def test_cast_date_datetime_pandas() -> None:
@@ -99,7 +99,7 @@ def test_cast_date_datetime_pandas() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
+    PANDAS_VERSION < (2, 0, 0),
     reason="pyarrow dtype not available",
 )
 def test_cast_date_datetime_invalid() -> None:

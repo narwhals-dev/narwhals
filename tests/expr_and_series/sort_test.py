@@ -4,7 +4,8 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 
@@ -29,7 +30,7 @@ def test_sort_single_expr(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("b").sort(descending=descending, nulls_last=nulls_last))
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -56,7 +57,7 @@ def test_sort_multiple_expr(
         "a",
         nw.col("b").sort(descending=descending, nulls_last=nulls_last),
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -69,11 +70,11 @@ def test_sort_multiple_expr(
     ],
 )
 def test_sort_series(
-    constructor_eager: Constructor,
+    constructor_eager: ConstructorEager,
     descending: bool,  # noqa: FBT001
     nulls_last: bool,  # noqa: FBT001
     expected: dict[str, float],
 ) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["b"]
     result = series.sort(descending=descending, nulls_last=nulls_last)
-    compare_dicts({"b": result}, {"b": expected})
+    assert_equal_data({"b": result}, {"b": expected})

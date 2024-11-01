@@ -6,14 +6,13 @@ import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 
 
+@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
-    parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
-)
-@pytest.mark.skipif(
-    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test() -> None:
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
@@ -22,11 +21,9 @@ def test_arrow_c_stream_test() -> None:
     assert pc.all(pc.equal(result, expected)).as_py()
 
 
+@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
-    parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
-)
-@pytest.mark.skipif(
-    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
@@ -36,11 +33,9 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
         pa.chunked_array(s)
 
 
+@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
-    parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
-)
-@pytest.mark.skipif(
-    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works

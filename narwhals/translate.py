@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 from datetime import datetime
 from datetime import timedelta
 from functools import wraps
@@ -45,6 +44,15 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
+
+NON_TEMPORAL_SCALAR_TYPES = (
+    bool,
+    bytes,
+    str,
+    int,
+    float,
+    complex,
+)
 
 
 @overload
@@ -395,27 +403,35 @@ def _from_native_impl(  # noqa: PLR0915
     # Extensions
     if hasattr(native_object, "__narwhals_dataframe__"):
         if series_only:
-            msg = "Cannot only use `series_only` with dataframe"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with dataframe"
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             native_object.__narwhals_dataframe__(),
             level="full",
         )
     elif hasattr(native_object, "__narwhals_lazyframe__"):
         if series_only:
-            msg = "Cannot only use `series_only` with lazyframe"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with lazyframe"
+                raise TypeError(msg)
+            return native_object
         if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
+                raise TypeError(msg)
+            return native_object
         return LazyFrame(
             native_object.__narwhals_lazyframe__(),
             level="full",
         )
     elif hasattr(native_object, "__narwhals_series__"):
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         return Series(
             native_object.__narwhals_series__(),
             level="full",
@@ -424,8 +440,10 @@ def _from_native_impl(  # noqa: PLR0915
     # Polars
     elif is_polars_dataframe(native_object):
         if series_only:
-            msg = "Cannot only use `series_only` with polars.DataFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with polars.DataFrame"
+                raise TypeError(msg)
+            return native_object
         pl = get_polars()
         return DataFrame(
             PolarsDataFrame(
@@ -437,11 +455,15 @@ def _from_native_impl(  # noqa: PLR0915
         )
     elif is_polars_lazyframe(native_object):
         if series_only:
-            msg = "Cannot only use `series_only` with polars.LazyFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with polars.LazyFrame"
+                raise TypeError(msg)
+            return native_object
         if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
+                raise TypeError(msg)
+            return native_object
         pl = get_polars()
         return LazyFrame(
             PolarsLazyFrame(
@@ -454,8 +476,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_polars_series(native_object):
         pl = get_polars()
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         return Series(
             PolarsSeries(
                 native_object,
@@ -468,8 +492,10 @@ def _from_native_impl(  # noqa: PLR0915
     # pandas
     elif is_pandas_dataframe(native_object):
         if series_only:
-            msg = "Cannot only use `series_only` with dataframe"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with dataframe"
+                raise TypeError(msg)
+            return native_object
         pd = get_pandas()
         return DataFrame(
             PandasLikeDataFrame(
@@ -482,8 +508,10 @@ def _from_native_impl(  # noqa: PLR0915
         )
     elif is_pandas_series(native_object):
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         pd = get_pandas()
         return Series(
             PandasLikeSeries(
@@ -499,8 +527,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_modin_dataframe(native_object):  # pragma: no cover
         mpd = get_modin()
         if series_only:
-            msg = "Cannot only use `series_only` with modin.DataFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with modin.DataFrame"
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
@@ -513,8 +543,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_modin_series(native_object):  # pragma: no cover
         mpd = get_modin()
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         return Series(
             PandasLikeSeries(
                 native_object,
@@ -529,8 +561,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_cudf_dataframe(native_object):  # pragma: no cover
         cudf = get_cudf()
         if series_only:
-            msg = "Cannot only use `series_only` with cudf.DataFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with cudf.DataFrame"
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
@@ -543,8 +577,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_cudf_series(native_object):  # pragma: no cover
         cudf = get_cudf()
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         return Series(
             PandasLikeSeries(
                 native_object,
@@ -559,8 +595,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_pyarrow_table(native_object):
         pa = get_pyarrow()
         if series_only:
-            msg = "Cannot only use `series_only` with arrow table"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with arrow table"
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             ArrowDataFrame(
                 native_object,
@@ -572,8 +610,10 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_pyarrow_chunked_array(native_object):
         pa = get_pyarrow()
         if not allow_series:
-            msg = "Please set `allow_series=True`"
-            raise TypeError(msg)
+            if strict:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return native_object
         return Series(
             ArrowSeries(
                 native_object,
@@ -587,11 +627,15 @@ def _from_native_impl(  # noqa: PLR0915
     # Dask
     elif is_dask_dataframe(native_object):
         if series_only:
-            msg = "Cannot only use `series_only` with dask DataFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `series_only` with dask DataFrame"
+                raise TypeError(msg)
+            return native_object
         if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
-            raise TypeError(msg)
+            if strict:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
+                raise TypeError(msg)
+            return native_object
         if get_dask_expr() is None:  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
@@ -607,10 +651,13 @@ def _from_native_impl(  # noqa: PLR0915
     # DuckDB
     elif is_duckdb_relation(native_object):
         if eager_only or series_only:  # pragma: no cover
-            msg = (
-                "Cannot only use `series_only=True` or `eager_only=False` "
-                "with DuckDB Relation"
-            )
+            if strict:
+                msg = (
+                    "Cannot only use `series_only=True` or `eager_only=False` "
+                    "with DuckDB Relation"
+                )
+            else:
+                return native_object
             raise TypeError(msg)
         return DataFrame(
             DuckDBInterchangeFrame(native_object, dtypes=dtypes),
@@ -620,11 +667,13 @@ def _from_native_impl(  # noqa: PLR0915
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
         if eager_only or series_only:
-            msg = (
-                "Cannot only use `series_only=True` or `eager_only=False` "
-                "with Ibis table"
-            )
-            raise TypeError(msg)
+            if strict:
+                msg = (
+                    "Cannot only use `series_only=True` or `eager_only=False` "
+                    "with Ibis table"
+                )
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             IbisInterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
@@ -633,11 +682,13 @@ def _from_native_impl(  # noqa: PLR0915
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
         if eager_only or series_only:
-            msg = (
-                "Cannot only use `series_only=True` or `eager_only=False` "
-                "with object which only implements __dataframe__"
-            )
-            raise TypeError(msg)
+            if strict:
+                msg = (
+                    "Cannot only use `series_only=True` or `eager_only=False` "
+                    "with object which only implements __dataframe__"
+                )
+                raise TypeError(msg)
+            return native_object
         return DataFrame(
             InterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
@@ -800,16 +851,10 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
-
-    pa = get_pyarrow()
-    if pa and isinstance(scalar_like, pa.Scalar):
-        return scalar_like.as_py()
-
-    cupy = get_cupy()
-    if (  # pragma: no cover
-        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
-    ):
-        return scalar_like.item()
+    if scalar_like is None:
+        return None
+    if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
+        return scalar_like
 
     np = get_numpy()
     if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
@@ -820,20 +865,29 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like.to_pydatetime()
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
+    if pd and pd.api.types.is_scalar(scalar_like):
+        try:
+            is_na = pd.isna(scalar_like)
+        except Exception:  # pragma: no cover  # noqa: BLE001, S110
+            pass
+        else:
+            if is_na:
+                return None
 
-    all_scalar_types = (
-        int,
-        float,
-        complex,
-        bool,
-        bytes,
-        str,
-        datetime,
-        timedelta,
-        numbers.Number,
-    )
-    if isinstance(scalar_like, all_scalar_types):
+    # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
+    # so we need to check this separately
+    if isinstance(scalar_like, (datetime, timedelta)):
         return scalar_like
+
+    pa = get_pyarrow()
+    if pa and isinstance(scalar_like, pa.Scalar):
+        return scalar_like.as_py()
+
+    cupy = get_cupy()
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
+        return scalar_like.item()
 
     msg = (
         f"Expected object convertible to a scalar, found {type(scalar_like)}. "

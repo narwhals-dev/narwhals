@@ -59,6 +59,7 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
 from narwhals.translate import to_py_scalar
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -66,7 +67,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.9.4"
+__version__ = "1.12.1"
 
 __all__ = [
     "dependencies",
@@ -74,6 +75,7 @@ __all__ = [
     "concat",
     "from_dict",
     "from_arrow",
+    "generate_temporary_column_name",
     "get_level",
     "new_series",
     "to_native",

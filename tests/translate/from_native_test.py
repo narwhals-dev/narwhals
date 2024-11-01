@@ -99,6 +99,8 @@ def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
     with context:
         res = nw.from_native(dframe, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
+    if eager_only:
+        assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
 @pytest.mark.parametrize("dframe", eager_frames)
@@ -122,6 +124,9 @@ def test_series_only(obj: Any, context: Any) -> None:
     with context:
         res = nw.from_native(obj, series_only=True)
         assert isinstance(res, nw.Series)
+    assert nw.from_native(obj, series_only=True, strict=False) is obj or isinstance(
+        res, nw.Series
+    )
 
 
 @pytest.mark.parametrize("series", all_series)
@@ -129,13 +134,20 @@ def test_series_only(obj: Any, context: Any) -> None:
     ("allow_series", "context"),
     [
         (True, does_not_raise()),
-        (False, pytest.raises(TypeError, match="Please set `allow_series=True`")),
+        (
+            False,
+            pytest.raises(
+                TypeError, match="Please set `allow_series=True` or `series_only=True`"
+            ),
+        ),
     ],
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
     with context:
         res = nw.from_native(series, allow_series=allow_series)
         assert isinstance(res, nw.Series)
+    if not allow_series:
+        assert nw.from_native(series, allow_series=allow_series, strict=False) is series
 
 
 def test_invalid_series_combination() -> None:
@@ -151,7 +163,9 @@ def test_pandas_like_validate() -> None:
     df2 = pd.DataFrame({"b": [1, 2, 3]})
     df = pd.concat([df1, df2, df2], axis=1)
 
-    with pytest.raises(ValueError, match="Expected unique column names"):
+    with pytest.raises(
+        ValueError, match=r"Expected unique column names, got:\n- 'b' 2 times"
+    ):
         nw.from_native(df)
 
 
@@ -182,6 +196,7 @@ def test_series_only_dask() -> None:
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
         nw.from_native(dframe, series_only=True)
+    assert nw.from_native(dframe, series_only=True, strict=False) is dframe
 
 
 @pytest.mark.parametrize(
@@ -201,6 +216,8 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
     with context:
         res = nw.from_native(dframe, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
+    if eager_only:
+        assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
 def test_from_native_strict_false_typing() -> None:
@@ -212,3 +229,13 @@ def test_from_native_strict_false_typing() -> None:
     unstable_nw.from_native(df, strict=False)
     unstable_nw.from_native(df, strict=False, eager_only=True)
     unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)
+
+
+def test_from_mock_interchange_protocol_non_strict() -> None:
+    class MockDf:
+        def __dataframe__(self) -> None:  # pragma: no cover
+            pass
+
+    mockdf = MockDf()
+    result = nw.from_native(mockdf, eager_only=True, strict=False)
+    assert result is mockdf  # type: ignore[comparison-overlap]

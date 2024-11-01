@@ -5,7 +5,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_select(constructor: Constructor) -> None:
@@ -13,7 +13,7 @@ def test_select(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_empty_select(constructor: Constructor) -> None:
@@ -48,7 +48,7 @@ def test_dask_select_reduction_and_modify_index() -> None:
         nw.col("z").head(2),
     )
     expected = {"a": [4, 4], "b": [5, 5], "z": [7.0, 8]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     # all reductions
     result = df.select(
@@ -57,4 +57,4 @@ def test_dask_select_reduction_and_modify_index() -> None:
         nw.col("z").max(),
     )
     expected = {"a": [4], "b": [5], "z": [9]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

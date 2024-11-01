@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 
@@ -21,9 +20,10 @@ def test_value_counts(
     normalize: Any,
     name: str | None,
 ) -> None:
-    if "pandas_nullable_constructor" in str(constructor_eager) and parse_version(
-        pd.__version__
-    ) < (2, 2):
+    if "pandas_nullable_constructor" in str(constructor_eager) and PANDAS_VERSION < (
+        2,
+        2,
+    ):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
 
@@ -41,9 +41,9 @@ def test_value_counts(
     )
 
     sorted_result = series.value_counts(sort=True, name=name, normalize=normalize)
-    compare_dicts(sorted_result, expected)
+    assert_equal_data(sorted_result, expected)
 
     unsorted_result = series.value_counts(
         sort=False, name=name, normalize=normalize
     ).sort(expected_name, descending=True)
-    compare_dicts(unsorted_result, expected)
+    assert_equal_data(unsorted_result, expected)
