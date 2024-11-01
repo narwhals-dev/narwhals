@@ -721,6 +721,11 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def is_finite(self: Self) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        return self._from_native_series(pc.is_finite(self._native_series))
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 

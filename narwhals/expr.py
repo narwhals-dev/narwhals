@@ -2313,6 +2313,57 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
+    def is_finite(self: Self) -> Self:
+        """
+        Returns a boolean Series indicating which values are finite.
+
+        Returns:
+            Expression of `Boolean` data type.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [1.0, 2],
+            ...     "b": [3.0, float("inf")],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().is_finite())
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                  a      b
+            0  True   True
+            1  True  False
+
+            >>> func(pl.DataFrame(data))
+            shape: (2, 2)
+            ┌──────┬───────┐
+            │ a    ┆ b     │
+            │ ---  ┆ ---   │
+            │ bool ┆ bool  │
+            ╞══════╪═══════╡
+            │ true ┆ true  │
+            │ true ┆ false │
+            └──────┴───────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[true,true]]
+            b: [[true,false]]
+        """
+        return self.__class__(lambda plx: self._call(plx).is_finite())
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

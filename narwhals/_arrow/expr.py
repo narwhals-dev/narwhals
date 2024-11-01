@@ -372,6 +372,9 @@ class ArrowExpr:
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
 
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

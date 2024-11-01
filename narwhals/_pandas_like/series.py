@@ -686,6 +686,11 @@ class PandasLikeSeries:
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
+    def is_finite(self: Self) -> Self:
+        import numpy as np  # ignore-banned-import
+
+        return self._from_native_series(np.isfinite(self._native_series))
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

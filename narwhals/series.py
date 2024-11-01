@@ -2525,6 +2525,52 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def is_finite(self: Self) -> Self:
+        """
+        Returns a boolean Series indicating which values are finite.
+
+        Returns:
+            Expression of `Boolean` data type.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, float("inf")]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.is_finite()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0     True
+            1    False
+            dtype: bool
+
+            >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [bool]
+            [
+               true
+               false
+            ]
+
+            >>> func(pa.chunked_array([data]))  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                true,
+                false
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_finite())
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 
