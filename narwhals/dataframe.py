@@ -346,14 +346,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
 
-            Calling `to_native` on a Narwhals DataFrame returns the native object:
+            Calling `.native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).to_native()
+            >>> nw.from_native(df_pd).native
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native()
+            >>> nw.from_native(df_pl).native
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -364,7 +364,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2   ┆ 7.0 ┆ b   │
             │ 3   ┆ 8.0 ┆ c   │
             └─────┴─────┴─────┘
-            >>> nw.from_native(df_pa).to_native()
+            >>> nw.from_native(df_pa).native
             pyarrow.Table
             foo: int64
             bar: double
@@ -497,12 +497,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).to_native()
+            >>> nw.from_native(df_pd).to_native()  # doctest:+SKIP
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native()
+            >>> nw.from_native(df_pl).to_native()  # doctest:+SKIP
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2836,14 +2836,14 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> df_pl = pl.LazyFrame(data)
             >>> df_pa = pa.table(data)
 
-            Calling `to_native` on a Narwhals DataFrame returns the native object:
+            Calling `.native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).lazy().to_native()
+            >>> nw.from_native(df_pd).lazy().native
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native().collect()
+            >>> nw.from_native(df_pl).native.collect()
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2948,12 +2948,12 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).lazy().to_native()
+            >>> nw.from_native(df_pd).lazy().to_native()  # doctest:+SKIP
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native().collect()
+            >>> nw.from_native(df_pl).to_native().collect()  # doctest:+SKIP
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │

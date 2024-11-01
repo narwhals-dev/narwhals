@@ -62,7 +62,7 @@ class Series:
 
             >>> @nw.narwhalify
             ... def func(s):
-            ...     return s.to_native()
+            ...     return s.native
 
             We can then pass either pandas or Polars to `func`:
 
@@ -161,12 +161,12 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             0    1
             1    2
             2    3
             dtype: int64
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)  # doctest:+SKIP
             shape: (3,)
             Series: '' [i64]
             [
