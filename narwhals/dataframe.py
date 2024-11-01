@@ -328,6 +328,11 @@ class DataFrame(BaseFrame[DataFrameT]):
     def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
+    @property
+    def native(self: Self) -> DataFrameT:
+        """Returns native frame underlying Narwhals DataFrame."""
+        return self._compliant_frame._native_frame  # type: ignore[no-any-return]
+
     def __init__(
         self,
         df: Any,
@@ -2764,6 +2769,11 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    @property
+    def native(self: Self) -> FrameT:
+        """Returns native frame underlying Narwhals LazyFrame."""
+        return self._compliant_frame._native_frame  # type: ignore[no-any-return]
 
     def __init__(
         self,

@@ -39,6 +39,7 @@
         - min
         - mode
         - name
+        - native
         - n_unique
         - null_count
         - pipe

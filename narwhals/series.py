@@ -41,6 +41,11 @@ class Series:
 
         return DataFrame
 
+    @property
+    def native(self: Self) -> Any:
+        """Returns native series underlying Narwhals Series."""
+        return self._compliant_series._native_series
+
     def __init__(
         self: Self,
         series: Any,

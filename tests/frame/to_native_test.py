@@ -14,3 +14,4 @@ def test_to_native(constructor: Constructor) -> None:
     df = nw.from_native(df_raw)
 
     assert isinstance(df.to_native(), df_raw.__class__)
+    assert isinstance(df.native, df_raw.__class__)

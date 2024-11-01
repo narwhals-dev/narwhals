@@ -19,6 +19,7 @@ SERIES_ONLY_METHODS = {
     "is_sorted",
     "item",
     "name",
+    "native",
     "rename",
     "scatter",
     "shape",

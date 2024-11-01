@@ -24,6 +24,7 @@
         - join
         - join_asof
         - lazy
+        - native
         - null_count
         - pipe
         - rename

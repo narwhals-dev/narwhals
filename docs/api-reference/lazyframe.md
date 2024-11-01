@@ -18,6 +18,7 @@
         - join_asof
         - lazy
         - pipe
+        - native
         - rename
         - schema
         - select
