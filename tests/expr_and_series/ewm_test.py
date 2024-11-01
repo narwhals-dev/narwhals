@@ -24,7 +24,7 @@ def test_ewm_mean_expr(constructor: Constructor) -> None:
 
 
 def test_ewm_mean_series(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_" in str(constructor_eager) or "daks" in str(constructor_eager):  # remove
+    if "pyarrow_" in str(constructor_eager):  # remove
         pytest.skip()
 
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
