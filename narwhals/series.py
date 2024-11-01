@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
+from warnings import warn
 
 from narwhals.utils import parse_version
 
@@ -43,7 +44,42 @@ class Series:
 
     @property
     def native(self: Self) -> Any:
-        """Returns native series underlying Narwhals Series."""
+        """
+        Convert Narwhals series to native series.
+
+        Returns:
+            Series of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                1
+                2
+                3
+            ]
+        """
         return self._compliant_series._native_series
 
     def __init__(
@@ -102,7 +138,7 @@ class Series:
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def to_native(self) -> Any:
+    def to_native(self: Self) -> Any:
         """
         Convert Narwhals series to native series.
 
@@ -139,7 +175,13 @@ class Series:
                 3
             ]
         """
-        return self._compliant_series._native_series
+        warn(
+            "Use `.native` property instead. `.to_native()` is "
+            "deprecated and it will be removed in future versions",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.native
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """

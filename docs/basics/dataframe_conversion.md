@@ -49,7 +49,7 @@ Similarly, if your library uses Polars internally, you can convert any user-supp
 
 ```python exec="1" source="above" session="conversion" result="python"
 def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
-    return nw.from_arrow(nw.from_native(df), native_namespace=pl).to_native()
+    return nw.from_arrow(nw.from_native(df), native_namespace=pl).native
 
 
 print(df_to_polars(df_duckdb))  # You can only execute this line of code once.
