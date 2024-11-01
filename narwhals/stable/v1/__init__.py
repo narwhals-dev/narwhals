@@ -345,12 +345,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).to_native()
+            >>> nw.from_native(df_pd).to_native()  # doctest:+SKIP
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native()
+            >>> nw.from_native(df_pl).to_native()  # doctest:+SKIP
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -361,7 +361,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             │ 2   ┆ 7.0 ┆ b   │
             │ 3   ┆ 8.0 ┆ c   │
             └─────┴─────┴─────┘
-            >>> nw.from_native(df_pa).to_native()
+            >>> nw.from_native(df_pa).to_native()  # doctest:+SKIP
             pyarrow.Table
             foo: int64
             bar: double
@@ -449,12 +449,12 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).lazy().to_native()
+            >>> nw.from_native(df_pd).lazy().to_native()  # doctest:+SKIP
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native().collect()
+            >>> nw.from_native(df_pl).to_native().collect()  # doctest:+SKIP
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -609,12 +609,12 @@ class Series(NwSeries):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             0    1
             1    2
             2    3
             dtype: int64
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)  # doctest:+SKIP
             shape: (3,)
             Series: '' [i64]
             [

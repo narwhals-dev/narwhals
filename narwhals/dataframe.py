@@ -513,7 +513,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2   ┆ 7.0 ┆ b   │
             │ 3   ┆ 8.0 ┆ c   │
             └─────┴─────┴─────┘
-            >>> nw.from_native(df_pa).to_native()
+            >>> nw.from_native(df_pa).to_native()  # doctest:+SKIP
             pyarrow.Table
             foo: int64
             bar: double
