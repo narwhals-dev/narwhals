@@ -699,15 +699,16 @@ class PandasLikeDataFrame:
             copy = self._implementation is Implementation.CUDF
 
         to_convert = {
-            key for key, val in self.schema.items()
+            key
+            for key, val in self.schema.items()
             if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
-        } 
+        }
         if to_convert:
             df = self.with_columns(
-                    self.__narwhals_namespace__()
-                    .col(list(to_convert))
-                    .dt.convert_time_zone("UTC")
-                    .dt.replace_time_zone(None)
+                self.__narwhals_namespace__()
+                .col(list(to_convert))
+                .dt.convert_time_zone("UTC")
+                .dt.replace_time_zone(None)
             )._native_frame
         else:
             df = self._native_frame
