@@ -474,10 +474,7 @@ class Series:
             )
         )
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Cast between data types.
 
