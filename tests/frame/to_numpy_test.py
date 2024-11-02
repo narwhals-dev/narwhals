@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -26,7 +27,9 @@ def test_to_numpy(constructor_eager: ConstructorEager) -> None:
 def test_to_numpy_tz_aware(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,):
+    if ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,)) or (
+        "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2)
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
