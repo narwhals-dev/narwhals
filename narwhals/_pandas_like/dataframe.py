@@ -698,9 +698,6 @@ class PandasLikeDataFrame:
             # pandas default differs from Polars, but cuDF default is True
             copy = self._implementation is Implementation.CUDF
 
-        if dtype is not None:
-            return self._native_frame.to_numpy(dtype=dtype, copy=copy)
-
         df = self.with_columns(
             *[
                 self.__narwhals_namespace__()
@@ -711,6 +708,9 @@ class PandasLikeDataFrame:
                 if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
             ]
         )._native_frame
+
+        if dtype is not None:
+            return df.to_numpy(dtype=dtype, copy=copy)
 
         # pandas return `object` dtype for nullable dtypes if dtype=None,
         # so we cast each Series to numpy and let numpy find a common dtype.
