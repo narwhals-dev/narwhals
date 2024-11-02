@@ -580,6 +580,8 @@ def find_stacklevel() -> int:
                 n += 1
             else:
                 break
+        else:  # pragma: no cover
+            pass
     finally:
         # https://docs.python.org/3/library/inspect.html
         # > Though the cycle detector will catch these, destruction of the frames

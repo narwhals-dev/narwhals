@@ -232,6 +232,11 @@ def test_from_native_strict_false_typing() -> None:
         unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
+
+
 def test_from_mock_interchange_protocol_non_strict() -> None:
     class MockDf:
         def __dataframe__(self) -> None:  # pragma: no cover
