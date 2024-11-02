@@ -701,18 +701,32 @@ class PandasLikeDataFrame:
         if dtype is not None:
             return self._native_frame.to_numpy(dtype=dtype, copy=copy)
 
+        convert = set()
+        for key, val in self.schema.items():
+            if val == self._dtypes.Datetime and val.time_zone is not None:  # type: ignore[attr-defined]
+                convert.add(key)
+        df = self.with_columns(
+            *[
+                self.__narwhals_namespace__()
+                .col(x)
+                .dt.convert_time_zone("UTC")
+                .dt.replace_time_zone(None)
+                for x in convert
+            ]
+        )._native_frame
+
         # pandas return `object` dtype for nullable dtypes if dtype=None,
         # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for col_dtype in self._native_frame.dtypes:
+        for col_dtype in df.dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np  # ignore-banned-import
 
                 return np.hstack(
                     [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]
                 )
-        return self._native_frame.to_numpy(copy=copy)
+        return df.to_numpy(copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
