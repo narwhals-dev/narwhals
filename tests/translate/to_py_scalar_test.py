@@ -30,6 +30,7 @@ from narwhals.dependencies import get_cudf
         (np.datetime64("2020-01-01", "ms"), datetime(2020, 1, 1)),
         (np.datetime64("2020-01-01", "us"), datetime(2020, 1, 1)),
         (np.datetime64("2020-01-01", "ns"), datetime(2020, 1, 1)),
+        (pd.NA, None),
     ],
 )
 def test_to_py_scalar(
