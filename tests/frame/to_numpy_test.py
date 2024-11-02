@@ -4,8 +4,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -21,7 +23,11 @@ def test_to_numpy(constructor_eager: ConstructorEager) -> None:
     assert result.dtype == "float64"
 
 
-def test_to_numpy_tz_aware(constructor_eager: ConstructorEager) -> None:
+def test_to_numpy_tz_aware(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
         eager_only=True,
