@@ -578,7 +578,7 @@ def find_stacklevel() -> int:
             ):
                 frame = frame.f_back
                 n += 1
-            else:
+            else:  # pragma: no cover
                 break
         else:  # pragma: no cover
             pass
