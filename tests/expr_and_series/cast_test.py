@@ -7,7 +7,6 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -194,7 +193,7 @@ def test_cast_raises_for_unknown_dtype(
         pass
 
     with pytest.raises(AssertionError, match=r"Unknown dtype"):
-        df.select(nw.col("a").cast(Banana))
+        df.select(nw.col("a").cast(Banana))  # type: ignore[arg-type]
 
 
 def test_cast_datetime_tz_aware(
@@ -227,8 +226,8 @@ def test_cast_datetime_tz_aware(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("dtype", [pl.String, pl.String(), pa.float64(), str])
-def test_raise_if_not_narwhals_dtype(constructor: Constructor, dtype: Any) -> None:
+@pytest.mark.parametrize("dtype", [pl.String, pl.String()])
+def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises(TypeError, match="Expected Narwhals object, got:"):
         df.select(nw.col("a").cast(dtype))

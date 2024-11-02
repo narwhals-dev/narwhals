@@ -186,19 +186,6 @@ class Expr:
             foo: [[1,2,3]]
             bar: [[6,7,8]]
         """
-        # from narwhals.dtypes import DType
-
-        # if not (
-        #     isinstance(dtype, DType)
-        #     or (isinstance(dtype, type) and issubclass(dtype, DType))
-        # ):
-        #     msg = (
-        #         f"Expected Narwhals DType, got: {type(dtype)}.\n\n"
-        #         "Hint: Perhaps you used Polars DataType instance `pl.dtype` instead of "
-        #         "Narwhals DType `nw.dtype`?"
-        #     )
-        #     raise TypeError(msg)
-
         return self.__class__(
             lambda plx: self._call(plx).cast(dtype),
         )

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -76,7 +77,9 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"

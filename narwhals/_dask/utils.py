@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -85,7 +86,9 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"

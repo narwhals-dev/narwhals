@@ -420,16 +420,6 @@ class Series:
                1
             ]
         """
-        # from narwhals.dtypes import DType
-
-        # if not (isinstance(dtype, DType) or dtype == DType()):
-        #     msg = (
-        #         f"Expected Narwhals DType, got: {type(dtype)}.\n\n"
-        #         "Hint: Perhaps you used Polars DataType instance `pl.dtype` instead of "
-        #         "Narwhals DType `nw.dtype`?"
-        #     )
-        #     raise TypeError(msg)
-
         return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:

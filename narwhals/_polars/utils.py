@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import parse_version
 
 
@@ -94,7 +95,9 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"
@@ -141,7 +144,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
         dt_time_unit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
+        return pl.Datetime(dt_time_unit, dt_time_zone)
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)
