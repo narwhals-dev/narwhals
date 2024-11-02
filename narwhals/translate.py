@@ -90,7 +90,7 @@ def to_native(
     from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, issue_deprecation_warning=True
+        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
     )
 
     if isinstance(narwhals_object, BaseFrame):
@@ -367,7 +367,7 @@ def from_native(
     from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, issue_deprecation_warning=True
+        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
     )
 
     return _from_native_impl(
@@ -808,7 +808,7 @@ def narwhalify(
     from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, issue_deprecation_warning=True
+        strict, pass_through, pass_through_default=True, emit_deprecation_warning=True
     )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:

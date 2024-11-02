@@ -1044,7 +1044,7 @@ def from_native(
         return native_dataframe
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, issue_deprecation_warning=False
+        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
 
     result = _from_native_impl(
@@ -1125,7 +1125,7 @@ def narwhalify(
     """
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, issue_deprecation_warning=False
+        strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
     )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:

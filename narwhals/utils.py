@@ -589,26 +589,19 @@ def find_stacklevel() -> int:
     return n
 
 
-def issue_warning(
-    message: str, category: type[Warning], _version: str, **kwargs: Any
-) -> None:
+def issue_deprecation_warning(message: str, _version: str) -> None:
     """
-    Issue a warning.
+    Issue a deprecation warning.
 
     Parameters
     ----------
     message
         The message associated with the warning.
-    category
-        The warning category.
     version
         Narwhals version when the warning was introduced. Just used for internal
         bookkeeping.
-    **kwargs
-        Additional arguments for `warnings.warn`. Note that the `stacklevel` is
-        determined automatically.
     """
-    warn(message=message, category=category, stacklevel=find_stacklevel(), **kwargs)
+    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 
 
 def validate_strict_and_pass_though(
@@ -616,17 +609,17 @@ def validate_strict_and_pass_though(
     pass_through: bool | None,
     *,
     pass_through_default: bool,
-    issue_deprecation_warning: bool,
+    emit_deprecation_warning: bool,
 ) -> bool:
     if strict is None and pass_through is None:
         pass_through = pass_through_default
     elif strict is not None and pass_through is None:
-        if issue_deprecation_warning:
+        if emit_deprecation_warning:
             msg = (
                 "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
                 "Note: `strict` will remain available in `narwhals.stable.v1`."
             )
-            issue_warning(msg, DeprecationWarning, _version="1.13.0")
+            issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict
     elif strict is None and pass_through is not None:
         pass
