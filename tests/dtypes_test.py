@@ -183,11 +183,17 @@ def test_pandas_fixed_offset_1302() -> None:
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
     ).dtype
-    assert result == nw.Datetime("ns", "UTC+01:00")
-    result = nw.from_native(
-        pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])).convert_dtypes(
-            dtype_backend="pyarrow"
-        ),
-        series_only=True,
-    ).dtype
-    assert result == nw.Datetime("ns", "+01:00")
+    if PANDAS_VERSION >= (2,):
+        assert result == nw.Datetime("ns", "UTC+01:00")
+    else:  # pragma: no cover
+        assert result == nw.Datetime("ns", "pytz.FixedOffset(60)")
+    if PANDAS_VERSION >= (2,):
+        result = nw.from_native(
+            pd.Series(
+                pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])
+            ).convert_dtypes(dtype_backend="pyarrow"),
+            series_only=True,
+        ).dtype
+        assert result == nw.Datetime("ns", "+01:00")
+    else:  # pragma: no cover
+        pass

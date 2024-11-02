@@ -34,15 +34,15 @@ PD_DATETIME_RGX = r"""^
     datetime64\[
         (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
         (?:,                                      # Begin non-capturing group for optional timezone
-            \s?                                   # Optional whitespace after comma
+            \s*                                   # Optional whitespace after comma
             (?P<time_zone>                        # Start named group for timezone
                 [a-zA-Z\/]+                       # Match timezone name, e.g., UTC, America/New_York
-                (?:                               # Begin optional non-capturing group for offset
-                    [+-]\d{2}:\d{2}               # Match offset in format +HH:MM or -HH:MM
-                )?                                # End optional offset group
+                (?:[+-]\d{2}:\d{2})?              # Optional offset in format +HH:MM or -HH:MM
+                |                                 # OR
+                pytz\.FixedOffset\(\d+\)          # Match pytz.FixedOffset with integer offset in parentheses
             )                                     # End time_zone group
         )?                                        # End optional timezone group
-    \]                                            # Closing bracket
+    \]                                            # Closing bracket for datetime64
 $"""
 PATTERN_PD_DATETIME = re.compile(PD_DATETIME_RGX, re.VERBOSE)
 PA_DATETIME_RGX = r"""^
