@@ -176,3 +176,18 @@ def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> Non
     assert snw.dtype == nw.Int64
     s[0] = 999.5
     assert snw.dtype == nw.Float64
+
+
+def test_pandas_fixed_offset_1302() -> None:
+    result = nw.from_native(
+        pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
+        series_only=True,
+    ).dtype
+    assert result == nw.Datetime("ns", "UTC+01:00")
+    result = nw.from_native(
+        pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])).convert_dtypes(
+            dtype_backend="pyarrow"
+        ),
+        series_only=True,
+    ).dtype
+    assert result == nw.Datetime("ns", "+01:00")
