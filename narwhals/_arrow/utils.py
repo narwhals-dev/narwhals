@@ -76,6 +76,15 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if "polars" in str(type(dtype)):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):

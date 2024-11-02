@@ -85,6 +85,15 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if "polars" in str(type(dtype)):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):

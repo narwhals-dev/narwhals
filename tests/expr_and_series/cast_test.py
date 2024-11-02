@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from typing import Any
 
 import pandas as pd
+import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -222,3 +225,10 @@ def test_cast_datetime_tz_aware(
         .str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("dtype", [pl.String, pl.String(), pa.float64(), str])
+def test_raise_if_not_narwhals_dtype(constructor: Constructor, dtype: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises(TypeError, match="Expected Narwhals object, got:"):
+        df.select(nw.col("a").cast(dtype))
