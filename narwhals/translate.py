@@ -857,6 +857,13 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like
 
     np = get_numpy()
+    if (
+        np
+        and isinstance(scalar_like, np.datetime64)
+        and scalar_like.dtype == "datetime64[ns]"
+    ):
+        return datetime(1970, 1, 1) + timedelta(microseconds=scalar_like.item() // 1000)
+
     if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
         return scalar_like.item()
 
