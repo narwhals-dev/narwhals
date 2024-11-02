@@ -113,9 +113,24 @@ Here are exceptions to our backwards compatibility policy:
 
   To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
   we recommend using `==` instead, as that works consistenty
-  across versions:
+  across namespaces:
 
   ```python
   assert nw.Datetime("us") == nw.Datetime
   assert nw.Datetime("us") in {nw.Datetime("us")}
+  ```
+
+- The first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
+
+  ```python
+  # v1 syntax:
+  nw.from_native(native_dataframe=df)  # people tend to write this
+  # main namespace syntax:
+  nw.from_native(native_object=df)
+  ```
+
+  In practice, we recommend passing this argument positionally, and that will work consistently
+  across namespaces:
+  ```python
+  nw.from_native(df)
   ```
