@@ -1013,8 +1013,19 @@ def from_native(
             - pandas.Series
             - polars.Series
             - anything with a `__narwhals_series__` method
-        strict: Whether to raise if object can't be converted (default) or
-            to just leave it as-is.
+        strict: Determine what happens if the object isn't supported by Narwhals:
+
+            - `True` (default): raise an error
+            - `False`: pass object through as-is
+
+            **Deprecated** (v1.13.0):
+                Please use `pass_through` instead. Note that `strict` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+        pass_through: Determine what happens if the object isn't supported by Narwhals:
+
+            - `False` (default): raise an error
+            - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects.
         eager_or_interchange_only: Whether to only allow eager objects or objects which
             implement the Dataframe Interchange Protocol.
@@ -1025,6 +1036,12 @@ def from_native(
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
     from narwhals.stable.v1 import dtypes
+
+    # Early returns
+    if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
+        return native_dataframe
+    if isinstance(native_dataframe, Series) and (series_only or allow_series):
+        return native_dataframe
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, issue_deprecation_warning=False
