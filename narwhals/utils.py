@@ -551,6 +551,66 @@ def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
+def find_stacklevel() -> int:
+    """
+    Find the first place in the stack that is not inside narwhals.
+
+    Taken from:
+    https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
+    """
+    import inspect
+    from pathlib import Path
+
+    import narwhals as nw
+
+    pkg_dir = str(Path(nw.__file__).parent)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    try:
+        while frame:
+            fname = inspect.getfile(frame)
+            if fname.startswith(pkg_dir) or (
+                (qualname := getattr(frame.f_code, "co_qualname", None))
+                # ignore @singledispatch wrappers
+                and qualname.startswith("singledispatch.")
+            ):
+                frame = frame.f_back
+                n += 1
+            else:
+                break
+    finally:
+        # https://docs.python.org/3/library/inspect.html
+        # > Though the cycle detector will catch these, destruction of the frames
+        # > (and local variables) can be made deterministic by removing the cycle
+        # > in a finally clause.
+        del frame
+    return n
+
+
+def issue_warning(
+    message: str, category: type[Warning], _version: str, **kwargs: Any
+) -> None:
+    """
+    Issue a warning.
+
+    Parameters
+    ----------
+    message
+        The message associated with the warning.
+    category
+        The warning category.
+    version
+        Narwhals version when the warning was introduced. Just used for internal
+        bookkeeping.
+    **kwargs
+        Additional arguments for `warnings.warn`. Note that the `stacklevel` is
+        determined automatically.
+    """
+    warn(message=message, category=category, stacklevel=find_stacklevel(), **kwargs)
+
+
 def validate_strict_and_pass_though(
     strict: bool | None,
     pass_through: bool | None,
@@ -566,7 +626,7 @@ def validate_strict_and_pass_though(
                 "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
                 "Note: `strict` will remain available in `narwhals.stable.v1`."
             )
-            # issue deprecation warning
+            issue_warning(msg, DeprecationWarning, _version="1.13.0")
         pass_through = not strict
     elif strict is None and pass_through is not None:
         pass
