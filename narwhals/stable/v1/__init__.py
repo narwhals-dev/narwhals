@@ -416,7 +416,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             | Use `.to_native` to see native output |
             └───────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> df.to_native().sort("a")  # doctest:+SKIP
+            >>> df.native.sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │

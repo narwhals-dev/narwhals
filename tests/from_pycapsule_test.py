@@ -16,7 +16,7 @@ from tests.utils import assert_equal_data
 def test_from_arrow_to_arrow() -> None:
     df = nw.from_native(pl.DataFrame({"ab": [1, 2, 3], "ba": [4, 5, 6]}), eager_only=True)
     result = nw.from_arrow(df, native_namespace=pa)
-    assert isinstance(result.to_native(), pa.Table)
+    assert isinstance(result.native, pa.Table)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
     assert_equal_data(result, expected)
 
@@ -27,7 +27,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pandas")
     df = nw.from_native(tbl, eager_only=True)
     result = nw.from_arrow(df, native_namespace=pl)
-    assert isinstance(result.to_native(), pl.DataFrame)
+    assert isinstance(result.native, pl.DataFrame)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
     assert_equal_data(result, expected)
     assert "pandas" not in sys.modules
@@ -37,7 +37,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_from_arrow_to_pandas() -> None:
     df = nw.from_native(pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]}), eager_only=True)
     result = nw.from_arrow(df, native_namespace=pd)
-    assert isinstance(result.to_native(), pd.DataFrame)
+    assert isinstance(result.native, pd.DataFrame)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
     assert_equal_data(result, expected)
 

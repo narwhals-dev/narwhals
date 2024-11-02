@@ -49,7 +49,7 @@ def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
     def func(df_any: Any) -> Any:
         df = nw_v1.from_native(df_any)
         df = df._l1_norm()
-        return df.to_native()
+        return df.native
 
     result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
     expected = {"a": [15]}

@@ -102,7 +102,7 @@ def test_maybe_reset_index_pandas() -> None:
     result = nw.maybe_reset_index(pandas_df)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     assert_frame_equal(nw.to_native(result), expected)
-    assert result.to_native() is pandas_df.to_native()
+    assert result.native is pandas_df.native
     pandas_series = nw.from_native(
         pd.Series([1, 2, 3], index=[7, 8, 9]), series_only=True
     )
@@ -113,7 +113,7 @@ def test_maybe_reset_index_pandas() -> None:
     result_s = nw.maybe_reset_index(pandas_series)
     expected_s = pd.Series([1, 2, 3])
     assert_series_equal(nw.to_native(result_s), expected_s)
-    assert result_s.to_native() is pandas_series.to_native()
+    assert result_s.native is pandas_series.native
 
 
 def test_maybe_reset_index_polars() -> None:
