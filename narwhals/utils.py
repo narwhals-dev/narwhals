@@ -549,3 +549,28 @@ def parse_columns_to_drop(
 
 def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def validate_strict_and_pass_though(
+    strict: bool | None,
+    pass_through: bool | None,
+    *,
+    pass_through_default: bool,
+    issue_deprecation_warning: bool,
+) -> bool:
+    if strict is None and pass_through is None:
+        pass_through = pass_through_default
+    elif strict is not None and pass_through is None:
+        if issue_deprecation_warning:
+            msg = (
+                "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
+                "Note: `strict` will remain available in `narwhals.stable.v1`."
+            )
+            # issue deprecation warning
+        pass_through = not strict
+    elif strict is None and pass_through is not None:
+        pass
+    else:
+        msg = "Cannot pass both `strict` and `pass_through`"
+        raise ValueError(msg)
+    return pass_through
