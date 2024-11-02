@@ -462,6 +462,20 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> NoReturn:
+        msg = "`Expr.ewm_mean` is not supported for the Dask backend"
+        raise NotImplementedError(msg)
+
     def unique(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.unique` is not supported for the Dask backend. Please use `LazyFrame.unique` instead."

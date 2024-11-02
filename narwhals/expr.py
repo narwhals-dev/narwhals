@@ -448,6 +448,9 @@ class Expr:
                   $1-\alpha$ and $1$ if `adjust=True`,
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
+        Returns:
+            Expr
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl

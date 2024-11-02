@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -11,7 +12,7 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 
 
 def test_ewm_mean_expr(constructor: Constructor) -> None:
-    if "pyarrow_" in str(constructor) or "dask" in str(constructor):  # remove
+    if any(x in str(constructor) for x in ("pyarrow_", "dask")):  # remove
         pytest.skip()
 
     df = nw.from_native(constructor(data))
@@ -56,3 +57,16 @@ def test_ewm_mean_expr_adjust(
         }
 
     assert_equal_data(result, expected)
+
+
+def test_ewm_mean_dask_raise() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+    with pytest.raises(
+        NotImplementedError,
+        match="`Expr.ewm_mean` is not supported for the Dask backend",
+    ):
+        df.select(nw.col("a").ewm_mean(com=1))
