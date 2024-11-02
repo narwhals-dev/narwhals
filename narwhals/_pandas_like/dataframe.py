@@ -701,17 +701,14 @@ class PandasLikeDataFrame:
         if dtype is not None:
             return self._native_frame.to_numpy(dtype=dtype, copy=copy)
 
-        convert = set()
-        for key, val in self.schema.items():
-            if val == self._dtypes.Datetime and val.time_zone is not None:  # type: ignore[attr-defined]
-                convert.add(key)
         df = self.with_columns(
             *[
                 self.__narwhals_namespace__()
-                .col(x)
+                .col(key)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
-                for x in convert
+                for key, val in self.schema.items()
+                if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
             ]
         )._native_frame
 
