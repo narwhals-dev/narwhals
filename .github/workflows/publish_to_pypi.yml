@@ -1,8 +1,16 @@
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
-on: push
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
 
 jobs:
+  downstream-tests:
+    uses: ./.github/workflows/downstream_tests.yml
+  
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
