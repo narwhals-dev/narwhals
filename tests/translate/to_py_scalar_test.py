@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.dependencies import get_cudf
+from tests.utils import PANDAS_VERSION
 
 
 @pytest.mark.parametrize(
@@ -30,7 +31,6 @@ from narwhals.dependencies import get_cudf
         (np.datetime64("2020-01-01", "ms"), datetime(2020, 1, 1)),
         (np.datetime64("2020-01-01", "us"), datetime(2020, 1, 1)),
         (np.datetime64("2020-01-01", "ns"), datetime(2020, 1, 1)),
-        (pd.NA, None),
     ],
 )
 def test_to_py_scalar(
@@ -41,6 +41,13 @@ def test_to_py_scalar(
     if expected == 1:
         assert not isinstance(output, np.int64)
     assert output == expected
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < (1,), reason="there was a (better?) time when there was no pd.NA"
+)
+def test_na_to_py_scalar() -> None:
+    assert nw.to_py_scalar(pd.NA) is None
 
 
 @pytest.mark.parametrize(
