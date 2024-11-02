@@ -272,6 +272,7 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=output_names,
+        returns_scalar=expr._returns_scalar or returns_scalar,
     )
 
 
@@ -291,6 +292,7 @@ def reuse_series_namespace_implementation(
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
+        returns_scalar=expr._returns_scalar,
     )
 
 

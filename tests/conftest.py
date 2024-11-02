@@ -101,7 +101,12 @@ if PANDAS_VERSION >= (2, 0, 0):
 else:  # pragma: no cover
     eager_constructors = [pandas_constructor]
 
-eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
+eager_constructors.extend(
+    [
+        polars_eager_constructor,
+        # pyarrow_table_constructor,
+    ]
+)
 lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover

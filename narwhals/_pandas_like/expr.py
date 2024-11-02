@@ -28,6 +28,7 @@ class PandasLikeExpr:
         root_names: list[str] | None,
         output_names: list[str] | None,
         implementation: Implementation,
+        returns_scalar: bool,
         backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> None:
@@ -35,8 +36,8 @@ class PandasLikeExpr:
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
-        self._depth = depth
         self._output_names = output_names
+        self._returns_scalar = returns_scalar
         self._implementation = implementation
         self._backend_version = backend_version
         self._dtypes = dtypes
@@ -84,6 +85,7 @@ class PandasLikeExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            returns_scalar=False,
             implementation=implementation,
             backend_version=backend_version,
             dtypes=dtypes,
@@ -114,15 +116,13 @@ class PandasLikeExpr:
             function_name="nth",
             root_names=None,
             output_names=None,
+            returns_scalar=False,
             implementation=implementation,
             backend_version=backend_version,
             dtypes=dtypes,
         )
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self, dtype: Any) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def __eq__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
@@ -317,6 +317,7 @@ class PandasLikeExpr:
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
+            returns_scalar=False,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -344,6 +345,7 @@ class PandasLikeExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
+            returns_scalar=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -450,35 +452,22 @@ class PandasLikeExprStringNamespace:
 
     def strip_chars(self, characters: str | None = None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "strip_chars",
-            characters,
+            self._expr, "str", "strip_chars", characters
         )
 
     def starts_with(self, prefix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "starts_with",
-            prefix,
+            self._expr, "str", "starts_with", prefix
         )
 
     def ends_with(self, suffix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "ends_with",
-            suffix,
+            self._expr, "str", "ends_with", suffix
         )
 
     def contains(self, pattern: str, *, literal: bool) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "contains",
-            pattern,
-            literal=literal,
+            self._expr, "str", "contains", pattern, literal=literal
         )
 
     def slice(self, offset: int, length: int | None = None) -> PandasLikeExpr:
@@ -488,25 +477,14 @@ class PandasLikeExprStringNamespace:
 
     def to_datetime(self: Self, format: str | None) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "to_datetime",
-            format,
+            self._expr, "str", "to_datetime", format
         )
 
     def to_uppercase(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "to_uppercase",
-        )
+        return reuse_series_namespace_implementation(self._expr, "str", "to_uppercase")
 
     def to_lowercase(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "to_lowercase",
-        )
+        return reuse_series_namespace_implementation(self._expr, "str", "to_lowercase")
 
 
 class PandasLikeExprDateTimeNamespace:
@@ -612,6 +590,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=root_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,
@@ -639,6 +618,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,
@@ -664,6 +644,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,
@@ -690,6 +671,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,
@@ -716,6 +698,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,
@@ -742,6 +725,7 @@ class PandasLikeExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=False,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             dtypes=self._expr._dtypes,

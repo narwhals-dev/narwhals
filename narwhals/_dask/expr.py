@@ -47,6 +47,7 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._implementation = Implementation.DASK
         self._backend_version = backend_version
         self._dtypes = dtypes
 

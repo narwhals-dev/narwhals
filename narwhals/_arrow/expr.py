@@ -29,6 +29,7 @@ class ArrowExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        # returns_scalar: bool,
         backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> None:
@@ -38,6 +39,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
+        # self._returns_scalar = returns_scalar
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._dtypes = dtypes

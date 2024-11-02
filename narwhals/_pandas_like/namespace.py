@@ -54,6 +54,7 @@ class PandasLikeNamespace:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        returns_scalar: bool,
     ) -> PandasLikeExpr:
         return PandasLikeExpr(
             func,
@@ -61,6 +62,7 @@ class PandasLikeNamespace:
             function_name=function_name,
             root_names=root_names,
             output_names=output_names,
+            returns_scalar=returns_scalar,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -85,6 +87,7 @@ class PandasLikeNamespace:
             function_name="series",
             root_names=None,
             output_names=None,
+            returns_scalar=False,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -130,6 +133,7 @@ class PandasLikeNamespace:
             function_name="all",
             root_names=None,
             output_names=None,
+            returns_scalar=False,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -155,6 +159,7 @@ class PandasLikeNamespace:
             function_name="lit",
             root_names=None,
             output_names=["lit"],
+            returns_scalar=True,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -209,6 +214,7 @@ class PandasLikeNamespace:
             function_name="len",
             root_names=None,
             output_names=["len"],
+            returns_scalar=True,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -228,6 +234,7 @@ class PandasLikeNamespace:
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -243,6 +250,7 @@ class PandasLikeNamespace:
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -258,6 +266,7 @@ class PandasLikeNamespace:
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -276,6 +285,7 @@ class PandasLikeNamespace:
             function_name="mean_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -303,6 +313,7 @@ class PandasLikeNamespace:
             function_name="min_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -330,6 +341,7 @@ class PandasLikeNamespace:
             function_name="max_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
     def concat(
@@ -433,6 +445,7 @@ class PandasLikeNamespace:
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
         )
 
 
@@ -512,6 +525,7 @@ class PandasWhen:
             function_name="whenthen",
             root_names=None,
             output_names=None,
+            returns_scalar=False,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -527,6 +541,7 @@ class PandasThen(PandasLikeExpr):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        returns_scalar: bool,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         dtypes: DTypes,
@@ -539,6 +554,7 @@ class PandasThen(PandasLikeExpr):
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._returns_scalar = (returns_scalar,)
 
     def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a

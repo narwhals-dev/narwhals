@@ -58,10 +58,11 @@ class PandasLikeGroupBy:
             )
 
     def agg(
-        self,
-        *aggs: IntoPandasLikeExpr,
-        **named_aggs: IntoPandasLikeExpr,
+        self, *aggs: IntoPandasLikeExpr, **named_aggs: IntoPandasLikeExpr
     ) -> PandasLikeDataFrame:
+        if not all(e._returns_scalar for e in [*aggs, *named_aggs.values()]):
+            msg = "Expression not returning a scalar are not supported in group_by.agg.\n"
+            raise ValueError(msg)
         exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
