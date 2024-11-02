@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,3 +31,21 @@ def test_to_numpy(
     assert s.shape == (3,)
 
     assert_array_equal(s.to_numpy(), np.array(data, dtype=float))
+
+
+def test_to_numpy_tz_aware(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
+        eager_only=True,
+    )
+    df = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
+    result = df["a"].to_numpy()
+    # for some reason, NumPy uses 'M' for datetimes
+    assert result.dtype.kind == "M"
+    assert (
+        result
+        == np.array(
+            ["2019-12-31T18:15:00.000000", "2020-01-01T18:15:00.000000"],
+            dtype=result.dtype,
+        )
+    ).all()
