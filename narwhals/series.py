@@ -383,10 +383,7 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Cast between data types.
 
