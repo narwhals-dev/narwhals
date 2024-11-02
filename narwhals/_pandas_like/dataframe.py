@@ -698,16 +698,22 @@ class PandasLikeDataFrame:
             # pandas default differs from Polars, but cuDF default is True
             copy = self._implementation is Implementation.CUDF
 
-        df = self.with_columns(
-            *[
-                self.__narwhals_namespace__()
-                .col(key)
-                .dt.convert_time_zone("UTC")
-                .dt.replace_time_zone(None)
-                for key, val in self.schema.items()
-                if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
-            ]
-        )._native_frame
+        if any(
+            dtype == self._dtypes.Datetime and dtype.time_zone is not None  # type: ignore[attr-defined]
+            for dtype in self.schema.values()
+        ):
+            df = self.with_columns(
+                *[
+                    self.__narwhals_namespace__()
+                    .col(key)
+                    .dt.convert_time_zone("UTC")
+                    .dt.replace_time_zone(None)
+                    for key, val in self.schema.items()
+                    if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
+                ]
+            )._native_frame
+        else:
+            df = self._native_frame
 
         if dtype is not None:
             return df.to_numpy(dtype=dtype, copy=copy)
