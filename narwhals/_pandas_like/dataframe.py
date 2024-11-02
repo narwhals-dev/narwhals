@@ -698,15 +698,15 @@ class PandasLikeDataFrame:
             # pandas default differs from Polars, but cuDF default is True
             copy = self._implementation is Implementation.CUDF
 
-        to_convert = {
+        to_convert = [
             key
             for key, val in self.schema.items()
             if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
-        }
+        ]
         if to_convert:
             df = self.with_columns(
                 self.__narwhals_namespace__()
-                .col(list(to_convert))
+                .col(*to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
             )._native_frame
