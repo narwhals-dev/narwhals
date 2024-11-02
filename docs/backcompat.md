@@ -97,40 +97,40 @@ Here are exceptions to our backwards compatibility policy:
 ### After `stable.v1`
 
 - `Datetime` and `Duration` dtypes hash using both `time_unit` and `time_zone`.
-  The effect of this can be seen when doing `dtype in {nw.Duration}` checks:
+    The effect of this can be seen when doing `dtype in {...}` checks:
 
-  ```python
-  import narwhals.stable.v1 as nw_v1
-  import narwhals as nw
+    ```python exec="1" source="above" session="backcompat"
+    import narwhals.stable.v1 as nw_v1
+    import narwhals as nw
 
-  # v1 behaviour:
-  assert nw_v1.Datetime("us") in {nw.Datetime}
+    # v1 behaviour:
+    assert nw_v1.Datetime("us") in {nw_v1.Datetime}
 
-  # main namespace (and, later, v2) behaviour:
-  assert nw.Datetime("us") not in {nw.Datetime}
-  assert nw.Datetime("us") in {nw.Datetime("us")}
-  ```
+    # main namespace (and, when we get there, v2) behaviour:
+    assert nw.Datetime("us") not in {nw.Datetime}
+    assert nw.Datetime("us") in {nw.Datetime("us")}
+    ```
 
-  To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
-  we recommend using `==` instead, as that works consistenty
-  across namespaces:
+    To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
+    we recommend using `==` instead, as that works consistenty
+    across namespaces:
 
-  ```python
-  assert nw.Datetime("us") == nw.Datetime
-  assert nw.Datetime("us") in {nw.Datetime("us")}
-  ```
+    ```python exec="1" source="above" session="backcompat"
+    assert nw.Datetime("us") == nw.Datetime
+    assert nw_v1.Datetime("us") == nw_v1.Datetime
+    ```
 
 - The first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
 
-  ```python
-  # v1 syntax:
-  nw.from_native(native_dataframe=df)  # people tend to write this
-  # main namespace syntax:
-  nw.from_native(native_object=df)
-  ```
+    ```python
+    # v1 syntax:
+    nw.from_native(native_dataframe=df)  # people tend to write this
+    # main namespace syntax:
+    nw.from_native(native_object=df)
+    ```
 
-  In practice, we recommend passing this argument positionally, and that will work consistently
-  across namespaces:
-  ```python
-  nw.from_native(df)
-  ```
+    In practice, we recommend passing this argument positionally, and that will work consistently
+    across namespaces:
+    ```python
+    nw.from_native(df)
+    ```
