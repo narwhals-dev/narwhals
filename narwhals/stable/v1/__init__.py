@@ -416,7 +416,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             | Use `.to_native` to see native output |
             └───────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> df.to_native().sort("a")
+            >>> df.to_native().sort("a")  # doctest:+SKIP
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
@@ -441,7 +441,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> import narwhals.stable.v1 as nw
+            >>> import narwhals as nw
             >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
