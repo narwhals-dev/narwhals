@@ -116,6 +116,7 @@ Here are exceptions to our backwards compatibility policy:
     across namespaces:
 
     ```python exec="1" source="above" session="backcompat"
+    # Recommended
     assert nw.Datetime("us") == nw.Datetime
     assert nw_v1.Datetime("us") == nw_v1.Datetime
     ```
@@ -132,5 +133,6 @@ Here are exceptions to our backwards compatibility policy:
     In practice, we recommend passing this argument positionally, and that will work consistently
     across namespaces:
     ```python
+    # Recommended
     nw.from_native(df)
     ```
