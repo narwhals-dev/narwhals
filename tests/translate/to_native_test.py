@@ -13,27 +13,27 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.parametrize(
-    ("method", "pass_through", "context"),
+    ("method", "strict", "context"),
     [
-        ("head", False, does_not_raise()),
         ("head", True, does_not_raise()),
-        ("to_numpy", True, does_not_raise()),
+        ("head", False, does_not_raise()),
+        ("to_numpy", False, does_not_raise()),
         (
             "to_numpy",
-            False,
+            True,
             pytest.raises(TypeError, match="Expected Narwhals object, got"),
         ),
     ],
 )
 def test_to_native(
-    constructor_eager: ConstructorEager, method: str, *, pass_through: bool, context: Any
+    constructor_eager: ConstructorEager, method: str, strict: Any, context: Any
 ) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
 
     with context:
-        nw.to_native(getattr(df, method)(), pass_through=pass_through)
+        nw.to_native(getattr(df, method)(), strict=strict)
 
     s = df["a"]
 
     with context:
-        nw.to_native(getattr(s, method)(), pass_through=pass_through)
+        nw.to_native(getattr(s, method)(), strict=strict)
