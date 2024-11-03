@@ -92,6 +92,9 @@ Here are exceptions to our backwards compatibility policy:
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
 - we may consider making some type hints more precise.
 
+In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
+before making any change.
+
 ## Breaking changes carried out so far
 
 ### After `stable.v1`
@@ -119,20 +122,4 @@ Here are exceptions to our backwards compatibility policy:
     # Recommended
     assert nw.Datetime("us") == nw.Datetime
     assert nw_v1.Datetime("us") == nw_v1.Datetime
-    ```
-
-- The first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
-
-    ```python
-    # v1 syntax:
-    nw.from_native(native_dataframe=df)  # people tend to write this
-    # main namespace syntax:
-    nw.from_native(native_object=df)
-    ```
-
-    In practice, we recommend passing this argument positionally, and that will work consistently
-    across namespaces:
-    ```python
-    # Recommended
-    nw.from_native(df)
     ```
