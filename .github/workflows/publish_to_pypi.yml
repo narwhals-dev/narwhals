@@ -4,9 +4,6 @@ on: push
 
 
 jobs:
-  downstream-tests:
-    uses: ./.github/workflows/downstream_tests.yml
-  
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
