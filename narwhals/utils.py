@@ -619,7 +619,8 @@ def validate_strict_and_pass_though(
         if emit_deprecation_warning:
             msg = (
                 "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
-                "Note: `strict` will remain available in `narwhals.stable.v1`."
+                "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
             )
             issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict
