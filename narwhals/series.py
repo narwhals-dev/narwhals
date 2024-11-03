@@ -464,8 +464,8 @@ class Series:
                2.428571
             ]
 
-            pandas and Polars handle nulls differently. So, When calculating ewm over
-            a sequence with null values, leading to distinct results:
+            pandas and Polars handle nulls differently. So, calculating ewm over
+            a sequence with null values leads to distinct results:
 
             >>> data = [2.0, 4.0, None, 3.0, float("nan"), 3.0]
             >>> s_pd2 = pd.Series(name="a", data=data)
