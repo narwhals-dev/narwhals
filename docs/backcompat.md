@@ -112,6 +112,11 @@ before making any change.
     If you are using Narwhals>=1.13.0, then we recommend using `pass_through`, as that
     works consistently across namespaces.
 
+    In the future:
+
+    - in the main Narwhals namespace, `strict` will be removed in favour of `pass_through`
+    - in `stable.v1`, we will keep both `strict` and `pass_through`
+
 - Since Narwhals 1.9.0, `Datetime` and `Duration` dtypes hash using both `time_unit` and
     `time_zone`.
     The effect of this can be seen when placing these dtypes in sets:
