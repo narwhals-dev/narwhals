@@ -10,6 +10,7 @@ from typing import TypeVar
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -376,7 +377,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     backend_version: tuple[int, ...],
     dtypes: DTypes,
 ) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"

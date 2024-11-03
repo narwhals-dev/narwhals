@@ -91,3 +91,48 @@ Here are exceptions to our backwards compatibility policy:
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
 - we may consider making some type hints more precise.
+
+## Breaking changes carried out so far
+
+### After `stable.v1`
+
+- `Datetime` and `Duration` dtypes hash using both `time_unit` and `time_zone`.
+    The effect of this can be seen when doing `dtype in {...}` checks:
+
+    ```python exec="1" source="above" session="backcompat"
+    import narwhals.stable.v1 as nw_v1
+    import narwhals as nw
+
+    # v1 behaviour:
+    assert nw_v1.Datetime("us") in {nw_v1.Datetime}
+
+    # main namespace (and, when we get there, v2) behaviour:
+    assert nw.Datetime("us") not in {nw.Datetime}
+    assert nw.Datetime("us") in {nw.Datetime("us")}
+    ```
+
+    To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
+    we recommend using `==` instead, as that works consistenty
+    across namespaces:
+
+    ```python exec="1" source="above" session="backcompat"
+    # Recommended
+    assert nw.Datetime("us") == nw.Datetime
+    assert nw_v1.Datetime("us") == nw_v1.Datetime
+    ```
+
+- The first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
+
+    ```python
+    # v1 syntax:
+    nw.from_native(native_dataframe=df)  # people tend to write this
+    # main namespace syntax:
+    nw.from_native(native_object=df)
+    ```
+
+    In practice, we recommend passing this argument positionally, and that will work consistently
+    across namespaces:
+    ```python
+    # Recommended
+    nw.from_native(df)
+    ```
