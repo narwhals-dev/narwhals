@@ -96,8 +96,22 @@ Here are exceptions to our backwards compatibility policy:
 
 ### After `stable.v1`
 
-- `Datetime` and `Duration` dtypes hash using both `time_unit` and `time_zone`.
-    The effect of this can be seen when doing `dtype in {...}` checks:
+- Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
+    has been deprecated in favour of `pass_through`. This is because several users expressed
+    confusion/surprise over what `strict=False` did.
+    ```python
+    # v1 syntax:
+    nw.from_native(df, strict=False)
+
+    # main namespace (and, when we get there, v2) syntax:
+    nw.from_native(df, pass_through=True)
+    ```
+    If you are using Narwhals>=1.13.0, then we recommend using `pass_through`, as that
+    works consistently across namespaces.
+
+- Since Narwhals 1.9.0, `Datetime` and `Duration` dtypes hash using both `time_unit` and
+    `time_zone`.
+    The effect of this can be seen when placing these dtypes in sets:
 
     ```python exec="1" source="above" session="backcompat"
     import narwhals.stable.v1 as nw_v1
@@ -121,7 +135,7 @@ Here are exceptions to our backwards compatibility policy:
     assert nw_v1.Datetime("us") == nw_v1.Datetime
     ```
 
-- The first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
+- Since Narwhals 1.1.0, the first argument to `from_native` has been renamed from `native_dataframe` to `native_object`:
 
     ```python
     # v1 syntax:
