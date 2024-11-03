@@ -578,7 +578,7 @@ def _stableify(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -590,7 +590,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
@@ -602,7 +602,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -614,7 +614,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -626,7 +626,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
@@ -638,7 +638,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
@@ -650,7 +650,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -662,7 +662,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoSeriesT,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -674,7 +674,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT,
+    native_object: IntoFrameT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -686,7 +686,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -698,7 +698,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -714,7 +714,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[True],
@@ -730,7 +730,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -746,7 +746,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
+    native_object: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -762,7 +762,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT,
+    native_object: IntoFrameT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -778,7 +778,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -790,7 +790,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
@@ -802,7 +802,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -814,7 +814,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -826,7 +826,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
@@ -838,7 +838,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
@@ -850,7 +850,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -862,7 +862,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoSeriesT,
+    native_object: IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -874,7 +874,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT,
+    native_object: IntoFrameT,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -886,7 +886,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: T,
+    native_object: T,
     *,
     pass_through: Literal[True],
     eager_only: None = ...,
@@ -898,7 +898,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: None = ...,
@@ -914,7 +914,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_object: IntoDataFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[True],
@@ -930,7 +930,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: None = ...,
@@ -946,7 +946,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoSeriesT,
+    native_object: IntoSeriesT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: None = ...,
@@ -962,7 +962,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT,
+    native_object: IntoFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: None = ...,
@@ -979,7 +979,7 @@ def from_native(
 # All params passed in as variables
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_object: Any,
     *,
     pass_through: bool,
     eager_only: bool | None,
@@ -990,7 +990,7 @@ def from_native(
 
 
 def from_native(
-    native_dataframe: Any,
+    native_object: Any,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
@@ -1003,7 +1003,7 @@ def from_native(
     Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
 
     Arguments:
-        native_dataframe: Raw object from user.
+        native_object: Raw object from user.
             Depending on the other arguments, input object can be:
 
             - pandas.DataFrame
@@ -1038,17 +1038,17 @@ def from_native(
     from narwhals.stable.v1 import dtypes
 
     # Early returns
-    if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
-        return native_dataframe
-    if isinstance(native_dataframe, Series) and (series_only or allow_series):
-        return native_dataframe
+    if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
+        return native_object
+    if isinstance(native_object, Series) and (series_only or allow_series):
+        return native_object
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
 
     result = _from_native_impl(
-        native_dataframe,
+        native_object,
         pass_through=pass_through,
         eager_only=eager_only,
         eager_or_interchange_only=eager_or_interchange_only,

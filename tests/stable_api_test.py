@@ -85,8 +85,6 @@ def test_stable_api_docstrings() -> None:
             continue
         v1_doc = getattr(nw_v1, item).__doc__
         nw_doc = getattr(nw, item).__doc__
-        if item == "from_native":
-            v1_doc = v1_doc.replace("native_dataframe", "native_object")
         assert v1_doc == nw_doc
 
 
