@@ -1105,7 +1105,7 @@ def to_native(
     from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
+        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
 
     if isinstance(narwhals_object, BaseFrame):
