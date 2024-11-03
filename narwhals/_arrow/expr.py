@@ -372,7 +372,6 @@ class ArrowExpr:
     def rolling_mean(
         self: Self,
         window_size: int,
-        weights: list[float] | None,
         *,
         min_periods: int | None,
         center: bool,
@@ -381,7 +380,6 @@ class ArrowExpr:
             self,
             "rolling_mean",
             window_size=window_size,
-            weights=weights,
             min_periods=min_periods,
             center=center,
         )

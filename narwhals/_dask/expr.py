@@ -728,17 +728,10 @@ class DaskExpr:
     def rolling_mean(
         self: Self,
         window_size: int,
-        weights: list[float] | None,
         *,
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        if weights is not None:
-            msg = (
-                "`weights` argument is not supported in `rolling_mean` for Dask backend."
-            )
-            raise NotImplementedError(msg)
-
         def func(
             _input: dask_expr.Series,
             _window: int,

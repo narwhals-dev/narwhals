@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generator
 from typing import Sequence
 
+from narwhals.dependencies import get_polars
 from narwhals.translate import to_py_scalar
 from narwhals.utils import isinstance_or_issubclass
 
@@ -79,6 +80,17 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -434,31 +446,25 @@ def _parse_time_format(arr: pa.Array) -> str:
     return ""
 
 
-def _rolling(
+def _window_agg(
     array: pa.chunked_array,
     window_size: int,
-    weights: list[float] | None,
     *,
     min_periods: int | None,
     center: bool,
-    aggregate_function: Callable[[pa.array, pa.array], pa.scalar],
+    aggregate_function: Callable[[pa.array], Any],
 ) -> Generator[pa.array | None, None, None]:
-    import numpy as np  # ignore-banned-import
-    import pyarrow as pa  # ignore-banned-import
+    """Computes `aggregate_function` over a window of `window_size` elements."""
     import pyarrow.compute as pc  # ignore-banned-import
 
     # Default min_periods to window_size if not provided
     if min_periods is None:
         min_periods = window_size
 
-    # Convert weights to a pyarrow array for elementwise operations if given
-    weights_: pa.array = (
-        pa.array(weights) if weights else pa.array(np.full(window_size, 1.0))
-    )
-
     # Flatten the chunked array to work with it as a contiguous array
     flat_array = array.combine_chunks()
     size = len(flat_array)
+
     # Calculate rolling mean by slicing the flat array for each position
     split_points = (
         (max(0, i - window_size // 2), min(size, i + window_size // 2))
@@ -472,7 +478,6 @@ def _rolling(
         num_valid = len(valid_window)
 
         if num_valid >= min_periods:
-            valid_weights = weights_.slice(0, num_valid)
-            yield to_py_scalar(aggregate_function(valid_window, valid_weights))
+            yield to_py_scalar(aggregate_function(valid_window))
         else:
             yield None

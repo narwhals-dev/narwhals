@@ -8,7 +8,7 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals._arrow.utils import _rolling
+from narwhals._arrow.utils import _window_agg
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
@@ -725,7 +725,6 @@ class ArrowSeries:
     def rolling_mean(
         self: Self,
         window_size: int,
-        weights: list[float] | None,
         *,
         min_periods: int | None,
         center: bool,
@@ -735,19 +734,15 @@ class ArrowSeries:
 
         native_series = self._native_series
 
-        def weighted_mean(arr: pa.array, weights: pa.array) -> pa.scalar:
-            return pc.divide(pc.sum(pc.multiply(arr, weights)), pc.sum(weights))
-
         result = pa.chunked_array(
             [
                 list(
-                    _rolling(
+                    _window_agg(
                         native_series,
                         window_size=window_size,
-                        weights=weights,
                         min_periods=min_periods,
                         center=center,
-                        aggregate_function=weighted_mean,
+                        aggregate_function=pc.mean,
                     )
                 )
             ]

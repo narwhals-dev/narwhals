@@ -511,34 +511,30 @@ class PandasLikeSeries:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF
+        if self.dtype == self._dtypes.Datetime and self.dtype.time_zone is not None:  # type: ignore[attr-defined]
+            s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None)._native_series
+        else:
+            s = self._native_series
 
-        has_missing = self._native_series.isna().any()
-        if (
-            has_missing
-            and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING
-        ):
+        has_missing = s.isna().any()
+        if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             if self._implementation is Implementation.PANDAS and self._backend_version < (
                 1,
             ):  # pragma: no cover
                 kwargs = {}
             else:
                 kwargs = {"na_value": float("nan")}
-            return self._native_series.to_numpy(
-                dtype=dtype
-                or PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._native_series.dtype)],
+            return s.to_numpy(
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)],
                 copy=copy,
                 **kwargs,
             )
-        if (
-            not has_missing
-            and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
-        ):
-            return self._native_series.to_numpy(
-                dtype=dtype
-                or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(self._native_series.dtype)],
+        if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
+            return s.to_numpy(
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)],
                 copy=copy,
             )
-        return self._native_series.to_numpy(dtype=dtype, copy=copy)
+        return s.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -686,18 +682,10 @@ class PandasLikeSeries:
     def rolling_mean(
         self: Self,
         window_size: int,
-        weights: list[float] | None,
         *,
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        if weights is not None:
-            msg = (
-                "`weights` argument is not supported in `rolling_mean` for "
-                "pandas-like backend."
-            )
-            raise NotImplementedError(msg)
-
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
         ).mean()

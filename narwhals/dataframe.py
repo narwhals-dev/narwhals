@@ -2874,7 +2874,7 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
         """
 
-        return to_native(narwhals_object=self, strict=True)
+        return to_native(narwhals_object=self, pass_through=False)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:

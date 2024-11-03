@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import re
-from contextlib import nullcontext as does_not_raise
-
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -55,41 +52,3 @@ def test_rolling_mean_series_no_weights(constructor_eager: ConstructorEager) -> 
         "x4": [float("nan"), 1.0, 1.5, 2.0, 4.0, 5.0, 8.5],
     }
     assert_equal_data(result, expected)
-
-
-def test_weighted_rolling_mean_expr(constructor: Constructor) -> None:
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match=re.escape("`weights` argument is not supported in `rolling_mean`"),
-        )
-        if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
-        else does_not_raise()
-    )
-    df = nw.from_native(constructor(data_weighted))
-
-    with context:
-        result = df.select(
-            x=nw.col("a").rolling_mean(window_size=2, weights=[0.25, 0.75]),
-        )
-        expected = {"x": [float("nan"), 1.75, 2.75, 3.75, 4.75, 5.75]}
-        assert_equal_data(result, expected)
-
-
-def test_weighted_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match=re.escape("`weights` argument is not supported in `rolling_mean`"),
-        )
-        if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf"))
-        else does_not_raise()
-    )
-    df = nw.from_native(constructor_eager(data_weighted), eager_only=True)
-
-    with context:
-        result = df.select(
-            x=df["a"].rolling_mean(window_size=2, weights=[0.25, 0.75]),
-        )
-        expected = {"x": [float("nan"), 1.75, 2.75, 3.75, 4.75, 5.75]}
-        assert_equal_data(result, expected)

@@ -135,10 +135,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Redefine an object's data type.
 
@@ -2316,7 +2313,6 @@ class Expr:
     def rolling_mean(
         self: Self,
         window_size: int,
-        weights: list[float] | None = None,
         *,
         min_periods: int | None = None,
         center: bool = False,
@@ -2333,8 +2329,6 @@ class Expr:
 
         Arguments:
             window_size: The length of the window in number of elements.
-            weights: An optional slice with the same length as the window that will be
-                multiplied elementwise with the values in the window.
             min_periods: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`.
@@ -2388,7 +2382,6 @@ class Expr:
         return self.__class__(
             lambda plx: self._call(plx).rolling_mean(
                 window_size=window_size,
-                weights=weights,
                 min_periods=min_periods,
                 center=center,
             )
