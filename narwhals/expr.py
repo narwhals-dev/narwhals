@@ -467,9 +467,11 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-
             >>> func(df_pd)
-
+                      a
+            0  1.000000
+            1  1.666667
+            2  2.428571
 
             >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 1)
@@ -482,7 +484,6 @@ class Expr:
             │ 1.666667 │
             │ 2.428571 │
             └──────────┘
-
         """
         return self.__class__(
             lambda plx: self._call(plx).ewm_mean(
