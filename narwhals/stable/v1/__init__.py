@@ -51,7 +51,6 @@ from narwhals.stable.v1.dtypes import UInt64
 from narwhals.stable.v1.dtypes import Unknown
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
-from narwhals.translate import to_native
 from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
@@ -1057,6 +1056,67 @@ def from_native(
         dtypes=dtypes,  # type: ignore[arg-type]
     )
     return _stableify(result)
+
+
+@overload
+def to_native(
+    narwhals_object: DataFrame[IntoDataFrameT], *, strict: Literal[True] = ...
+) -> IntoDataFrameT: ...
+@overload
+def to_native(
+    narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
+) -> IntoFrameT: ...
+@overload
+def to_native(narwhals_object: Series, *, strict: Literal[True] = ...) -> Any: ...
+@overload
+def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
+@overload
+def to_native(
+    narwhals_object: DataFrame[IntoDataFrameT], *, pass_through: Literal[False] = ...
+) -> IntoDataFrameT: ...
+@overload
+def to_native(
+    narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
+) -> IntoFrameT: ...
+@overload
+def to_native(narwhals_object: Series, *, pass_through: Literal[False] = ...) -> Any: ...
+@overload
+def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
+
+
+def to_native(
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
+    *,
+    strict: bool | None = None,
+    pass_through: bool | None = None,
+) -> IntoFrameT | Any:
+    """
+    Convert Narwhals object to native one.
+
+    Arguments:
+        narwhals_object: Narwhals object.
+        strict: whether to raise on non-Narwhals input.
+
+    Returns:
+        Object of class that user started with.
+    """
+    from narwhals.dataframe import BaseFrame
+    from narwhals.series import Series
+    from narwhals.utils import validate_strict_and_pass_though
+
+    pass_through = validate_strict_and_pass_though(
+        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
+    )
+
+    if isinstance(narwhals_object, BaseFrame):
+        return narwhals_object._compliant_frame._native_frame
+    if isinstance(narwhals_object, Series):
+        return narwhals_object._compliant_series._native_series
+
+    if not pass_through:
+        msg = f"Expected Narwhals object, got {type(narwhals_object)}."
+        raise TypeError(msg)
+    return narwhals_object
 
 
 def narwhalify(
