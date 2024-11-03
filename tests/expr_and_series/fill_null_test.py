@@ -4,7 +4,6 @@ import warnings
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -65,8 +64,14 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
         or "dask" in str(constructor)
     ):
         with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-            warnings.simplefilter(action="ignore", category=FutureWarning)
+            # case for modin and dask
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
+            # case for pandas_pyarrow_constructor
+            warnings.filterwarnings(
+                "ignore", message="Falling back on a non-pyarrow code path which"
+            )
             result_forward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="forward", limit=None)
             )
@@ -88,8 +93,15 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
         or "dask" in str(constructor)
     ):
         with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-            warnings.simplefilter(action="ignore", category=FutureWarning)
+            # case for modin and dask
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
+
+            # case for pandas_pyarrow_constructor
+            warnings.filterwarnings(
+                "ignore", message="Falling back on a non-pyarrow code path which"
+            )
             result_backward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="backward", limit=None)
             )
@@ -116,7 +128,9 @@ def test_fill_null_limits(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_limits))
     with context:
         if "modin" in str(constructor):
-            warnings.simplefilter("ignore", category=FutureWarning)
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
 
         result_forward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="forward", limit=2)
@@ -185,7 +199,9 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
 
     with context:
         if "modin" in str(constructor_eager):
-            warnings.simplefilter("ignore", category=FutureWarning)
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
         expected_forward = {
             "a_forward": [0.0, 1, 1, float("nan"), 2, 2, float("nan"), 3],
             "b_forward": ["", "a", "a", None, "c", "c", None, "e"],
@@ -226,8 +242,14 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         or "dask" in str(constructor_eager)
     ):
         with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-            warnings.simplefilter(action="ignore", category=FutureWarning)
+            # case for modin and dask
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
+            # case for pandas_pyarrow_constructor
+            warnings.filterwarnings(
+                "ignore", message="Falling back on a non-pyarrow code path which"
+            )
             result_forward = df.select(
                 a_forward=df["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df["a"].fill_null(strategy="backward", limit=None),
@@ -258,8 +280,14 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         or "dask" in str(constructor_eager)
     ):
         with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-            warnings.simplefilter(action="ignore", category=FutureWarning)
+            # case for modin and dask
+            warnings.filterwarnings(
+                "ignore", message="The 'downcast' keyword in fillna is deprecated"
+            )
+            # case for pandas_pyarrow_constructor
+            warnings.filterwarnings(
+                "ignore", message="Falling back on a non-pyarrow code path which"
+            )
             result_forward_str = df_str.select(
                 a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
