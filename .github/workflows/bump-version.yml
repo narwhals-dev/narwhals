@@ -14,8 +14,12 @@ on:
         - major
 
 jobs:
+  downstream-tests-slow:
+     uses: ./.github/workflows/downstream_tests_slow.yml
+
   bump-version:
     runs-on: ubuntu-latest
+    needs: downstream-tests-slow
     steps:
 
     - uses: actions/checkout@v4

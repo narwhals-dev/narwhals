@@ -1,0 +1,62 @@
+name: Test Downstream Libraries - Slow
+
+on: 
+  workflow_call:
+
+jobs:
+  vegafusion:
+     env:
+       UV_SYSTEM_PYTHON: true
+
+     strategy:
+       matrix:
+         python-version: ["3.11"]
+         os: [ubuntu-latest]
+
+     runs-on: ${{ matrix.os }}
+     steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v5
+          with:
+            python-version: ${{ matrix.python-version }}
+        - name: Install uv
+          uses: astral-sh/setup-uv@v3
+          with:
+            enable-cache: "true"
+            cache-suffix: ${{ matrix.python-version }}
+            cache-dependency-glob: "**requirements*.txt"
+        - name: clone-vegafusion
+          run: |
+              git clone --single-branch -b v2 https://github.com/vega/vegafusion.git
+              cd vegafusion
+              git log
+        - name: Cache rust dependencies
+          uses: Swatinem/rust-cache@v2
+          with:
+            workspaces: vegafusion
+        - name: Build wheels
+          uses: PyO3/maturin-action@v1
+          with:
+            command: build
+            manylinux: 2014
+            rust-toolchain: stable
+            args: --release -m vegafusion/vegafusion-python/Cargo.toml --features=protobuf-src --strip
+        - name: Install wheels
+          working-directory: vegafusion/target/wheels/
+          run: |
+            ls -la
+            python -m pip install vegafusion-*manylinux*.whl
+
+            # Optional dependencies
+            python -m pip install pyarrow pandas polars-lts-cpu "duckdb>=1.0" "vl-convert-python>=1.0.1rc1" scikit-image "pandas>=2.2" jupytext voila anywidget ipywidgets chromedriver-binary-auto
+
+            # Test dependencies
+            python -m pip install pytest altair vega-datasets scikit-image jupytext voila ipykernel anywidget ipywidgets selenium flaky tenacity chromedriver-binary-auto 
+        - name: Test lazy imports
+          working-directory: vegafusion/vegafusion-python/
+          run: python checks/check_lazy_imports.py
+        - name: Test vegafusion
+          working-directory: vegafusion/vegafusion-python/
+          env:
+            VEGAFUSION_TEST_HEADLESS: 1
+          run: pytest
