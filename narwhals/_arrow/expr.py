@@ -379,11 +379,10 @@ class ArrowExpr:
         return_dtype: DType | None = None,
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            result = [function(series) for series in self._call(df)]
+            input_series_list = self._call(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
             if is_numpy_array(result[0]):
-                output_names = (
-                    self._output_names if self._output_names is not None else []
-                )
                 result = [
                     df.__narwhals_namespace__()
                     ._create_compliant_series(array)

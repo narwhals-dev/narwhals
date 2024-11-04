@@ -527,32 +527,36 @@ class Expr:
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.select(
-            ...         nw.col("a", "b")
-            ...         .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64)
-            ...         .sum()
+            ...         nw.col("a", "b").map_batches(
+            ...             lambda s: s.to_numpy() + 1, return_dtype=nw.Float64
+            ...         )
             ...     )
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
-                 a     b
-            0  9.0  18.0
+                 a    b
+            0  2.0  5.0
+            1  3.0  6.0
+            2  4.0  7.0
             >>> func(df_pl)
-            shape: (1, 2)
-            ┌─────┬──────┐
-            │ a   ┆ b    │
-            │ --- ┆ ---  │
-            │ f64 ┆ f64  │
-            ╞═════╪══════╡
-            │ 9.0 ┆ 18.0 │
-            └─────┴──────┘
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 2.0 ┆ 5.0 │
+            │ 3.0 ┆ 6.0 │
+            │ 4.0 ┆ 7.0 │
+            └─────┴─────┘
             >>> func(df_pa)
             pyarrow.Table
             a: double
             b: double
             ----
-            a: [[9]]
-            b: [[18]]
+            a: [[2,3,4]]
+            b: [[5,6,7]]
         """
         return self.__class__(
             lambda plx: self._call(plx).map_batches(

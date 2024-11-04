@@ -507,67 +507,6 @@ class Expr(NwExpr):
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
-    def map_batches(
-        self,
-        function: Callable[[Any], Self],
-        return_dtype: DType | None = None,
-    ) -> Self:
-        """
-        Apply a custom python function to a whole Series or sequence of Series.
-
-        The output of this custom function is presumed to be either a Series,
-        or a NumPy array (in which case it will be automatically converted into
-        a Series).
-
-        Arguments:
-            return_dtype: Dtype of the output Series.
-                          If not set, the dtype will be inferred based on the first non-null value
-                          that is returned by the function.
-
-        Examples:
-            >>> import polars as pl
-            >>> import pandas as pd
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.select(
-            ...         nw.col("a", "b")
-            ...         .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64)
-            ...         .sum()
-            ...     )
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
-
-            >>> func(df_pd)
-                 a     b
-            0  9.0  18.0
-            >>> func(df_pl)
-            shape: (1, 2)
-            ┌─────┬──────┐
-            │ a   ┆ b    │
-            │ --- ┆ ---  │
-            │ f64 ┆ f64  │
-            ╞═════╪══════╡
-            │ 9.0 ┆ 18.0 │
-            └─────┴──────┘
-            >>> func(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[9]]
-            b: [[18]]
-        """
-        return super().map_batches(function=function, return_dtype=return_dtype)
-
 
 class Schema(NwSchema):
     """
