@@ -276,7 +276,8 @@ def maybe_get_index(obj: T) -> Any | None:
 
 def maybe_set_index(df: T, keys: str | Series | list[Series | str]) -> T:
     """
-    Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+    Set columns `keys` to be the index of `df`, if `df` is pandas-like. 'keys' should be
+    a name of an existing column, a Series, or a list of column names and/or Series.
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already aligns indices for users.
@@ -296,12 +297,13 @@ def maybe_set_index(df: T, keys: str | Series | list[Series | str]) -> T:
         4  1
         5  2
     """
-    from narwhals.series import Series
 
     df_any = cast(Any, df)
     native_frame = to_native(df_any)
 
     if is_pandas_like_dataframe(native_frame):
+        from narwhals.series import Series
+
         if _is_iterable(keys):
             keys = [key.to_native() if isinstance(key, Series) else key for key in keys]
         if isinstance(keys, Series):
