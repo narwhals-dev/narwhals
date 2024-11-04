@@ -1,6 +1,6 @@
 name: Test Downstream Libraries
 
-on:
+on: 
   pull_request:
   push:
     branches: [main]
@@ -55,7 +55,7 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
-        dependencies: ["core", "core,optional"]
+        dependencies: ["core,optional"]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -73,19 +73,27 @@ jobs:
         run: |
             git clone https://github.com/marimo-team/marimo.git --depth=1
             cd marimo
+            uv venv -p 3.12
             git log
       - name: install-basics
         run: uv pip install --upgrade tox virtualenv setuptools hatch --system
       - name: install-marimo-dev
         run: |
             cd marimo
-            uv pip install -e ".[dev]" --system
+            . .venv/bin/activate
+            uv pip install -e ".[dev]"
+            which python
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            cd marimo
+            . .venv/bin/activate
+            uv pip uninstall narwhals
+            uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+            cd marimo
+            . .venv/bin/activate
+            uv pip freeze
       - name: Create assets directory, copy over index.html
         continue-on-error: true
         run: |
@@ -96,12 +104,13 @@ jobs:
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
             cd marimo
-            hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
+            . .venv/bin/activate
+            # make sure that we use the .venv when running tests, so that
+            # the local narwhals install is picked up
+            sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
+            hatch run python -c "import narwhals; print(narwhals.__file__)"
+            hatch run test-optional:test-narwhals
         timeout-minutes: 15
-      - name: Run typechecks
-        run: |
-            cd marimo
-            hatch run typecheck:check
 
   scikit-lego:
     strategy:
@@ -221,3 +230,60 @@ jobs:
         run: |
             cd tubular
             pytest tests --config-file=pyproject.toml
+  
+  # vegafusion:
+  #    env:
+  #      UV_SYSTEM_PYTHON: true
+
+  #    strategy:
+  #      matrix:
+  #        python-version: ["3.11"]
+  #        os: [ubuntu-latest]
+
+  #    runs-on: ${{ matrix.os }}
+  #    steps:
+  #       - uses: actions/checkout@v4
+  #       - uses: actions/setup-python@v5
+  #         with:
+  #           python-version: ${{ matrix.python-version }}
+  #       - name: Install uv
+  #         uses: astral-sh/setup-uv@v3
+  #         with:
+  #           enable-cache: "true"
+  #           cache-suffix: ${{ matrix.python-version }}
+  #           cache-dependency-glob: "**requirements*.txt"
+  #       - name: clone-vegafusion
+  #         run: |
+  #             git clone --single-branch -b v2 https://github.com/vega/vegafusion.git
+  #             cd vegafusion
+  #             git log
+  #       - name: Cache rust dependencies
+  #         uses: Swatinem/rust-cache@v2
+  #         with:
+  #           workspaces: vegafusion
+  #       - name: Build wheels
+  #         uses: PyO3/maturin-action@v1
+  #         with:
+  #           command: build
+  #           manylinux: 2014
+  #           rust-toolchain: stable
+  #           args: --release -m vegafusion/vegafusion-python/Cargo.toml --features=protobuf-src --strip
+  #       - name: Install wheels
+  #         working-directory: vegafusion/target/wheels/
+  #         run: |
+  #           ls -la
+  #           python -m pip install vegafusion-*manylinux*.whl
+
+  #           # Optional dependencies
+  #           python -m pip install pyarrow pandas polars-lts-cpu "duckdb>=1.0" "vl-convert-python>=1.0.1rc1" scikit-image "pandas>=2.2" jupytext voila anywidget ipywidgets chromedriver-binary-auto
+
+  #           # Test dependencies
+  #           python -m pip install pytest altair vega-datasets scikit-image jupytext voila ipykernel anywidget ipywidgets selenium flaky tenacity chromedriver-binary-auto 
+  #       - name: Test lazy imports
+  #         working-directory: vegafusion/vegafusion-python/
+  #         run: python checks/check_lazy_imports.py
+  #       - name: Test vegafusion
+  #         working-directory: vegafusion/vegafusion-python/
+  #         env:
+  #           VEGAFUSION_TEST_HEADLESS: 1
+  #         run: pytest

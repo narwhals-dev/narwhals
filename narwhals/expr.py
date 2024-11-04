@@ -135,10 +135,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Redefine an object's data type.
 
@@ -3988,6 +3985,9 @@ class ExprDateTimeNamespace(Generic[T]):
     def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert to a new time zone.
+
+        If converting from a time-zone-naive column, then conversion happens
+        as if converting from UTC.
 
         Arguments:
             time_zone: Target time zone.

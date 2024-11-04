@@ -383,10 +383,7 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Cast between data types.
 
@@ -3990,6 +3987,9 @@ class SeriesDateTimeNamespace(Generic[T]):
     def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert time zone.
+
+        If converting from a time-zone-naive column, then conversion happens
+        as if converting from UTC.
 
         Arguments:
             time_zone: Target time zone.

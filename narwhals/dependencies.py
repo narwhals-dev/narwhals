@@ -251,6 +251,44 @@ def is_into_series(native_series: IntoSeries) -> bool:
     )
 
 
+def is_into_dataframe(native_dataframe: Any) -> bool:
+    """
+    Check whether `native_dataframe` can be converted to a Narwhals DataFrame.
+
+    Arguments:
+        native_dataframe: The object to check.
+
+    Returns:
+        `True` if `native_dataframe` can be converted to a Narwhals DataFrame, `False` otherwise.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> from narwhals.dependencies import is_into_dataframe
+
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> np_arr = np.array([[1, 4], [2, 5], [3, 6]])
+
+        >>> is_into_dataframe(df_pd)
+        True
+        >>> is_into_dataframe(df_pl)
+        True
+        >>> is_into_dataframe(np_arr)
+        False
+    """
+    from narwhals.dataframe import DataFrame
+
+    return (
+        isinstance(native_dataframe, DataFrame)
+        or hasattr(native_dataframe, "__narwhals_dataframe__")
+        or is_polars_dataframe(native_dataframe)
+        or is_pyarrow_table(native_dataframe)
+        or is_pandas_like_dataframe(native_dataframe)
+    )
+
+
 __all__ = [
     "get_polars",
     "get_pandas",
@@ -275,5 +313,6 @@ __all__ = [
     "is_dask_dataframe",
     "is_pandas_like_dataframe",
     "is_pandas_like_series",
+    "is_into_dataframe",
     "is_into_series",
 ]

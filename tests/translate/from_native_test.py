@@ -134,7 +134,12 @@ def test_series_only(obj: Any, context: Any) -> None:
     ("allow_series", "context"),
     [
         (True, does_not_raise()),
-        (False, pytest.raises(TypeError, match="Please set `allow_series=True`")),
+        (
+            False,
+            pytest.raises(
+                TypeError, match="Please set `allow_series=True` or `series_only=True`"
+            ),
+        ),
     ],
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
@@ -221,9 +226,15 @@ def test_from_native_strict_false_typing() -> None:
     nw.from_native(df, strict=False, eager_only=True)
     nw.from_native(df, strict=False, eager_or_interchange_only=True)
 
-    unstable_nw.from_native(df, strict=False)
-    unstable_nw.from_native(df, strict=False, eager_only=True)
-    unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)
+    with pytest.deprecated_call(match="please use `pass_through` instead"):
+        unstable_nw.from_native(df, strict=False)  # type: ignore[call-overload]
+        unstable_nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
+        unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)  # type: ignore[call-overload]
+
+
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
 
 
 def test_from_mock_interchange_protocol_non_strict() -> None:
