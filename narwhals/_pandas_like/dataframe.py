@@ -396,7 +396,7 @@ class PandasLikeDataFrame:
             return self
 
         # If the inputs are all Expressions
-        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
+        # (as opposed to Series), we can use a fast path (concat, instead of assign).
         # We can't use the fastpath if any input is not an expression (e.g.
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
