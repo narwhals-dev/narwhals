@@ -2,6 +2,7 @@ name: Test Downstream Libraries - Slow
 
 on: 
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   vegafusion:
