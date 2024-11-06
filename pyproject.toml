@@ -140,7 +140,8 @@ exclude_also = [
   "if sys.version_info() <",
   "if implementation is Implementation.MODIN",
   "if implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)'
+  'request.applymarker\(pytest.mark.xfail\)',
+  'if self._backend_version < '
 ]
 
 [tool.mypy]

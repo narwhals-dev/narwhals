@@ -46,7 +46,7 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             msg = "`nth` is only supported for Polars>=1.0.0. Please use `col` for columns selection instead."
             raise AttributeError(msg)
         return PolarsExpr(
@@ -58,7 +58,7 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        if self._backend_version < (0, 20, 5):  # pragma: no cover
+        if self._backend_version < (0, 20, 5):
             return PolarsExpr(
                 pl.count().alias("len"),
                 dtypes=self._dtypes,
@@ -109,7 +109,7 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 4):
             return PolarsExpr(
                 pl.mean([*column_names]),  # type: ignore[arg-type]
                 dtypes=self._dtypes,
@@ -128,7 +128,7 @@ class PolarsNamespace:
 
         polars_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        if self._backend_version < (0, 20, 8):  # pragma: no cover
+        if self._backend_version < (0, 20, 8):
             return PolarsExpr(
                 pl.sum_horizontal(e._native_expr for e in polars_exprs)
                 / pl.sum_horizontal(1 - e.is_null()._native_expr for e in polars_exprs),
@@ -161,7 +161,7 @@ class PolarsNamespace:
             )
         ]
 
-        if self._backend_version < (0, 20, 6):  # pragma: no cover
+        if self._backend_version < (0, 20, 6):
             null_mask = [expr.is_null() for expr in pl_exprs]
             sep = pl.lit(separator)
 
