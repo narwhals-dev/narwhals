@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -75,6 +76,9 @@ def test_ewm_mean_dask_raise() -> None:
         df.select(nw.col("a").ewm_mean(com=1))
 
 
+@pytest.mark.skipif(
+    POLARS_VERSION < (0, 20, 13), reason="Polars changed how it handles None"
+)
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
