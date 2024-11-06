@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Mapping
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
@@ -40,6 +41,13 @@ class PolarsExpr:
         expr = self._native_expr
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
+
+    def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
+        expr = self._native_expr
+        return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        return self._from_native_expr(
+            expr.replace_strict(mapping, return_dtype=return_dtype)
+        )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_expr(self._native_expr.__eq__(extract_native(other)))

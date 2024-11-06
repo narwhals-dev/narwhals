@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import overload
 
@@ -483,6 +484,46 @@ class PandasLikeSeries:
 
     def shift(self, n: int) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
+
+    def replace(self, mapping: Mapping[Any, Any]) -> PandasLikeSeries:
+        result = self._from_native_series(
+            self._native_series.replace(
+                mapping,
+            )
+        )
+        if result.dtype != self.dtype:
+            msg = "dtype changed - please use `replace_strict` instead"
+            raise ValueError(msg)
+        return result
+
+    def replace_strict(
+        self, mapping: Mapping[Any, Any], *, return_dtype: DType
+    ) -> PandasLikeSeries:
+        tmp_name = f"{self.name}_tmp"
+        dtype = narwhals_to_native_dtype(
+            return_dtype,
+            self._native_series.dtype,
+            self._implementation,
+            self._backend_version,
+            self._dtypes,
+        )
+        other = self.__native_namespace__().DataFrame(
+            {
+                self.name: list(mapping.keys()),
+                tmp_name: self.__native_namespace__().Series(
+                    list(mapping.values()), dtype=dtype
+                ),
+            }
+        )
+        result = (
+            self._native_series.to_frame()
+            .merge(other, on=self.name, how="left")[tmp_name]
+            .rename(self.name)
+        )
+        if result.isna().sum() != self._native_series.isna().sum():
+            msg = "Not all values got replaced"
+            raise ValueError(msg)
+        return self._from_native_series(result)
 
     def sort(
         self, *, descending: bool = False, nulls_last: bool = False
