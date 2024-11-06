@@ -43,17 +43,22 @@ def test_median_series(
 def test_median_expr_raises_on_str(
     constructor: Constructor,
     expr: nw.Expr,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 
     df = nw.from_native(constructor(data))
-    with pytest.raises(
-        InvalidOperationError,
-        match="`median` operation not supported for non-numeric input type.",
-    ):
-        df.select(expr)
+    if "polars_lazy" in str(constructor):
+        with pytest.raises(
+            PlInvalidOperationError,
+            match="`median` operation not supported for dtype `str`",
+        ):
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(
+            (InvalidOperationError, PlInvalidOperationError),
+            match="`median` operation not supported",
+        ):
+            df.select(expr)
 
 
 @pytest.mark.parametrize(("col"), [("s")])
