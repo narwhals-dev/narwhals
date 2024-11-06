@@ -76,16 +76,15 @@ def test_ewm_mean_dask_raise() -> None:
         df.select(nw.col("a").ewm_mean(com=1))
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION <= (0, 20, 31), reason="Polars changed how it handles None"
-)
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
     ignore_nulls: bool,  # noqa: FBT001
     constructor: Constructor,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask")):
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask")) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
