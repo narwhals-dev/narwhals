@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from polars.exceptions import PolarsError
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
@@ -40,6 +39,8 @@ def test_replace_strict_series(constructor_eager: ConstructorEager) -> None:
 def test_replace_with_default(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    from polars.exceptions import PolarsError
+
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
