@@ -77,7 +77,7 @@ def test_ewm_mean_dask_raise() -> None:
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION <= (0, 20, 13), reason="Polars changed how it handles None"
+    POLARS_VERSION <= (0, 20, 31), reason="Polars changed how it handles None"
 )
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_ewm_mean_nulls(
