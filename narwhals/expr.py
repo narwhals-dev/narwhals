@@ -4044,6 +4044,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Convert to a new time zone.
 
+        If converting from a time-zone-naive column, then conversion happens
+        as if converting from UTC.
+
         Arguments:
             time_zone: Target time zone.
 
