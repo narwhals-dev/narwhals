@@ -36,6 +36,7 @@
         - over
         - pipe
         - quantile
+        - rank
         - round
         - sample
         - shift

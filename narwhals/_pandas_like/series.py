@@ -682,6 +682,20 @@ class PandasLikeSeries:
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        result = self._native_series.rank(
+            method="first" if method == "ordinal" else method,
+            na_option="keep",
+            ascending=not descending,
+            pct=False,
+        )
+        return self._from_native_series(result)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
