@@ -186,10 +186,11 @@ class PandasLikeSeries:
         ignore_nulls: bool = False,
     ) -> PandasLikeSeries:
         ser = self._native_series
+        mask_na = ser.isna()
         result = ser.ewm(
             com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
         ).mean()
-
+        result[mask_na] = None
         return self._from_native_series(result)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:

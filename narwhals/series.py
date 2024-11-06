@@ -464,8 +464,9 @@ class Series:
                2.428571
             ]
 
-            pandas and Polars handle nulls differently. So, calculating ewm over
-            a sequence with null values leads to distinct results:
+            pandas and Polars handle NaN differently. So, calculating ewm over
+            a sequence with null values leads to distinct results. Narwhals
+            matches Polars' results when "None" is in the input.
 
             >>> data = [2.0, 4.0, None, 3.0, float("nan"), 3.0]
             >>> s_pd2 = pd.Series(name="a", data=data)
@@ -474,9 +475,9 @@ class Series:
             >>> func(s_pd2)
             0    2.000000
             1    3.333333
-            2    3.333333
+            2         NaN
             3    3.090909
-            4    3.090909
+            4         NaN
             5    3.023256
             Name: a, dtype: float64
 

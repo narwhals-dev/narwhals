@@ -496,9 +496,9 @@ class Expr:
                       a
             0  2.000000
             1  3.333333
-            2  3.333333
+            2       NaN
             3  3.090909
-            4  3.090909
+            4       NaN
             5  3.023256
 
             >>> func(df_pl2)  # doctest: +NORMALIZE_WHITESPACE
