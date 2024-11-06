@@ -109,6 +109,9 @@ class PolarsSeries:
     def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        if self._backend_version < (1,):
+            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
+            raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(mapping, return_dtype=dtype))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:

@@ -17,16 +17,21 @@ if TYPE_CHECKING:
 
 
 class PolarsExpr:
-    def __init__(self, expr: Any, dtypes: DTypes) -> None:
+    def __init__(
+        self, expr: Any, dtypes: DTypes, backend_version: tuple[int, ...]
+    ) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
         self._dtypes = dtypes
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
     def _from_native_expr(self, expr: Any) -> Self:
-        return self.__class__(expr, dtypes=self._dtypes)
+        return self.__class__(
+            expr, dtypes=self._dtypes, backend_version=self._backend_version
+        )
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -45,6 +50,9 @@ class PolarsExpr:
     def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
         expr = self._native_expr
         return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        if self._backend_version < (1,):
+            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
+            raise NotImplementedError(msg)
         return self._from_native_expr(
             expr.replace_strict(mapping, return_dtype=return_dtype)
         )

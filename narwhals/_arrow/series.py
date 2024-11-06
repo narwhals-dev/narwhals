@@ -668,9 +668,10 @@ class ArrowSeries:
         self, mapping: Mapping[Any, Any], *, return_dtype: DType
     ) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
 
         # https://stackoverflow.com/a/79111029/4451315
-        idxs = pa.compute.index_in(self._native_series, pa.array(list(mapping.keys())))
+        idxs = pc.index_in(self._native_series, pa.array(list(mapping.keys())))
         result_native = pa.compute.take(pa.array(list(mapping.values())), idxs).cast(
             narwhals_to_native_dtype(return_dtype, self._dtypes)
         )
