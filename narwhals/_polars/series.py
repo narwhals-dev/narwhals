@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Mapping
 from typing import Sequence
 from typing import overload
 
@@ -106,13 +105,15 @@ class PolarsSeries:
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(ser.cast(dtype))
 
-    def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
-        return self._from_native_series(ser.replace_strict(mapping, return_dtype=dtype))
+        return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         if self._backend_version < (0, 20, 29):
@@ -204,15 +205,6 @@ class PolarsSeries:
         return PolarsDataFrame(
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
-
-    def replace(self, mapping: Mapping[Any, Any]) -> Self:
-        result = self._from_native_series(self._native_series.replace(mapping))
-        if (
-            self._backend_version < (1,) and result.dtype != self.dtype
-        ):  # pragma: no cover
-            msg = "dtype changed - please use `replace_strict` instead"
-            raise ValueError(msg)
-        return result
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         if self._backend_version < (0, 20, 6):

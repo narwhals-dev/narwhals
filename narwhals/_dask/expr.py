@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import Mapping
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
@@ -478,22 +478,16 @@ class DaskExpr:
         msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
         raise NotImplementedError(msg)
 
-    def replace(self, mapping: Mapping[Any, Any]) -> Self:
-        return self._from_call(
-            lambda _input, mapping: _input.replace(mapping),
-            "replace",
-            mapping,
-            returns_scalar=False,
-        )
-
-    def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
         dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
         return self._from_call(
             lambda _input, mapping, _return_dtype: _input.map(
                 mapping, meta=(_input.name, dtype)
             ),
             "replace_strict",
-            mapping,
+            dict(zip(old, new)),
             return_dtype,
             returns_scalar=False,
         )

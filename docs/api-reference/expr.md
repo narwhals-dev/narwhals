@@ -36,7 +36,6 @@
         - over
         - pipe
         - quantile
-        - replace
         - replace_strict
         - round
         - sample

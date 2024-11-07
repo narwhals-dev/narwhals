@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Mapping
+from typing import Sequence
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
@@ -47,14 +47,16 @@ class PolarsExpr:
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
 
-    def replace_strict(self, mapping: Mapping[Any, Any], *, return_dtype: DType) -> Self:
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
         expr = self._native_expr
         return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
         return self._from_native_expr(
-            expr.replace_strict(mapping, return_dtype=return_dtype)
+            expr.replace_strict(old, new, return_dtype=return_dtype)
         )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]

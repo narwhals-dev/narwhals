@@ -6,7 +6,6 @@ from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import Literal
-from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
@@ -968,73 +967,18 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
-    def replace(self, mapping: Mapping[Any, Any]) -> Self:
-        """
-        Replace values according to mapping.
-
-        This function always preserves the input data type. To replace
-        all values (potentially with a default value for values not present
-        in `mapping`, use `replace_strict` instead).
-
-        Arguments:
-            mapping: Mapping of old values to new values.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> df_pd = pd.DataFrame({"a": [5, 0, 1, 2]})
-            >>> df_pl = pl.DataFrame({"a": [5, 0, 1, 2]})
-            >>> df_pa = pa.table({"a": [5, 0, 1, 2]})
-
-            Let's define dataframe-agnostic functions:
-
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.with_columns(b=nw.col("a").replace({1: 9, 2: 10}))
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
-
-            >>> func(df_pd)
-               a   b
-            0  5   5
-            1  0   0
-            2  1   9
-            3  2  10
-            >>> func(df_pl)
-            shape: (4, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 5   ┆ 5   │
-            │ 0   ┆ 0   │
-            │ 1   ┆ 9   │
-            │ 2   ┆ 10  │
-            └─────┴─────┘
-            >>> func(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[5,0,1,2]]
-            b: [[5,0,9,10]]
-        """
-        return self.__class__(lambda plx: self._call(plx).replace(mapping))
-
     def replace_strict(
-        self, mapping: Mapping[Any, Any], *, return_dtype: DType | type[DType]
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
     ) -> Self:
         """
         Replace all values according to mapping.
 
         This function must replace all input values, and the return dtype must
-        be specified. To only replace some values, use `replace` instead.
+        be specified.
 
         Arguments:
-            mapping: Mapping of old values to new values.
+            old: Sequence of old values to replace.
+            new: Sequence of new values to replace.
             return_dtype: Return dtype.
 
         Examples:
@@ -1052,7 +996,7 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(
             ...         b=nw.col("a").replace_strict(
-            ...             {0: "zero", 1: "one", 2: "two", 3: "three"},
+            ...             [0,1,2,3], ['zero', 'one', 'two', 'three']
             ...             return_dtype=nw.String,
             ...         )
             ...     )
@@ -1086,7 +1030,9 @@ class Expr:
             b: [["three","zero","one","two"]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).replace_strict(mapping, return_dtype=return_dtype)
+            lambda plx: self._call(plx).replace_strict(
+                old, new, return_dtype=return_dtype
+            )
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
