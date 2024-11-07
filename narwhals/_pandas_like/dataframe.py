@@ -296,7 +296,7 @@ class PandasLikeDataFrame:
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
+            The param ``buffer_size`` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         if not named:
@@ -656,7 +656,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)

@@ -1005,9 +1005,14 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.cum_sum())
 
-    def unique(self) -> Self:
+    def unique(self, *, maintain_order: bool = False) -> Self:
         """
-        Returns unique values
+        Returns unique values of the series.
+
+        Arguments:
+            maintain_order: Keep the same order as the original series. This may be more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import pandas as pd
@@ -1021,7 +1026,7 @@ class Series:
 
             >>> @nw.narwhalify
             ... def func(s):
-            ...     return s.unique()
+            ...     return s.unique(maintain_order=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1039,7 +1044,9 @@ class Series:
                6
             ]
         """
-        return self._from_compliant_series(self._compliant_series.unique())
+        return self._from_compliant_series(
+            self._compliant_series.unique(maintain_order=maintain_order)
+        )
 
     def diff(self) -> Self:
         """
