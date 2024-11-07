@@ -1010,9 +1010,9 @@ class Series:
         Returns unique values of the series.
 
         Arguments:
-            maintain_order: Keep the same order as the original series. This is more
+            maintain_order: Keep the same order as the original series. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for polars
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import pandas as pd

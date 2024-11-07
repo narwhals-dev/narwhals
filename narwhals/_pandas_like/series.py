@@ -474,7 +474,7 @@ class PandasLikeSeries:
     def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         return self._from_native_series(

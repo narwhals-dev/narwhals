@@ -712,9 +712,9 @@ class Expr:
         Return unique values of this expression.
 
         Arguments:
-            maintain_order: Keep the same order as the original expression. This is more
+            maintain_order: Keep the same order as the original expression. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for polars.
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import polars as pl
