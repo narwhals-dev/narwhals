@@ -100,7 +100,7 @@ class ArrowGroupBy:
                 next(
                     (
                         t := self._df._from_native_frame(
-                            table.filter(pc.equal(table[col_token], v)).drop_columns(
+                            table.filter(pc.equal(table[col_token], v)).drop(
                                 columns=[col_token]
                             )
                         )
