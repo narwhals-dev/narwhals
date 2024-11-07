@@ -730,15 +730,18 @@ class ArrowSeries:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
-        sort_keys = "descending" if descending else "ascending"
-        tiebreaker = "first" if method == "ordinal" else method
-        native_series = self._native_series
-        null_mask = pc.is_null(native_series)
+        if method != "average":
+            sort_keys = "descending" if descending else "ascending"
+            tiebreaker = "first" if method == "ordinal" else method
+            native_series = self._native_series
+            null_mask = pc.is_null(native_series)
 
-        rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
+            rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
 
-        result = pc.if_else(null_mask, pa.scalar(None), rank)
-        return self._from_native_series(result)
+            result = pc.if_else(null_mask, pa.scalar(None), rank)
+            return self._from_native_series(result)
+        else:
+            pass 
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
