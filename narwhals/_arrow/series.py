@@ -658,7 +658,7 @@ class ArrowSeries:
 
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))
-        result_native = pa.compute.take(pa.array(new), idxs).cast(
+        result_native = pc.take(pa.array(new), idxs).cast(
             narwhals_to_native_dtype(return_dtype, self._dtypes)
         )
         result = self._from_native_series(result_native)
