@@ -471,7 +471,12 @@ class PandasLikeSeries:
     def cum_sum(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.cumsum())
 
-    def unique(self) -> PandasLikeSeries:
+    def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name

@@ -282,8 +282,8 @@ class PandasLikeExpr:
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")
 
-    def unique(self) -> Self:
-        return reuse_series_implementation(self, "unique")
+    def unique(self, *, maintain_order: bool = False) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
 
     def diff(self) -> Self:
         return reuse_series_implementation(self, "diff")

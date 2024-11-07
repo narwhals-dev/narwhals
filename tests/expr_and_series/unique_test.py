@@ -14,13 +14,13 @@ def test_unique_expr(constructor: Constructor, request: pytest.FixtureRequest) -
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").unique())
+    result = df.select(nw.col("a").unique(maintain_order=True))
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
 
 def test_unique_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    result = series.unique()
+    result = series.unique(maintain_order=True)
     expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
