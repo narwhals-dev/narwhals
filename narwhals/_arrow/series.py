@@ -656,10 +656,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import
 
         series = self._native_series
-        conditions = []
-        for key in mapping:
-            condition = pc.equal(series, pa.scalar(key))
-            conditions.append(condition)
+        conditions = [pc.equal(series, pa.scalar(key)) for key in mapping]
         for condition, value in zip(conditions, mapping.values()):
             series = pc.if_else(condition, pa.scalar(value), series)
         return self._from_native_series(series)
@@ -672,7 +669,7 @@ class ArrowSeries:
 
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(list(mapping.keys())))
-        result_native = pa.compute.take(pa.array(list(mapping.values())), idxs).cast(
+        result_native = pc.take(pa.array(list(mapping.values())), idxs).cast(
             narwhals_to_native_dtype(return_dtype, self._dtypes)
         )
         result = self._from_native_series(result_native)
