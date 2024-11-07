@@ -1044,7 +1044,9 @@ class Series:
                6
             ]
         """
-        return self._from_compliant_series(self._compliant_series.unique())
+        return self._from_compliant_series(
+            self._compliant_series.unique(maintain_order=maintain_order)
+        )
 
     def diff(self) -> Self:
         """
