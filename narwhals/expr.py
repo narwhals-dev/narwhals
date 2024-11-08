@@ -834,9 +834,14 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
-    def unique(self) -> Self:
+    def unique(self, *, maintain_order: bool = False) -> Self:
         """
-        Return unique values
+        Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression. This may be more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import polars as pl
@@ -851,7 +856,7 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col("a", "b").unique())
+            ...     return df.select(nw.col("a", "b").unique(maintain_order=True))
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
@@ -879,7 +884,9 @@ class Expr:
             a: [[1,3,5]]
             b: [[2,4,6]]
         """
-        return self.__class__(lambda plx: self._call(plx).unique())
+        return self.__class__(
+            lambda plx: self._call(plx).unique(maintain_order=maintain_order)
+        )
 
     def abs(self) -> Self:
         """
