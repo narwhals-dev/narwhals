@@ -481,16 +481,8 @@ class DaskExpr:
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
     ) -> Self:
-        dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
-        return self._from_call(
-            lambda _input, mapping, _return_dtype: _input.map(
-                mapping, meta=(_input.name, dtype)
-            ),
-            "replace_strict",
-            dict(zip(old, new)),
-            return_dtype,
-            returns_scalar=False,
-        )
+        msg = "`replace_strict` is not yet supported for Dask expressions"
+        raise NotImplementedError(msg)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index

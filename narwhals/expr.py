@@ -978,10 +978,10 @@ class Expr:
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
     ) -> Self:
         """
-        Replace all values according to mapping.
+        Replace old values with new values.
 
-        This function must replace all input values, and the return dtype must
-        be specified.
+        This function must replace all non-null input values (else it raises an error),
+        and the return dtype must be specified.
 
         Arguments:
             old: Sequence of old values to replace.
