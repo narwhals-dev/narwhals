@@ -1349,6 +1349,69 @@ class Series:
         """
         return self.alias(name=name)
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+    ) -> Self:
+        """
+        Replace old values with values.
+
+        This function must replace all non-null input values (else it raises an error),
+        and the return dtype must be specified.
+
+        Arguments:
+            old: Sequence of old values to replace.
+            new: Sequence of new values to replace.
+            return_dtype: Return dtype.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> df_pd = pd.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pa = pa.table({"a": [3, 0, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.replace_strict(
+            ...         [0, 1, 2, 3], ["zero", "one", "two", "three"], return_dtype=nw.String
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd["a"])
+            0    three
+            1     zero
+            2      one
+            3      two
+            Name: a, dtype: object
+            >>> func(df_pl["a"])  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: 'a' [str]
+            [
+                "three"
+                "zero"
+                "one"
+                "two"
+            ]
+            >>> func(df_pa["a"])
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "three",
+                "zero",
+                "one",
+                "two"
+              ]
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
+        )
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this Series. Place null values first.

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
     from narwhals.utils import Implementation
 
@@ -270,6 +272,13 @@ class PandasLikeExpr:
 
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "replace_strict", old, new, return_dtype=return_dtype
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         return reuse_series_implementation(

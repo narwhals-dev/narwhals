@@ -974,6 +974,74 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+    ) -> Self:
+        """
+        Replace old values with new values.
+
+        This function must replace all non-null input values (else it raises an error),
+        and the return dtype must be specified.
+
+        Arguments:
+            old: Sequence of old values to replace.
+            new: Sequence of new values to replace.
+            return_dtype: Return dtype.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> df_pd = pd.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pa = pa.table({"a": [3, 0, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").replace_strict(
+            ...             [0,1,2,3], ['zero', 'one', 'two', 'three']
+            ...             return_dtype=nw.String,
+            ...         )
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+               a      b
+            0  3  three
+            1  0   zero
+            2  1    one
+            3  2    two
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ str   │
+            ╞═════╪═══════╡
+            │ 3   ┆ three │
+            │ 0   ┆ zero  │
+            │ 1   ┆ one   │
+            │ 2   ┆ two   │
+            └─────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: string
+            ----
+            a: [[3,0,1,2]]
+            b: [["three","zero","one","two"]]
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).replace_strict(
+                old, new, return_dtype=return_dtype
+            )
+        )
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this column. Place null values first.
