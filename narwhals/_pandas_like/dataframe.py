@@ -280,7 +280,7 @@ class PandasLikeDataFrame:
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
@@ -532,7 +532,7 @@ class PandasLikeDataFrame:
                 )
 
         if how == "anti":
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 return self._from_native_frame(
                     self._native_frame.merge(
                         other._native_frame,
@@ -730,7 +730,7 @@ class PandasLikeDataFrame:
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_frame
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
+        if self._implementation is Implementation.MODIN:
             return self._native_frame._to_pandas()
         return self._native_frame.to_pandas()  # pragma: no cover
 
@@ -797,7 +797,7 @@ class PandasLikeDataFrame:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_frame.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()

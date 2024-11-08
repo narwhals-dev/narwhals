@@ -468,6 +468,12 @@ class Series:
         """
         Convert to list.
 
+        Notes:
+            This function converts to Python scalars. It's typically
+            more efficient to keep your data in the format native to
+            your original dataframe, so we recommend only calling this
+            when you absolutely need to.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl

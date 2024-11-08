@@ -223,6 +223,8 @@ class PandasLikeSeries:
         )
 
     def to_list(self) -> Any:
+        if self._implementation is Implementation.CUDF:
+            return self._native_series.to_arrow().to_pylist()
         return self._native_series.to_list()
 
     def is_between(
@@ -574,9 +576,9 @@ class PandasLikeSeries:
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self._native_series.to_pandas()
-        elif self._implementation is Implementation.MODIN:  # pragma: no cover
+        elif self._implementation is Implementation.MODIN:
             return self._native_series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
@@ -701,7 +703,7 @@ class PandasLikeSeries:
         )
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 
         import pyarrow as pa  # ignore-banned-import()

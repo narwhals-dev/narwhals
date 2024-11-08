@@ -138,8 +138,8 @@ omit = [
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation is Implementation.MODIN",
-  "if implementation is Implementation.CUDF",
+  "if (:?self._)?implementation is Implementation.MODIN",
+  "if (:?self._)?implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)',
   'if self._backend_version < '
 ]
