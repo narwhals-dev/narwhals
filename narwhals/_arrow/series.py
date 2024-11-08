@@ -673,8 +673,6 @@ class ArrowSeries:
                 f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
             )
             raise ValueError(msg)
-            msg = "replace_strict did not replace all values"
-            raise ValueError(msg)
         return result
 
     def sort(
