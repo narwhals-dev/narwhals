@@ -56,3 +56,15 @@ def test_with_columns_dtypes_single_row(
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
     result = df.with_columns(nw.col("a"))
     assert result.collect_schema() == {"a": nw.Categorical}
+
+
+def test_dask_with_columns_modifies_index() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df = nw.from_native(dd.from_dict({"a": [1, 3, 2]}, npartitions=2))
+    with pytest.raises(
+        ValueError, match="Expressions that modify the index are not supported"
+    ):
+        df.with_columns(nw.col("a").head(1))

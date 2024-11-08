@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_arg_true(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_arg_true(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, None, None, 3]}))
     result = df.select(nw.col("a").is_null().arg_true())
     expected = {"a": [1, 2]}

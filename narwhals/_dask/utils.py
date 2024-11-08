@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import TypeVar
 
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -12,10 +13,14 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     import dask.dataframe as dd
     import dask_expr
+    from dask_expr._collection import Scalar
+    from dask_expr._collection import Series
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
+
+    T = TypeVar("T", Scalar, Series)
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:

@@ -50,6 +50,7 @@ class DaskNamespace:
             root_names=None,
             output_names=None,
             returns_scalar=False,
+            modifies_index=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -85,6 +86,7 @@ class DaskNamespace:
             root_names=None,
             output_names=["lit"],
             returns_scalar=False,
+            modifies_index=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -131,6 +133,7 @@ class DaskNamespace:
             root_names=None,
             output_names=["len"],
             returns_scalar=True,
+            modifies_index=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -150,6 +153,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -168,6 +172,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -186,6 +191,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -253,6 +259,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -274,6 +281,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -295,6 +303,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -338,7 +347,11 @@ class DaskNamespace:
             raise TypeError(msg)
 
         return DaskWhen(
-            condition, self._backend_version, returns_scalar=False, dtypes=self._dtypes
+            condition,
+            self._backend_version,
+            returns_scalar=False,
+            modifies_index=False,
+            dtypes=self._dtypes,
         )
 
     def concat_str(
@@ -387,6 +400,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -400,6 +414,7 @@ class DaskWhen:
         otherwise_value: Any = None,
         *,
         returns_scalar: bool,
+        modifies_index: bool,
         dtypes: DTypes,
     ) -> None:
         self._backend_version = backend_version
@@ -407,6 +422,7 @@ class DaskWhen:
         self._then_value = then_value
         self._otherwise_value = otherwise_value
         self._returns_scalar = returns_scalar
+        self._modifies_index = modifies_index
         self._dtypes = dtypes
 
     def __call__(self, df: DaskLazyFrame) -> list[dask_expr.Series]:
@@ -450,6 +466,7 @@ class DaskWhen:
             output_names=None,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
+            modifies_index=self._modifies_index,
             dtypes=self._dtypes,
         )
 
@@ -464,6 +481,7 @@ class DaskThen(DaskExpr):
         root_names: list[str] | None,
         output_names: list[str] | None,
         returns_scalar: bool,
+        modifies_index: bool,
         backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> None:
@@ -475,6 +493,7 @@ class DaskThen(DaskExpr):
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._modifies_index = modifies_index
 
     def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a

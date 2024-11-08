@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -11,11 +9,9 @@ data = {"a": [1, 1, 2]}
 data_str = {"a": ["x", "x", "y"]}
 
 
-def test_unique_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unique_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").unique())
+    result = df.select(nw.col("a").unique()).sort("a")
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
