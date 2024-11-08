@@ -2534,6 +2534,9 @@ class Series:
         """
         Assign ranks to data, dealing with ties appropriately.
 
+        Notes:
+            The resulting dtype may differ between backends.
+
         Arguments:
             method: The method used to assign ranks to tied elements.
                 The following methods are available (default is 'average'):
@@ -2554,20 +2557,53 @@ class Series:
             descending: Rank in descending order.
 
         Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [3, 6, 1, 1, 6]
 
-        >>> s = pl.Series("a", [3, 6, 1, 1, 6])
-        >>> s.rank()
-        shape: (5,)
-        Series: 'a' [f64]
-        [
-            3.0
-            4.5
-            1.5
-            1.5
-            4.5
-        ]
+            We define a dataframe-agnostic function that computes the dense rank for
+            the data:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rank(method="dense")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
+
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               2
+               3
+               1
+               1
+               3
+            ]
+
+            >>> func(pd.Series(data))
+            0    2.0
+            1    3.0
+            2    1.0
+            3    1.0
+            4    3.0
+            dtype: float64
+
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                3,
+                1,
+                1,
+                3
+              ]
+            ]
         """
-        supported_rank_methods = {"average", "min", "max", "dense"}
+        supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
         if method not in supported_rank_methods:
             msg = f"Ranking method must be one of {supported_rank_methods}. Found '{method}'"
             raise ValueError(msg)
@@ -3220,7 +3256,7 @@ class SeriesStringNamespace(Generic[T]):
             ... def func(s):
             ...     return s.str.to_datetime(format="%Y-%m-%d")
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow::
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0   2020-01-01

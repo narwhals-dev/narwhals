@@ -727,21 +727,26 @@ class ArrowSeries:
         *,
         descending: bool,
     ) -> Self:
+        if method == "average":
+            msg = (
+                "`rank` with `method='average' is not supported for pyarrow backend. "
+                "The available methods are {'min', 'max', 'dense', 'ordinal'}."
+            )
+            raise ValueError(msg)
+
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
-        if method != "average":
-            sort_keys = "descending" if descending else "ascending"
-            tiebreaker = "first" if method == "ordinal" else method
-            native_series = self._native_series
-            null_mask = pc.is_null(native_series)
+        sort_keys = "descending" if descending else "ascending"
+        tiebreaker = "first" if method == "ordinal" else method
 
-            rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
+        native_series = self._native_series
+        null_mask = pc.is_null(native_series)
 
-            result = pc.if_else(null_mask, pa.scalar(None), rank)
-            return self._from_native_series(result)
-        else:
-            pass 
+        rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
+
+        result = pc.if_else(null_mask, pa.scalar(None), rank)
+        return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()

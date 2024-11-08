@@ -2319,6 +2319,9 @@ class Expr:
         """
         Assign ranks to data, dealing with ties appropriately.
 
+        Notes:
+            The resulting dtype may differ between backends.
+
         Arguments:
             method: The method used to assign ranks to tied elements.
                 The following methods are available (default is 'average'):
@@ -2338,61 +2341,54 @@ class Expr:
 
             descending: Rank in descending order.
 
-        Examples
-        --------
-        The 'average' method:
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [3, 6, 1, 1, 6]}
 
-        >>> df = pl.DataFrame({"a": [3, 6, 1, 1, 6]})
-        >>> df.select(pl.col("a").rank())
-        shape: (5, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ f64 │
-        ╞═════╡
-        │ 3.0 │
-        │ 4.5 │
-        │ 1.5 │
-        │ 1.5 │
-        │ 4.5 │
-        └─────┘
+            We define a dataframe-agnostic function that computes the dense rank for
+            the data:
 
-        The 'ordinal' method:
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(rnk=nw.col("a").rank(method="dense"))
 
-        >>> df = pl.DataFrame({"a": [3, 6, 1, 1, 6]})
-        >>> df.select(pl.col("a").rank("ordinal"))
-        shape: (5, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ u32 │
-        ╞═════╡
-        │ 3   │
-        │ 4   │
-        │ 1   │
-        │ 2   │
-        │ 5   │
-        └─────┘
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
-        Use 'rank' with 'over' to rank within groups:
+            >>> func(pl.DataFrame(data))
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ rnk │
+            │ --- ┆ --- │
+            │ i64 ┆ u32 │
+            ╞═════╪═════╡
+            │ 3   ┆ 2   │
+            │ 6   ┆ 3   │
+            │ 1   ┆ 1   │
+            │ 1   ┆ 1   │
+            │ 6   ┆ 3   │
+            └─────┴─────┘
 
-        >>> df = pl.DataFrame({"a": [1, 1, 2, 2, 2], "b": [6, 7, 5, 14, 11]})
-        >>> df.with_columns(pl.col("b").rank().over("a").alias("rank"))
-        shape: (5, 3)
-        ┌─────┬─────┬──────┐
-        │ a   ┆ b   ┆ rank │
-        │ --- ┆ --- ┆ ---  │
-        │ i64 ┆ i64 ┆ f64  │
-        ╞═════╪═════╪══════╡
-        │ 1   ┆ 6   ┆ 1.0  │
-        │ 1   ┆ 7   ┆ 2.0  │
-        │ 2   ┆ 5   ┆ 1.0  │
-        │ 2   ┆ 14  ┆ 3.0  │
-        │ 2   ┆ 11  ┆ 2.0  │
-        └─────┴─────┴──────┘
+            >>> func(pd.DataFrame(data))
+               a  rnk
+            0  3  2.0
+            1  6  3.0
+            2  1  1.0
+            3  1  1.0
+            4  6  3.0
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: int64
+            rnk: uint64
+            ----
+            a: [[3,6,1,1,6]]
+            rnk: [[2,3,1,1,3]]
         """
 
-        supported_rank_methods = {"average", "min", "max", "dense"}
+        supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
         if method not in supported_rank_methods:
             msg = f"Ranking method must be one of {supported_rank_methods}. Found '{method}'"
             raise ValueError(msg)

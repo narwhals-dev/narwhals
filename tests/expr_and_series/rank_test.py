@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+from contextlib import nullcontext as does_not_raise
+from typing import Literal
+
+import pytest
+
+import narwhals.stable.v1 as nw
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
+
+rank_methods = ["average", "min", "max", "dense", "ordinal"]
+
+data = {"a": [3, 6, 1, 1, None, 6], "b": [1, 1, 2, 1, 2, 2]}
+
+expected = {
+    "average": [3.0, 4.5, 1.5, 1.5, float("nan"), 4.5],
+    "min": [3, 4, 1, 1, float("nan"), 4],
+    "max": [3, 5, 2, 2, float("nan"), 5],
+    "dense": [2, 3, 1, 1, float("nan"), 3],
+    "ordinal": [3, 4, 1, 2, float("nan"), 5],
+}
+
+expected_over = {
+    "average": [2.0, 3.0, 1.0, 1.0, float("nan"), 2.0],
+    "min": [2, 3, 1, 1, float("nan"), 2],
+    "max": [2, 3, 1, 1, float("nan"), 2],
+    "dense": [2, 3, 1, 1, float("nan"), 2],
+    "ordinal": [2, 3, 1, 1, float("nan"), 2],
+}
+
+
+@pytest.mark.parametrize("method", rank_methods)
+def test_rank_expr(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    method: Literal["average", "min", "max", "dense", "ordinal"],
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    context = (
+        pytest.raises(
+            ValueError,
+            match=r"`rank` with `method='average' is not supported for pyarrow backend.",
+        )
+        if "pyarrow_table" in str(constructor) and method == "average"
+        else does_not_raise()
+    )
+
+    with context:
+        df = nw.from_native(constructor(data))
+
+        result = df.select(nw.col("a").rank(method=method))
+        expected_data = {"a": expected[method]}
+        assert_equal_data(result, expected_data)
+
+
+@pytest.mark.parametrize("method", rank_methods)
+def test_rank_series(
+    constructor_eager: ConstructorEager,
+    method: Literal["average", "min", "max", "dense", "ordinal"],
+) -> None:
+    context = (
+        pytest.raises(
+            ValueError,
+            match=r"`rank` with `method='average' is not supported for pyarrow backend.",
+        )
+        if "pyarrow_table" in str(constructor_eager) and method == "average"
+        else does_not_raise()
+    )
+
+    with context:
+        df = nw.from_native(constructor_eager(data), eager_only=True)
+
+        result = {"a": df["a"].rank(method=method)}
+        expected_data = {"a": expected[method]}
+        assert_equal_data(result, expected_data)
+
+
+@pytest.mark.parametrize("method", rank_methods)
+def test_rank_expr_in_over_context(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    method: Literal["average", "min", "max", "dense", "ordinal"],
+) -> None:
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        # Pyarrow raises:
+        # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
+        # We can handle that to provide a better error message.
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+
+    result = df.select(nw.col("a").rank(method=method).over("b"))
+    expected_data = {"a": expected_over[method]}
+    assert_equal_data(result, expected_data)
