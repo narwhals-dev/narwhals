@@ -296,7 +296,7 @@ class PandasLikeDataFrame:
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
+            The param ``buffer_size`` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         if not named:
@@ -395,15 +395,13 @@ class PandasLikeDataFrame:
         if not new_columns and len(self) == 0:
             return self
 
-        # If the inputs are all Expressions which return full columns
-        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
+        # If the inputs are all Expressions
+        # (as opposed to Series), we can use a fast path (concat, instead of assign).
         # We can't use the fastpath if any input is not an expression (e.g.
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
-        fast_path = (
-            all(len(s) > 1 for s in new_columns)
-            and all(isinstance(x, PandasLikeExpr) for x in exprs)
-            and all(isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items())
+        fast_path = all(isinstance(x, PandasLikeExpr) for x in exprs) and all(
+            isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items()
         )
 
         if fast_path:
@@ -658,7 +656,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
