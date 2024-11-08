@@ -223,6 +223,8 @@ class PandasLikeSeries:
         )
 
     def to_list(self) -> Any:
+        if self._implementation is Implementation.CUDF:
+            return self._native_series.to_arrow().to_pylist()
         return self._native_series.to_list()
 
     def is_between(
