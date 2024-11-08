@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -24,7 +25,9 @@ def test_map_batches_expr(
 def test_map_batches_expr_numpy(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 3)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -39,7 +42,9 @@ def test_map_batches_expr_numpy(
 def test_map_batches_expr_names(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 3)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
