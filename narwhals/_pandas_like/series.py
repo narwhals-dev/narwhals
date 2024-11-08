@@ -506,15 +506,18 @@ class PandasLikeSeries:
                 tmp_name: self.__native_namespace__().Series(new, dtype=dtype),
             }
         )
-        result = (
+        result = self._from_native_series(
             self._native_series.to_frame()
             .merge(other, on=self.name, how="left")[tmp_name]
             .rename(self.name)
         )
-        if result.isna().sum() != self._native_series.isna().sum():
-            msg = "Not all values got replaced"
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
             raise ValueError(msg)
-        return self._from_native_series(result)
+        return result
 
     def sort(
         self, *, descending: bool = False, nulls_last: bool = False
