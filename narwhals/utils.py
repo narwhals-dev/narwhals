@@ -274,10 +274,15 @@ def maybe_get_index(obj: T) -> Any | None:
     return None
 
 
-def maybe_set_index(df: T, keys: str | Series | list[Series | str]) -> T:
+def maybe_set_index(
+    df: T,
+    column_names: str | list[str] | None = None,
+    *,
+    index: Series | list[Series] | None = None,
+) -> T:
     """
-    Set columns `keys` to be the index of `df`, if `df` is pandas-like. 'keys' should be
-    a name of an existing column, a Series, or a list of column names and/or Series.
+    Set the index of `df`, if `df` is pandas-like. The index can either be specified as
+    a existing column name or list of column names with `column_names`, or set directly with a Series or list of Series with `index`.
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already aligns indices for users.
@@ -301,17 +306,35 @@ def maybe_set_index(df: T, keys: str | Series | list[Series | str]) -> T:
     df_any = cast(Any, df)
     native_frame = to_native(df_any)
 
+    if column_names is not None and index is not None:
+        msg = "Only one of `column_names` or `keys` should be provided"
+        raise ValueError(msg)
+
+    if not column_names and not index:
+        msg = "Either `column_names` or `keys` should be provided"
+        raise ValueError(msg)
+
     if is_pandas_like_dataframe(native_frame):
-        from narwhals.series import Series
+        if column_names is not None:
+            return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+                df_any._compliant_frame._from_native_frame(
+                    native_frame.set_index(column_names)
+                )
+            )
 
-        if _is_iterable(keys):
-            keys = [key.to_native() if isinstance(key, Series) else key for key in keys]
-        if isinstance(keys, Series):
-            keys = keys.to_native()
+        if index is not None:
+            from narwhals.series import Series
 
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_frame(native_frame.set_index(keys))
-        )
+            if _is_iterable(index):
+                index = [
+                    key.to_native() if isinstance(key, Series) else key for key in index
+                ]
+            if isinstance(index, Series):
+                index = index.to_native()
+
+            return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+                df_any._compliant_frame._from_native_frame(native_frame.set_index(index))
+            )
 
     return df_any  # type: ignore[no-any-return]
 
