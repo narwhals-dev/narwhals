@@ -322,7 +322,7 @@ class ArrowExpr:
         return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old, new, return_dtype=return_dtype
