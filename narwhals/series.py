@@ -2604,7 +2604,7 @@ class Series:
 
         Warning:
             Different backend handle null values differently. `is_finite` will return
-            False for NaN and Null's in the pandas and Dask backend, while for Polars and
+            False for NaN and Null's in the pandas backend, while for Polars and
             PyArrow null values are kept as such.
 
         Returns:
