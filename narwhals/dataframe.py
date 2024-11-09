@@ -1722,9 +1722,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep first unique row.
                 * 'last': Keep last unique row.
-            maintain_order: Keep the same order as the original DataFrame. This is more
+            maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for polars.
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import pandas as pd
@@ -2874,7 +2874,7 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
         """
 
-        return to_native(narwhals_object=self, strict=True)
+        return to_native(narwhals_object=self, pass_through=False)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -3568,9 +3568,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep first unique row.
                 * 'last': Keep last unique row.
-            maintain_order: Keep the same order as the original DataFrame. This is more
+            maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for polars.
+                to run on the streaming engine for Polars.
 
         Returns:
             LazyFrame: LazyFrame with unique rows.

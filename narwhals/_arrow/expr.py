@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
@@ -317,8 +318,15 @@ class ArrowExpr:
     def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
-    def unique(self: Self) -> Self:
-        return reuse_series_implementation(self, "unique")
+    def unique(self: Self, *, maintain_order: bool = False) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
+
+    def replace_strict(
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "replace_strict", old, new, return_dtype=return_dtype
+        )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         return reuse_series_implementation(

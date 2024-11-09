@@ -383,10 +383,7 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         """
         Cast between data types.
 
@@ -470,6 +467,12 @@ class Series:
     def to_list(self) -> list[Any]:
         """
         Convert to list.
+
+        Notes:
+            This function converts to Python scalars. It's typically
+            more efficient to keep your data in the format native to
+            your original dataframe, so we recommend only calling this
+            when you absolutely need to.
 
         Examples:
             >>> import pandas as pd
@@ -1008,9 +1011,14 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.cum_sum())
 
-    def unique(self) -> Self:
+    def unique(self, *, maintain_order: bool = False) -> Self:
         """
-        Returns unique values
+        Returns unique values of the series.
+
+        Arguments:
+            maintain_order: Keep the same order as the original series. This may be more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import pandas as pd
@@ -1024,7 +1032,7 @@ class Series:
 
             >>> @nw.narwhalify
             ... def func(s):
-            ...     return s.unique()
+            ...     return s.unique(maintain_order=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1042,7 +1050,9 @@ class Series:
                6
             ]
         """
-        return self._from_compliant_series(self._compliant_series.unique())
+        return self._from_compliant_series(
+            self._compliant_series.unique(maintain_order=maintain_order)
+        )
 
     def diff(self) -> Self:
         """
@@ -1338,6 +1348,69 @@ class Series:
             ]
         """
         return self.alias(name=name)
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+    ) -> Self:
+        """
+        Replace old values with values.
+
+        This function must replace all non-null input values (else it raises an error),
+        and the return dtype must be specified.
+
+        Arguments:
+            old: Sequence of old values to replace.
+            new: Sequence of new values to replace.
+            return_dtype: Return dtype.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> df_pd = pd.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pa = pa.table({"a": [3, 0, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.replace_strict(
+            ...         [0, 1, 2, 3], ["zero", "one", "two", "three"], return_dtype=nw.String
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd["a"])
+            0    three
+            1     zero
+            2      one
+            3      two
+            Name: a, dtype: object
+            >>> func(df_pl["a"])  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: 'a' [str]
+            [
+                "three"
+                "zero"
+                "one"
+                "two"
+            ]
+            >>> func(df_pa["a"])
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "three",
+                "zero",
+                "one",
+                "two"
+              ]
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
@@ -4036,6 +4109,9 @@ class SeriesDateTimeNamespace(Generic[T]):
     def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert time zone.
+
+        If converting from a time-zone-naive column, then conversion happens
+        as if converting from UTC.
 
         Arguments:
             time_zone: Target time zone.

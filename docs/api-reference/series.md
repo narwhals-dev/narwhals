@@ -45,6 +45,7 @@
         - pipe
         - quantile
         - rename
+        - replace_strict
         - round
         - sample
         - scatter

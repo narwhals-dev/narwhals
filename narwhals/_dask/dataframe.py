@@ -187,7 +187,7 @@ class DaskLazyFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         subset = flatten(subset) if subset else None

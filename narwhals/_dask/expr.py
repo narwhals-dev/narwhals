@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
@@ -475,6 +476,12 @@ class DaskExpr:
     def head(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
+        raise NotImplementedError(msg)
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
+        msg = "`replace_strict` is not yet supported for Dask expressions"
         raise NotImplementedError(msg)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:

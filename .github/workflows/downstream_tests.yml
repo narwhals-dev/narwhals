@@ -1,6 +1,6 @@
-name: Test Downstream Libraries
+name: Test Downstream Libraries - Fast
 
-on:
+on: 
   pull_request:
   push:
     branches: [main]

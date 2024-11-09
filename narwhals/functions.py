@@ -173,6 +173,9 @@ def new_series(
             may auto-infer it from `values`.
         native_namespace: The native library to use for DataFrame creation.
 
+    Returns:
+        A new Series
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -291,6 +294,9 @@ def from_dict(
         native_namespace: The native library to use for DataFrame creation. Only
             necessary if inputs are not Narwhals Series.
 
+    Returns:
+        A new DataFrame
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -361,7 +367,7 @@ def _from_dict_impl(
         else:
             msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
-        data = {key: to_native(value, strict=False) for key, value in data.items()}
+        data = {key: to_native(value, pass_through=True) for key, value in data.items()}
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -430,6 +436,9 @@ def from_arrow(
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
         native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new DataFrame
 
     Examples:
         >>> import pandas as pd

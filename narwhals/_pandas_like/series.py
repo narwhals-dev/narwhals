@@ -223,6 +223,8 @@ class PandasLikeSeries:
         )
 
     def to_list(self) -> Any:
+        if self._implementation is Implementation.CUDF:
+            return self._native_series.to_arrow().to_pylist()
         return self._native_series.to_list()
 
     def is_between(
@@ -471,7 +473,12 @@ class PandasLikeSeries:
     def cum_sum(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.cumsum())
 
-    def unique(self) -> PandasLikeSeries:
+    def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the Polars API
+            and has no effect on the output.
+        """
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
@@ -483,6 +490,36 @@ class PandasLikeSeries:
 
     def shift(self, n: int) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> PandasLikeSeries:
+        tmp_name = f"{self.name}_tmp"
+        dtype = narwhals_to_native_dtype(
+            return_dtype,
+            self._native_series.dtype,
+            self._implementation,
+            self._backend_version,
+            self._dtypes,
+        )
+        other = self.__native_namespace__().DataFrame(
+            {
+                self.name: old,
+                tmp_name: self.__native_namespace__().Series(new, dtype=dtype),
+            }
+        )
+        result = self._from_native_series(
+            self._native_series.to_frame()
+            .merge(other, on=self.name, how="left")[tmp_name]
+            .rename(self.name)
+        )
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
+            raise ValueError(msg)
+        return result
 
     def sort(
         self, *, descending: bool = False, nulls_last: bool = False
@@ -511,41 +548,37 @@ class PandasLikeSeries:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF
+        if self.dtype == self._dtypes.Datetime and self.dtype.time_zone is not None:  # type: ignore[attr-defined]
+            s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None)._native_series
+        else:
+            s = self._native_series
 
-        has_missing = self._native_series.isna().any()
-        if (
-            has_missing
-            and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING
-        ):
+        has_missing = s.isna().any()
+        if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             if self._implementation is Implementation.PANDAS and self._backend_version < (
                 1,
             ):  # pragma: no cover
                 kwargs = {}
             else:
                 kwargs = {"na_value": float("nan")}
-            return self._native_series.to_numpy(
-                dtype=dtype
-                or PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._native_series.dtype)],
+            return s.to_numpy(
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)],
                 copy=copy,
                 **kwargs,
             )
-        if (
-            not has_missing
-            and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
-        ):
-            return self._native_series.to_numpy(
-                dtype=dtype
-                or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(self._native_series.dtype)],
+        if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
+            return s.to_numpy(
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)],
                 copy=copy,
             )
-        return self._native_series.to_numpy(dtype=dtype, copy=copy)
+        return s.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self._native_series.to_pandas()
-        elif self._implementation is Implementation.MODIN:  # pragma: no cover
+        elif self._implementation is Implementation.MODIN:
             return self._native_series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
@@ -670,7 +703,7 @@ class PandasLikeSeries:
         )
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 
         import pyarrow as pa  # ignore-banned-import()
