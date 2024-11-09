@@ -725,13 +725,49 @@ class PandasLikeSeries:
         *,
         descending: bool,
     ) -> Self:
-        result = self._native_series.rank(
-            method="first" if method == "ordinal" else method,
-            na_option="keep",
-            ascending=not descending,
-            pct=False,
-        )
-        return self._from_native_series(result)
+        pd_method = "first" if method == "ordinal" else method
+        native_series = self._native_series
+
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < (3,)
+            and self.dtype
+            in {
+                self._dtypes.Int64,
+                self._dtypes.Int32,
+                self._dtypes.Int16,
+                self._dtypes.Int8,
+                self._dtypes.UInt64,
+                self._dtypes.UInt32,
+                self._dtypes.UInt16,
+                self._dtypes.UInt8,
+            }
+            and (null_mask := native_series.isna()).any()
+        ):
+            # crazy workaround for the case of `na_option="keep"` and nullable
+            # integer dtypes. This should be supported in pandas > 3.0
+            # https://github.com/pandas-dev/pandas/issues/56976
+            ranked_series = (
+                native_series.to_frame()
+                .assign(**{f"{native_series.name}_is_null": null_mask})
+                .groupby(f"{native_series.name}_is_null")
+                .rank(
+                    method=pd_method,
+                    na_option="keep",
+                    ascending=not descending,
+                    pct=False,
+                )[native_series.name]
+            )
+
+        else:
+            ranked_series = native_series.rank(
+                method=pd_method,
+                na_option="keep",
+                ascending=not descending,
+                pct=False,
+            )
+
+        return self._from_native_series(ranked_series)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

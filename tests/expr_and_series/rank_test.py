@@ -12,7 +12,8 @@ from tests.utils import assert_equal_data
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
 
-data = {"a": [3, 6, 1, 1, None, 6], "b": [1, 1, 2, 1, 2, 2]}
+data_int = {"a": [3, 6, 1, 1, None, 6], "b": [1, 1, 2, 1, 2, 2]}
+data_float = {"a": [3.1, 6.1, 1.5, 1.5, None, 6.1], "b": [1, 1, 2, 1, 2, 2]}
 
 expected = {
     "average": [3.0, 4.5, 1.5, 1.5, float("nan"), 4.5],
@@ -32,10 +33,12 @@ expected_over = {
 
 
 @pytest.mark.parametrize("method", rank_methods)
+@pytest.mark.parametrize("data", [data_int, data_float])
 def test_rank_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
+    data: dict[str, float],
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -58,9 +61,11 @@ def test_rank_expr(
 
 
 @pytest.mark.parametrize("method", rank_methods)
+@pytest.mark.parametrize("data", [data_int, data_float])
 def test_rank_series(
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
+    data: dict[str, float],
 ) -> None:
     context = (
         pytest.raises(
@@ -85,13 +90,13 @@ def test_rank_expr_in_over_context(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "polars" not in str(constructor):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
         # We can handle that to provide a better error message.
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_int))
 
     result = df.select(nw.col("a").rank(method=method).over("b"))
     expected_data = {"a": expected_over[method]}
