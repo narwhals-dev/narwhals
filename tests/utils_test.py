@@ -91,6 +91,10 @@ def test_maybe_set_index_polars_column_names(
 
 
 @pytest.mark.parametrize(
+    "native_df_or_series",
+    [pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}), pd.Series([0, 1, 2])],
+)
+@pytest.mark.parametrize(
     ("narwhals_index", "pandas_index"),
     [
         (nw.from_native(pd.Series([1, 2, 0]), series_only=True), pd.Series([1, 2, 0])),
@@ -109,11 +113,16 @@ def test_maybe_set_index_polars_column_names(
 def test_maybe_set_index_pandas_direct_index(
     narwhals_index: Series | list[Series] | None,
     pandas_index: pd.Series | list[pd.Series] | None,
+    native_df_or_series: pd.DataFrame | pd.Series,
 ) -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(native_df_or_series, allow_series=True)
     result = nw.maybe_set_index(df, index=narwhals_index)
-    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index(pandas_index)
-    assert_frame_equal(nw.to_native(result), expected)
+    if isinstance(native_df_or_series, pd.Series):
+        native_df_or_series.index = pandas_index
+        assert_series_equal(nw.to_native(result), native_df_or_series)
+    else:
+        expected = native_df_or_series.set_index(pandas_index)
+        assert_frame_equal(nw.to_native(result), expected)
 
 
 @pytest.mark.parametrize(

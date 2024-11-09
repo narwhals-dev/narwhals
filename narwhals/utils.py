@@ -332,6 +332,11 @@ def maybe_set_index(
             if isinstance(index, Series):
                 index = index.to_native()
 
+            if is_pandas_like_series(df_any):
+                native_frame.index = index
+            else:
+                native_frame = native_frame.set_index(index)
+
             return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
                 df_any._compliant_frame._from_native_frame(native_frame.set_index(index))
             )
