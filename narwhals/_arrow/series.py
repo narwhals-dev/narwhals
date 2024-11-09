@@ -645,10 +645,35 @@ class ArrowSeries:
         else:
             return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
-    def unique(self: Self) -> ArrowSeries:
+    def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the Polars API
+            and has no effect on the output.
+        """
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return self._from_native_series(pc.unique(self._native_series))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        # https://stackoverflow.com/a/79111029/4451315
+        idxs = pc.index_in(self._native_series, pa.array(old))
+        result_native = pc.take(pa.array(new), idxs).cast(
+            narwhals_to_native_dtype(return_dtype, self._dtypes)
+        )
+        result = self._from_native_series(result_native)
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
+            raise ValueError(msg)
+        return result
 
     def sort(
         self: Self, *, descending: bool = False, nulls_last: bool = False

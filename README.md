@@ -49,6 +49,7 @@ Join the party!
 - [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [tabmat](https://github.com/Quantco/tabmat)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
 - [wimsey](https://github.com/benrutter/wimsey)
@@ -120,6 +121,9 @@ to this list!
 ## Appears on
 
 Narwhals has been featured in several talks, podcasts, and blog posts:
+
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
 
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs

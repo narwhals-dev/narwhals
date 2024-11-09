@@ -2323,6 +2323,9 @@ def new_series(
             may auto-infer it from `values`.
         native_namespace: The native library to use for DataFrame creation.
 
+    Returns:
+        A new Series
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -2375,6 +2378,9 @@ def from_arrow(
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
         native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new DataFrame
 
     Examples:
         >>> import pandas as pd
@@ -2430,6 +2436,9 @@ def from_dict(
         schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation. Only
             necessary if inputs are not Narwhals Series.
+
+    Returns:
+        A new DataFrame
 
     Examples:
         >>> import pandas as pd

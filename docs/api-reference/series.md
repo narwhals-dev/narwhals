@@ -45,6 +45,7 @@
         - quantile
         - rank
         - rename
+        - replace_strict
         - round
         - sample
         - scatter
