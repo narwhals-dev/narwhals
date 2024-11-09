@@ -307,11 +307,11 @@ def maybe_set_index(
     native_frame = to_native(df_any)
 
     if column_names is not None and index is not None:
-        msg = "Only one of `column_names` or `keys` should be provided"
+        msg = "Only one of `column_names` or `index` should be provided"
         raise ValueError(msg)
 
     if not column_names and not index:
-        msg = "Either `column_names` or `keys` should be provided"
+        msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
     if is_pandas_like_dataframe(native_frame):
@@ -327,7 +327,7 @@ def maybe_set_index(
 
             if _is_iterable(index):
                 index = [
-                    key.to_native() if isinstance(key, Series) else key for key in index
+                    idx.to_native() if isinstance(idx, Series) else idx for idx in index
                 ]
             if isinstance(index, Series):
                 index = index.to_native()

@@ -139,11 +139,11 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
     column_names = ["a", "b"]
     index = nw.from_native(pd.Series([0, 1, 2]), series_only=True)
     with pytest.raises(
-        ValueError, match="Only one of `column_names` or `keys` should be provided"
+        ValueError, match="Only one of `column_names` or `index` should be provided"
     ):
         nw.maybe_set_index(df, column_names=column_names, index=index)
     with pytest.raises(
-        ValueError, match="Either `column_names` or `keys` should be provided"
+        ValueError, match="Either `column_names` or `index` should be provided"
     ):
         nw.maybe_set_index(df)
 
