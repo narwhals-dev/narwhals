@@ -10,13 +10,12 @@ import polars as pl
 import pytest
 from hypothesis import assume
 from hypothesis import given
-from hypothesis import settings
 from hypothesis.extra.numpy import arrays
 
 import narwhals as nw
 from tests.conftest import pandas_constructor
 from tests.conftest import pyarrow_table_constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -135,7 +134,6 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
     return draw(rows), draw(columns)
 
 
-@settings(max_examples=10000)  # type: ignore[misc]
 @given(
     selector=st.one_of(
         single_selector,
@@ -246,10 +244,10 @@ def test_getitem(
     df_other = nw.from_native(constructor(TEST_DATA))
     result_other = df_other[selector]
 
-    if hasattr(result_polars, "to_dict"):
-        compare_dicts(
-            result_polars.to_dict(),
-            result_other.to_dict(),  # type: ignore[union-attr]
-        )
+    if isinstance(result_polars, nw.Series):
+        assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})
     else:
-        assert result_polars.to_list() == result_other.to_list()  # type: ignore[union-attr]
+        assert_equal_data(
+            result_other,
+            result_polars.to_dict(),
+        )
