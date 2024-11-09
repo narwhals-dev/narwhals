@@ -147,7 +147,11 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        return PolarsExpr(pl.median([*column_names]), dtypes=self._dtypes)  # type: ignore[arg-type]
+        return PolarsExpr(
+            pl.median([*column_names]),  # type: ignore[arg-type]
+            dtypes=self._dtypes,
+            backend_version=self._backend_version,
+        )
 
     def concat_str(
         self,
