@@ -2602,6 +2602,11 @@ class Series:
         """
         Returns a boolean Series indicating which values are finite.
 
+        Warning:
+            Different backend handle null values differently. `is_finite` will return
+            False for NaN and Null's in the pandas and Dask backend, while for Polars and
+            PyArrow null values are kept as such.
+
         Returns:
             Expression of `Boolean` data type.
 
@@ -2610,7 +2615,7 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> data = [1.0, float("inf")]
+            >>> data = [float("nan"), float("inf"), 2.0, None]
 
             We define a library agnostic function:
 
@@ -2621,24 +2626,30 @@ class Series:
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(pd.Series(data))
-            0     True
+            0    False
             1    False
+            2     True
+            3    False
             dtype: bool
 
             >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
-            shape: (2,)
+            shape: (4,)
             Series: '' [bool]
             [
-               true
                false
+               false
+               true
+               null
             ]
 
             >>> func(pa.chunked_array([data]))  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
+                false,
+                false,
                 true,
-                false
+                null
               ]
             ]
         """

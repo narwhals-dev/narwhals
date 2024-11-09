@@ -1003,7 +1003,8 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(
             ...         b=nw.col("a").replace_strict(
-            ...             [0,1,2,3], ['zero', 'one', 'two', 'three']
+            ...             [0, 1, 2, 3],
+            ...             ["zero", "one", "two", "three"],
             ...             return_dtype=nw.String,
             ...         )
             ...     )
@@ -1301,8 +1302,8 @@ class Expr:
         Returns a boolean Series indicating which values are null.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
+            distinguish between NaN and Null, whereas pandas doesn't.
 
         Examples:
             >>> import pandas as pd
@@ -2387,7 +2388,12 @@ class Expr:
 
     def is_finite(self: Self) -> Self:
         """
-        Returns a boolean Series indicating which values are finite.
+        Returns boolean values indicating which original values are finite.
+
+        Warning:
+            Different backend handle null values differently. `is_finite` will return
+            False for NaN and Null's in the pandas and Dask backend, while for Polars and
+            PyArrow null values are kept as such.
 
         Returns:
             Expression of `Boolean` data type.
@@ -2397,42 +2403,40 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> data = {
-            ...     "a": [1.0, 2],
-            ...     "b": [3.0, float("inf")],
-            ... }
+            >>> data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
             We define a library agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.all().is_finite())
+            ...     return df.select(nw.col("a").is_finite())
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(pd.DataFrame(data))
-                  a      b
-            0  True   True
-            1  True  False
-
+                   a
+            0  False
+            1  False
+            2   True
+            3  False
             >>> func(pl.DataFrame(data))
-            shape: (2, 2)
-            ┌──────┬───────┐
-            │ a    ┆ b     │
-            │ ---  ┆ ---   │
-            │ bool ┆ bool  │
-            ╞══════╪═══════╡
-            │ true ┆ true  │
-            │ true ┆ false │
-            └──────┴───────┘
+            shape: (4, 1)
+            ┌───────┐
+            │ a     │
+            │ ---   │
+            │ bool  │
+            ╞═══════╡
+            │ false │
+            │ false │
+            │ true  │
+            │ null  │
+            └───────┘
 
             >>> func(pa.table(data))
             pyarrow.Table
             a: bool
-            b: bool
             ----
-            a: [[true,true]]
-            b: [[true,false]]
+            a: [[false,false,true,null]]
         """
         return self.__class__(lambda plx: self._call(plx).is_finite())
 

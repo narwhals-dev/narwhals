@@ -722,7 +722,9 @@ class PandasLikeSeries:
     def is_finite(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
 
-        return self._from_native_series(np.isfinite(self._native_series))
+        return self._from_native_series(
+            np.isfinite(self._native_series) & ~self._native_series.isna()
+        )
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
