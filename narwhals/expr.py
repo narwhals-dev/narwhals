@@ -1003,7 +1003,8 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(
             ...         b=nw.col("a").replace_strict(
-            ...             [0,1,2,3], ['zero', 'one', 'two', 'three']
+            ...             [0, 1, 2, 3],
+            ...             ["zero", "one", "two", "three"],
             ...             return_dtype=nw.String,
             ...         )
             ...     )
