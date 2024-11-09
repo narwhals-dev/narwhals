@@ -143,6 +143,14 @@ def test_maybe_set_index_polars_direct_index(
     assert result is df
 
 
+def test_maybe_set_index_pandas_series_column_names() -> None:
+    df = nw.from_native(pd.Series([0, 1, 2]), allow_series=True)
+    with pytest.raises(
+        ValueError, match="Cannot set index using column names on a Series"
+    ):
+        nw.maybe_set_index(df, column_names=["a"])
+
+
 def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     column_names = ["a", "b"]

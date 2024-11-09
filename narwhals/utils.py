@@ -314,31 +314,34 @@ def maybe_set_index(
         msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
-    if is_pandas_like_dataframe(native_frame):
-        if column_names is not None:
+    if column_names is not None:
+        if is_pandas_like_dataframe(native_frame):
             return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
                 df_any._compliant_frame._from_native_frame(
                     native_frame.set_index(column_names)
                 )
             )
+        elif is_pandas_like_series(native_frame):
+            msg = "Cannot set index using column names on a Series"
+            raise ValueError(msg)
 
-        if index is not None:  # pragma: no cover
-            from narwhals.series import Series
+    if index is not None:  # pragma: no cover
+        from narwhals.series import Series
 
-            if _is_iterable(index):
-                index = [
-                    idx.to_native() if isinstance(idx, Series) else idx for idx in index
-                ]
-            if isinstance(index, Series):
-                index = index.to_native()
+        if _is_iterable(index):
+            index = [idx.to_native() if isinstance(idx, Series) else idx for idx in index]
+        if isinstance(index, Series):
+            index = index.to_native()
 
-            if is_pandas_like_series(df_any):
-                native_frame.index = index
-            else:
-                native_frame = native_frame.set_index(index)
-
+        if is_pandas_like_dataframe(native_frame):
             return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
                 df_any._compliant_frame._from_native_frame(native_frame.set_index(index))
+            )
+
+        elif is_pandas_like_series(native_frame):
+            native_frame.index = index
+            return df_any._from_compliant_series(  # type: ignore[no-any-return]
+                df_any._compliant_series._from_native_series(native_frame)
             )
 
     return df_any  # type: ignore[no-any-return]
