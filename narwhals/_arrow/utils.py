@@ -174,20 +174,26 @@ def validate_dataframe_comparand(
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if isinstance(other, ArrowDataFrame):
-        return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
+            import numpy as np  # ignore-banned-import
             import pyarrow as pa  # ignore-banned-import
 
-            value = other.item()
+            value = other[0]
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
-            return pa.chunked_array([[value] * length])
+            return pa.chunked_array(
+                [np.full(shape=length, fill_value=value, dtype=type(value))]
+            )
         return other._native_series
+
+    from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
+
+    if isinstance(other, ArrowDataFrame):  # pragma: no cover
+        return NotImplemented
+
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
 
