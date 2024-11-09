@@ -13,11 +13,12 @@
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Lazy-only support**: Dask
 - **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
-- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
+- ✅ **Just use** [a subset of **the Polars API**](https://narwhals-dev.github.io/narwhals/api-reference/), no need to learn anything new
 - ✅ **Zero dependencies**, Narwhals only uses what
   the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**
@@ -42,9 +43,15 @@ Join the party!
 
 - [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [marimo](https://github.com/marimo-team/marimo)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [py-shiny](https://github.com/posit-dev/py-shiny)
+- [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [tubular](https://github.com/lvgig/tubular)
+- [wimsey](https://github.com/benrutter/wimsey)
 
 Feel free to add your project to the list if it's missing, and/or
 [chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
@@ -114,8 +121,14 @@ to this list!
 
 Narwhals has been featured in several talks, podcasts, and blog posts:
 
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
+
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs
+
+- [Python Bytes Podcast](https://www.youtube.com/live/N7w_ESVW40I?si=y-wN1uCsAuJOKlOT&t=382)
+  Episode 402, topic #2
 
 - [Super Data Science: ML & AI Podcast](https://www.youtube.com/watch?v=TeG4U8R0U8U)  
   Narwhals: For Pandas-to-Polars DataFrame Compatibility

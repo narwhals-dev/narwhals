@@ -75,12 +75,19 @@ def map_interchange_dtype_to_narwhals_dtype(
 
 class InterchangeFrame:
     def __init__(self, df: Any, dtypes: DTypes) -> None:
-        self._native_frame = df
         self._interchange_frame = df.__dataframe__()
         self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self
+
+    def __native_namespace__(self: Self) -> NoReturn:
+        msg = (
+            "Cannot access native namespace for metadata-only dataframes with unknown backend."
+            "If you would like to see this kind of object supported in Narwhals, please "
+            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)
 
     def __getitem__(self, item: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
@@ -89,21 +96,11 @@ class InterchangeFrame:
             self._interchange_frame.get_column_by_name(item), dtypes=self._dtypes
         )
 
-    @property
-    def schema(self) -> dict[str, DType]:
-        return {
-            column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._interchange_frame.get_column_by_name(column_name).dtype,
-                self._dtypes,
-            )
-            for column_name in self._interchange_frame.column_names()
-        }
-
     def to_pandas(self: Self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd.__version__) >= parse_version("1.5.0"):
-            return pd.api.interchange.from_dataframe(self._native_frame)
+            return pd.api.interchange.from_dataframe(self._interchange_frame)
         else:  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
@@ -114,9 +111,19 @@ class InterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         from pyarrow.interchange import from_dataframe  # ignore-banned-import()
 
-        return from_dataframe(self._native_frame)
+        return from_dataframe(self._interchange_frame)
 
-    def __getattr__(self, attr: str) -> NoReturn:
+    def __getattr__(self, attr: str) -> Any:
+        if attr == "schema":
+            return {
+                column_name: map_interchange_dtype_to_narwhals_dtype(
+                    self._interchange_frame.get_column_by_name(column_name).dtype,
+                    self._dtypes,
+                )
+                for column_name in self._interchange_frame.column_names()
+            }
+        elif attr == "columns":
+            return list(self._interchange_frame.column_names())
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "
@@ -125,3 +132,26 @@ class InterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)
+
+    def select(
+        self: Self,
+        *exprs: Any,
+        **named_exprs: Any,
+    ) -> Self:
+        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
+            msg = (
+                "`select`-ing not by name is not supported for interchange-only level.\n\n"
+                "If you would like to see this kind of object better supported in "
+                "Narwhals, please open a feature request "
+                "at https://github.com/narwhals-dev/narwhals/issues."
+            )
+            raise NotImplementedError(msg)
+
+        frame = self._interchange_frame.select_columns_by_name(exprs)
+        if not hasattr(frame, "_df"):  # pragma: no cover
+            msg = (
+                "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
+                "See https://github.com/data-apis/dataframe-api/issues/360."
+            )
+            raise NotImplementedError(frame)
+        return self.__class__(frame._df, dtypes=self._dtypes)

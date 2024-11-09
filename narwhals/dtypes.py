@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from collections import OrderedDict
+from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Mapping
 
 if TYPE_CHECKING:
+    from typing import Iterator
+    from typing import Literal
+    from typing import Sequence
+
     from typing_extensions import Self
 
 
@@ -71,10 +78,95 @@ class Object(DType): ...
 class Unknown(DType): ...
 
 
-class Datetime(TemporalType): ...
+class Datetime(TemporalType):
+    """
+    Data type representing a calendar date and time of day.
+
+    Arguments:
+        time_unit: Unit of time. Defaults to `'us'` (microseconds).
+        time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
+            `import zoneinfo; zoneinfo.available_timezones()` for a full list).
+
+    Notes:
+        Adapted from Polars implementation at:
+        https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457
+    """
+
+    def __init__(
+        self: Self,
+        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_zone: str | timezone | None = None,
+    ) -> None:
+        if time_unit not in {"s", "ms", "us", "ns"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+
+        if isinstance(time_zone, timezone):
+            time_zone = str(time_zone)
+
+        self.time_unit = time_unit
+        self.time_zone = time_zone
+
+    def __eq__(self: Self, other: object) -> bool:
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.time_unit == other.time_unit and self.time_zone == other.time_zone
+        else:  # pragma: no cover
+            return False
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, self.time_unit, self.time_zone))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
 
 
-class Duration(TemporalType): ...
+class Duration(TemporalType):
+    """
+    Data type representing a time duration.
+
+    Arguments:
+        time_unit: Unit of time. Defaults to `'us'` (microseconds).
+
+    Notes:
+        Adapted from Polars implementation at:
+        https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502
+    """
+
+    def __init__(
+        self: Self,
+        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+    ) -> None:
+        if time_unit not in ("s", "ms", "us", "ns"):
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+
+        self.time_unit = time_unit
+
+    def __eq__(self: Self, other: object) -> bool:
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.time_unit == other.time_unit
+        else:  # pragma: no cover
+            return False
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, self.time_unit))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(time_unit={self.time_unit!r})"
 
 
 class Categorical(DType): ...
@@ -83,13 +175,140 @@ class Categorical(DType): ...
 class Enum(DType): ...
 
 
-class Struct(DType): ...
+class Field:
+    """
+    Definition of a single field within a `Struct` DataType.
+
+    Arguments:
+        name: The name of the field within its parent `Struct`.
+        dtype: The `DataType` of the field's values.
+
+    """
+
+    name: str
+    dtype: type[DType] | DType
+
+    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
+        self.name = name
+        self.dtype = dtype
+
+    def __eq__(self, other: Field) -> bool:  # type: ignore[override]
+        return (self.name == other.name) & (self.dtype == other.dtype)
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.dtype))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.name!r}, {self.dtype})"
 
 
-class List(DType): ...
+class Struct(DType):
+    """
+    Struct composite type.
+
+    Arguments:
+        fields: The fields that make up the struct. Can be either a sequence of Field objects or a mapping of column names to data types.
+    """
+
+    fields: list[Field]
+
+    def __init__(
+        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+    ) -> None:
+        if isinstance(fields, Mapping):
+            self.fields = [Field(name, dtype) for name, dtype in fields.items()]
+        else:
+            self.fields = list(fields)
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # The comparison allows comparing objects to classes, and specific
+        # inner types to those without (eg: inner=None). if one of the
+        # arguments is not specific about its inner type we infer it
+        # as being equal. (See the List type for more info).
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.fields == other.fields
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, tuple(self.fields)))
+
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+        for fld in self.fields:
+            yield fld.name, fld.dtype
+
+    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+        for fld in reversed(self.fields):
+            yield fld.name, fld.dtype
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({dict(self)})"
+
+    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
+        """Return Struct dtype as a schema dict."""
+        return OrderedDict(self)
 
 
-class Array(DType): ...
+class List(DType):
+    def __init__(self, inner: DType | type[DType]) -> None:
+        self.inner = inner
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # This equality check allows comparison of type classes and type instances.
+        # If a parent type is not specific about its inner type, we infer it as equal:
+        # > list[i64] == list[i64] -> True
+        # > list[i64] == list[f32] -> False
+        # > list[i64] == list      -> True
+
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.inner == other.inner
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.inner))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.inner!r})"
+
+
+class Array(DType):
+    def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
+        self.inner = inner
+        if width is None:
+            error = "`width` must be specified when initializing an `Array`"
+            raise TypeError(error)
+        self.width = width
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # This equality check allows comparison of type classes and type instances.
+        # If a parent type is not specific about its inner type, we infer it as equal:
+        # > array[i64] == array[i64] -> True
+        # > array[i64] == array[f32] -> False
+        # > array[i64] == array      -> True
+
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.inner == other.inner
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.inner, self.width))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.inner!r}, {self.width})"
 
 
 class Date(TemporalType): ...

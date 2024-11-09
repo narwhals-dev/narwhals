@@ -5,8 +5,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      # Check for updates to GitHub Actions every week
-      interval: "weekly"
+      # Check for updates to GitHub Actions every month
+      interval: "monthly"
     commit-message:
       prefix: "skip changelog" # So this PR will not be added to release-drafter
       include: "scope" # List of the updated dependencies in the commit will be added

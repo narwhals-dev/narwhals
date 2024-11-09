@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_tail(constructor: Constructor) -> None:
@@ -27,13 +27,13 @@ def test_tail(constructor: Constructor) -> None:
 
     with context:
         result = df.tail(2)
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
         result = df.collect().tail(2)  # type: ignore[assignment]
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
         result = df.collect().tail(-1)  # type: ignore[assignment]
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
         result = df.collect().select(nw.col("a").tail(2))  # type: ignore[assignment]
-        compare_dicts(result, {"a": expected["a"]})
+        assert_equal_data(result, {"a": expected["a"]})

@@ -1,21 +1,25 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 data = [1, 3, 2]
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
-)
-def test_convert(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
+def test_convert(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+) -> None:
     if any(
         cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin")

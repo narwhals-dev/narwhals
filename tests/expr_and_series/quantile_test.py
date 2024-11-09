@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 from typing import Literal
 
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_quantile_expr(
 
     with context:
         result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -62,7 +62,7 @@ def test_quantile_expr(
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
@@ -72,4 +72,4 @@ def test_quantile_series(
         "a"
     ].alias("a")
     result = series.quantile(quantile=q, interpolation=interpolation)
-    compare_dicts({"a": [result]}, {"a": [expected]})
+    assert_equal_data({"a": [result]}, {"a": [expected]})

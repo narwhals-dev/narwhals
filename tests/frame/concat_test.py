@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_concat_horizontal(constructor: Constructor) -> None:
@@ -20,7 +22,7 @@ def test_concat_horizontal(constructor: Constructor) -> None:
         "c": [6, 12, -1],
         "d": [0, -4, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([])
@@ -37,7 +39,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     result = nw.concat([df_left, df_right], how="vertical")
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")

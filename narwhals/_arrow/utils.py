@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -50,21 +51,43 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if pa.types.is_date32(dtype):
         return dtypes.Date()
     if pa.types.is_timestamp(dtype):
-        return dtypes.Datetime()
+        return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
     if pa.types.is_duration(dtype):
-        return dtypes.Duration()
+        return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     if pa.types.is_struct(dtype):
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    dtype.field(i).name,
+                    native_to_narwhals_dtype(dtype.field(i).type, dtypes),
+                )
+                for i in range(dtype.num_fields)
+            ]
+        )
+
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
-        return dtypes.List()
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
     if pa.types.is_fixed_size_list(dtype):
-        return dtypes.Array()
+        return dtypes.Array(
+            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -94,11 +117,12 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Use Polars' default
-        return pa.timestamp("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return pa.timestamp(time_unit, tz=time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # Use Polars' default
-        return pa.duration("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
@@ -323,3 +347,97 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+# Regex for date, time, separator and timezone components
+DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})"
+SEP_RE = r"(?P<sep>\s|T)"
+TIME_RE = r"(?P<time>\d{2}:\d{2}(?::\d{2})?)"  # \s*(?P<period>[AP]M)?)?
+HMS_RE = r"^(?P<hms>\d{2}:\d{2}:\d{2})$"
+HM_RE = r"^(?P<hm>\d{2}:\d{2})$"
+TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
+FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
+
+# Separate regexes for different date formats
+YMD_RE = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])$"
+DMY_RE = r"^(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
+MDY_RE = r"^(?P<month>0[1-9]|1[0-2])(?P<sep1>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
+
+DATE_FORMATS = (
+    (YMD_RE, "%Y-%m-%d"),
+    (DMY_RE, "%d-%m-%Y"),
+    (MDY_RE, "%m-%d-%Y"),
+)
+TIME_FORMATS = (
+    (HMS_RE, "%H:%M:%S"),
+    (HM_RE, "%H:%M"),
+)
+
+
+def parse_datetime_format(arr: pa.StringArray) -> str:
+    """Try to infer datetime format from StringArray."""
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
+        pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
+    )
+
+    if not pc.all(matches.is_valid()).as_py():
+        msg = (
+            "Unable to infer datetime format, provided format is not supported. "
+            "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        )
+        raise NotImplementedError(msg)
+
+    dates = matches.field("date")
+    separators = matches.field("sep")
+    times = matches.field("time")
+    tz = matches.field("tz")
+
+    # separators and time zones must be unique
+    if pc.count(pc.unique(separators)).as_py() > 1:
+        msg = "Found multiple separator values while inferring datetime format."
+        raise ValueError(msg)
+
+    if pc.count(pc.unique(tz)).as_py() > 1:
+        msg = "Found multiple timezone values while inferring datetime format."
+        raise ValueError(msg)
+
+    date_value = _parse_date_format(dates)
+    time_value = _parse_time_format(times)
+
+    sep_value = separators[0].as_py()
+    tz_value = "%z" if tz[0].as_py() else ""
+
+    return f"{date_value}{sep_value}{time_value}{tz_value}"
+
+
+def _parse_date_format(arr: pa.Array) -> str:
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    for date_rgx, date_fmt in DATE_FORMATS:
+        matches = pc.extract_regex(arr, pattern=date_rgx)
+        if (
+            pc.all(matches.is_valid()).as_py()
+            and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
+            and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1
+            and (date_sep_value := sep1[0].as_py()) == sep2[0].as_py()
+        ):
+            return date_fmt.replace("-", date_sep_value)
+
+    msg = (
+        "Unable to infer datetime format. "
+        "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+    )
+    raise ValueError(msg)
+
+
+def _parse_time_format(arr: pa.Array) -> str:
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    for time_rgx, time_fmt in TIME_FORMATS:
+        matches = pc.extract_regex(arr, pattern=time_rgx)
+        if pc.all(matches.is_valid()).as_py():
+            return time_fmt
+    return ""

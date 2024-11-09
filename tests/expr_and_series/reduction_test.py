@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -32,7 +32,7 @@ def test_scalar_reduction_select(
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.select(*expr)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -58,4 +58,4 @@ def test_scalar_reduction_with_columns(
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(*expr).select(*expected.keys())
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

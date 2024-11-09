@@ -10,6 +10,7 @@ nav:
     - basics/dataframe.md
     - basics/series.md
     - basics/complete_example.md
+    - basics/dataframe_conversion.md
   - Pandas-like concepts:
     - other/pandas_index.md
     - other/user_warning.md
@@ -22,9 +23,11 @@ nav:
   - API Completeness:
     - api-completeness/index.md
     - Supported DataFrame methods: api-completeness/dataframe.md
-    - Supporteda Expr methods: api-completeness/expr.md
+    - Supported LazyFrame methods: api-completeness/lazyframe.md
+    - Supported Expr methods: api-completeness/expr.md
     - Supported Series methods: api-completeness/series.md
   - API Reference:
+    - api-reference/index.md
     - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/expr.md
@@ -41,9 +44,9 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
-    - api-reference/index.md
     - api-reference/selectors.md
     - api-reference/typing.md
+  - This: this.md
 theme:
   name: material
   font: false
@@ -75,9 +78,7 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
-extra_css:
-  - https://unpkg.com/katex@0/dist/katex.min.css
-  - css/mkdocstrings.css
+
 
 plugins:
 - search
@@ -88,9 +89,14 @@ plugins:
         - https://installer.readthedocs.io/en/stable/objects.inv
         rendering:
           show_signature_annotations: true
+        options:
+          members_order: alphabetical
+    enable_inventory: true
+
 
 hooks:
 - utils/generate_backend_completeness.py
+- utils/generate_zen_content.py
 
 
 markdown_extensions:

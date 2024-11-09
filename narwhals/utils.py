@@ -10,6 +10,7 @@ from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
 from typing import cast
+from warnings import warn
 
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
@@ -31,6 +32,7 @@ from narwhals.translate import to_native
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import pandas as pd
     from typing_extensions import Self
     from typing_extensions import TypeGuard
 
@@ -306,6 +308,65 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return df_any  # type: ignore[no-any-return]
 
 
+def maybe_reset_index(obj: T) -> T:
+    """
+    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already resets the index for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this is a no-op.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
+        >>> df = nw.from_native(df_pd)
+        >>> nw.to_native(nw.maybe_reset_index(df))
+           a  b
+        0  1  4
+        1  2  5
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj):
+        native_namespace = obj_any.__native_namespace__()
+        if _has_default_index(native_obj, native_namespace):
+            return obj_any  # type: ignore[no-any-return]
+        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+        )
+    if is_pandas_like_series(native_obj):
+        native_namespace = obj_any.__native_namespace__()
+        if _has_default_index(native_obj, native_namespace):
+            return obj_any  # type: ignore[no-any-return]
+        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            obj_any._compliant_series._from_native_series(
+                native_obj.reset_index(drop=True)
+            )
+        )
+    return obj_any  # type: ignore[no-any-return]
+
+
+def _has_default_index(
+    native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
+) -> bool:
+    index = native_frame_or_series.index
+    return (
+        isinstance(index, native_namespace.RangeIndex)
+        and index.start == 0
+        and index.stop == len(index)
+        and index.step == 1
+    )
+
+
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
@@ -421,17 +482,37 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    """Generates a unique token of specified n_bytes that is not present in the given list of columns.
+    warn(
+        "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
+        "deprecated and it will be removed in future versions",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+
+
+def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+    """Generates a unique token of specified `n_bytes` that is not present in the given
+    list of columns.
+
+    It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
+    function to return a string nbytes random bytes.
 
     Arguments:
-        n_bytes : The number of bytes to generate for the token.
-        columns : The list of columns to check for uniqueness.
+        n_bytes: The number of bytes to generate for the token.
+        columns: The list of columns to check for uniqueness.
 
     Returns:
         A unique token that is not present in the given list of columns.
 
     Raises:
         AssertionError: If a unique token cannot be generated after 100 attempts.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> columns = ["abc", "xyz"]
+        >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
+        True
     """
     counter = 0
     while True:
@@ -442,8 +523,8 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
         counter += 1
         if counter > 100:
             msg = (
-                "Internal Error: Narwhals was not able to generate a column name to perform given "
-                "join operation"
+                "Internal Error: Narwhals was not able to generate a column name with "
+                f"{n_bytes=} and not in {columns}"
             )
             raise AssertionError(msg)
 
@@ -468,3 +549,84 @@ def parse_columns_to_drop(
 
 def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def find_stacklevel() -> int:
+    """
+    Find the first place in the stack that is not inside narwhals.
+
+    Taken from:
+    https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
+    """
+    import inspect
+    from pathlib import Path
+
+    import narwhals as nw
+
+    pkg_dir = str(Path(nw.__file__).parent)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    try:
+        while frame:
+            fname = inspect.getfile(frame)
+            if fname.startswith(pkg_dir) or (
+                (qualname := getattr(frame.f_code, "co_qualname", None))
+                # ignore @singledispatch wrappers
+                and qualname.startswith("singledispatch.")
+            ):
+                frame = frame.f_back
+                n += 1
+            else:  # pragma: no cover
+                break
+        else:  # pragma: no cover
+            pass
+    finally:
+        # https://docs.python.org/3/library/inspect.html
+        # > Though the cycle detector will catch these, destruction of the frames
+        # > (and local variables) can be made deterministic by removing the cycle
+        # > in a finally clause.
+        del frame
+    return n
+
+
+def issue_deprecation_warning(message: str, _version: str) -> None:
+    """
+    Issue a deprecation warning.
+
+    Parameters
+    ----------
+    message
+        The message associated with the warning.
+    version
+        Narwhals version when the warning was introduced. Just used for internal
+        bookkeeping.
+    """
+    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+
+
+def validate_strict_and_pass_though(
+    strict: bool | None,
+    pass_through: bool | None,
+    *,
+    pass_through_default: bool,
+    emit_deprecation_warning: bool,
+) -> bool:
+    if strict is None and pass_through is None:
+        pass_through = pass_through_default
+    elif strict is not None and pass_through is None:
+        if emit_deprecation_warning:
+            msg = (
+                "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
+                "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+            )
+            issue_deprecation_warning(msg, _version="1.13.0")
+        pass_through = not strict
+    elif strict is None and pass_through is not None:
+        pass
+    else:
+        msg = "Cannot pass both `strict` and `pass_through`"
+        raise ValueError(msg)
+    return pass_through

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
 
@@ -25,19 +23,17 @@ def test_nth(
     constructor: Constructor,
     idx: int | list[int],
     expected: dict[str, list[int]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor) and parse_version(pl.__version__) < parse_version(
-        "1.0.0"
-    ):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.skipif(
-    parse_version(pl.__version__) >= parse_version("1.0.0"),
+    POLARS_VERSION >= (1, 0, 0),
     reason="1.0.0",
 )
 def test_nth_not_supported() -> None:  # pragma: no cover

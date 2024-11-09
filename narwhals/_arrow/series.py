@@ -12,9 +12,10 @@ from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -604,7 +605,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -621,7 +622,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -644,10 +645,35 @@ class ArrowSeries:
         else:
             return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
-    def unique(self: Self) -> ArrowSeries:
+    def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the Polars API
+            and has no effect on the output.
+        """
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return self._from_native_series(pc.unique(self._native_series))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        # https://stackoverflow.com/a/79111029/4451315
+        idxs = pc.index_in(self._native_series, pa.array(old))
+        result_native = pc.take(pa.array(new), idxs).cast(
+            narwhals_to_native_dtype(return_dtype, self._dtypes)
+        )
+        result = self._from_native_series(result_native)
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
+            raise ValueError(msg)
+        return result
 
     def sort(
         self: Self, *, descending: bool = False, nulls_last: bool = False
@@ -715,7 +741,7 @@ class ArrowSeries:
 
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
@@ -755,11 +781,89 @@ class ArrowSeriesDateTimeNamespace:
             pc.strftime(self._arrow_series._native_series, format)
         )
 
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        if time_zone is not None:
+            result = pc.assume_timezone(
+                pc.local_timestamp(self._arrow_series._native_series), time_zone
+            )
+        else:
+            result = pc.local_timestamp(self._arrow_series._native_series)
+        return self._arrow_series._from_native_series(result)
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+
+        if self._arrow_series.dtype.time_zone is None:  # type: ignore[attr-defined]
+            result = self.replace_time_zone("UTC")._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+        else:
+            result = self._arrow_series._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+
+        return self._arrow_series._from_native_series(result)
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        s = self._arrow_series._native_series
+        dtype = self._arrow_series.dtype
+        if dtype == self._arrow_series._dtypes.Datetime:
+            unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.cast(pa.int64())
+            if unit == "ns":
+                if time_unit == "ns":
+                    result = s_cast
+                elif time_unit == "us":
+                    result = floordiv_compat(s_cast, 1_000)
+                else:
+                    result = floordiv_compat(s_cast, 1_000_000)
+            elif unit == "us":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000)
+                elif time_unit == "us":
+                    result = s_cast
+                else:
+                    result = floordiv_compat(s_cast, 1_000)
+            elif unit == "ms":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000)
+                else:
+                    result = s_cast
+            elif unit == "s":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000_000)
+                else:
+                    result = pc.multiply(s_cast, 1_000)
+            else:  # pragma: no cover
+                msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
+                raise AssertionError(msg)
+        elif dtype == self._arrow_series._dtypes.Date:
+            time_s = pc.multiply(s.cast(pa.int32()), 86400)
+            if time_unit == "ns":
+                result = pc.multiply(time_s, 1_000_000_000)
+            elif time_unit == "us":
+                result = pc.multiply(time_s, 1_000_000)
+            else:
+                result = pc.multiply(time_s, 1_000)
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        return self._arrow_series._from_native_series(result)
+
     def date(self: Self) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import()
 
         return self._arrow_series._from_native_series(
-            self._arrow_series._native_series.cast(pa.date64())
+            self._arrow_series._native_series.cast(pa.date32())
         )
 
     def year(self: Self) -> ArrowSeries:
@@ -1033,8 +1137,11 @@ class ArrowSeriesStringNamespace:
             ),
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
         import pyarrow.compute as pc  # ignore-banned-import()
+
+        if format is None:
+            format = parse_datetime_format(self._arrow_series._native_series)
 
         return self._arrow_series._from_native_series(
             pc.strptime(self._arrow_series._native_series, format=format, unit="us")

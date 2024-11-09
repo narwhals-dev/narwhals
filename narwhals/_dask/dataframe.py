@@ -11,7 +11,7 @@ from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
@@ -149,7 +149,9 @@ class DaskLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
+            col: native_to_narwhals_dtype(
+                self._native_frame.loc[:, col], self._dtypes, self._implementation
+            )
             for col in self._native_frame.columns
         }
 
@@ -185,14 +187,14 @@ class DaskLazyFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         subset = flatten(subset) if subset else None
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns
-            token = generate_unique_token(n_bytes=8, columns=subset)
+            token = generate_temporary_column_name(n_bytes=8, columns=subset)
             ser = native_frame.groupby(subset).size().rename(token)
             ser = ser.loc[ser == 1]
             unique = ser.reset_index().drop(columns=token)
@@ -206,7 +208,8 @@ class DaskLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -214,7 +217,10 @@ class DaskLazyFrame:
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        return self._from_native_frame(df.sort_values(flat_keys, ascending=ascending))
+        na_position = "last" if nulls_last else "first"
+        return self._from_native_frame(
+            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+        )
 
     def join(
         self: Self,
@@ -230,7 +236,7 @@ class DaskLazyFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
         if how == "cross":
-            key_token = generate_unique_token(
+            key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
@@ -247,7 +253,7 @@ class DaskLazyFrame:
             )
 
         if how == "anti":
-            indicator_token = generate_unique_token(
+            indicator_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
@@ -341,23 +347,23 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> DaskLazyGroupBy:
+    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by))
+        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def tail(self: Self, n: int) -> Self:
         native_frame = self._native_frame
         n_partitions = native_frame.npartitions
 
-        if n_partitions == 1:
+        if n_partitions == 1:  # pragma: no cover
             return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
             raise NotImplementedError(msg)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        row_index_token = generate_unique_token(n_bytes=8, columns=self.columns)
+        row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         pln = self.__narwhals_namespace__()
         return (
             self.with_row_index(name=row_index_token)

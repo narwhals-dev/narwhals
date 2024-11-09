@@ -6,11 +6,16 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals.utils import generate_unique_token
+from narwhals._pandas_like.utils import calculate_timestamp_date
+from narwhals._pandas_like.utils import calculate_timestamp_datetime
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.utils import Implementation
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     import dask_expr
@@ -473,6 +478,12 @@ class DaskExpr:
         msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
         raise NotImplementedError(msg)
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+    ) -> Self:
+        msg = "`replace_strict` is not yet supported for Dask expressions"
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
@@ -561,7 +572,7 @@ class DaskExpr:
                 if _input.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
-                return _input.quantile(q=_quantile, method="dask")
+                return _input.quantile(q=_quantile, method="dask")  # pragma: no cover
 
             return self._from_call(
                 func,
@@ -576,7 +587,7 @@ class DaskExpr:
     def is_first_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
@@ -593,7 +604,7 @@ class DaskExpr:
     def is_last_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 
@@ -666,17 +677,18 @@ class DaskExpr:
                 )
                 raise ValueError(msg)
 
-            if df._native_frame.npartitions > 1:
-                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
-                raise NotImplementedError(msg)
-
-            tmp = df.group_by(*keys).agg(self)
-            tmp_native = (
-                df.select(*keys)
-                .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
-                ._native_frame
+            if df._native_frame.npartitions == 1:  # pragma: no cover
+                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                tmp_native = (
+                    df.select(*keys)
+                    .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
+                    ._native_frame
+                )
+                return [tmp_native[name] for name in self._output_names]
+            msg = (
+                "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
-            return [tmp_native[name] for name in self._output_names]
+            raise NotImplementedError(msg)
 
         return self.__class__(
             func,
@@ -811,7 +823,7 @@ class DaskExprStringNamespace:
             returns_scalar=False,
         )
 
-    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
         import dask.dataframe as dd  # ignore-banned-import()
 
         return self._expr._from_call(
@@ -922,6 +934,64 @@ class DaskExprDateTimeNamespace:
             lambda _input, _format: _input.dt.strftime(_format),
             "strftime",
             format.replace("%.f", ".%f"),
+            returns_scalar=False,
+        )
+
+    def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _time_zone: _input.dt.tz_localize(None).dt.tz_localize(
+                _time_zone
+            )
+            if _time_zone is not None
+            else _input.dt.tz_localize(None),
+            "tz_localize",
+            time_zone,
+            returns_scalar=False,
+        )
+
+    def convert_time_zone(self, time_zone: str) -> DaskExpr:
+        def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
+            if dtype.time_zone is None:  # type: ignore[attr-defined]
+                return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
+            else:
+                return s.dt.tz_convert(time_zone)
+
+        return self._expr._from_call(
+            func,
+            "tz_convert",
+            time_zone,
+            returns_scalar=False,
+        )
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
+        def func(
+            s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
+        ) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
+            is_pyarrow_dtype = "pyarrow" in str(dtype)
+            mask_na = s.isna()
+            if dtype == self._expr._dtypes.Date:
+                # Date is only supported in pandas dtypes if pyarrow-backed
+                s_cast = s.astype("Int32[pyarrow]")
+                result = calculate_timestamp_date(s_cast, time_unit)
+            elif dtype == self._expr._dtypes.Datetime:
+                original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+                s_cast = (
+                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+                )
+                result = calculate_timestamp_datetime(
+                    s_cast, original_time_unit, time_unit
+                )
+            else:
+                msg = "Input should be either of Date or Datetime type"
+                raise TypeError(msg)
+            return result.where(~mask_na)
+
+        return self._expr._from_call(
+            func,
+            "datetime",
+            time_unit,
             returns_scalar=False,
         )
 

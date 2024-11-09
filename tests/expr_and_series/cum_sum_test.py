@@ -1,8 +1,9 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {
     "a": [0, 1, 2, 3, 4],
@@ -19,10 +20,10 @@ def test_cum_sum_simple(constructor: Constructor) -> None:
         "b": [1, 3, 6, 11, 14],
         "c": [5, 9, 12, 14, 15],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_cum_sum_simple_series(constructor_eager: Any) -> None:
+def test_cum_sum_simple_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {
         "a": [0, 1, 3, 6, 10],
@@ -34,4 +35,4 @@ def test_cum_sum_simple_series(constructor_eager: Any) -> None:
         df["b"].cum_sum(),
         df["c"].cum_sum(),
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
