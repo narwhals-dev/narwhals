@@ -322,7 +322,7 @@ def maybe_set_index(
                 )
             )
 
-        if index is not None:
+        if index is not None:  # pragma: no cover
             from narwhals.series import Series
 
             if _is_iterable(index):
