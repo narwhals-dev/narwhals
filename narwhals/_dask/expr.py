@@ -479,7 +479,7 @@ class DaskExpr:
         raise NotImplementedError(msg)
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         msg = "`replace_strict` is not yet supported for Dask expressions"
         raise NotImplementedError(msg)

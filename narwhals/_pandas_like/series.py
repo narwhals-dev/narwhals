@@ -492,15 +492,19 @@ class PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
-        dtype = narwhals_to_native_dtype(
-            return_dtype,
-            self._native_series.dtype,
-            self._implementation,
-            self._backend_version,
-            self._dtypes,
+        dtype = (
+            narwhals_to_native_dtype(
+                return_dtype,
+                self._native_series.dtype,
+                self._implementation,
+                self._backend_version,
+                self._dtypes,
+            )
+            if return_dtype
+            else None
         )
         other = self.__native_namespace__().DataFrame(
             {

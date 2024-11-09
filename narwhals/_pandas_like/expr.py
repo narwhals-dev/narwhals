@@ -274,7 +274,7 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "drop_nulls")
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old, new, return_dtype=return_dtype

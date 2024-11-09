@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
@@ -975,18 +976,25 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+        self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any] | None = None,
+        *,
+        return_dtype: DType | type[DType] | None = None,
     ) -> Self:
         """
-        Replace old values with new values.
+        Replace all values by different values.
 
-        This function must replace all non-null input values (else it raises an error),
-        and the return dtype must be specified.
+        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
-            old: Sequence of old values to replace.
-            new: Sequence of new values to replace.
-            return_dtype: Return dtype.
+            old: Sequence of values to replace. It also accepts a mapping of values to
+                their replacement as syntactic sugar for
+                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+            new: Sequence of values to replace by. Length must match the length of `old`.
+            return_dtype: The data type of the resulting expression. If set to `None`
+                (default), the data type is determined automatically based on the other
+                inputs.
 
         Examples:
             >>> import narwhals as nw
@@ -1037,6 +1045,14 @@ class Expr:
             a: [[3,0,1,2]]
             b: [["three","zero","one","two"]]
         """
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+
+            new = list(old.values())
+            old = list(old.keys())
+
         return self.__class__(
             lambda plx: self._call(plx).replace_strict(
                 old, new, return_dtype=return_dtype
