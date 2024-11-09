@@ -191,6 +191,15 @@ class PolarsSeries:
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return self._native_series.median()
+
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> PolarsDataFrame:

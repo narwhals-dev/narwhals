@@ -525,6 +525,40 @@ class Series:
         """
         return self._compliant_series.mean()
 
+    def median(self) -> Any:
+        """
+        Reduce this Series to the median value.
+
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [5, 3, 8]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            Let's define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.median()
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            np.float64(5.0)
+            >>> func(s_pl)
+            5.0
+            >>> func(s_pa)
+            <pyarrow.DoubleScalar: 5.0>
+        """
+        return self._compliant_series.median()
+
     def count(self) -> Any:
         """
         Returns the number of non-null elements in the Series.

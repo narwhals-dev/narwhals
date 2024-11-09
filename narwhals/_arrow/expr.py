@@ -205,6 +205,9 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
+    def median(self) -> Self:
+        return reuse_series_implementation(self, "median", returns_scalar=True)
+
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 

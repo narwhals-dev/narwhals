@@ -425,6 +425,15 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.mean()
 
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+        ser = self._native_series
+        return ser.median()
+
     def std(
         self,
         *,
