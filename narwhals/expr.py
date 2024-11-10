@@ -2448,6 +2448,96 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"] = "average",
+        *,
+        descending: bool = False,
+    ) -> Self:
+        """
+        Assign ranks to data, dealing with ties appropriately.
+
+        Notes:
+            The resulting dtype may differ between backends.
+
+        Arguments:
+            method: The method used to assign ranks to tied elements.
+                The following methods are available (default is 'average'):
+
+                - 'average' : The average of the ranks that would have been assigned to
+                  all the tied values is assigned to each value.
+                - 'min' : The minimum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value. (This is also referred to
+                    as "competition" ranking.)
+                - 'max' : The maximum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value.
+                - 'dense' : Like 'min', but the rank of the next highest element is
+                   assigned the rank immediately after those assigned to the tied
+                   elements.
+                - 'ordinal' : All values are given a distinct rank, corresponding to the
+                    order that the values occur in the Series.
+
+            descending: Rank in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [3, 6, 1, 1, 6]}
+
+            We define a dataframe-agnostic function that computes the dense rank for
+            the data:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(rnk=nw.col("a").rank(method="dense"))
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
+
+            >>> func(pl.DataFrame(data))
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ rnk │
+            │ --- ┆ --- │
+            │ i64 ┆ u32 │
+            ╞═════╪═════╡
+            │ 3   ┆ 2   │
+            │ 6   ┆ 3   │
+            │ 1   ┆ 1   │
+            │ 1   ┆ 1   │
+            │ 6   ┆ 3   │
+            └─────┴─────┘
+
+            >>> func(pd.DataFrame(data))
+               a  rnk
+            0  3  2.0
+            1  6  3.0
+            2  1  1.0
+            3  1  1.0
+            4  6  3.0
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: int64
+            rnk: uint64
+            ----
+            a: [[3,6,1,1,6]]
+            rnk: [[2,3,1,1,3]]
+        """
+
+        supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
+        if method not in supported_rank_methods:
+            msg = (
+                "Ranking method must be one of {'average', 'min', 'max', 'dense', 'ordinal'}. "
+                f"Found '{method}'"
+            )
+            raise ValueError(msg)
+
+        return self.__class__(
+            lambda plx: self._call(plx).rank(method=method, descending=descending)
+        )
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

@@ -757,6 +757,36 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        if method == "average":
+            msg = (
+                "`rank` with `method='average' is not supported for pyarrow backend. "
+                "The available methods are {'min', 'max', 'dense', 'ordinal'}."
+            )
+            raise ValueError(msg)
+
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        sort_keys = "descending" if descending else "ascending"
+        tiebreaker = "first" if method == "ordinal" else method
+
+        native_series = self._native_series
+        if self._backend_version < (14, 0, 0):  # pragma: no cover
+            native_series = native_series.combine_chunks()
+
+        null_mask = pc.is_null(native_series)
+
+        rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
+
+        result = pc.if_else(null_mask, pa.scalar(None), rank)
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
