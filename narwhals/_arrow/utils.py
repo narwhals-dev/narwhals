@@ -355,7 +355,7 @@ SEP_RE = r"(?P<sep>\s|T)"
 TIME_RE = r"(?P<time>\d{2}:\d{2}(?::\d{2})?|\d{6}?)"  # \s*(?P<period>[AP]M)?)?
 HMS_RE = r"^(?P<hms>\d{2}:\d{2}:\d{2})$"
 HM_RE = r"^(?P<hm>\d{2}:\d{2})$"
-HMS_RE_NO_SEP = r"^(?P<hmsns>\d{6})$"
+HMS_RE_NO_SEP = r"^(?P<hms_no_sep>\d{6})$"
 TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
 FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
 
