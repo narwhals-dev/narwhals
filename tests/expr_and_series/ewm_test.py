@@ -82,19 +82,6 @@ def test_ewm_mean_dask_raise() -> None:
         df.select(nw.col("a").ewm_mean(com=1))
 
 
-def test_ewm_mean_old_raise() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw.from_native(pl.DataFrame(data))
-    if POLARS_VERSION <= (0, 20, 31):
-        with pytest.raises(
-            NotImplementedError,
-            match="ewm_mean` not implemented for polars older than 0.20.31",
-        ):
-            df.select(nw.col("a").ewm_mean(com=1))
-
-
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
