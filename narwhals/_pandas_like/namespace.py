@@ -139,7 +139,7 @@ class PandasLikeNamespace:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
-                name="lit",
+                name="literal",
                 index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
@@ -154,7 +154,7 @@ class PandasLikeNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=[_lit_pandas_series.__name__],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
