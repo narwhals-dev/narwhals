@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -76,6 +77,17 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -338,9 +350,12 @@ def convert_str_slice_to_int_slice(
 
 
 # Regex for date, time, separator and timezone components
-DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})"
+DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}|\d{8})"
 SEP_RE = r"(?P<sep>\s|T)"
-TIME_RE = r"(?P<time>\d{2}:\d{2}:\d{2})"  # \s*(?P<period>[AP]M)?)?
+TIME_RE = r"(?P<time>\d{2}:\d{2}(?::\d{2})?|\d{6}?)"  # \s*(?P<period>[AP]M)?)?
+HMS_RE = r"^(?P<hms>\d{2}:\d{2}:\d{2})$"
+HM_RE = r"^(?P<hm>\d{2}:\d{2})$"
+HMS_RE_NO_SEP = r"^(?P<hms_no_sep>\d{6})$"
 TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
 FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
 
@@ -348,12 +363,15 @@ FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
 YMD_RE = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])$"
 DMY_RE = r"^(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
 MDY_RE = r"^(?P<month>0[1-9]|1[0-2])(?P<sep1>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
+YMD_RE_NO_SEP = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<month>0[1-9]|1[0-2])(?P<day>0[1-9]|[12][0-9]|3[01])$"
 
 DATE_FORMATS = (
+    (YMD_RE_NO_SEP, "%Y%m%d"),
     (YMD_RE, "%Y-%m-%d"),
     (DMY_RE, "%d-%m-%Y"),
     (MDY_RE, "%m-%d-%Y"),
 )
+TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"))
 
 
 def parse_datetime_format(arr: pa.StringArray) -> str:
@@ -400,7 +418,9 @@ def _parse_date_format(arr: pa.Array) -> str:
 
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
-        if (
+        if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
+            return date_fmt
+        elif (
             pc.all(matches.is_valid()).as_py()
             and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
             and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1
@@ -418,5 +438,8 @@ def _parse_date_format(arr: pa.Array) -> str:
 def _parse_time_format(arr: pa.Array) -> str:
     import pyarrow.compute as pc  # ignore-banned-import
 
-    matches = pc.extract_regex(arr, pattern=TIME_RE)
-    return "%H:%M:%S" if pc.all(matches.is_valid()).as_py() else ""
+    for time_rgx, time_fmt in TIME_FORMATS:
+        matches = pc.extract_regex(arr, pattern=time_rgx)
+        if pc.all(matches.is_valid()).as_py():
+            return time_fmt
+    return ""
