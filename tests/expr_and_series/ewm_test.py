@@ -13,7 +13,9 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 
 
 def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")):
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -28,7 +30,9 @@ def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor)
 def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")) or (
+        "polars" in str(constructor_eager) and POLARS_VERSION <= (0, 20, 31)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
@@ -43,7 +47,9 @@ def test_ewm_mean_expr_adjust(
     constructor: Constructor,
     adjust: bool,  # noqa: FBT001
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")):
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -74,6 +80,19 @@ def test_ewm_mean_dask_raise() -> None:
         match="`Expr.ewm_mean` is not supported for the Dask backend",
     ):
         df.select(nw.col("a").ewm_mean(com=1))
+
+
+def test_ewm_mean_old_raise() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame(data))
+    if POLARS_VERSION <= (0, 20, 31):
+        with pytest.raises(
+            NotImplementedError,
+            match="ewm_mean` not implemented for polars older than 0.20.31",
+        ):
+            df.select(nw.col("a").ewm_mean(com=1))
 
 
 @pytest.mark.parametrize("ignore_nulls", [True, False])
