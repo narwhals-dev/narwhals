@@ -34,6 +34,8 @@ jobs:
       - name: install-altair-dev
         run: |
             cd altair
+            # temporary pin to get CI green
+            uv pip install "hatchling<1.26" --system
             uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
@@ -81,6 +83,8 @@ jobs:
         run: |
             cd marimo
             . .venv/bin/activate
+            # temporary pin to get CI green
+            uv pip install "hatchling<1.26"
             uv pip install -e ".[dev]"
             which python
       - name: install-narwhals-dev
