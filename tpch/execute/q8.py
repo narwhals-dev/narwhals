@@ -53,17 +53,3 @@ print(
         fn(region),
     )
 )
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q8.query(
-        fn(part),
-        fn(supplier),
-        fn(lineitem),
-        fn(orders),
-        fn(customer),
-        fn(nation),
-        fn(region),
-    ).compute()
-)
