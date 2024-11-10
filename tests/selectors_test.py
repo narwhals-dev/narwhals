@@ -44,13 +44,7 @@ def test_boolean(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_string(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "dask" in str(constructor) and PYARROW_VERSION < (12,):
-        # Dask doesn't infer `'b'` as String for old PyArrow versions
-        request.applymarker(pytest.mark.xfail)
+def test_string(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(string())
     expected = {"b": ["a", "b", "c"]}

@@ -106,10 +106,12 @@ class PolarsSeries:
         return self._from_native_series(ser.cast(dtype))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
@@ -188,6 +190,15 @@ class PolarsSeries:
 
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
+
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return self._native_series.median()
 
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False

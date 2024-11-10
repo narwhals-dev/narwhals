@@ -48,10 +48,12 @@ class PolarsExpr:
         return self._from_native_expr(expr.cast(dtype))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         expr = self._native_expr
-        return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        return_dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)

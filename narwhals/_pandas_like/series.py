@@ -425,6 +425,15 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.mean()
 
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+        ser = self._native_series
+        return ser.median()
+
     def std(
         self,
         *,
@@ -492,15 +501,19 @@ class PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
-        dtype = narwhals_to_native_dtype(
-            return_dtype,
-            self._native_series.dtype,
-            self._implementation,
-            self._backend_version,
-            self._dtypes,
+        dtype = (
+            narwhals_to_native_dtype(
+                return_dtype,
+                self._native_series.dtype,
+                self._implementation,
+                self._backend_version,
+                self._dtypes,
+            )
+            if return_dtype
+            else None
         )
         other = self.__native_namespace__().DataFrame(
             {

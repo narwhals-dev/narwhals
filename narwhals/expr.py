@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
@@ -443,6 +444,52 @@ class Expr:
             b: [[4]]
         """
         return self.__class__(lambda plx: self._call(plx).mean())
+
+    def median(self) -> Self:
+        """
+        Get median value.
+
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df_pl = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df_pa = pa.table({"a": [1, 8, 3], "b": [4, 5, 2]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").median())
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  3.0  4.0
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 3.0 ┆ 4.0 │
+            └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[3]]
+            b: [[4]]
+        """
+        return self.__class__(lambda plx: self._call(plx).median())
 
     def std(self, *, ddof: int = 1) -> Self:
         """
@@ -975,18 +1022,25 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+        self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any] | None = None,
+        *,
+        return_dtype: DType | type[DType] | None = None,
     ) -> Self:
         """
-        Replace old values with new values.
+        Replace all values by different values.
 
-        This function must replace all non-null input values (else it raises an error),
-        and the return dtype must be specified.
+        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
-            old: Sequence of old values to replace.
-            new: Sequence of new values to replace.
-            return_dtype: Return dtype.
+            old: Sequence of values to replace. It also accepts a mapping of values to
+                their replacement as syntactic sugar for
+                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+            new: Sequence of values to replace by. Length must match the length of `old`.
+            return_dtype: The data type of the resulting expression. If set to `None`
+                (default), the data type is determined automatically based on the other
+                inputs.
 
         Examples:
             >>> import narwhals as nw
@@ -1037,6 +1091,14 @@ class Expr:
             a: [[3,0,1,2]]
             b: [["three","zero","one","two"]]
         """
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+
+            new = list(old.values())
+            old = list(old.keys())
+
         return self.__class__(
             lambda plx: self._call(plx).replace_strict(
                 old, new, return_dtype=return_dtype
@@ -4709,6 +4771,56 @@ def mean(*columns: str) -> Expr:
     """
 
     return Expr(lambda plx: plx.mean(*columns))
+
+
+def median(*columns: str) -> Expr:
+    """
+    Get the median value.
+
+    Notes:
+        - Syntactic sugar for ``nw.col(columns).median()``
+        - Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
+        >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+        >>> df_pa = pa.table({"a": [4, 5, 2]})
+
+        Let's define a dataframe agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.median("a"))
+
+        We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
+    """
+
+    return Expr(lambda plx: plx.median(*columns))
 
 
 def min(*columns: str) -> Expr:
