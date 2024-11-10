@@ -105,8 +105,20 @@ class PolarsSeries:
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(ser.cast(dtype))
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        ser = self._native_series
+        dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
+        if self._backend_version < (1,):
+            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
+            raise NotImplementedError(msg)
+        return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
+
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        if self._backend_version < (0, 20, 29):  # pragma: no cover
+        if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
@@ -179,12 +191,21 @@ class PolarsSeries:
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return self._native_series.median()
+
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (0, 20, 15):  # pragma: no cover
+        if self._backend_version < (0, 20, 15):
             result = self._native_series.to_dummies(separator=separator)
             result = result.select(result.columns[int(drop_first) :])
         else:
@@ -224,7 +245,7 @@ class PolarsSeries:
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        if self._backend_version < (0, 20, 6):  # pragma: no cover
+        if self._backend_version < (0, 20, 6):
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
@@ -255,7 +276,7 @@ class PolarsSeries:
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             import polars as pl  # ignore-banned-import()
 
             value_name_ = name or ("proportion" if normalize else "count")

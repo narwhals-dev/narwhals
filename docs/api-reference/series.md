@@ -37,6 +37,7 @@
         - len
         - max
         - mean
+        - median
         - min
         - mode
         - name
@@ -45,6 +46,7 @@
         - pipe
         - quantile
         - rename
+        - replace_strict
         - round
         - sample
         - scatter

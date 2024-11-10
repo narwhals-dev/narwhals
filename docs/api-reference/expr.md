@@ -30,6 +30,7 @@
         - len
         - max
         - mean
+        - median
         - min
         - mode
         - null_count
@@ -37,6 +38,7 @@
         - over
         - pipe
         - quantile
+        - replace_strict
         - round
         - sample
         - shift
