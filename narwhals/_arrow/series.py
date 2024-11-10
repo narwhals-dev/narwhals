@@ -261,6 +261,17 @@ class ArrowSeries:
 
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def median(self) -> int:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return pc.approximate_median(self._native_series)  # type: ignore[no-any-return]
+
     def min(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
@@ -656,16 +667,16 @@ class ArrowSeries:
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))
-        result_native = pc.take(pa.array(new), idxs).cast(
-            narwhals_to_native_dtype(return_dtype, self._dtypes)
-        )
+        result_native = pc.take(pa.array(new), idxs)
+        if return_dtype is not None:
+            result_native.cast(narwhals_to_native_dtype(return_dtype, self._dtypes))
         result = self._from_native_series(result_native)
         if result.is_null().sum() != self.is_null().sum():
             msg = (

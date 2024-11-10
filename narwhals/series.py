@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generic
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -523,6 +524,40 @@ class Series:
             2.0
         """
         return self._compliant_series.mean()
+
+    def median(self) -> Any:
+        """
+        Reduce this Series to the median value.
+
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [5, 3, 8]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            Let's define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.median()
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            np.float64(5.0)
+            >>> func(s_pl)
+            5.0
+            >>> func(s_pa)
+            <pyarrow.DoubleScalar: 5.0>
+        """
+        return self._compliant_series.median()
 
     def count(self) -> Any:
         """
@@ -1350,18 +1385,25 @@ class Series:
         return self.alias(name=name)
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | type[DType]
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any] | None = None,
+        *,
+        return_dtype: DType | type[DType] | None = None,
     ) -> Self:
         """
-        Replace old values with values.
+        Replace all values by different values.
 
-        This function must replace all non-null input values (else it raises an error),
-        and the return dtype must be specified.
+        This function must replace all non-null input values (else it raises an error).
 
         Arguments:
-            old: Sequence of old values to replace.
-            new: Sequence of new values to replace.
-            return_dtype: Return dtype.
+            old: Sequence of values to replace. It also accepts a mapping of values to
+                their replacement as syntactic sugar for
+                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+            new: Sequence of values to replace by. Length must match the length of `old`.
+            return_dtype: The data type of the resulting expression. If set to `None`
+                (default), the data type is determined automatically based on the other
+                inputs.
 
         Examples:
             >>> import narwhals as nw
@@ -1408,6 +1450,14 @@ class Series:
               ]
             ]
         """
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+
+            new = list(old.values())
+            old = list(old.keys())
+
         return self._from_compliant_series(
             self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
         )

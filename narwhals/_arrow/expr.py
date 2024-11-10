@@ -205,6 +205,9 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
+    def median(self) -> Self:
+        return reuse_series_implementation(self, "median", returns_scalar=True)
+
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
@@ -322,7 +325,7 @@ class ArrowExpr:
         return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old, new, return_dtype=return_dtype

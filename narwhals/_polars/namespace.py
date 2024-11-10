@@ -142,6 +142,17 @@ class PolarsNamespace:
             backend_version=self._backend_version,
         )
 
+    def median(self, *column_names: str) -> PolarsExpr:
+        import polars as pl  # ignore-banned-import()
+
+        from narwhals._polars.expr import PolarsExpr
+
+        return PolarsExpr(
+            pl.median([*column_names]),  # type: ignore[arg-type]
+            dtypes=self._dtypes,
+            backend_version=self._backend_version,
+        )
+
     def concat_str(
         self,
         exprs: Iterable[IntoPolarsExpr],
