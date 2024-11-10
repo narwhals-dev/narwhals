@@ -181,10 +181,10 @@ def validate_dataframe_comparand(
             import numpy as np  # ignore-banned-import
             import pyarrow as pa  # ignore-banned-import
 
-            value = other[0]
+            value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
-            return pa.array(np.full(shape=length, fill_value=value, dtype=type(value)))
+            return pa.array(np.full(shape=length, fill_value=value))
         return other._native_series
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover

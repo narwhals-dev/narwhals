@@ -5203,8 +5203,8 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         >>> func(df_pd)
            a  literal
-        0  1  3
-        1  2  3
+        0  1        3
+        1  2        3
         >>> func(df_pl)
         shape: (2, 2)
         ┌─────┬─────────┐
