@@ -777,6 +777,9 @@ class ArrowSeries:
         tiebreaker = "first" if method == "ordinal" else method
 
         native_series = self._native_series
+        if self._backend_version < (14, 0, 0):  # pragma: no cover
+            native_series = native_series.combine_chunks()
+
         null_mask = pc.is_null(native_series)
 
         rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
