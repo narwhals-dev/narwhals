@@ -1447,31 +1447,31 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.with_columns(nw.lit(3).alias("b"))
+        ...     return df.with_columns(nw.lit(3))
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
-           a  b
+           a  literal
         0  1  3
         1  2  3
         >>> func(df_pl)
         shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i32 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 3   │
-        └─────┴─────┘
+        ┌─────┬─────────┐
+        │ a   ┆ literal │
+        │ --- ┆ ---     │
+        │ i64 ┆ i32     │
+        ╞═════╪═════════╡
+        │ 1   ┆ 3       │
+        │ 2   ┆ 3       │
+        └─────┴─────────┘
         >>> func(df_pa)
         pyarrow.Table
         a: int64
-        b: int64
+        literal: int64
         ----
         a: [[1,2]]
-        b: [[3,3]]
+        literal: [[3,3]]
     """
     return _stableify(nw.lit(value, dtype))
 
