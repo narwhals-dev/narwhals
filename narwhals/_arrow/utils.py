@@ -184,9 +184,7 @@ def validate_dataframe_comparand(
             value = other[0]
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
-            return pa.chunked_array(
-                [np.full(shape=length, fill_value=value, dtype=type(value))]
-            )
+            return pa.array(np.full(shape=length, fill_value=value, dtype=type(value)))
         return other._native_series
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
