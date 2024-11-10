@@ -42,14 +42,3 @@ print(
         fn(partsupp),
     )
 )
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q2.query(
-        fn(region),
-        fn(nation),
-        fn(supplier),
-        fn(part),
-        fn(partsupp),
-    ).compute()
-)
