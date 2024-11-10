@@ -2731,7 +2731,10 @@ class Series:
         """
         supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
         if method not in supported_rank_methods:
-            msg = f"Ranking method must be one of {supported_rank_methods}. Found '{method}'"
+            msg = (
+                "Ranking method must be one of {'average', 'min', 'max', 'dense', 'ordinal'}. "
+                f"Found '{method}'"
+            )
             raise ValueError(msg)
 
         return self._from_compliant_series(

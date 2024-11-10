@@ -101,3 +101,19 @@ def test_rank_expr_in_over_context(
     result = df.select(nw.col("a").rank(method=method).over("b"))
     expected_data = {"a": expected_over[method]}
     assert_equal_data(result, expected_data)
+
+
+def test_invalid_method_raise(constructor: Constructor) -> None:
+    method = "invalid_method_name"
+    df = nw.from_native(constructor(data_float))
+
+    msg = (
+        "Ranking method must be one of {'average', 'min', 'max', 'dense', 'ordinal'}. "
+        f"Found '{method}'"
+    )
+
+    with pytest.raises(ValueError, match=msg):
+        df.select(nw.col("a").rank(method=method))  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match=msg):
+        df.lazy().collect()["a"].rank(method=method)  # type: ignore[arg-type]
