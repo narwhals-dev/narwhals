@@ -320,7 +320,7 @@ def maybe_set_index(
         keys = (
             [to_native(idx, pass_through=True) for idx in index]
             if _is_iterable(index)
-            else [to_native(index, pass_through=True)]
+            else to_native(index, pass_through=True)
         )
     else:
         keys = column_names
