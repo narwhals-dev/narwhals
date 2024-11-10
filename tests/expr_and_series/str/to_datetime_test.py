@@ -60,17 +60,24 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
             "2020-01-01 12:34:00",
             "2020-01-01T12:34:00.000000000",
         ),
+        (
+            {"a": ["20240101123456"]},
+            "2024-01-01 12:34:56",
+            "2024-01-01T12:34:56.000000000",
+        ),
     ],
 )
 def test_to_datetime_infer_fmt(
+    request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
 ) -> None:
+    if "polars" in str(constructor) and str(data["a"][0]).isdigit():
+        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):  # pragma: no cover
         expected = expected_cudf
-
     result = (
         nw.from_native(constructor(data))
         .lazy()
@@ -94,14 +101,22 @@ def test_to_datetime_infer_fmt(
             "2020-01-01 12:34:00",
             "2020-01-01T12:34:00.000000000",
         ),
+        (
+            {"a": ["20240101123456"]},
+            "2024-01-01 12:34:56",
+            "2024-01-01T12:34:56.000000000",
+        ),
     ],
 )
 def test_to_datetime_series_infer_fmt(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
 ) -> None:
+    if "polars" in str(constructor_eager) and str(data["a"][0]).isdigit():
+        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):  # pragma: no cover
         expected = expected_cudf
 
