@@ -282,10 +282,12 @@ def maybe_set_index(
 ) -> T:
     """
     Set the index of `df`, if `df` is pandas-like. The index can either be specified as
-    a existing column name or list of column names with `column_names`, or set directly with a Series or list of Series with `index`.
+    a existing column name or list of column names with `column_names`, or set directly
+    with a Series or list of Series with `index`.
+
     Notes:
-        This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        This is only really intended for backwards-compatibility purposes, for example if
+        your library already aligns indices for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
         For non-pandas-like inputs, this is a no-op.
@@ -304,7 +306,7 @@ def maybe_set_index(
     """
 
     df_any = cast(Any, df)
-    native_frame = to_native(df_any)
+    native_obj = to_native(df_any)
 
     if column_names is not None and index is not None:
         msg = "Only one of `column_names` or `index` should be provided"
@@ -314,37 +316,29 @@ def maybe_set_index(
         msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
-    if column_names is not None:
-        if is_pandas_like_dataframe(native_frame):
-            return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-                df_any._compliant_frame._from_native_frame(
-                    native_frame.set_index(column_names)
-                )
-            )
-        elif is_pandas_like_series(native_frame):
+    if index is not None:
+        keys = (
+            [to_native(idx, pass_through=True) for idx in index]
+            if _is_iterable(index)
+            else [to_native(index, pass_through=True)]
+        )
+    else:
+        keys = column_names
+
+    if is_pandas_like_dataframe(native_obj):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        )
+    elif is_pandas_like_series(native_obj):
+        if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
 
-    if index is not None:  # pragma: no cover
-        from narwhals.series import Series
-
-        if _is_iterable(index):
-            index = [idx.to_native() if isinstance(idx, Series) else idx for idx in index]
-        if isinstance(index, Series):
-            index = index.to_native()
-
-        if is_pandas_like_dataframe(native_frame):
-            return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-                df_any._compliant_frame._from_native_frame(native_frame.set_index(index))
-            )
-
-        elif is_pandas_like_series(native_frame):
-            native_frame.index = index
-            return df_any._from_compliant_series(  # type: ignore[no-any-return]
-                df_any._compliant_series._from_native_series(native_frame)
-            )
-
-    return df_any  # type: ignore[no-any-return]
+        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+            df_any._compliant_series._from_native_series(native_obj.set_axis(keys))
+        )
+    else:
+        return df_any  # type: ignore[no-any-return]
 
 
 def maybe_reset_index(obj: T) -> T:
