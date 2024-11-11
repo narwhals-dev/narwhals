@@ -333,9 +333,8 @@ def maybe_set_index(
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
-        native_obj.index = keys
         return df_any._from_compliant_series(  # type: ignore[no-any-return]
-            df_any._compliant_series._from_native_series(native_obj)
+            df_any._compliant_series._from_native_series(native_obj.set_axis(keys))
         )
     else:
         return df_any  # type: ignore[no-any-return]
