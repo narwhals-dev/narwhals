@@ -311,7 +311,9 @@ class DaskNamespace:
         msg = "`_create_compliant_series` for DaskNamespace exists only for compatibility"
         raise NotImplementedError(msg)
 
-    def _create_series_from_scalar(self, *_: Any) -> NoReturn:
+    def _create_series_from_scalar(
+        self, value: Any, *, reference_series: DaskExpr
+    ) -> NoReturn:
         msg = (
             "`_create_series_from_scalar` for DaskNamespace exists only for compatibility"
         )

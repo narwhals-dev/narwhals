@@ -228,7 +228,7 @@ def reuse_series_implementation(
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
                 getattr(column, attr)(*_args, **_kwargs),
-                column,  # type: ignore[arg-type]
+                reference_series=column,  # type: ignore[arg-type]
             )
             if returns_scalar
             else getattr(column, attr)(*_args, **_kwargs)
