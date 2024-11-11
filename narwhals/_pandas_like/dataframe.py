@@ -280,7 +280,7 @@ class PandasLikeDataFrame:
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
@@ -296,7 +296,7 @@ class PandasLikeDataFrame:
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
+            The param ``buffer_size`` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         if not named:
@@ -395,15 +395,13 @@ class PandasLikeDataFrame:
         if not new_columns and len(self) == 0:
             return self
 
-        # If the inputs are all Expressions which return full columns
-        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
+        # If the inputs are all Expressions
+        # (as opposed to Series), we can use a fast path (concat, instead of assign).
         # We can't use the fastpath if any input is not an expression (e.g.
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
-        fast_path = (
-            all(len(s) > 1 for s in new_columns)
-            and all(isinstance(x, PandasLikeExpr) for x in exprs)
-            and all(isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items())
+        fast_path = all(isinstance(x, PandasLikeExpr) for x in exprs) and all(
+            isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items()
         )
 
         if fast_path:
@@ -431,7 +429,7 @@ class PandasLikeDataFrame:
             )
         else:
             # This is the logic in pandas' DataFrame.assign
-            if self._backend_version < (2,):  # pragma: no cover
+            if self._backend_version < (2,):
                 df = self._native_frame.copy(deep=True)
             else:
                 df = self._native_frame.copy(deep=False)
@@ -534,7 +532,7 @@ class PandasLikeDataFrame:
                 )
 
         if how == "anti":
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 return self._from_native_frame(
                     self._native_frame.merge(
                         other._native_frame,
@@ -658,7 +656,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
@@ -732,7 +730,7 @@ class PandasLikeDataFrame:
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_frame
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
+        if self._implementation is Implementation.MODIN:
             return self._native_frame._to_pandas()
         return self._native_frame.to_pandas()  # pragma: no cover
 
@@ -799,7 +797,7 @@ class PandasLikeDataFrame:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_frame.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()

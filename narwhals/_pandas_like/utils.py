@@ -129,7 +129,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,

@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
@@ -444,6 +445,52 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
+    def median(self) -> Self:
+        """
+        Get median value.
+
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df_pl = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df_pa = pa.table({"a": [1, 8, 3], "b": [4, 5, 2]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").median())
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  3.0  4.0
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 3.0 ┆ 4.0 │
+            └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[3]]
+            b: [[4]]
+        """
+        return self.__class__(lambda plx: self._call(plx).median())
+
     def std(self, *, ddof: int = 1) -> Self:
         """
         Get standard deviation.
@@ -491,6 +538,75 @@ class Expr:
 
         """
         return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
+
+    def map_batches(
+        self,
+        function: Callable[[Any], Self],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        """
+        Apply a custom python function to a whole Series or sequence of Series.
+
+        The output of this custom function is presumed to be either a Series,
+        or a NumPy array (in which case it will be automatically converted into
+        a Series).
+
+        Arguments:
+            return_dtype: Dtype of the output Series.
+                          If not set, the dtype will be inferred based on the first non-null value
+                          that is returned by the function.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(
+            ...         nw.col("a", "b").map_batches(
+            ...             lambda s: s.to_numpy() + 1, return_dtype=nw.Float64
+            ...         )
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  2.0  5.0
+            1  3.0  6.0
+            2  4.0  7.0
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 2.0 ┆ 5.0 │
+            │ 3.0 ┆ 6.0 │
+            │ 4.0 ┆ 7.0 │
+            └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[2,3,4]]
+            b: [[5,6,7]]
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).map_batches(
+                function=function, return_dtype=return_dtype
+            )
+        )
 
     def sum(self) -> Expr:
         """
@@ -707,9 +823,14 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
-    def unique(self) -> Self:
+    def unique(self, *, maintain_order: bool = False) -> Self:
         """
-        Return unique values
+        Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression. This may be more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for Polars.
 
         Examples:
             >>> import polars as pl
@@ -724,7 +845,7 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col("a", "b").unique())
+            ...     return df.select(nw.col("a", "b").unique(maintain_order=True))
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
@@ -752,7 +873,9 @@ class Expr:
             a: [[1,3,5]]
             b: [[2,4,6]]
         """
-        return self.__class__(lambda plx: self._call(plx).unique())
+        return self.__class__(
+            lambda plx: self._call(plx).unique(maintain_order=maintain_order)
+        )
 
     def abs(self) -> Self:
         """
@@ -966,6 +1089,90 @@ class Expr:
             a_shift: [[null,1,1,3,5]]
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
+
+    def replace_strict(
+        self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any] | None = None,
+        *,
+        return_dtype: DType | type[DType] | None = None,
+    ) -> Self:
+        """
+        Replace all values by different values.
+
+        This function must replace all non-null input values (else it raises an error).
+
+        Arguments:
+            old: Sequence of values to replace. It also accepts a mapping of values to
+                their replacement as syntactic sugar for
+                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+            new: Sequence of values to replace by. Length must match the length of `old`.
+            return_dtype: The data type of the resulting expression. If set to `None`
+                (default), the data type is determined automatically based on the other
+                inputs.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> df_pd = pd.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df_pa = pa.table({"a": [3, 0, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").replace_strict(
+            ...             [0, 1, 2, 3],
+            ...             ["zero", "one", "two", "three"],
+            ...             return_dtype=nw.String,
+            ...         )
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+               a      b
+            0  3  three
+            1  0   zero
+            2  1    one
+            3  2    two
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ str   │
+            ╞═════╪═══════╡
+            │ 3   ┆ three │
+            │ 0   ┆ zero  │
+            │ 1   ┆ one   │
+            │ 2   ┆ two   │
+            └─────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: string
+            ----
+            a: [[3,0,1,2]]
+            b: [["three","zero","one","two"]]
+        """
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+
+            new = list(old.values())
+            old = list(old.keys())
+
+        return self.__class__(
+            lambda plx: self._call(plx).replace_strict(
+                old, new, return_dtype=return_dtype
+            )
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
@@ -3917,6 +4124,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Convert to a new time zone.
 
+        If converting from a time-zone-naive column, then conversion happens
+        as if converting from UTC.
+
         Arguments:
             time_zone: Target time zone.
 
@@ -4545,6 +4755,56 @@ def mean(*columns: str) -> Expr:
     return Expr(lambda plx: plx.mean(*columns))
 
 
+def median(*columns: str) -> Expr:
+    """
+    Get the median value.
+
+    Notes:
+        - Syntactic sugar for ``nw.col(columns).median()``
+        - Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
+        >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+        >>> df_pa = pa.table({"a": [4, 5, 2]})
+
+        Let's define a dataframe agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.median("a"))
+
+        We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
+    """
+
+    return Expr(lambda plx: plx.median(*columns))
+
+
 def min(*columns: str) -> Expr:
     """
     Return the minimum value.
@@ -5006,31 +5266,31 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.with_columns(nw.lit(3).alias("b"))
+        ...     return df.with_columns(nw.lit(3))
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
-           a  b
+           a  literal
         0  1  3
         1  2  3
         >>> func(df_pl)
         shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i32 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 3   │
-        └─────┴─────┘
+        ┌─────┬─────────┐
+        │ a   ┆ literal │
+        │ --- ┆ ---     │
+        │ i64 ┆ i32     │
+        ╞═════╪═════════╡
+        │ 1   ┆ 3       │
+        │ 2   ┆ 3       │
+        └─────┴─────────┘
         >>> func(df_pa)
         pyarrow.Table
         a: int64
-        b: int64
+        literal: int64
         ----
         a: [[1,2]]
-        b: [[3,3]]
+        literal: [[3,3]]
     """
     if is_numpy_array(value):
         msg = (

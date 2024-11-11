@@ -76,14 +76,14 @@ class DaskNamespace:
 
         return DaskExpr(
             lambda df: [
-                df._native_frame.assign(lit=value)
-                .loc[:, "lit"]
+                df._native_frame.assign(literal=value)
+                .loc[:, "literal"]
                 .pipe(convert_if_dtype, dtype)
             ],
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=["literal"],
             returns_scalar=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -103,6 +103,11 @@ class DaskNamespace:
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
+
+    def median(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
 
     def sum(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
