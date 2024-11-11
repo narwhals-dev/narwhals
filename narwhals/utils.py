@@ -281,15 +281,30 @@ def maybe_set_index(
     index: Series | list[Series] | None = None,
 ) -> T:
     """
-    Set the index of `df`, if `df` is pandas-like. The index can either be specified as
-    a existing column name or list of column names with `column_names`, or set directly
-    with a Series or list of Series with `index`.
+    Set the index of `df`, if `df` is pandas-like, otherwise this is a no-op.
+
+    Arguments:
+        df: object for which maybe set the index (can be either a Narwhals `DataFrame`
+            or `Series`).
+        column_names: name or list of names of the columns to set as index.
+            For dataframes, only one of `column_names` and `index` can be specified but
+            not both. If `column_names` is passed and `df` is a Series, then a
+            `ValueError` is raised.
+        index: series or list of series to set as index.
+
+    Raises:
+        ValueError: If one of the following condition happens:
+
+            - none of `column_names` and `index` are provided
+            - both `column_names` and `index` are provided
+            - `column_names` is provided and `df` is a Series
 
     Notes:
         This is only really intended for backwards-compatibility purposes, for example if
         your library already aligns indices for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
+
         For non-pandas-like inputs, this is a no-op.
 
     Examples:
