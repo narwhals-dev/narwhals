@@ -8,6 +8,7 @@ from typing import Literal
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_generic
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -382,10 +383,15 @@ class ArrowExpr:
             input_series_list = self._call(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]):
+
+            if is_numpy_array(result[0]) or is_numpy_generic(result[0]):
                 result = [
                     df.__narwhals_namespace__()
                     ._create_compliant_series(array)
+                    .alias(output_name)
+                    if is_numpy_array(array)
+                    else df.__narwhals_namespace__()
+                    ._create_compliant_series([array])
                     .alias(output_name)
                     for array, output_name in zip(result, output_names)
                 ]

@@ -184,6 +184,11 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     return (np := get_numpy()) is not None and isinstance(arr, np.ndarray)
 
 
+def is_numpy_generic(obj: Any) -> TypeGuard[np.generic]:
+    """Check whether `obj` is a NumPy generic without importing NumPy."""
+    return (np := get_numpy()) is not None and isinstance(obj, np.generic)
+
+
 def is_pandas_like_dataframe(df: Any) -> bool:
     """
     Check whether `df` is a pandas-like DataFrame without doing any imports

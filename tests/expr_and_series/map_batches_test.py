@@ -38,6 +38,9 @@ def test_map_batches_expr_numpy(
     )
     assert_equal_data(expected, {"a": [9.0]})
 
+    expected = df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
+    assert_equal_data(expected, {"a": [2], "b": [2], "z": [2]})
+
 
 def test_map_batches_expr_names(
     request: pytest.FixtureRequest, constructor: Constructor

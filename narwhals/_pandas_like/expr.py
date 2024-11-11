@@ -9,6 +9,7 @@ from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_generic
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -398,7 +399,7 @@ class PandasLikeExpr:
             input_series_list = self._call(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]):
+            if is_numpy_array(result[0]) or is_numpy_generic(result[0]):
                 result = [
                     df.__narwhals_namespace__()
                     ._create_compliant_series(array)
