@@ -410,10 +410,8 @@ class PandasLikeExpr:
             input_series_list = self._call(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
-            if (
-                is_numpy_array(result[0])
-                or (np := get_numpy()) is not None
-                and np.isscalar(result[0])
+            if is_numpy_array(result[0]) or (
+                (np := get_numpy()) is not None and np.isscalar(result[0])
             ):
                 result = [
                     df.__narwhals_namespace__()

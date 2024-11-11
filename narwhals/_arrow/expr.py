@@ -395,17 +395,16 @@ class ArrowExpr:
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
 
-            if (
-                is_numpy_array(result[0])
-                or (np := get_numpy()) is not None
-                and np.isscalar(result[0])
-            ):
+            if is_numpy_array(result[0]):
                 result = [
                     df.__narwhals_namespace__()
                     ._create_compliant_series(array)
                     .alias(output_name)
-                    if is_numpy_array(array)
-                    else df.__narwhals_namespace__()
+                    for array, output_name in zip(result, output_names)
+                ]
+            elif (np := get_numpy()) is not None and np.isscalar(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
                     ._create_compliant_series([array])
                     .alias(output_name)
                     for array, output_name in zip(result, output_names)
