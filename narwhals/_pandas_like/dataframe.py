@@ -677,7 +677,6 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
-            # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasLikeSeries(
                     self._native_frame[col],
