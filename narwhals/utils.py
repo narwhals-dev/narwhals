@@ -348,8 +348,17 @@ def maybe_set_index(
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
+
+        if (
+            df_any._compliant_series._implementation is Implementation.PANDAS
+            and df_any._compliant_series._backend_version < (1,)
+        ):  # pragma: no cover
+            native_obj = native_obj.set_axis(keys, inplace=False)
+        else:
+            native_obj = native_obj.set_axis(keys)
+
         return df_any._from_compliant_series(  # type: ignore[no-any-return]
-            df_any._compliant_series._from_native_series(native_obj.set_axis(keys))
+            df_any._compliant_series._from_native_series(native_obj)
         )
     else:
         return df_any  # type: ignore[no-any-return]
