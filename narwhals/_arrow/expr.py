@@ -8,6 +8,8 @@ from typing import Sequence
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -382,6 +384,44 @@ class ArrowExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
+
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            input_series_list = self._call(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
+
+            if is_numpy_array(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series(array)
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            elif (np := get_numpy()) is not None and np.isscalar(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series([array])
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype is not None:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

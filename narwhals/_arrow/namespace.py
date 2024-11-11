@@ -152,7 +152,7 @@ class ArrowNamespace:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
                 data=[value],
-                name="lit",
+                name="literal",
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
@@ -165,7 +165,7 @@ class ArrowNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=[_lit_arrow_series.__name__],
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )

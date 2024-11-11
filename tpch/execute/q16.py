@@ -18,7 +18,3 @@ print(q16.query(fn(part), fn(partsupp), fn(supplier)).collect())
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q16.query(fn(part), fn(partsupp), fn(supplier)))
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(q16.query(fn(part), fn(partsupp), fn(supplier)).compute())

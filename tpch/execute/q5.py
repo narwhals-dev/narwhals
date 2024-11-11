@@ -33,11 +33,3 @@ print(
         fn(region), fn(nation), fn(customer), fn(line_item), fn(orders), fn(supplier)
     )
 )
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q5.query(
-        fn(region), fn(nation), fn(customer), fn(line_item), fn(orders), fn(supplier)
-    ).compute()
-)
