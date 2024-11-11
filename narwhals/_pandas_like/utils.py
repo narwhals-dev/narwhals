@@ -142,7 +142,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError(msg)
 
 
-def create_native_series(
+def create_compliant_series(
     iterable: Any,
     index: Any = None,
     *,

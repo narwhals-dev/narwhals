@@ -227,12 +227,12 @@ def reuse_series_implementation(
 
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(column, attr)(*_args, **_kwargs),
-                column,  # type: ignore[arg-type]
+                getattr(series, attr)(*_args, **_kwargs),
+                reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
-            else getattr(column, attr)(*_args, **_kwargs)
-            for column in expr._call(df)  # type: ignore[arg-type]
+            else getattr(series, attr)(*_args, **_kwargs)
+            for series in expr._call(df)  # type: ignore[arg-type]
         ]
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names

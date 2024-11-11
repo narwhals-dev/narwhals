@@ -12,7 +12,7 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_native_series
+from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
@@ -349,7 +349,7 @@ class PandasLikeDataFrame:
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def with_row_index(self, name: str) -> Self:
-        row_index = create_native_series(
+        row_index = create_compliant_series(
             range(len(self._native_frame)),
             index=self._native_frame.index,
             implementation=self._implementation,
