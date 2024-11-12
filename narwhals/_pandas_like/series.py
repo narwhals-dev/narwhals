@@ -18,7 +18,7 @@ from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -726,7 +726,7 @@ class PandasLikeSeries:
             output_order = [null_col_pd, *cols]
         else:
             output_order = list(result.columns)
-            null_col_pd = generate_unique_token(n_bytes=8, columns=output_order)
+            null_col_pd = generate_temporary_column_name(n_bytes=8, columns=output_order)
 
         return PandasLikeDataFrame(
             result.loc[:, output_order].rename(
