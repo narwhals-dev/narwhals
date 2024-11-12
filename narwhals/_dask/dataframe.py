@@ -136,7 +136,7 @@ class DaskLazyFrame:
             )
             return self._from_native_frame(df)
 
-        df = self._native_frame.assign(**new_series)[list(new_series.keys())]
+        df = self._native_frame.assign(**new_series).loc[:, list(new_series.keys())]
         return self._from_native_frame(df)
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
@@ -258,7 +258,7 @@ class DaskLazyFrame:
             )
 
             other_native = (
-                other._native_frame[right_on]
+                other._native_frame.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
@@ -277,7 +277,7 @@ class DaskLazyFrame:
 
         if how == "semi":
             other_native = (
-                other._native_frame[right_on]
+                other._native_frame.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
