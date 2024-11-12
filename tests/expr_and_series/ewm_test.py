@@ -41,11 +41,30 @@ def test_ewm_mean_series(
     assert_equal_data({"a": result}, expected)
 
 
-@pytest.mark.parametrize("adjust", [True, False])
+@pytest.mark.parametrize(
+    ("adjust", "expected"),
+    [
+        (
+            True,
+            {
+                "a": [1.0, 1.0, 1.5714285714285714],
+                "b": [1.0, 1.6666666666666667, 2.4285714285714284],
+            },
+        ),
+        (
+            False,
+            {
+                "a": [1.0, 1.0, 1.5],
+                "b": [1.0, 1.5, 2.25],
+            },
+        ),
+    ],
+)
 def test_ewm_mean_expr_adjust(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     adjust: bool,  # noqa: FBT001
+    expected: dict[str, list[float]],
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
         "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
@@ -54,18 +73,6 @@ def test_ewm_mean_expr_adjust(
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").ewm_mean(com=1, adjust=adjust))
-
-    if adjust:
-        expected = {
-            "a": [1.0, 1.0, 1.5714285714285714],
-            "b": [1.0, 1.6666666666666667, 2.4285714285714284],
-        }
-    else:
-        expected = {
-            "a": [1.0, 1.0, 1.5],
-            "b": [1.0, 1.5, 2.25],
-        }
-
     assert_equal_data(result, expected)
 
 
@@ -82,10 +89,37 @@ def test_ewm_mean_dask_raise() -> None:
         df.select(nw.col("a").ewm_mean(com=1))
 
 
-@pytest.mark.parametrize("ignore_nulls", [True, False])
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (
+            True,
+            {
+                "a": [
+                    2.0,
+                    3.3333333333333335,
+                    float("nan"),
+                    3.142857142857143,
+                ]
+            },
+        ),
+        (
+            False,
+            {
+                "a": [
+                    2.0,
+                    3.3333333333333335,
+                    float("nan"),
+                    3.090909090909091,
+                ]
+            },
+        ),
+    ],
+)
 def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
     ignore_nulls: bool,  # noqa: FBT001
+    expected: dict[str, list[float]],
     constructor: Constructor,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
@@ -95,24 +129,4 @@ def test_ewm_mean_nulls(
 
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
     result = df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=ignore_nulls))
-
-    if ignore_nulls:
-        expected = {
-            "a": [
-                2.0,
-                3.3333333333333335,
-                float("nan"),
-                3.142857142857143,
-            ],
-        }
-    else:
-        expected = {
-            "a": [
-                2.0,
-                3.3333333333333335,
-                float("nan"),
-                3.090909090909091,
-            ],
-        }
-
     assert_equal_data(result, expected)
