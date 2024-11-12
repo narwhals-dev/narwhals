@@ -2583,6 +2583,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     ) -> Self:
         r"""
         Create a spreadsheet-style pivot table as a DataFrame.
+
         Arguments:
             on: Name of the column(s) whose values will be used as the header of the
                 output DataFrame.
@@ -2602,6 +2603,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 discovery.
             separator: Used as separator/delimiter in generated column names in case of
                 multiple `values` columns.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2614,11 +2616,15 @@ class DataFrame(BaseFrame[DataFrameT]):
             ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+
             Let's define a dataframe-agnostic function:
+
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.pivot("col", index="ix", aggregate_function="sum")
+
             We can then pass either pandas or Polars to `func`:
+
             >>> func(df_pd)
                ix  foo_a  foo_b  bar_a  bar_b
             0   1      1      7      2      9
