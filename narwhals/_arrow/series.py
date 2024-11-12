@@ -752,17 +752,32 @@ class ArrowSeries:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         series = self._native_series
-        da = series.dictionary_encode().combine_chunks()
+        name = self._name
+        da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
-        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
+        null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
+        cols = [
+            {null_col_pa: null_col_pl}.get(
+                f"{name}{separator}{v}", f"{name}{separator}{v}"
+            )
+            for v in da.dictionary
+        ]
 
+        output_order = (
+            [
+                null_col_pl,
+                *sorted([c for c in cols if c != null_col_pl])[int(drop_first) :],
+            ]
+            if null_col_pl in cols
+            else sorted(cols)[int(drop_first) :]
+        )
         return ArrowDataFrame(
-            pa.Table.from_arrays(columns, names=names),
+            pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             dtypes=self._dtypes,
-        ).select(*sorted(names)[int(drop_first) :])
+        ).select(*output_order)
 
     def quantile(
         self: Self,
