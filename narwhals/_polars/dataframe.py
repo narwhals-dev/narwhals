@@ -261,7 +261,7 @@ class PolarsDataFrame:
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             msg = "`pivot` is only supported for Polars>=1.0.0"
             raise NotImplementedError(msg)
-        result = self._native_dataframe.pivot(
+        result = self._native_frame.pivot(
             on,
             index=index,
             values=values,

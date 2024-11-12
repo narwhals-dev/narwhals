@@ -7,7 +7,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -131,7 +131,7 @@ def test_pivot(
         aggregate_function=agg_func,  # type: ignore[arg-type]
     )
 
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
