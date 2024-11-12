@@ -67,7 +67,7 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in column_names]
+            return [df._native_frame[column_name] for column_name in column_names]
 
         return cls(
             func,
