@@ -14,11 +14,11 @@ from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -724,14 +724,17 @@ class PandasLikeSeries:
         if has_nulls:
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
+            result = select_columns_by_name(
+                result, output_order, self._backend_version, self._implementation
+            ).rename(columns={null_col_pd: null_col_pl}, copy=False)
         else:
             output_order = list(result.columns)
-            null_col_pd = generate_temporary_column_name(n_bytes=8, columns=output_order)
+            result = select_columns_by_name(
+                result, output_order, self._backend_version, self._implementation
+            )
 
         return PandasLikeDataFrame(
-            result.loc[:, output_order].rename(
-                columns={null_col_pd: null_col_pl}, errors="ignore"
-            ),
+            result,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
