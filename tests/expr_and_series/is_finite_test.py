@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -11,7 +13,10 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
-def test_is_finite_expr(constructor: Constructor) -> None:
+def test_is_finite_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if sys.version_info < (3, 9) and "pandas_pyarrow" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     if "polars" in str(constructor) or "pyarrow_table" in str(constructor):
         expected = {"a": [False, False, True, None]}
     else:
@@ -23,7 +28,12 @@ def test_is_finite_expr(constructor: Constructor) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
-def test_is_finite_series(constructor_eager: ConstructorEager) -> None:
+def test_is_finite_series(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if sys.version_info < (3, 9) and "pandas_pyarrow" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
     if "polars" in str(constructor_eager) or "pyarrow_table" in str(constructor_eager):
         expected = {"a": [False, False, True, None]}
     else:

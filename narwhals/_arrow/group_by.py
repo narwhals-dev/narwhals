@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 POLARS_TO_ARROW_AGGREGATIONS = {
     "len": "count",
+    "median": "approximate_median",
     "n_unique": "count_distinct",
     "std": "stddev",
     "var": "variance",  # currently unused, we don't have `var` yet

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Sequence
 
 from narwhals._polars.utils import extract_args_kwargs
@@ -47,11 +48,26 @@ class PolarsExpr:
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
 
+    def map_batches(
+        self,
+        function: Callable[[Any], Self],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        if return_dtype is not None:
+            return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+            return self._from_native_expr(
+                self._native_expr.map_batches(function, return_dtype)
+            )
+        else:
+            return self._from_native_expr(self._native_expr.map_batches(function))
+
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         expr = self._native_expr
-        return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        return_dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)

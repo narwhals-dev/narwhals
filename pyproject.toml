@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.13.3"
+version = "1.13.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -116,7 +116,7 @@ filterwarnings = [
   'ignore:.*You are using pyarrow version',
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
-  'ignore:.*The default coalesce behavior'
+  'ignore:.*The default coalesce behavior',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

@@ -1447,31 +1447,31 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.with_columns(nw.lit(3).alias("b"))
+        ...     return df.with_columns(nw.lit(3))
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
-           a  b
-        0  1  3
-        1  2  3
+           a  literal
+        0  1        3
+        1  2        3
         >>> func(df_pl)
         shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i32 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 3   │
-        └─────┴─────┘
+        ┌─────┬─────────┐
+        │ a   ┆ literal │
+        │ --- ┆ ---     │
+        │ i64 ┆ i32     │
+        ╞═════╪═════════╡
+        │ 1   ┆ 3       │
+        │ 2   ┆ 3       │
+        └─────┴─────────┘
         >>> func(df_pa)
         pyarrow.Table
         a: int64
-        b: int64
+        literal: int64
         ----
         a: [[1,2]]
-        b: [[3,3]]
+        literal: [[3,3]]
     """
     return _stableify(nw.lit(value, dtype))
 
@@ -1618,6 +1618,55 @@ def mean(*columns: str) -> Expr:
         a: [[4]]
     """
     return _stableify(nw.mean(*columns))
+
+
+def median(*columns: str) -> Expr:
+    """
+    Get the median value.
+
+    Notes:
+        - Syntactic sugar for ``nw.col(columns).median()``
+        - Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
+        >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+        >>> df_pa = pa.table({"a": [4, 5, 2]})
+
+        Let's define a dataframe agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.median("a"))
+
+        We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
+    """
+    return _stableify(nw.median(*columns))
 
 
 def sum(*columns: str) -> Expr:
@@ -2519,6 +2568,7 @@ __all__ = [
     "max_horizontal",
     "mean",
     "mean_horizontal",
+    "median",
     "min",
     "min_horizontal",
     "sum",

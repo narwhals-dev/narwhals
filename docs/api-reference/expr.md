@@ -28,8 +28,10 @@
         - is_null
         - is_unique
         - len
+        - map_batches
         - max
         - mean
+        - median
         - min
         - mode
         - null_count

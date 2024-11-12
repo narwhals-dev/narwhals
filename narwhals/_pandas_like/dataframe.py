@@ -12,9 +12,10 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_native_series
+from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
@@ -232,7 +233,14 @@ class PandasLikeDataFrame:
 
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
-                return self._from_native_frame(self._native_frame.loc[:, item])
+                return self._from_native_frame(
+                    select_columns_by_name(
+                        self._native_frame,
+                        item,
+                        self._backend_version,
+                        self._implementation,
+                    )
+                )
             return self._from_native_frame(self._native_frame.iloc[item])
 
         elif isinstance(item, slice):
@@ -328,7 +336,15 @@ class PandasLikeDataFrame:
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
-            return self._from_native_frame(self._native_frame.loc[:, list(exprs)])
+            column_names = list(exprs)
+            return self._from_native_frame(
+                select_columns_by_name(
+                    self._native_frame,
+                    column_names,  # type: ignore[arg-type]
+                    self._backend_version,
+                    self._implementation,
+                )
+            )
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -349,7 +365,7 @@ class PandasLikeDataFrame:
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def with_row_index(self, name: str) -> Self:
-        row_index = create_native_series(
+        row_index = create_compliant_series(
             range(len(self._native_frame)),
             index=self._native_frame.index,
             implementation=self._implementation,
@@ -545,9 +561,17 @@ class PandasLikeDataFrame:
                 indicator_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
+                if right_on is None:  # pragma: no cover
+                    msg = "`right_on` cannot be `None` in anti-join"
+                    raise TypeError(msg)
 
                 other_native = (
-                    other._native_frame.loc[:, right_on]
+                    select_columns_by_name(
+                        other._native_frame,
+                        right_on,
+                        self._backend_version,
+                        self._implementation,
+                    )
                     .rename(  # rename to avoid creating extra columns in join
                         columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                         copy=False,
@@ -567,8 +591,16 @@ class PandasLikeDataFrame:
                 )
 
         if how == "semi":
+            if right_on is None:  # pragma: no cover
+                msg = "`right_on` cannot be `None` in semi-join"
+                raise TypeError(msg)
             other_native = (
-                other._native_frame.loc[:, right_on]
+                select_columns_by_name(
+                    other._native_frame,
+                    right_on,
+                    self._backend_version,
+                    self._implementation,
+                )
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                     copy=False,
@@ -677,7 +709,6 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
-            # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasLikeSeries(
                     self._native_frame[col],

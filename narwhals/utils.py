@@ -274,15 +274,37 @@ def maybe_get_index(obj: T) -> Any | None:
     return None
 
 
-def maybe_set_index(df: T, column_names: str | list[str]) -> T:
+def maybe_set_index(
+    obj: T,
+    column_names: str | list[str] | None = None,
+    *,
+    index: Series | list[Series] | None = None,
+) -> T:
     """
-    Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+    Set the index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
+            or `Series`).
+        column_names: name or list of names of the columns to set as index.
+            For dataframes, only one of `column_names` and `index` can be specified but
+            not both. If `column_names` is passed and `df` is a Series, then a
+            `ValueError` is raised.
+        index: series or list of series to set as index.
+
+    Raises:
+        ValueError: If one of the following condition happens:
+
+            - none of `column_names` and `index` are provided
+            - both `column_names` and `index` are provided
+            - `column_names` is provided and `df` is a Series
 
     Notes:
-        This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        This is only really intended for backwards-compatibility purposes, for example if
+        your library already aligns indices for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
+
         For non-pandas-like inputs, this is a no-op.
 
     Examples:
@@ -297,15 +319,49 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    df_any = cast(Any, df)
-    native_frame = to_native(df_any)
-    if is_pandas_like_dataframe(native_frame):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_frame(
-                native_frame.set_index(column_names)
-            )
+
+    df_any = cast(Any, obj)
+    native_obj = to_native(df_any)
+
+    if column_names is not None and index is not None:
+        msg = "Only one of `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if not column_names and not index:
+        msg = "Either `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if index is not None:
+        keys = (
+            [to_native(idx, pass_through=True) for idx in index]
+            if _is_iterable(index)
+            else to_native(index, pass_through=True)
         )
-    return df_any  # type: ignore[no-any-return]
+    else:
+        keys = column_names
+
+    if is_pandas_like_dataframe(native_obj):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        )
+    elif is_pandas_like_series(native_obj):
+        if column_names:
+            msg = "Cannot set index using column names on a Series"
+            raise ValueError(msg)
+
+        if (
+            df_any._compliant_series._implementation is Implementation.PANDAS
+            and df_any._compliant_series._backend_version < (1,)
+        ):  # pragma: no cover
+            native_obj = native_obj.set_axis(keys, inplace=False)
+        else:
+            native_obj = native_obj.set_axis(keys)
+
+        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+            df_any._compliant_series._from_native_series(native_obj)
+        )
+    else:
+        return df_any  # type: ignore[no-any-return]
 
 
 def maybe_reset_index(obj: T) -> T:
@@ -482,12 +538,11 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    warn(
+    msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
-        "deprecated and it will be removed in future versions",
-        DeprecationWarning,
-        stacklevel=2,
+        "deprecated and it will be removed in future versions"
     )
+    issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 

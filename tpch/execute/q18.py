@@ -18,7 +18,3 @@ print(q18.query(fn(customer), fn(lineitem), fn(orders)).collect())
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q18.query(fn(customer), fn(lineitem), fn(orders)))
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(q18.query(fn(customer), fn(lineitem), fn(orders)).compute())

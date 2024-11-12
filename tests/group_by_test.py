@@ -104,6 +104,18 @@ def test_group_by_len(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_group_by_median(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.col("b").median())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "b": [5, 3]}
+    assert_equal_data(result, expected)
+
+
 def test_group_by_n_unique(constructor: Constructor) -> None:
     result = (
         nw.from_native(constructor(data))

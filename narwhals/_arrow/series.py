@@ -261,6 +261,17 @@ class ArrowSeries:
 
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def median(self) -> int:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return pc.approximate_median(self._native_series)  # type: ignore[no-any-return]
+
     def min(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
@@ -569,14 +580,57 @@ class ArrowSeries:
 
         return self._from_native_series(pc.take(ser, mask))
 
-    def fill_null(self: Self, value: Any) -> Self:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
+
+        def fill_aux(
+            arr: pa.Array,
+            limit: int,
+            direction: Literal["forward", "backward"] | None = None,
+        ) -> pa.Array:
+            # this algorithm first finds the indices of the valid values to fill all the null value positions
+            # then it calculates the distance of each new index and the original index
+            # if the distance is equal to or less than the limit and the original value is null, it is replaced
+            valid_mask = pc.is_valid(arr)
+            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            if direction == "forward":
+                valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
+                distance = indices - valid_index
+            else:
+                valid_index = np.minimum.accumulate(
+                    np.where(valid_mask[::-1], indices[::-1], len(arr))
+                )[::-1]
+                distance = valid_index - indices
+            return pc.if_else(
+                pc.and_(
+                    pc.is_null(arr),
+                    pc.less_equal(distance, pa.scalar(limit)),
+                ),
+                arr.take(valid_index),
+                arr,
+            )
 
         ser = self._native_series
         dtype = ser.type
 
-        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        if value is not None:
+            res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        elif limit is None:
+            fill_func = (
+                pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
+            )
+            res_ser = self._from_native_series(fill_func(ser))
+        else:
+            res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
+
+        return res_ser
 
     def to_frame(self: Self) -> ArrowDataFrame:
         import pyarrow as pa  # ignore-banned-import()
@@ -656,16 +710,16 @@ class ArrowSeries:
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))
-        result_native = pc.take(pa.array(new), idxs).cast(
-            narwhals_to_native_dtype(return_dtype, self._dtypes)
-        )
+        result_native = pc.take(pa.array(new), idxs)
+        if return_dtype is not None:
+            result_native.cast(narwhals_to_native_dtype(return_dtype, self._dtypes))
         result = self._from_native_series(result_native)
         if result.is_null().sum() != self.is_null().sum():
             msg = (
@@ -698,17 +752,32 @@ class ArrowSeries:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         series = self._native_series
-        da = series.dictionary_encode().combine_chunks()
+        name = self._name
+        da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
-        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
+        null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
+        cols = [
+            {null_col_pa: null_col_pl}.get(
+                f"{name}{separator}{v}", f"{name}{separator}{v}"
+            )
+            for v in da.dictionary
+        ]
 
+        output_order = (
+            [
+                null_col_pl,
+                *sorted([c for c in cols if c != null_col_pl])[int(drop_first) :],
+            ]
+            if null_col_pl in cols
+            else sorted(cols)[int(drop_first) :]
+        )
         return ArrowDataFrame(
-            pa.Table.from_arrays(columns, names=names),
+            pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             dtypes=self._dtypes,
-        ).select(*sorted(names)[int(drop_first) :])
+        ).select(*output_order)
 
     def quantile(
         self: Self,
