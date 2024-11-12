@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -8,7 +10,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_renamed_taxicab_norm(constructor: Constructor) -> None:
@@ -23,7 +25,7 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
@@ -33,11 +35,11 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # It's new, so it couldn't be backwards-incompatible.
     result = df.with_columns(b=nw_v1.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     # The older `_l1_norm` still works in the stable api
     result = df.with_columns(b=nw_v1.col("a")._l1_norm())
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
@@ -51,7 +53,7 @@ def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
 
     result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
     expected = {"a": [15]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
@@ -64,7 +66,7 @@ def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> 
 
     result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
     expected = {"a": [15]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_stable_api_completeness() -> None:
@@ -83,16 +85,7 @@ def test_stable_api_docstrings() -> None:
             continue
         v1_doc = getattr(nw_v1, item).__doc__
         nw_doc = getattr(nw, item).__doc__
-        if item == "from_native":
-            v1_doc = v1_doc.replace("native_dataframe", "native_object")
-        assert (
-            v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
-            == nw_doc
-        )
-        assert (
-            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
-            == v1_doc
-        )
+        assert v1_doc == nw_doc
 
 
 def test_dataframe_docstrings() -> None:

@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 from typing import TypeVar
 
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -30,11 +32,54 @@ PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.CUDF,
     Implementation.MODIN,
 }
+PD_DATETIME_RGX = r"""^
+    datetime64\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+        (?:,                                      # Begin non-capturing group for optional timezone
+            \s*                                   # Optional whitespace after comma
+            (?P<time_zone>                        # Start named group for timezone
+                [a-zA-Z\/]+                       # Match timezone name, e.g., UTC, America/New_York
+                (?:[+-]\d{2}:\d{2})?              # Optional offset in format +HH:MM or -HH:MM
+                |                                 # OR
+                pytz\.FixedOffset\(\d+\)          # Match pytz.FixedOffset with integer offset in parentheses
+            )                                     # End time_zone group
+        )?                                        # End optional timezone group
+    \]                                            # Closing bracket for datetime64
+$"""
+PATTERN_PD_DATETIME = re.compile(PD_DATETIME_RGX, re.VERBOSE)
+PA_DATETIME_RGX = r"""^
+    timestamp\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+        (?:,                                      # Begin non-capturing group for optional timezone
+            \s?tz=                                # Match "tz=" prefix
+            (?P<time_zone>                        # Start named group for timezone
+                [a-zA-Z\/]*                       # Match timezone name (e.g., UTC, America/New_York)
+                (?:                               # Begin optional non-capturing group for offset
+                    [+-]\d{2}:\d{2}               # Match offset in format +HH:MM or -HH:MM
+                )?                                # End optional offset group
+            )                                     # End time_zone group
+        )?                                        # End optional timezone group
+    \]                                            # Closing bracket for timestamp
+    \[pyarrow\]                                   # Literal string "[pyarrow]"
+$"""
+PATTERN_PA_DATETIME = re.compile(PA_DATETIME_RGX, re.VERBOSE)
+PD_DURATION_RGX = r"""^
+    timedelta64\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+    \]                                            # Closing bracket for timedelta64
+$"""
+
+PATTERN_PD_DURATION = re.compile(PD_DURATION_RGX, re.VERBOSE)
+PA_DURATION_RGX = r"""^
+    duration\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+    \]                                            # Closing bracket for duration
+    \[pyarrow\]                                   # Literal string "[pyarrow]"
+$"""
+PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def validate_column_comparand(
-    index: Any, other: Any, *, treat_length_one_as_scalar: bool = True
-) -> Any:
+def validate_column_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -55,9 +100,10 @@ def validate_column_comparand(
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        if other.len() == 1 and treat_length_one_as_scalar:
+        if other.len() == 1:
             # broadcast
-            return other.item()
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -83,7 +129,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
-            return other._native_series.iloc[0]
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -96,7 +143,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError(msg)
 
 
-def create_native_series(
+def create_compliant_series(
     iterable: Any,
     index: Any = None,
     *,
@@ -218,16 +265,10 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
-    dtype = str(column.dtype)
-
-    pd_datetime_rgx = (
-        r"^datetime64\[(?P<time_unit>s|ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
-    )
-    pa_datetime_rgx = r"^timestamp\[(?P<time_unit>s|ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
-
-    pd_duration_rgx = r"^timedelta64\[(?P<time_unit>s|ms|us|ns)\]$"
-    pa_duration_rgx = r"^duration\[(?P<time_unit>s|ms|us|ns)\]\[pyarrow\]$"
+def native_to_narwhals_dtype(
+    native_column: Any, dtypes: DTypes, implementation: Implementation
+) -> DType:
+    dtype = str(native_column.dtype)
 
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -267,41 +308,37 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
         return dtypes.Boolean()
     if dtype == "category" or dtype.startswith("dictionary<"):
         return dtypes.Categorical()
-    if (match_ := re.match(pd_datetime_rgx, dtype)) or (
-        match_ := re.match(pa_datetime_rgx, dtype)
+    if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
+        match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
         dt_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
-    if (match_ := re.match(pd_duration_rgx, dtype)) or (
-        match_ := re.match(pa_duration_rgx, dtype)
+    if (match_ := PATTERN_PD_DURATION.match(dtype)) or (
+        match_ := PATTERN_PA_DURATION.match(dtype)
     ):
         du_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype.startswith(("large_list", "list")):
-        return dtypes.List(
-            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes)
-        )
-    if dtype.startswith("fixed_size_list"):
-        return dtypes.Array(
-            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes),
-            column.dtype.pyarrow_dtype.list_size,
-        )
-    if dtype.startswith("struct"):
-        return dtypes.Struct()
+    if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
-        if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
-            idx := getattr(column, "first_valid_index", lambda: None)()
-        ) is not None and isinstance(column.loc[idx], str):
-            # Infer based on first non-missing value.
-            # For pandas pre 3.0, this isn't perfect.
-            # After pandas 3.0, pandas has a dedicated string dtype
-            # which is inferred by default.
+        if implementation is Implementation.DASK:
+            # Dask columns are lazy, so we can't inspect values.
+            # The most useful assumption is probably String
             return dtypes.String()
-        else:
-            df = column.to_frame()
+        if implementation is Implementation.PANDAS:  # pragma: no cover
+            # This is the most efficient implementation for pandas,
+            # and doesn't require the interchange protocol
+            import pandas as pd  # ignore-banned-import
+
+            dtype = pd.api.types.infer_dtype(native_column, skipna=True)
+            if dtype == "string":
+                return dtypes.String()
+            return dtypes.Object()
+        else:  # pragma: no cover
+            df = native_column.to_frame()
             if hasattr(df, "__dataframe__"):
                 from narwhals._interchange.dataframe import (
                     map_interchange_dtype_to_narwhals_dtype,
@@ -311,10 +348,8 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
                     return map_interchange_dtype_to_narwhals_dtype(
                         df.__dataframe__().get_column(0).dtype, dtypes
                     )
-                except Exception:  # noqa: BLE001
-                    return dtypes.Object()
-            else:  # pragma: no cover
-                return dtypes.Object()
+                except Exception:  # noqa: BLE001, S110
+                    pass
     return dtypes.Unknown()
 
 
@@ -343,7 +378,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     backend_version: tuple[int, ...],
     dtypes: DTypes,
 ) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"
@@ -551,3 +588,68 @@ def convert_str_slice_to_int_slice(
     stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def calculate_timestamp_datetime(
+    s: pd.Series, original_time_unit: str, time_unit: str
+) -> pd.Series:
+    if original_time_unit == "ns":
+        if time_unit == "ns":
+            result = s
+        elif time_unit == "us":
+            result = s // 1_000
+        else:
+            result = s // 1_000_000
+    elif original_time_unit == "us":
+        if time_unit == "ns":
+            result = s * 1_000
+        elif time_unit == "us":
+            result = s
+        else:
+            result = s // 1_000
+    elif original_time_unit == "ms":
+        if time_unit == "ns":
+            result = s * 1_000_000
+        elif time_unit == "us":
+            result = s * 1_000
+        else:
+            result = s
+    elif original_time_unit == "s":
+        if time_unit == "ns":
+            result = s * 1_000_000_000
+        elif time_unit == "us":
+            result = s * 1_000_000
+        else:
+            result = s * 1_000
+    else:  # pragma: no cover
+        msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
+        raise AssertionError(msg)
+    return result
+
+
+def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
+    s = s * 86_400  # number of seconds in a day
+    if time_unit == "ns":
+        result = s * 1_000_000_000
+    elif time_unit == "us":
+        result = s * 1_000_000
+    else:
+        result = s * 1_000
+    return result
+
+
+def select_columns_by_name(
+    df: T,
+    column_names: Sequence[str],
+    backend_version: tuple[int, ...],
+    implementation: Implementation,
+) -> T:
+    """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
+    generally more performant."""
+    if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
+        implementation is Implementation.PANDAS and backend_version < (1, 5)
+    ):
+        # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
+        # for why we need this
+        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
+    return df[column_names]  # type: ignore[no-any-return, index]

@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 2, 3],
@@ -40,7 +40,7 @@ def test_concat_str(
         .sort("a")
         .select("full_sentence")
     )
-    compare_dicts(result, {"full_sentence": expected})
+    assert_equal_data(result, {"full_sentence": expected})
     result = (
         df.select(
             "a",
@@ -55,4 +55,4 @@ def test_concat_str(
         .sort("a")
         .select("full_sentence")
     )
-    compare_dicts(result, {"full_sentence": expected})
+    assert_equal_data(result, {"full_sentence": expected})

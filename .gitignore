@@ -17,6 +17,7 @@ coverage.xml
 # Documentation
 site/
 todo.md
+docs/this.md
 docs/api-completeness/*.md
 !docs/api-completeness/index.md
 

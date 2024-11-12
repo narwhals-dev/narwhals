@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from queries import q2
 
 from . import IO_FUNCS
@@ -39,15 +41,4 @@ print(
         fn(part),
         fn(partsupp),
     )
-)
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q2.query(
-        fn(region),
-        fn(nation),
-        fn(supplier),
-        fn(part),
-        fn(partsupp),
-    ).compute()
 )

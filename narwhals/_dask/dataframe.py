@@ -9,9 +9,10 @@ from typing import Sequence
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
@@ -116,7 +117,14 @@ class DaskLazyFrame:
 
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
-            return self._from_native_frame(self._native_frame.loc[:, exprs])
+            return self._from_native_frame(
+                select_columns_by_name(
+                    self._native_frame,
+                    list(exprs),  # type: ignore[arg-type]
+                    self._backend_version,
+                    self._implementation,
+                )
+            )
 
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
@@ -136,7 +144,12 @@ class DaskLazyFrame:
             )
             return self._from_native_frame(df)
 
-        df = self._native_frame.assign(**new_series).loc[:, list(new_series.keys())]
+        df = select_columns_by_name(
+            self._native_frame.assign(**new_series),
+            list(new_series.keys()),
+            self._backend_version,
+            self._implementation,
+        )
         return self._from_native_frame(df)
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
@@ -149,7 +162,9 @@ class DaskLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
+            col: native_to_narwhals_dtype(
+                self._native_frame[col], self._dtypes, self._implementation
+            )
             for col in self._native_frame.columns
         }
 
@@ -185,16 +200,16 @@ class DaskLazyFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         subset = flatten(subset) if subset else None
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns
-            token = generate_unique_token(n_bytes=8, columns=subset)
+            token = generate_temporary_column_name(n_bytes=8, columns=subset)
             ser = native_frame.groupby(subset).size().rename(token)
-            ser = ser.loc[ser == 1]
+            ser = ser[ser == 1]
             unique = ser.reset_index().drop(columns=token)
             result = native_frame.merge(unique, on=subset, how="inner")
         else:
@@ -234,7 +249,7 @@ class DaskLazyFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
         if how == "cross":
-            key_token = generate_unique_token(
+            key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
@@ -251,12 +266,20 @@ class DaskLazyFrame:
             )
 
         if how == "anti":
-            indicator_token = generate_unique_token(
+            indicator_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
+            if right_on is None:  # pragma: no cover
+                msg = "`right_on` cannot be `None` in anti-join"
+                raise TypeError(msg)
             other_native = (
-                other._native_frame.loc[:, right_on]
+                select_columns_by_name(
+                    other._native_frame,
+                    right_on,
+                    self._backend_version,
+                    self._implementation,
+                )
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
@@ -270,12 +293,20 @@ class DaskLazyFrame:
                 right_on=left_on,
             )
             return self._from_native_frame(
-                df.loc[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
+                df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
             )
 
         if how == "semi":
+            if right_on is None:  # pragma: no cover
+                msg = "`right_on` cannot be `None` in semi-join"
+                raise TypeError(msg)
             other_native = (
-                other._native_frame.loc[:, right_on]
+                select_columns_by_name(
+                    other._native_frame,
+                    right_on,
+                    self._backend_version,
+                    self._implementation,
+                )
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
@@ -345,23 +376,23 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> DaskLazyGroupBy:
+    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by))
+        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def tail(self: Self, n: int) -> Self:
         native_frame = self._native_frame
         n_partitions = native_frame.npartitions
 
-        if n_partitions == 1:
+        if n_partitions == 1:  # pragma: no cover
             return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
             raise NotImplementedError(msg)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        row_index_token = generate_unique_token(n_bytes=8, columns=self.columns)
+        row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         pln = self.__narwhals_namespace__()
         return (
             self.with_row_index(name=row_index_token)

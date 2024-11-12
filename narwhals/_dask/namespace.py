@@ -41,7 +41,7 @@ class DaskNamespace:
 
     def all(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in df.columns]
+            return [df._native_frame[column_name] for column_name in df.columns]
 
         return DaskExpr(
             func,
@@ -76,14 +76,14 @@ class DaskNamespace:
 
         return DaskExpr(
             lambda df: [
-                df._native_frame.assign(lit=value)
-                .loc[:, "lit"]
-                .pipe(convert_if_dtype, dtype)
+                df._native_frame.assign(literal=value)["literal"].pipe(
+                    convert_if_dtype, dtype
+                )
             ],
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=["literal"],
             returns_scalar=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -104,6 +104,11 @@ class DaskNamespace:
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
 
+    def median(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
+
     def sum(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
@@ -121,7 +126,7 @@ class DaskNamespace:
                         npartitions=df._native_frame.npartitions,
                     )
                 ]
-            return [df._native_frame.loc[:, df.columns[0]].size.to_series().rename("len")]
+            return [df._native_frame[df.columns[0]].size.to_series().rename("len")]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
@@ -232,7 +237,7 @@ class DaskNamespace:
             )
         raise NotImplementedError
 
-    def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
+    def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
@@ -256,6 +261,48 @@ class DaskNamespace:
             dtypes=self._dtypes,
         )
 
+    def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        import dask.dataframe as dd  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [dd.concat(series, axis=1).min(axis=1).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
+
+    def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        import dask.dataframe as dd  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [dd.concat(series, axis=1).max(axis=1).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
+
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
         raise NotImplementedError(msg)
@@ -264,7 +311,9 @@ class DaskNamespace:
         msg = "`_create_compliant_series` for DaskNamespace exists only for compatibility"
         raise NotImplementedError(msg)
 
-    def _create_series_from_scalar(self, *_: Any) -> NoReturn:
+    def _create_series_from_scalar(
+        self, value: Any, *, reference_series: DaskExpr
+    ) -> NoReturn:
         msg = (
             "`_create_series_from_scalar` for DaskNamespace exists only for compatibility"
         )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
-from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -9,9 +8,11 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
 
@@ -27,13 +28,13 @@ def test_group_by_complex() -> None:
         result = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     lf = nw.from_native(df_lazy).lazy()
     result = nw.to_native(
         lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_invalid_group_by_dask() -> None:
@@ -73,14 +74,14 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(constructor_eager: Any) -> None:
+def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
     for key, sub_df in df.group_by("a"):
         if key == (1,):
             expected = {"a": [1, 1], "b": [4, 4], "c": [7.0, 8.0]}
-            compare_dicts(sub_df, expected)
+            assert_equal_data(sub_df, expected)
             assert isinstance(sub_df, nw.DataFrame)
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
@@ -100,7 +101,19 @@ def test_group_by_len(constructor: Constructor) -> None:
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
     expected = {"a": [1, 3], "b": [2, 1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
+
+
+def test_group_by_median(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.col("b").median())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "b": [5, 3]}
+    assert_equal_data(result, expected)
 
 
 def test_group_by_n_unique(constructor: Constructor) -> None:
@@ -111,7 +124,7 @@ def test_group_by_n_unique(constructor: Constructor) -> None:
         .sort("a")
     )
     expected = {"a": [1, 3], "b": [1, 1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_std(constructor: Constructor) -> None:
@@ -120,7 +133,7 @@ def test_group_by_std(constructor: Constructor) -> None:
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
     )
     expected = {"a": [1, 2], "b": [0.707107] * 2}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_n_unique_w_missing(
@@ -149,7 +162,7 @@ def test_group_by_n_unique_w_missing(
         "c_n_min": [4, 5],
         "d_n_unique": [1, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_same_name_twice() -> None:
@@ -186,7 +199,7 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
         "b_min": [4, 6],
         "b_max": [5, 6],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_simple_unnamed(constructor: Constructor) -> None:
@@ -206,7 +219,7 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
         "b": [4, 6],
         "c": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_multiple_keys(constructor: Constructor) -> None:
@@ -227,19 +240,19 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
         "c_min": [2, 1],
         "c_max": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_key_with_nulls(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
-        if (
-            "pandas_constructor" in str(constructor)
-            and parse_version(pd.__version__) < parse_version("1.0.0")
-        )
+        if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
         else nullcontext()
     )
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
@@ -252,20 +265,63 @@ def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest
             .with_columns(nw.col("b").cast(nw.Float64))
         )
         expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
+
+
+def test_key_with_nulls_ignored(
+    constructor: Constructor,
+) -> None:
+    data = {"b": [4, 5, None], "a": [1, 2, 3]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("b", drop_null_keys=True)
+        .agg(nw.len(), nw.col("a").min())
+        .sort("a")
+        .with_columns(nw.col("b").cast(nw.Float64))
+    )
+    expected = {"b": [4.0, 5], "len": [1, 1], "a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_key_with_nulls_iter(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+) -> None:
+    if PANDAS_VERSION < (1, 3) and "pandas_constructor" in str(constructor_eager):
+        # bug in old pandas
+        request.applymarker(pytest.mark.xfail)
+    data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
+    result = dict(
+        nw.from_native(constructor_eager(data), eager_only=True)
+        .group_by("b", "c", drop_null_keys=True)
+        .__iter__()
+    )
+    assert len(result) == 2
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+
+    result = dict(
+        nw.from_native(constructor_eager(data), eager_only=True)
+        .group_by("b", "c", drop_null_keys=False)
+        .__iter__()
+    )
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+    assert len(result) == 4
 
 
 def test_no_agg(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_categorical(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
         0,
         0,
@@ -283,4 +339,4 @@ def test_group_by_categorical(
         .agg(nw.col("x").sum())
         .sort("x")
     )
-    compare_dicts(result, data)
+    assert_equal_data(result, data)

@@ -15,7 +15,7 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import create_native_series
+from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 
@@ -67,12 +67,12 @@ class PandasLikeNamespace:
         )
 
     def _create_series_from_scalar(
-        self, value: Any, series: PandasLikeSeries
+        self, value: Any, *, reference_series: PandasLikeSeries
     ) -> PandasLikeSeries:
         return PandasLikeSeries._from_iterable(
             [value],
-            name=series._native_series.name,
-            index=series._native_series.index[0:1],
+            name=reference_series._native_series.name,
+            index=reference_series._native_series.index[0:1],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -91,7 +91,7 @@ class PandasLikeNamespace:
         )
 
     def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
-        return create_native_series(
+        return create_compliant_series(
             value,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -139,7 +139,7 @@ class PandasLikeNamespace:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
-                name="lit",
+                name="literal",
                 index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
@@ -154,7 +154,7 @@ class PandasLikeNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=[_lit_pandas_series.__name__],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -176,6 +176,14 @@ class PandasLikeNamespace:
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         ).mean()
+
+    def median(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        ).median()
 
     def max(self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
@@ -274,6 +282,60 @@ class PandasLikeNamespace:
             func=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.min(axis=1)
+                    .rename(series[0].name, copy=False),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.max(axis=1)
+                    .rename(series[0].name, copy=False),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
         )

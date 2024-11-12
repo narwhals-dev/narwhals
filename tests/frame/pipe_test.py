@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": ["foo", "bars"],
@@ -13,4 +15,4 @@ def test_pipe(constructor: Constructor) -> None:
     columns = df.collect_schema().names()
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

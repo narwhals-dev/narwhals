@@ -17,7 +17,7 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -83,12 +83,31 @@ class ArrowDataFrame:
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(col[index] for col in self._native_frame)
 
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[False] = False,
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            msg = "Unnamed rows are not yet supported on PyArrow tables"
-            raise NotImplementedError(msg)
+            return list(self.iter_rows(named=False))  # type: ignore[return-value]
         return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
@@ -142,16 +161,18 @@ class ArrowDataFrame:
 
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice, slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice, slice]
+        ),
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -314,10 +335,10 @@ class ArrowDataFrame:
         df = self._native_frame.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_frame(df)
 
-    def group_by(self, *keys: str) -> ArrowGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
-        return ArrowGroupBy(self, list(keys))
+        return ArrowGroupBy(self, list(keys), drop_null_keys=drop_null_keys)
 
     def join(
         self,
@@ -337,7 +358,7 @@ class ArrowDataFrame:
 
         if how == "cross":
             plx = self.__narwhals_namespace__()
-            key_token = generate_unique_token(
+            key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
@@ -497,7 +518,9 @@ class ArrowDataFrame:
 
     def collect(self) -> ArrowDataFrame:
         return ArrowDataFrame(
-            self._native_frame, backend_version=self._backend_version, dtypes=self._dtypes
+            self._native_frame,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def clone(self) -> Self:
@@ -556,7 +579,7 @@ class ArrowDataFrame:
         df = self._native_frame
 
         columns = self.columns
-        col_token = generate_unique_token(n_bytes=8, columns=columns)
+        col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         row_count = (
             df.append_column(col_token, pa.array(np.arange(len(self))))
             .group_by(columns)
@@ -598,7 +621,7 @@ class ArrowDataFrame:
     ) -> Self:
         """
         NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
+            The param `maintain_order` is only here for compatibility with the Polars API
             and has no effect on the output.
         """
         import numpy as np  # ignore-banned-import
@@ -615,7 +638,7 @@ class ArrowDataFrame:
             agg_func_map = {"any": "min", "first": "min", "last": "max"}
 
             agg_func = agg_func_map[keep]
-            col_token = generate_unique_token(n_bytes=8, columns=self.columns)
+            col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
             keep_idx = (
                 df.append_column(col_token, pa.array(np.arange(len(self))))
                 .group_by(subset)

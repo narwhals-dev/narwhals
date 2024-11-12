@@ -62,14 +62,16 @@ class ArrowNamespace:
             dtypes=self._dtypes,
         )
 
-    def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
+    def _create_series_from_scalar(
+        self, value: Any, *, reference_series: ArrowSeries
+    ) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        if self._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
             value = value.as_py()
         return ArrowSeries._from_iterable(
             [value],
-            name=series.name,
+            name=reference_series.name,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -152,7 +154,7 @@ class ArrowNamespace:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
                 data=[value],
-                name="lit",
+                name="literal",
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
@@ -165,7 +167,7 @@ class ArrowNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=[_lit_arrow_series.__name__],
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -237,6 +239,62 @@ class ArrowNamespace:
             output_names=reduce_output_names(parsed_exprs),
         )
 
+    def min_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            return [
+                ArrowSeries(
+                    native_series=reduce(
+                        lambda x, y: pc.min_element_wise(x, y),
+                        [s._native_series for s in series],
+                        init_series._native_series,
+                    ),
+                    name=init_series.name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def max_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            return [
+                ArrowSeries(
+                    native_series=reduce(
+                        lambda x, y: pc.max_element_wise(x, y),
+                        [s._native_series for s in series],
+                        init_series._native_series,
+                    ),
+                    name=init_series.name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
     def concat(
         self,
         items: Iterable[ArrowDataFrame],
@@ -268,6 +326,11 @@ class ArrowNamespace:
         return ArrowExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
+
+    def median(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
 
     def max(self, *column_names: str) -> ArrowExpr:
         return ArrowExpr.from_column_names(

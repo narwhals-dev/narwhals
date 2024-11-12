@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
@@ -6,6 +8,7 @@ from narwhals.dtypes import Datetime as NwDatetime
 from narwhals.dtypes import DType
 from narwhals.dtypes import Duration as NwDuration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -77,6 +80,7 @@ __all__ = [
     "NumericType",
     "Object",
     "String",
+    "Field",
     "Struct",
     "UInt8",
     "UInt16",

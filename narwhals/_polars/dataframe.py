@@ -68,6 +68,12 @@ class PolarsDataFrame:
     def __getattr__(self, attr: str) -> Any:
         if attr == "collect":  # pragma: no cover
             raise AttributeError
+        if attr == "schema":
+            schema = self._native_frame.schema
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in schema.items()
+            }
 
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
@@ -78,23 +84,15 @@ class PolarsDataFrame:
         return func
 
     def __array__(self, dtype: Any | None = None, copy: bool | None = None) -> np.ndarray:
-        if self._backend_version < (0, 20, 28) and copy is not None:  # pragma: no cover
+        if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
             raise NotImplementedError(msg)
-        if self._backend_version < (0, 20, 28):  # pragma: no cover
+        if self._backend_version < (0, 20, 28):
             return self._native_frame.__array__(dtype)
         return self._native_frame.__array__(dtype)
 
-    @property
-    def schema(self) -> dict[str, Any]:
-        schema = self._native_frame.schema
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
-
     def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):  # pragma: no cover
+        if self._backend_version < (1,):
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
@@ -205,18 +203,18 @@ class PolarsDataFrame:
         else:
             return df.to_dict(as_series=False)
 
-    def group_by(self, *by: str) -> Any:
+    def group_by(self, *by: str, drop_null_keys: bool) -> Any:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, list(by))
+        return PolarsGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 4):
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             to_drop = parse_columns_to_drop(
                 compliant_frame=self, columns=columns, strict=strict
             )
@@ -230,7 +228,7 @@ class PolarsDataFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
                 self._native_frame.melt(
                     id_vars=index,
@@ -298,7 +296,7 @@ class PolarsLazyFrame:
         }
 
     def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):  # pragma: no cover
+        if self._backend_version < (1,):
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
@@ -314,18 +312,18 @@ class PolarsLazyFrame:
             dtypes=self._dtypes,
         )
 
-    def group_by(self, *by: str) -> Any:
+    def group_by(self, *by: str, drop_null_keys: bool) -> Any:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
-        return PolarsLazyGroupBy(self, list(by))
+        return PolarsLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 4):
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
@@ -336,7 +334,7 @@ class PolarsLazyFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
                 self._native_frame.melt(
                     id_vars=index,

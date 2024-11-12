@@ -8,6 +8,7 @@ from typing import Iterator
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 
 POLARS_TO_ARROW_AGGREGATIONS = {
     "len": "count",
+    "median": "approximate_median",
     "n_unique": "count_distinct",
     "std": "stddev",
     "var": "variance",  # currently unused, we don't have `var` yet
@@ -37,10 +39,15 @@ def get_function_name_option(function_name: str) -> Any | None:
 
 
 class ArrowGroupBy:
-    def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         import pyarrow as pa  # ignore-banned-import()
 
-        self._df = df
+        if drop_null_keys:
+            self._df = df.drop_nulls(keys)
+        else:
+            self._df = df
         self._keys = list(keys)
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
@@ -74,20 +81,36 @@ class ArrowGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        key_values = (
-            self._df.select(*self._keys)
-            .unique(subset=self._keys, keep="first")
-            .iter_rows()
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
+        null_token = "__null_token_value__"  # noqa: S105
+
+        table = self._df._native_frame
+        key_values = pc.binary_join_element_wise(
+            *[pc.cast(table[key], pa.string()) for key in self._keys],
+            "",
+            null_handling="replace",
+            null_replacement=null_token,
         )
-        nw_namespace = self._df.__narwhals_namespace__()
+        table = table.add_column(i=0, field_=col_token, column=key_values)
+
         yield from (
             (
-                key_value,
-                self._df.filter(
-                    *[nw_namespace.col(k) == v for k, v in zip(self._keys, key_value)]
+                next(
+                    (
+                        t := self._df._from_native_frame(
+                            table.filter(pc.equal(table[col_token], v)).drop([col_token])
+                        )
+                    )
+                    .select(*self._keys)
+                    .head(1)
+                    .iter_rows()
                 ),
+                t,
             )
-            for key_value in key_values
+            for v in pc.unique(key_values)
         )
 
 

@@ -1,11 +1,12 @@
-import numpy as np
+from __future__ import annotations
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import NUMPY_VERSION
 
 
 def test_invalid() -> None:
@@ -19,7 +20,7 @@ def test_invalid() -> None:
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Perhaps you:"):
-        df.select([nw.col("a").cast(pl.Int64)])
+        df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]
 
 
 def test_native_vs_non_native() -> None:
@@ -42,9 +43,7 @@ def test_validate_laziness() -> None:
         nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
 
 
-@pytest.mark.skipif(
-    parse_version(np.__version__) < parse_version("1.26.4"), reason="too old"
-)
+@pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")
     # the headache this caused me...

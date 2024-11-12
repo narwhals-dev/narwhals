@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from queries import q22
 
 from . import IO_FUNCS
@@ -15,7 +17,3 @@ print(q22.query(fn(customer), fn(orders)).collect())
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q22.query(fn(customer), fn(orders)))
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(q22.query(fn(customer), fn(orders)).compute())

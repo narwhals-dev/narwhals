@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import parse_version
 
 
@@ -75,11 +76,16 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(field_name, native_to_narwhals_dtype(field_type, dtypes))
+                for field_name, field_type in dtype
+            ]
+        )
     if dtype == pl.List:
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
     if dtype == pl.Array:
-        if parse_version(pl.__version__) < (1, 0):  # pragma: no cover
+        if parse_version(pl.__version__) < (0, 20, 30):  # pragma: no cover
             return dtypes.Array(
                 native_to_narwhals_dtype(dtype.inner, dtypes), dtype.width
             )
@@ -89,6 +95,17 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
+
     import polars as pl  # ignore-banned-import()
 
     if dtype == dtypes.Float64:
@@ -127,7 +144,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
         dt_time_unit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
+        return pl.Datetime(dt_time_unit, dt_time_zone)
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)

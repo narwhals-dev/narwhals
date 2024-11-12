@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from queries import q9
 
 from . import IO_FUNCS
@@ -26,12 +28,4 @@ tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(
     q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))
-)
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q9.query(
-        fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier)
-    ).compute()
 )

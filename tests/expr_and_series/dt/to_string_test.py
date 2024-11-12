@@ -7,7 +7,8 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 data = {
@@ -29,7 +30,7 @@ data = {
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_series(constructor_eager: Any, fmt: str) -> None:
+def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> None:
     input_frame = nw.from_native(constructor_eager(data), eager_only=True)
     input_series = input_frame["a"]
 
@@ -44,7 +45,7 @@ def test_dt_to_string_series(constructor_eager: Any, fmt: str) -> None:
         # the fraction of a second.
         result = {"a": input_series.dt.to_string(fmt).str.replace(r"\.\d+$", "")}
 
-    compare_dicts(result, {"a": expected_col})
+    assert_equal_data(result, {"a": expected_col})
 
 
 @pytest.mark.parametrize(
@@ -70,7 +71,7 @@ def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
         result = input_frame.select(
             nw.col("a").dt.to_string(fmt).str.replace(r"\.\d+$", "").alias("b")
         )
-    compare_dicts(result, {"b": expected_col})
+    assert_equal_data(result, {"b": expected_col})
 
 
 def _clean_string(result: str) -> str:
@@ -100,7 +101,7 @@ def _clean_string_expr(e: Any) -> Any:
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime_series(
-    constructor_eager: Any, data: datetime, expected: str
+    constructor_eager: ConstructorEager, data: datetime, expected: str
 ) -> None:
     df = constructor_eager({"a": [data]})
     result = (
@@ -138,12 +139,12 @@ def test_dt_to_string_iso_local_datetime_expr(
     result = nw.from_native(df).with_columns(
         _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f")).alias("b")
     )
-    compare_dicts(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
 
     result = nw.from_native(df).with_columns(
         _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f")).alias("b")
     )
-    compare_dicts(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
 
 
 @pytest.mark.parametrize(
@@ -152,7 +153,7 @@ def test_dt_to_string_iso_local_datetime_expr(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_series(
-    constructor_eager: Any, data: datetime, expected: str
+    constructor_eager: ConstructorEager, data: datetime, expected: str
 ) -> None:
     df = constructor_eager({"a": [data]})
     result = nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").item(0)
@@ -171,4 +172,4 @@ def test_dt_to_string_iso_local_date_expr(
     result = nw.from_native(df).with_columns(
         nw.col("a").dt.to_string("%Y-%m-%d").alias("b")
     )
-    compare_dicts(result, {"a": [data], "b": [expected]})
+    assert_equal_data(result, {"a": [data], "b": [expected]})

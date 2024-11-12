@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_select(constructor: Constructor) -> None:
@@ -11,7 +14,7 @@ def test_select(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_empty_select(constructor: Constructor) -> None:
@@ -30,3 +33,14 @@ def test_non_string_select_invalid() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(TypeError, match="\n\nHint: if you were trying to select"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
+
+
+def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION < (1, 1):
+        # bug in old pandas
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
+    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
+    result = df.select(nw.col([False, True]))  # type: ignore[list-item]
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]

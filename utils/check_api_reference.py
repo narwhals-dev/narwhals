@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 
@@ -10,7 +12,7 @@ from narwhals.utils import remove_suffix
 ret = 0
 
 NAMESPACES = {"dt", "str", "cat", "name"}
-EXPR_ONLY_METHODS = {"over"}
+EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
     "is_empty",
@@ -31,7 +33,14 @@ SERIES_ONLY_METHODS = {
     "zip_with",
     "__iter__",
 }
-BASE_DTYPES = {"NumericType", "DType", "TemporalType", "Literal"}
+BASE_DTYPES = {
+    "NumericType",
+    "DType",
+    "TemporalType",
+    "Literal",
+    "OrderedDict",
+    "Mapping",
+}
 
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 
@@ -46,7 +55,7 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented):
+if missing := set(top_level_functions).difference(documented).difference({"annotations"}):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1

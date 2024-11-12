@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from queries import q20
 
 from . import IO_FUNCS
@@ -15,6 +17,3 @@ print(q20.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(supplier)).
 
 fn = IO_FUNCS["pyarrow"]
 print(q20.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(supplier)))
-
-fn = IO_FUNCS["dask"]
-print(q20.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(supplier)).compute())

@@ -219,19 +219,21 @@ def reuse_series_implementation(
     plx = expr.__narwhals_namespace__()
 
     def func(df: CompliantDataFrame) -> list[CompliantSeries]:
-        out: list[CompliantSeries] = []
-        for column in expr._call(df):  # type: ignore[arg-type]
-            _out = getattr(column, attr)(
-                *[maybe_evaluate_expr(df, arg) for arg in args],
-                **{
-                    arg_name: maybe_evaluate_expr(df, arg_value)
-                    for arg_name, arg_value in kwargs.items()
-                },
+        _args = [maybe_evaluate_expr(df, arg) for arg in args]
+        _kwargs = {
+            arg_name: maybe_evaluate_expr(df, arg_value)
+            for arg_name, arg_value in kwargs.items()
+        }
+
+        out: list[CompliantSeries] = [
+            plx._create_series_from_scalar(
+                getattr(series, attr)(*_args, **_kwargs),
+                reference_series=series,  # type: ignore[arg-type]
             )
-            if returns_scalar:
-                out.append(plx._create_series_from_scalar(_out, column))  # type: ignore[arg-type]
-            else:
-                out.append(_out)
+            if returns_scalar
+            else getattr(series, attr)(*_args, **_kwargs)
+            for series in expr._call(df)  # type: ignore[arg-type]
+        ]
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
