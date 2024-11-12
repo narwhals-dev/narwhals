@@ -234,7 +234,12 @@ class PandasLikeDataFrame:
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
                 return self._from_native_frame(
-                    select_columns_by_name(self._native_frame, item)
+                    select_columns_by_name(
+                        self._native_frame,
+                        item,
+                        self._backend_version,
+                        self._implementation,
+                    )
                 )
             return self._from_native_frame(self._native_frame.iloc[item])
 
@@ -333,7 +338,12 @@ class PandasLikeDataFrame:
             # This is a simple slice => fastpath!
             column_names = list(exprs)
             return self._from_native_frame(
-                select_columns_by_name(self._native_frame, column_names)  # type: ignore[arg-type]
+                select_columns_by_name(
+                    self._native_frame,
+                    column_names,  # type: ignore[arg-type]
+                    self._backend_version,
+                    self._implementation,
+                )
             )
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
@@ -556,7 +566,12 @@ class PandasLikeDataFrame:
                     raise TypeError(msg)
 
                 other_native = (
-                    select_columns_by_name(other._native_frame, right_on)
+                    select_columns_by_name(
+                        other._native_frame,
+                        right_on,
+                        self._backend_version,
+                        self._implementation,
+                    )
                     .rename(  # rename to avoid creating extra columns in join
                         columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                         copy=False,
@@ -580,7 +595,12 @@ class PandasLikeDataFrame:
                 msg = "`right_on` cannot be `None` in semi-join"
                 raise TypeError(msg)
             other_native = (
-                select_columns_by_name(other._native_frame, right_on)
+                select_columns_by_name(
+                    other._native_frame,
+                    right_on,
+                    self._backend_version,
+                    self._implementation,
+                )
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                     copy=False,

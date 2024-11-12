@@ -39,7 +39,12 @@ class PandasLikeGroupBy:
         ):  # pragma: no cover
             if (
                 not drop_null_keys
-                and select_columns_by_name(self._df._native_frame, self._keys)
+                and select_columns_by_name(
+                    self._df._native_frame,
+                    self._keys,
+                    self._df._backend_version,
+                    self._df._implementation,
+                )
                 .isna()
                 .any()
                 .any()
@@ -231,7 +236,11 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = native_namespace.DataFrame(
                 list(grouped.groups.keys()), columns=keys
             )
-        return from_dataframe(select_columns_by_name(result_aggs, output_names))
+        return from_dataframe(
+            select_columns_by_name(
+                result_aggs, output_names, backend_version, implementation
+            )
+        )
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -279,4 +288,8 @@ def agg_pandas(  # noqa: PLR0915
     # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
     result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(select_columns_by_name(result_complex, output_names))
+    return from_dataframe(
+        select_columns_by_name(
+            result_complex, output_names, backend_version, implementation
+        )
+    )
