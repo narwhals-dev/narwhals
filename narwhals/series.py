@@ -1687,12 +1687,21 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
-    def fill_null(self, value: Any) -> Self:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
         """
         Fill null values using the specified value.
 
         Arguments:
             value: Value used to fill null values.
+
+            strategy: Strategy used to fill null values.
+
+            limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1727,8 +1736,40 @@ class Series:
                2
                5
             ]
+
+            Using a strategy:
+
+            >>> @nw.narwhalify
+            ... def func_strategies(s):
+            ...     return s.fill_null(strategy="forward", limit=1)
+
+            >>> func_strategies(s_pd)
+            0    1.0
+            1    2.0
+            2    2.0
+            dtype: float64
+
+            >>> func_strategies(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               2
+            ]
         """
-        return self._from_compliant_series(self._compliant_series.fill_null(value))
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
+        return self._from_compliant_series(
+            self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
+        )
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"

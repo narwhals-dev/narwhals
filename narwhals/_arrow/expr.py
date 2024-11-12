@@ -308,8 +308,15 @@ class ArrowExpr:
             seed=seed,
         )
 
-    def fill_null(self: Self, value: Any) -> Self:
-        return reuse_series_implementation(self, "fill_null", value=value)
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "fill_null", value=value, strategy=strategy, limit=limit
+        )
 
     def is_duplicated(self: Self) -> Self:
         return reuse_series_implementation(self, "is_duplicated")

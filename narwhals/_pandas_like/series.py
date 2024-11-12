@@ -470,9 +470,23 @@ class PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.isna())
 
-    def fill_null(self, value: Any) -> PandasLikeSeries:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> PandasLikeSeries:
         ser = self._native_series
-        return self._from_native_series(ser.fillna(value))
+        if value is not None:
+            res_ser = self._from_native_series(ser.fillna(value=value))
+        else:
+            res_ser = self._from_native_series(
+                ser.ffill(limit=limit)
+                if strategy == "forward"
+                else ser.bfill(limit=limit)
+            )
+
+        return res_ser
 
     def drop_nulls(self) -> PandasLikeSeries:
         ser = self._native_series

@@ -11,6 +11,7 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
 from narwhals.utils import tupleify
@@ -38,7 +39,15 @@ class PandasLikeGroupBy:
         ):  # pragma: no cover
             if (
                 not drop_null_keys
-                and self._df._native_frame.loc[:, self._keys].isna().any().any()
+                and select_columns_by_name(
+                    self._df._native_frame,
+                    self._keys,
+                    self._df._backend_version,
+                    self._df._implementation,
+                )
+                .isna()
+                .any()
+                .any()
             ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
@@ -227,7 +236,11 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = native_namespace.DataFrame(
                 list(grouped.groups.keys()), columns=keys
             )
-        return from_dataframe(result_aggs.loc[:, output_names])
+        return from_dataframe(
+            select_columns_by_name(
+                result_aggs, output_names, backend_version, implementation
+            )
+        )
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -275,4 +288,8 @@ def agg_pandas(  # noqa: PLR0915
     # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
     result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result_complex.loc[:, output_names])
+    return from_dataframe(
+        select_columns_by_name(
+            result_complex, output_names, backend_version, implementation
+        )
+    )
