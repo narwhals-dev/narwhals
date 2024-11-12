@@ -1,14 +1,12 @@
-from typing import Any
-
-import pytest
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
-def test_any_all(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_any_all(constructor: Constructor) -> None:
     df = nw.from_native(
         constructor(
             {
@@ -18,15 +16,15 @@ def test_any_all(constructor: Any, request: Any) -> None:
             }
         )
     )
-    result = df.select(nw.all().all())
+    result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.select(nw.all().any())
     expected = {"a": [True], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_any_all_series(constructor_eager: Any) -> None:
+def test_any_all_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager(
             {
@@ -39,7 +37,7 @@ def test_any_all_series(constructor_eager: Any) -> None:
     )
     result = {"a": [df["a"].all()], "b": [df["b"].all()], "c": [df["c"].all()]}
     expected = {"a": [False], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = {"a": [df["a"].any()], "b": [df["b"].any()], "c": [df["c"].any()]}
     expected = {"a": [True], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

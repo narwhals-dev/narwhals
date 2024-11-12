@@ -1,10 +1,9 @@
-from typing import Any
-
-import numpy as np
-import pytest
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 1, 2, 3, 2],
@@ -12,23 +11,20 @@ data = {
 }
 
 
-def test_is_last_distinct_expr(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # TODO(unassigned): why is Modin failing here?
-        request.applymarker(pytest.mark.xfail)
+def test_is_last_distinct_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().is_last_distinct())
     expected = {
         "a": [False, True, False, True, True],
         "b": [False, False, True, True, True],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_is_last_distinct_series(constructor_eager: Any) -> None:
+def test_is_last_distinct_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_last_distinct()
-    expected = np.array([False, True, False, True, True])
-    assert (result.to_numpy() == expected).all()
+    expected = {
+        "a": [False, True, False, True, True],
+    }
+    assert_equal_data({"a": result}, expected)

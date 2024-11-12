@@ -8,15 +8,17 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
+[![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Lazy-only support**: Dask
 - **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
-- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
+- ✅ **Just use** [a subset of **the Polars API**](https://narwhals-dev.github.io/narwhals/api-reference/), no need to learn anything new
 - ✅ **Zero dependencies**, Narwhals only uses what
   the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**
@@ -39,10 +41,18 @@ Get started!
 
 Join the party!
 
+- [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [marimo](https://github.com/marimo-team/marimo)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [py-shiny](https://github.com/posit-dev/py-shiny)
+- [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [tabmat](https://github.com/Quantco/tabmat)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [tubular](https://github.com/lvgig/tubular)
+- [wimsey](https://github.com/benrutter/wimsey)
 
 Feel free to add your project to the list if it's missing, and/or
 [chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
@@ -74,6 +84,14 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    - if you started with PyArrow, you'll get PyArrow back
 
+<h1 align="left">
+	<img
+		width="600"
+		alt="narwhals_gif"
+		src="https://github.com/user-attachments/assets/88292d3c-6359-4155-973d-d0f8e3fbf5ac">
+
+</h1>
+
 ## Example
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
@@ -84,9 +102,6 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 - Do you have a specific Polars function in mind that you would like Narwhals to have in order to make your work easier?
 
 If you said yes to both, we'd love to hear from you!
-
-**Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
-Indeed, you may suspect that.
 
 ## Sponsors and institutional partners
 
@@ -102,6 +117,37 @@ provided some funding / development time:
 
 If you contribute to Narwhals on your organization's time, please let us know. We'd be happy to add your employer
 to this list!
+
+## Appears on
+
+Narwhals has been featured in several talks, podcasts, and blog posts:
+
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
+
+- [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
+  Ahoy, Narwhals are bridging the data science APIs
+
+- [Python Bytes Podcast](https://www.youtube.com/live/N7w_ESVW40I?si=y-wN1uCsAuJOKlOT&t=382)
+  Episode 402, topic #2
+
+- [Super Data Science: ML & AI Podcast](https://www.youtube.com/watch?v=TeG4U8R0U8U)  
+  Narwhals: For Pandas-to-Polars DataFrame Compatibility
+
+- [Sample Space Podcast | probabl](https://youtu.be/8hYdq4sWbbQ?si=WG0QP1CZ6gkFf18b)  
+  How Narwhals has many end users ... that never use it directly. - Marco Gorelli
+
+- [Pycon Lithuania](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
+  Marco Gorelli - DataFrame interoperatiblity - what's been achieved, and what comes next?
+
+- [Pycon Italy](https://www.youtube.com/watch?v=3IqUli9XsmQ)  
+  How you can write a dataframe-agnostic library - Marco Gorelli
+
+- [Polars Blog Post](https://pola.rs/posts/lightweight_plotting/)  
+  Polars has a new lightweight plotting backend
+
+- [Quansight Labs blog post (w/ Scikit-Lego)](https://labs.quansight.org/blog/scikit-lego-narwhals)  
+  How Narwhals and scikit-lego came together to achieve dataframe-agnosticism
 
 ## Why "Narwhals"?
 

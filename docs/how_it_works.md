@@ -19,7 +19,7 @@ def col_a(df):
 Let's step up the complexity. How about `nw.col('a')+1`? We already know what the
 `nw.col('a')` part looks like, so we just need to add `1` to each of its outputs:
 
-```python exec="1"
+```python exec="1" source="above"
 def col_a(df):
     return [df.loc[:, "a"]]
 
@@ -30,7 +30,7 @@ def col_a_plus_1(df):
 
 Expressions can return multiple Series - for example, `nw.col('a', 'b')` translates to:
 
-```python exec="1"
+```python exec="1" source="above"
 def col_a_b(df):
     return [df.loc[:, "a"], df.loc[:, "b"]]
 ```
@@ -38,7 +38,7 @@ def col_a_b(df):
 Expressions can also take multiple columns as input - for example, `nw.sum_horizontal('a', 'b')`
 translates to:
 
-```python exec="1"
+```python exec="1" source="above"
 def sum_horizontal_a_b(df):
     return [df.loc[:, "a"] + df.loc[:, "b"]]
 ```
@@ -75,6 +75,7 @@ from narwhals.utils import parse_version
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 print(nw.col("a")._call(pn))
 ```
@@ -88,7 +89,7 @@ The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasLikeDataFrame._native_dataframe` and `PandasLikeSeries._native_series`.
+underlying pandas objects via `PandasLikeDataFrame._native_frame` and `PandasLikeSeries._native_series`.
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
@@ -101,6 +102,7 @@ import pandas as pd
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -108,6 +110,7 @@ df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 expression = pn.col("a") + 1
 result = expression._call(df)
@@ -134,17 +137,17 @@ this section better are 110% welcome.
 
 ## Polars and other implementations
 
-Other implementations are similar to the above: their define their own Narwhals-compliant
+Other implementations are similar to the above: they define their own Narwhals-compliant
 objects. So, all-in-all, there are a couple of layers here:
 
 - `nw.DataFrame` is backed by a Narwhals-compliant Dataframe, such as:
-  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame`
-  - `narwhals._arrow.dataframe.ArrowDataFrame`
-  - `narwhals._polars.dataframe.PolarsDataFrame`
+    - `narwhals._pandas_like.dataframe.PandasLikeDataFrame`
+    - `narwhals._arrow.dataframe.ArrowDataFrame`
+    - `narwhals._polars.dataframe.PolarsDataFrame`
 - each Narwhals-compliant DataFrame is backed by a native Dataframe, for example:
-  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame` is backed by a pandas DataFrame
-  - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
-  - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
+    - `narwhals._pandas_like.dataframe.PandasLikeDataFrame` is backed by a pandas DataFrame
+    - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
+    - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
 
 Each implementation defines its own objects in subfolders such as `narwhals._pandas_like`,
 `narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
@@ -196,6 +199,7 @@ import pandas as pd
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -210,6 +214,7 @@ backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._c
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 expr = (nw.col("a") + 1)._call(pn)
 print(expr)
@@ -222,10 +227,10 @@ df_compliant = df._compliant_frame
 result = df_compliant.select(expr)
 ```
 
-We can then view the underlying pandas Dataframe which was produced by calling `._native_dataframe`:
+We can then view the underlying pandas Dataframe which was produced by calling `._native_frame`:
 
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
-print(result._native_dataframe)
+print(result._native_frame)
 ```
 which is the same as we'd have obtained by just using the Narwhals API directly:
 

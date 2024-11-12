@@ -1,6 +1,8 @@
 jinja2
+duckdb
 markdown-exec[ansi]
 mkdocs
+mkdocs-autorefs
 mkdocs-material
 mkdocstrings[python]
 polars>=1.0.0

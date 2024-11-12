@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -24,29 +25,29 @@ from tests.utils import compare_dicts
     ],
 )
 def test_str_to_uppercase(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
 
     if any("ß" in s for value in data.values() for s in value) & (
         constructor.__name__
-        not in (
-            "pandas_constructor",
-            "pandas_nullable_constructor",
-            "polars_eager_constructor",
-            "polars_lazy_constructor",
+        in (
+            "pandas_pyarrow_constructor",
+            "pyarrow_table_constructor",
+            "modin_constructor",
         )
+        or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert
         # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
         request.applymarker(pytest.mark.xfail)
 
-    compare_dicts(result_frame, expected)
+    assert_equal_data(result_frame, expected)
 
 
 @pytest.mark.parametrize(
@@ -65,10 +66,10 @@ def test_str_to_uppercase(
     ],
 )
 def test_str_to_uppercase_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -78,6 +79,7 @@ def test_str_to_uppercase_series(
             "pandas_constructor",
             "pandas_nullable_constructor",
             "polars_eager_constructor",
+            "cudf_constructor",
         )
     ):
         # We are marking it xfail for these conditions above
@@ -86,7 +88,7 @@ def test_str_to_uppercase_series(
         request.applymarker(pytest.mark.xfail)
 
     result_series = df["a"].str.to_uppercase()
-    assert result_series.to_numpy().tolist() == expected["a"]
+    assert_equal_data({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -105,13 +107,13 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_lowercase())
-    compare_dicts(result_frame, expected)
+    assert_equal_data(result_frame, expected)
 
 
 @pytest.mark.parametrize(
@@ -130,11 +132,11 @@ def test_str_to_lowercase(
     ],
 )
 def test_str_to_lowercase_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.to_lowercase()
-    assert result_series.to_numpy().tolist() == expected["a"]
+    assert_equal_data({"a": result_series}, expected)

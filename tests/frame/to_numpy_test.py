@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
+from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
-def test_convert_numpy(constructor_eager: Any) -> None:
+def test_to_numpy(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw, eager_only=True).to_numpy()
@@ -16,6 +24,31 @@ def test_convert_numpy(constructor_eager: Any) -> None:
     np.testing.assert_array_equal(result, expected)
     assert result.dtype == "float64"
 
-    result = nw.from_native(df_raw, eager_only=True).__array__()
-    np.testing.assert_array_equal(result, expected)
-    assert result.dtype == "float64"
+
+def test_to_numpy_tz_aware(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if (
+        ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
+        or (
+            any(x in str(constructor_eager) for x in ("pyarrow", "modin"))
+            and is_windows()
+        )
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
+        eager_only=True,
+    )
+    df = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
+    result = df.to_numpy()
+    # for some reason, NumPy uses 'M' for datetimes
+    assert result.dtype.kind == "M"
+    assert (
+        result
+        == np.array(
+            [["2019-12-31T18:15:00.000000"], ["2020-01-01T18:15:00.000000"]],
+            dtype=result.dtype,
+        )
+    ).all()

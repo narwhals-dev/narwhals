@@ -27,7 +27,7 @@ pl_df_right = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 pl_left_merge = pl_df_left.join(pl_df_right, left_on="b", right_on="c", how="left")
 
 print(pd_left_merge.columns)
-print(pl_df_right.columns)
+print(pl_left_merge.columns)
 ```
 
 There are several such subtle difference between the libraries. Writing dataframe-agnostic code is hard!

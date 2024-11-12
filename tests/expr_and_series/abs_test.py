@@ -1,22 +1,20 @@
-from typing import Any
-
-import pytest
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
-def test_abs(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_abs(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.select(b=nw.col("a").abs())
     expected = {"b": [1, 2, 3, 4, 5]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_abs_series(constructor_eager: Any) -> None:
+def test_abs_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2, 3, -4, 5]}), eager_only=True)
     result = {"b": df["a"].abs()}
     expected = {"b": [1, 2, 3, 4, 5]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

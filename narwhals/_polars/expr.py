@@ -2,35 +2,37 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Sequence
 
-from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
-from narwhals._polars.utils import reverse_translate_dtype
+from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class PolarsExpr:
-    def __init__(self, expr: Any) -> None:
+    def __init__(
+        self, expr: Any, dtypes: DTypes, backend_version: tuple[int, ...]
+    ) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
-    def __narwhals_expr__(self) -> Self:  # pragma: no cover
-        return self
-
-    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
-        return PolarsNamespace(backend_version=self._backend_version)
-
     def _from_native_expr(self, expr: Any) -> Self:
-        return self.__class__(expr)
+        return self.__class__(
+            expr, dtypes=self._dtypes, backend_version=self._backend_version
+        )
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -43,8 +45,35 @@ class PolarsExpr:
 
     def cast(self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype = reverse_translate_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
+
+    def map_batches(
+        self,
+        function: Callable[[Any], Self],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        if return_dtype is not None:
+            return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+            return self._from_native_expr(
+                self._native_expr.map_batches(function, return_dtype)
+            )
+        else:
+            return self._from_native_expr(self._native_expr.map_batches(function))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        expr = self._native_expr
+        return_dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
+        if self._backend_version < (1,):
+            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
+            raise NotImplementedError(msg)
+        return self._from_native_expr(
+            expr.replace_strict(old, new, return_dtype=return_dtype)
+        )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_expr(self._native_expr.__eq__(extract_native(other)))

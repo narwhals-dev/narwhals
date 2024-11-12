@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import PYARROW_VERSION
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager) and parse_version(
-        pa.__version__
-    ) < parse_version("15.0.0"):
+def test_get_categories(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -23,10 +23,10 @@ def test_get_categories(request: Any, constructor_eager: Any) -> None:
     expected = {"a": ["one", "two"]}
 
     result_expr = df.select(nw.col("a").cat.get_categories())
-    compare_dicts(result_expr, expected)
+    assert_equal_data(result_expr, expected)
 
-    result_series = df["a"].cat.get_categories().to_list()
-    assert set(result_series) == set(expected["a"])
+    result_series = df["a"].cat.get_categories()
+    assert_equal_data({"a": result_series}, expected)
 
 
 def test_get_categories_pyarrow() -> None:
@@ -39,7 +39,7 @@ def test_get_categories_pyarrow() -> None:
     expected = {"a": ["a", "b", "d"]}
 
     result_expr = df.select(nw.col("a").cat.get_categories())
-    compare_dicts(result_expr, expected)
+    assert_equal_data(result_expr, expected)
 
-    result_series = df["a"].cat.get_categories().to_list()
-    assert result_series == expected["a"]
+    result_series = df["a"].cat.get_categories()
+    assert_equal_data({"a": result_series}, expected)

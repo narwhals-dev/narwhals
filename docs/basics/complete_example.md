@@ -10,10 +10,6 @@ We'll need to write two methods:
 - `transform`: scale a given dataset with the mean and standard deviations calculated
   during `fit`.
 
-The `fit` method is a bit complicated, so let's start with `transform`.
-Suppose we've already calculated the mean and standard deviation of each column, and have
-stored them in attributes `self.means` and `self.std_devs`.
-
 ## Fit method
 
 Unlike the `transform` method, which we'll write below, `fit` cannot stay lazy,

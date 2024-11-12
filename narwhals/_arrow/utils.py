@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
-from narwhals import dtypes
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
+from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
+if TYPE_CHECKING:
+    import pyarrow as pa
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
-    pa = get_pyarrow()
+    from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
+
+
+def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
+    import pyarrow as pa  # ignore-banned-import
+
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -43,18 +51,44 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_date32(dtype):
         return dtypes.Date()
     if pa.types.is_timestamp(dtype):
-        return dtypes.Datetime()
+        return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
     if pa.types.is_duration(dtype):
-        return dtypes.Duration()
+        return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
-    raise AssertionError
+    if pa.types.is_struct(dtype):
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    dtype.field(i).name,
+                    native_to_narwhals_dtype(dtype.field(i).type, dtypes),
+                )
+                for i in range(dtype.num_fields)
+            ]
+        )
+
+    if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+    if pa.types.is_fixed_size_list(dtype):
+        return dtypes.Array(
+            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+        )
+    return dtypes.Unknown()  # pragma: no cover
 
 
-def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    from narwhals import dtypes
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
 
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
@@ -81,17 +115,25 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return pa.bool_()
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # TODO(Unassigned): what should the key be? let's keep it consistent
-        # with Polars for now
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Use Polars' default
-        return pa.timestamp("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return pa.timestamp(time_unit, tz=time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # Use Polars' default
-        return pa.duration("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -139,7 +181,8 @@ def validate_dataframe_comparand(
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            pa = get_pyarrow()
+            import pyarrow as pa  # ignore-banned-import
+
             value = other.item()
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
@@ -155,7 +198,8 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
     Should be in namespace.
     """
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import
+
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
@@ -187,15 +231,16 @@ def vertical_concat(dfs: list[Any]) -> Any:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
 
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import
+
     return pa.concat_tables(dfs).combine_chunks()
 
 
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    pc = get_pyarrow_compute()
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -233,8 +278,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    pc = get_pyarrow_compute()
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -246,3 +291,155 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
         )
 
     return arrow_array, pa_object
+
+
+def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+    fast_path = all(_len == max_length for _len in lengths)
+
+    if fast_path:
+        return [s._native_series for s in series]
+
+    import pyarrow as pa  # ignore-banned-import
+
+    is_max_length_gt_1 = max_length > 1
+    reshaped = []
+    for s, length in zip(series, lengths):
+        s_native = s._native_series
+        if is_max_length_gt_1 and length == 1:
+            value = s_native[0]
+            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+                value = value.as_py()
+            reshaped.append(pa.array([value] * max_length, type=s_native.type))
+        else:
+            reshaped.append(s_native)
+
+    return reshaped
+
+
+def convert_slice_to_nparray(
+    num_rows: int, rows_slice: slice | int | Sequence[int]
+) -> Any:
+    import numpy as np  # ignore-banned-import
+
+    if isinstance(rows_slice, slice):
+        return np.arange(num_rows)[rows_slice]
+    else:
+        return rows_slice
+
+
+def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+    if isinstance(rows, slice) and rows == slice(None):
+        selected_rows = table
+    elif isinstance(rows, Sequence) and not rows:
+        selected_rows = table.slice(0, 0)
+    else:
+        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
+        selected_rows = table.take(range_)
+    return selected_rows
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)
+
+
+# Regex for date, time, separator and timezone components
+DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}|\d{8})"
+SEP_RE = r"(?P<sep>\s|T)"
+TIME_RE = r"(?P<time>\d{2}:\d{2}(?::\d{2})?|\d{6}?)"  # \s*(?P<period>[AP]M)?)?
+HMS_RE = r"^(?P<hms>\d{2}:\d{2}:\d{2})$"
+HM_RE = r"^(?P<hm>\d{2}:\d{2})$"
+HMS_RE_NO_SEP = r"^(?P<hms_no_sep>\d{6})$"
+TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
+FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
+
+# Separate regexes for different date formats
+YMD_RE = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])$"
+DMY_RE = r"^(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
+MDY_RE = r"^(?P<month>0[1-9]|1[0-2])(?P<sep1>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])(?P<sep2>[-/.])(?P<year>(?:[12][0-9])?[0-9]{2})$"
+YMD_RE_NO_SEP = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<month>0[1-9]|1[0-2])(?P<day>0[1-9]|[12][0-9]|3[01])$"
+
+DATE_FORMATS = (
+    (YMD_RE_NO_SEP, "%Y%m%d"),
+    (YMD_RE, "%Y-%m-%d"),
+    (DMY_RE, "%d-%m-%Y"),
+    (MDY_RE, "%m-%d-%Y"),
+)
+TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"))
+
+
+def parse_datetime_format(arr: pa.StringArray) -> str:
+    """Try to infer datetime format from StringArray."""
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
+        pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
+    )
+
+    if not pc.all(matches.is_valid()).as_py():
+        msg = (
+            "Unable to infer datetime format, provided format is not supported. "
+            "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        )
+        raise NotImplementedError(msg)
+
+    dates = matches.field("date")
+    separators = matches.field("sep")
+    times = matches.field("time")
+    tz = matches.field("tz")
+
+    # separators and time zones must be unique
+    if pc.count(pc.unique(separators)).as_py() > 1:
+        msg = "Found multiple separator values while inferring datetime format."
+        raise ValueError(msg)
+
+    if pc.count(pc.unique(tz)).as_py() > 1:
+        msg = "Found multiple timezone values while inferring datetime format."
+        raise ValueError(msg)
+
+    date_value = _parse_date_format(dates)
+    time_value = _parse_time_format(times)
+
+    sep_value = separators[0].as_py()
+    tz_value = "%z" if tz[0].as_py() else ""
+
+    return f"{date_value}{sep_value}{time_value}{tz_value}"
+
+
+def _parse_date_format(arr: pa.Array) -> str:
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    for date_rgx, date_fmt in DATE_FORMATS:
+        matches = pc.extract_regex(arr, pattern=date_rgx)
+        if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
+            return date_fmt
+        elif (
+            pc.all(matches.is_valid()).as_py()
+            and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
+            and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1
+            and (date_sep_value := sep1[0].as_py()) == sep2[0].as_py()
+        ):
+            return date_fmt.replace("-", date_sep_value)
+
+    msg = (
+        "Unable to infer datetime format. "
+        "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+    )
+    raise ValueError(msg)
+
+
+def _parse_time_format(arr: pa.Array) -> str:
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    for time_rgx, time_fmt in TIME_FORMATS:
+        matches = pc.extract_regex(arr, pattern=time_rgx)
+        if pc.all(matches.is_valid()).as_py():
+            return time_fmt
+    return ""

@@ -11,8 +11,10 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -21,31 +23,47 @@ if TYPE_CHECKING:
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
     "len": "size",
+    "n_unique": "nunique",
 }
 
 
 class PandasLikeGroupBy:
-    def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         self._df = df
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (1, 0)
+            and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
-            if self._df._native_dataframe.loc[:, self._keys].isna().any().any():
+            if (
+                not drop_null_keys
+                and select_columns_by_name(
+                    self._df._native_frame,
+                    self._keys,
+                    self._df._backend_version,
+                    self._df._implementation,
+                )
+                .isna()
+                .any()
+                .any()
+            ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
-            self._grouped = self._df._native_dataframe.groupby(
+            self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
+                observed=True,
             )
         else:
-            self._grouped = self._df._native_dataframe.groupby(
+            self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
-                dropna=False,
+                dropna=drop_null_keys,
+                observed=True,
             )
 
     def agg(
@@ -75,37 +93,38 @@ class PandasLikeGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._from_native_dataframe,
-            dataframe_is_empty=self._df._native_dataframe.empty,
+            self._from_native_frame,
+            dataframe_is_empty=self._df._native_frame.empty,
             implementation=implementation,
             backend_version=self._df._backend_version,
+            native_namespace=self._df.__native_namespace__(),
         )
 
-    def _from_native_dataframe(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
+    def _from_native_frame(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
+            dtypes=self._df._dtypes,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        with warnings.catch_warnings():
-            # we already use `tupleify` above, so we're already opting in to
-            # the new behaviour
-            warnings.filterwarnings(
-                "ignore",
-                message="In a future version of pandas, a length 1 tuple will be returned",
-                category=FutureWarning,
-            )
-            iterator = self._grouped.__iter__()
-        yield from (
-            (key, self._from_native_dataframe(sub_df)) for (key, sub_df) in iterator
-        )
+        indices = self._grouped.indices
+        if (
+            self._df._implementation is Implementation.PANDAS
+            and self._df._backend_version < (2, 2)
+        ) or (self._df._implementation is Implementation.CUDF):  # pragma: no cover
+            for key in indices:
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
+        else:
+            for key in indices:
+                key = tupleify(key)  # noqa: PLW2901
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
-def agg_pandas(
+def agg_pandas(  # noqa: PLR0915
     grouped: Any,
     exprs: list[PandasLikeExpr],
     keys: list[str],
@@ -115,6 +134,7 @@ def agg_pandas(
     implementation: Any,
     backend_version: tuple[int, ...],
     dataframe_is_empty: bool,
+    native_namespace: Any,
 ) -> PandasLikeDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -122,13 +142,18 @@ def agg_pandas(
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
-    all_simple_aggs = True
+    all_aggs_are_simple = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
-            all_simple_aggs = False
+            all_aggs_are_simple = False
             break
 
-    if all_simple_aggs:
+    # dict of {output_name: root_name} that we count n_unique on
+    # We need to do this separately from the rest so that we
+    # can pass the `dropna` kwargs.
+    nunique_aggs: dict[str, str] = {}
+
+    if all_aggs_are_simple:
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             if expr._depth == 0:
@@ -155,22 +180,67 @@ def agg_pandas(
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                 function_name, function_name
             )
+            is_n_unique = function_name == "nunique"
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (root_name, function_name)
+                if is_n_unique:
+                    nunique_aggs[output_name] = root_name
+                else:
+                    simple_aggregations[output_name] = (root_name, function_name)
 
-        aggs = collections.defaultdict(list)
+        simple_aggs = collections.defaultdict(list)
         name_mapping = {}
         for output_name, named_agg in simple_aggregations.items():
-            aggs[named_agg[0]].append(named_agg[1])
+            simple_aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
-        try:
-            result_simple = grouped.agg(aggs)
-        except AttributeError as exc:
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
-        result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
-        result_simple = result_simple.rename(columns=name_mapping).reset_index()
-        return from_dataframe(result_simple.loc[:, output_names])
+        if simple_aggs:
+            try:
+                result_simple_aggs = grouped.agg(simple_aggs)
+            except AttributeError as exc:
+                msg = "Failed to aggregated - does your aggregation function return a scalar?"
+                raise RuntimeError(msg) from exc
+            result_simple_aggs.columns = [
+                f"{a}_{b}" for a, b in result_simple_aggs.columns
+            ]
+            result_simple_aggs = result_simple_aggs.rename(
+                columns=name_mapping, copy=False
+            )
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
+        if nunique_aggs:
+            result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
+                dropna=False
+            )
+            result_nunique_aggs.columns = list(nunique_aggs.keys())
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_nunique_aggs.reset_index(inplace=True)  # noqa: PD002
+        if simple_aggs and nunique_aggs:
+            if (
+                set(result_simple_aggs.columns)
+                .difference(keys)
+                .intersection(result_nunique_aggs.columns)
+            ):
+                msg = (
+                    "Got two aggregations with the same output name. Please make sure "
+                    "that aggregations have unique output names."
+                )
+                raise ValueError(msg)
+            result_aggs = result_simple_aggs.merge(result_nunique_aggs, on=keys)
+        elif nunique_aggs and not simple_aggs:
+            result_aggs = result_nunique_aggs
+        elif simple_aggs and not nunique_aggs:
+            result_aggs = result_simple_aggs
+        else:
+            # No aggregation provided
+            result_aggs = native_namespace.DataFrame(
+                list(grouped.groups.keys()), columns=keys
+            )
+        return from_dataframe(
+            select_columns_by_name(
+                result_aggs, output_names, backend_version, implementation
+            )
+        )
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -214,6 +284,12 @@ def agg_pandas(
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    result = result_complex.reset_index()
+    # Keep inplace=True to avoid making a redundant copy.
+    # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+    result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(
+        select_columns_by_name(
+            result_complex, output_names, backend_version, implementation
+        )
+    )

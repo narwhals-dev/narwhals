@@ -15,6 +15,7 @@
         - group_by
         - head
         - join
+        - join_asof
         - lazy
         - pipe
         - rename
@@ -22,7 +23,9 @@
         - select
         - sort
         - tail
+        - to_native
         - unique
+        - unpivot
         - with_columns
         - with_row_index
       show_root_heading: false

@@ -1,24 +1,22 @@
-from typing import Any
-
-import pytest
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
-def test_count(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_count(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b", "z").count())
     expected = {"a": [3], "b": [2], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_count_series(constructor_eager: Any) -> None:
+def test_count_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"a": [df["a"].count()], "b": [df["b"].count()], "z": [df["z"].count()]}
     expected = {"a": [3], "b": [2], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

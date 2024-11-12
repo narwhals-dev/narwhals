@@ -1,38 +1,32 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 import polars as pl
 import pytest
 
-import narwhals as nw
-from tests.utils import compare_dicts
+import narwhals.stable.v1 as nw
+from tests.utils import Constructor
+from tests.utils import assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
-def test_keep(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_keep(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.keep())
     expected = {k: [e * 2 for e in v] for k, v in data.items()}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_keep_after_alias(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_keep_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.keep())
     expected = {"foo": data["foo"]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_keep_raise_anonymous(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_keep_raise_anonymous(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

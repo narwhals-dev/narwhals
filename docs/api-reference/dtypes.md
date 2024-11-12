@@ -4,6 +4,8 @@
     handler: python
     options:
       members:
+        - Array
+        - List
         - Int64
         - Int32
         - Int16
@@ -12,12 +14,15 @@
         - UInt32
         - UInt16
         - UInt8
+        - Field
         - Float64
         - Float32
         - Boolean
         - Categorical
         - Enum
         - String
+        - Struct
+        - Date
         - Datetime
         - Duration
         - Object

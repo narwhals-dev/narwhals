@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
@@ -21,26 +20,21 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     ],
 )
 def test_unique(
-    constructor: Any,
+    constructor: Constructor,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
-    request: Any,
 ) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
     result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_unique_none(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
     result = df.unique(maintain_order=True)
-    compare_dicts(result, data)
+    assert_equal_data(result, data)

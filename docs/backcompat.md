@@ -74,8 +74,8 @@ users of `narwhals.stable.v1` will have their code unaffected.
 Which should you use? In general we recommend:
 
 - When prototyping, use `import narwhals as nw`, so you can iterate quickly.
-- Once you're happy with what you've got and what to release something production-ready and stable,
-  when switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
+- Once you're happy with what you've got and want to release something production-ready and stable,
+  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
 
 ## Exceptions
 
@@ -91,3 +91,54 @@ Here are exceptions to our backwards compatibility policy:
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
 - we may consider making some type hints more precise.
+
+In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
+before making any change.
+
+## Breaking changes carried out so far
+
+### After `stable.v1`
+
+- Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
+    has been deprecated in favour of `pass_through`. This is because several users expressed
+    confusion/surprise over what `strict=False` did.
+    ```python
+    # v1 syntax:
+    nw.from_native(df, strict=False)
+
+    # main namespace (and, when we get there, v2) syntax:
+    nw.from_native(df, pass_through=True)
+    ```
+    If you are using Narwhals>=1.13.0, then we recommend using `pass_through`, as that
+    works consistently across namespaces.
+
+    In the future:
+
+    - in the main Narwhals namespace, `strict` will be removed in favour of `pass_through`
+    - in `stable.v1`, we will keep both `strict` and `pass_through`
+
+- Since Narwhals 1.9.0, `Datetime` and `Duration` dtypes hash using both `time_unit` and
+    `time_zone`.
+    The effect of this can be seen when placing these dtypes in sets:
+
+    ```python exec="1" source="above" session="backcompat"
+    import narwhals.stable.v1 as nw_v1
+    import narwhals as nw
+
+    # v1 behaviour:
+    assert nw_v1.Datetime("us") in {nw_v1.Datetime}
+
+    # main namespace (and, when we get there, v2) behaviour:
+    assert nw.Datetime("us") not in {nw.Datetime}
+    assert nw.Datetime("us") in {nw.Datetime("us")}
+    ```
+
+    To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
+    we recommend using `==` instead, as that works consistenty
+    across namespaces:
+
+    ```python exec="1" source="above" session="backcompat"
+    # Recommended
+    assert nw.Datetime("us") == nw.Datetime
+    assert nw_v1.Datetime("us") == nw_v1.Datetime
+    ```

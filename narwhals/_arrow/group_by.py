@@ -4,11 +4,11 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -16,13 +16,40 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
 
+POLARS_TO_ARROW_AGGREGATIONS = {
+    "len": "count",
+    "median": "approximate_median",
+    "n_unique": "count_distinct",
+    "std": "stddev",
+    "var": "variance",  # currently unused, we don't have `var` yet
+}
+
+
+def get_function_name_option(function_name: str) -> Any | None:
+    """Map specific pyarrow compute function to respective option to match polars behaviour."""
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    function_name_to_options = {
+        "count": pc.CountOptions(mode="all"),
+        "count_distinct": pc.CountOptions(mode="all"),
+        "stddev": pc.VarianceOptions(ddof=1),
+        "variance": pc.VarianceOptions(ddof=1),
+    }
+    return function_name_to_options.get(function_name)
+
 
 class ArrowGroupBy:
-    def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
-        pa = get_pyarrow()
-        self._df = df
+    def __init__(
+        self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
+        import pyarrow as pa  # ignore-banned-import()
+
+        if drop_null_keys:
+            self._df = df.drop_nulls(keys)
+        else:
+            self._df = df
         self._keys = list(keys)
-        self._grouped = pa.TableGroupBy(self._df._native_dataframe, list(self._keys))
+        self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
     def agg(
         self,
@@ -50,7 +77,40 @@ class ArrowGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._df._from_native_dataframe,
+            self._df._from_native_frame,
+        )
+
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
+        null_token = "__null_token_value__"  # noqa: S105
+
+        table = self._df._native_frame
+        key_values = pc.binary_join_element_wise(
+            *[pc.cast(table[key], pa.string()) for key in self._keys],
+            "",
+            null_handling="replace",
+            null_replacement=null_token,
+        )
+        table = table.add_column(i=0, field_=col_token, column=key_values)
+
+        yield from (
+            (
+                next(
+                    (
+                        t := self._df._from_native_frame(
+                            table.filter(pc.equal(table[col_token], v)).drop([col_token])
+                        )
+                    )
+                    .select(*self._keys)
+                    .head(1)
+                    .iter_rows()
+                ),
+                t,
+            )
+            for v in pc.unique(key_values)
         )
 
 
@@ -61,7 +121,8 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
-    pc = get_pyarrow_compute()
+    import pyarrow.compute as pc  # ignore-banned-import()
+
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -94,17 +155,14 @@ def agg_arrow(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
+            function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
+
+            option = get_function_name_option(function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                if function_name != "len":
-                    simple_aggregations[output_name] = (
-                        (root_name, function_name),
-                        f"{root_name}_{function_name}",
-                    )
-                else:
-                    simple_aggregations[output_name] = (
-                        (root_name, "count", pc.CountOptions(mode="all")),
-                        f"{root_name}_count",
-                    )
+                simple_aggregations[output_name] = (
+                    (root_name, function_name, option),
+                    f"{root_name}_{function_name}",
+                )
 
         aggs: list[Any] = []
         name_mapping = {}

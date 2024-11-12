@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.1.9"
+version = "1.13.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -23,12 +23,21 @@ exclude = [
   "/docs",
   "/tests",
   "/tpch",
+  "/utils",
+  ".gitignore",
+  "CONTRIBUTING.md",
+  "mkdocs.yml",
+  "noxfile.py",
+  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
+cudf = ["cudf>=23.08.00"]
+modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
-pyarrow = ['pyarrow>=11.0.0']
+pyarrow = ["pyarrow>=11.0.0"]
+dask = ["dask[dataframe]>=2024.7"]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -54,7 +63,9 @@ lint.ignore = [
   "E501",
   "FIX",
   "ISC001",
-  "PD",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "NPY002",
+  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PD010",
   "PLR0911",
   "PLR0912",
   "PLR0913",
@@ -66,18 +77,31 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+"tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
+"tpch/execute/*" = ["T201"]
+"tpch/notebooks/*" = [
+  "ANN001",
+  "ANN201",
+  "EM101",
+  "EXE002",
+  "PTH123",
+  "T203",
+  "TRY003",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
@@ -91,6 +115,9 @@ filterwarnings = [
   'ignore:.*implementation has mismatches with pandas',
   'ignore:.*Do not use the `random` module inside strategies',
   'ignore:.*You are using pyarrow version',
+  'ignore:.*but when imported by',
+  'ignore:Distributing .*This may take some time',
+  'ignore:.*The default coalesce behavior',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -102,13 +129,20 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
-omit = ['narwhals/typing.py']
+omit = [
+  'narwhals/typing.py',
+  'narwhals/stable/v1/typing.py',
+  'narwhals/this.py',
+  # we can run this in every environment that we measure coverage on due to upper-bound constraits
+  'narwhals/_ibis/*',
+]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation is Implementation.MODIN",
-  "if implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)'
+  "if (:?self._)?implementation is Implementation.MODIN",
+  "if (:?self._)?implementation is Implementation.CUDF",
+  'request.applymarker\(pytest.mark.xfail\)',
+  'if self._backend_version < '
 ]
 
 [tool.mypy]

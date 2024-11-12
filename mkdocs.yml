@@ -5,24 +5,29 @@ watch:
 nav:
   - Home: index.md
   - Why: why.md
-  - Installation: installation.md
-  - Quick start: quick_start.md
+  - Installation and quick start: installation.md
   - Tutorial:
     - basics/dataframe.md
-    - basics/column.md
+    - basics/series.md
     - basics/complete_example.md
-  - Other concepts:
+    - basics/dataframe_conversion.md
+  - Pandas-like concepts:
     - other/pandas_index.md
     - other/user_warning.md
-  - levels.md
+    - other/column_names.md
   - overhead.md
   - backcompat.md
   - extending.md
   - how_it_works.md
-  - Roadmap: roadmap.md
-  - Related projects: related.md
-  - API Completeness: api-completeness.md
+  - Roadmap and related projects: roadmap_and_related.md
+  - API Completeness:
+    - api-completeness/index.md
+    - Supported DataFrame methods: api-completeness/dataframe.md
+    - Supported LazyFrame methods: api-completeness/lazyframe.md
+    - Supported Expr methods: api-completeness/expr.md
+    - Supported Series methods: api-completeness/series.md
   - API Reference:
+    - api-reference/index.md
     - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/expr.md
@@ -39,18 +44,21 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
-    - api-reference/index.md
     - api-reference/selectors.md
     - api-reference/typing.md
+  - This: this.md
 theme:
   name: material
   font: false
+  favicon: assets/logo.svg
+  logo: assets/logo.svg
   features:
     - content.code.copy
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
-  palette:
+    - navigation.top
+  palette:   
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
       toggle:
@@ -71,6 +79,7 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
 
+
 plugins:
 - search
 - mkdocstrings:
@@ -80,9 +89,14 @@ plugins:
         - https://installer.readthedocs.io/en/stable/objects.inv
         rendering:
           show_signature_annotations: true
+        options:
+          members_order: alphabetical
+    enable_inventory: true
+
 
 hooks:
 - utils/generate_backend_completeness.py
+- utils/generate_zen_content.py
 
 
 markdown_extensions:

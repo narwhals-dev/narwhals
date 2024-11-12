@@ -18,25 +18,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install uv (Unix)
-        if: runner.os != 'Windows'
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: Install uv (Windows)
-        if: runner.os == 'Windows'
-        run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=90
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=85
 
   pytest-windows:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.12"]
         os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
@@ -45,8 +43,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install uv (Windows)
-        run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: install-modin
@@ -55,13 +57,11 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   pytest-coverage:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.11", "3.13"]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -70,15 +70,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install uv (Unix)
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: install-modin
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
         run: uv pip freeze
+      - name: install ibis
+        run: uv pip install ibis-framework[duckdb]>=6.0.0 --system
+        # Ibis puts upper bounds on dependencies, and requires Python3.10+,
+        # which messes with other dependencies on lower Python versions
+        if: matrix.python-version == '3.11'
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
+        if: matrix.python-version == '3.13'
         run: pytest narwhals --doctest-modules

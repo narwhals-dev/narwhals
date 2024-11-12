@@ -9,15 +9,15 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 
 @given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))  # type: ignore[misc]
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
+    PANDAS_VERSION < (2, 0, 0),
     reason="pyarrow dtype not available",
 )
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_ordinal_day(dates: datetime) -> None:
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
     result_pdms = nw.from_native(

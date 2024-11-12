@@ -1,22 +1,31 @@
+from __future__ import annotations
+
 import contextlib
+from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
+from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.typing import IntoDataFrame
-from narwhals.typing import IntoFrame
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
 with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
+with contextlib.suppress(ImportError):
+    import cudf  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -56,6 +65,11 @@ def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
+def cudf_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+    cudf = get_cudf()
+    return cudf.DataFrame(obj)  # type: ignore[no-any-return]
+
+
 def polars_eager_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
@@ -64,16 +78,21 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def dask_lazy_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
-    return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
+    return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
+
+
+def dask_lazy_p2_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+    dd = get_dask_dataframe()
+    return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
-if parse_version(pd.__version__) >= parse_version("2.0.0"):
+if PANDAS_VERSION >= (2, 0, 0):
     eager_constructors = [
         pandas_constructor,
         pandas_nullable_constructor,
@@ -87,16 +106,21 @@ lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
-# TODO(unassigned): when Dask gets better support, remove the "False and" part
+if get_cudf() is not None:
+    eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
-    lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
+    # TODO(unassigned): reinstate both dask constructors once if/when we have a dask use-case
+    # lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # noqa: ERA001
+    lazy_constructors.append(dask_lazy_p2_constructor)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor_eager(request: Any) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(
+    request: pytest.FixtureRequest,
+) -> ConstructorEager:
     return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: Any) -> Callable[[Any], Any]:
+def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]

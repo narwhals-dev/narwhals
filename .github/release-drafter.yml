@@ -1,6 +1,7 @@
 exclude-labels:
-  - skip changelog
+  - ignore
   - release
+  - dependencies
 name-template: 'Narwhals v$RESOLVED_VERSION'
 
 change-template: '- $TITLE (#$NUMBER)' 
@@ -9,31 +10,34 @@ autolabeler:
   - label: breaking
     title:
       # Example: feat!: ...
-      - '/^(build|chore|ci|depr|docs|feat|fix|perf|refactor|release|test)(\(.*\))?\!\: /'
+      - '/^([Bb]uild|[Cc]hore|CI|ci|[Dd]epr|[Dd]oc|DOC|[Ff]eat|[Ff]ix|[Pp]erf|[Rr]efactor|[Rr]elease|[Tt]est)\! /'
   - label: build
     title:
-      - '/^build/'
+      - '/^([Bb]uild)/'
   - label: internal
     title:
-      - '/^(chore|ci|refactor|test|template|bench)/'
+      - '/^(chore|ci|refactor|test|template|bench|Chore|CI|Refactor|Test|Template|Bench)/'
   - label: deprecation
     title:
-      - '/^depr/'
+      - '/^([Dd]epr)/'
   - label: documentation
     title:
-      - '/(.*doc|.*docstring)/'
+      - '/^([Dd]oc|DOC)/'
   - label: enhancement
     title:
-      - '/^(.*feat|.*enh)/'
+      - '/^(feat|enh|Feat|ENH|Enh)/'
   - label: fix
     title:
-      - '/^fix/'
+      - '/^([Ff]ix)/'
   - label: performance
     title:
-      - '/^perf/'
+      - '/^([Pp]erf)/'
   - label: release
     title:
-      - '/^release/'
+      - '/^([Rr]elease)/'
+  - label: ignore
+    title:
+      - '/^\[pre-commit.ci\]/'
       
 version-resolver:
   major:

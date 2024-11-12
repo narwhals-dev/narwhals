@@ -7,7 +7,8 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -18,10 +19,8 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor: Any, dtype: DType | None, expected_lit: list[Any], request: Any
+    constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
 ) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -32,10 +31,10 @@ def test_lit(
         "z": [7.0, 8.0, 9.0],
         "lit": expected_lit,
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_lit_error(constructor: Any) -> None:
+def test_lit_error(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -51,3 +50,15 @@ def test_lit_error(constructor: Any) -> None:
         NotImplementedError, match="Nested datatypes are not supported yet."
     ):
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
+
+
+def test_lit_out_name(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw).lazy()
+    result = df.with_columns(nw.lit(2))
+    expected = {
+        "a": [1, 3, 2],
+        "literal": [2, 2, 2],
+    }
+    assert_equal_data(result, expected)

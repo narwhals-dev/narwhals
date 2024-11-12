@@ -2,11 +2,15 @@
 
 ![](assets/image.png)
 
-Extremely lightweight compatibility layer between Polars, pandas, and more.
+Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-Seamlessly support both, without depending on either!
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Lazy-only support**: Dask
+- **Interchange-level support**: Ibis, DuckDB, Vaex, anything else which implements the DataFrame Interchange Protocol
 
-- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
+Seamlessly support all, without depending on any!
+
+- ✅ **Just use** [a subset of **the Polars API**](https://narwhals-dev.github.io/narwhals/api-reference/), no need to learn anything new
 - ✅ **Zero dependencies**, Narwhals only uses what
   the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**

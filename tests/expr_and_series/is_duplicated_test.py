@@ -1,34 +1,22 @@
-from typing import Any
-
-import numpy as np
-import pytest
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
-data = {
-    "a": [1, 1, 2],
-    "b": [1, 2, 3],
-}
+data = {"a": [1, 1, 2], "b": [1, 2, 3], "index": [0, 1, 2]}
 
 
-def test_is_duplicated_expr(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # TODO(unassigned): why is Modin failing here?
-        request.applymarker(pytest.mark.xfail)
+def test_is_duplicated_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().is_duplicated())
-    expected = {
-        "a": [True, True, False],
-        "b": [False, False, False],
-    }
-    compare_dicts(result, expected)
+    result = df.select(nw.col("a", "b").is_duplicated(), "index").sort("index")
+    expected = {"a": [True, True, False], "b": [False, False, False], "index": [0, 1, 2]}
+    assert_equal_data(result, expected)
 
 
-def test_is_duplicated_series(constructor_eager: Any) -> None:
+def test_is_duplicated_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_duplicated()
-    expected = np.array([True, True, False])
-    assert (result.to_numpy() == expected).all()
+    expected = {"a": [True, True, False]}
+    assert_equal_data({"a": result}, expected)

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import Constructor
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -21,19 +23,31 @@ from tests.utils import compare_dicts
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_expr(
-    constructor: Any,
+    constructor: Constructor,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) and interpolation != "linear":
         request.applymarker(pytest.mark.xfail)
+
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
-    compare_dicts(result, expected)
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.quantile` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
+        assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -48,7 +62,7 @@ def test_quantile_expr(
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
@@ -58,4 +72,4 @@ def test_quantile_series(
         "a"
     ].alias("a")
     result = series.quantile(quantile=q, interpolation=interpolation)
-    compare_dicts({"a": [result]}, {"a": [expected]})
+    assert_equal_data({"a": [result]}, {"a": [expected]})

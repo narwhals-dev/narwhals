@@ -3,47 +3,57 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
-from narwhals._arrow.utils import reverse_translate_dtype
-from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSeries:
     def __init__(
-        self, native_series: Any, *, name: str, backend_version: tuple[int, ...]
+        self,
+        native_series: pa.ChunkedArray,
+        *,
+        name: str,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = name
         self._native_series = native_series
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def _from_native_series(self, series: Any) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         if isinstance(series, pa.Array):
             series = pa.chunked_array([series])
         return self.__class__(
             series,
             name=self._name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -53,79 +63,98 @@ class ArrowSeries:
         name: str,
         *,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         return cls(
             pa.chunked_array([data]),
             name=name,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __len__(self) -> int:
         return len(self._native_series)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.equal(ser, other))
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.not_equal(ser, other))
 
     def __ge__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.greater_equal(ser, other))
 
     def __gt__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.greater(ser, other))
 
     def __le__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.less_equal(ser, other))
 
     def __lt__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.less(ser, other))
 
     def __and__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.and_kleene(ser, other))
 
     def __rand__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.and_kleene(other, ser))
 
     def __or__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.or_kleene(ser, other))
 
     def __ror__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         other = validate_column_comparand(other)
         return self._from_native_series(pc.add(self._native_series, other))
 
@@ -133,7 +162,8 @@ class ArrowSeries:
         return self + other  # type: ignore[no-any-return]
 
     def __sub__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         other = validate_column_comparand(other)
         return self._from_native_series(pc.subtract(self._native_series, other))
 
@@ -141,7 +171,8 @@ class ArrowSeries:
         return (self - other) * (-1)  # type: ignore[no-any-return]
 
     def __mul__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         other = validate_column_comparand(other)
         return self._from_native_series(pc.multiply(self._native_series, other))
 
@@ -149,13 +180,15 @@ class ArrowSeries:
         return self * other  # type: ignore[no-any-return]
 
     def __pow__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(ser, other))
 
     def __rpow__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
@@ -171,8 +204,9 @@ class ArrowSeries:
         return self._from_native_series(floordiv_compat(other, ser))
 
     def __truediv__(self, other: Any) -> Self:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
@@ -181,8 +215,9 @@ class ArrowSeries:
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
     def __rtruediv__(self, other: Any) -> Self:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         other = validate_column_comparand(other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
@@ -190,57 +225,108 @@ class ArrowSeries:
             other = pa.scalar(other)
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
 
+    def __mod__(self, other: Any) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        floor_div = (self // other)._native_series
+        res = pc.subtract(ser, pc.multiply(floor_div, other))
+        return self._from_native_series(res)
+
+    def __rmod__(self, other: Any) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        floor_div = (other // self)._native_series
+        res = pc.subtract(other, pc.multiply(floor_div, ser))
+        return self._from_native_series(res)
+
     def __invert__(self) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(pc.invert(self._native_series))
 
     def len(self) -> int:
         return len(self._native_series)
 
     def filter(self, other: Any) -> Self:
-        other = validate_column_comparand(other)
+        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
+            other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))
 
     def mean(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def median(self) -> int:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return pc.approximate_median(self._native_series)  # type: ignore[no-any-return]
+
     def min(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.min(self._native_series)  # type: ignore[no-any-return]
 
     def max(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.max(self._native_series)  # type: ignore[no-any-return]
 
     def sum(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.sum(self._native_series)  # type: ignore[no-any-return]
 
     def drop_nulls(self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(pc.drop_null(self._native_series))
 
+    def shift(self, n: int) -> Self:
+        import pyarrow as pa  # ignore-banned-import()
+
+        ca = self._native_series
+
+        if n > 0:
+            result = pa.concat_arrays([pa.nulls(n, ca.type), *ca[:-n].chunks])
+        elif n < 0:
+            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca.type)])
+        else:
+            result = ca
+        return self._from_native_series(result)
+
     def std(self, ddof: int = 1) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
 
     def count(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
     def n_unique(self) -> int:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         unique_values = pc.unique(self._native_series)
         return pc.count(unique_values, mode="all")  # type: ignore[no-any-return]
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        return get_pyarrow()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.PYARROW:
+            return self._implementation.to_native_namespace()
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(backend_version=self._backend_version)
+        msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     @property
     def name(self) -> str:
@@ -258,7 +344,26 @@ class ArrowSeries:
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series[idx]
+        if isinstance(idx, Sequence):
+            return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
+
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        ca = self._native_series
+        mask = np.zeros(len(ca), dtype=bool)
+        mask[indices] = True
+        if isinstance(values, self.__class__):
+            values = validate_column_comparand(values)
+        if isinstance(values, pa.ChunkedArray):
+            values = values.combine_chunks()
+        if not isinstance(values, pa.Array):
+            values = pa.array(values)
+        result = pc.replace_with_mask(ca, mask, values.take(indices))
+        return self._from_native_series(result)
 
     def to_list(self) -> Any:
         return self._native_series.to_pylist()
@@ -274,42 +379,52 @@ class ArrowSeries:
             self._native_series,
             name=name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @property
-    def dtype(self) -> DType:
-        return translate_dtype(self._native_series.type)
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series.type, self._dtypes)
 
     def abs(self) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(pc.abs(self._native_series))
 
     def cum_sum(self) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(pc.cumulative_sum(self._native_series))
 
     def round(self, decimals: int) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(
             pc.round(self._native_series, decimals, round_mode="half_towards_infinity")
         )
 
     def diff(self) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(
             pc.pairwise_diff(self._native_series.combine_chunks())
         )
 
     def any(self) -> bool:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.any(self._native_series)  # type: ignore[no-any-return]
 
     def all(self) -> bool:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.all(self._native_series)  # type: ignore[no-any-return]
 
-    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str = "both") -> Any:
-        pc = get_pyarrow_compute()
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         if closed == "left":
             ge = pc.greater_equal(ser, lower_bound)
@@ -339,9 +454,10 @@ class ArrowSeries:
         return self._from_native_series(ser.is_null())
 
     def cast(self, dtype: DType) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self) -> int:
@@ -364,18 +480,23 @@ class ArrowSeries:
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         value_set = pa.array(other)
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
     def arg_true(self) -> Self:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_iterable(
-            res, name=self.name, backend_version=self._backend_version
+            res,
+            name=self.name,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -398,10 +519,10 @@ class ArrowSeries:
         normalize: bool = False,
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility"""
-        from narwhals._arrow.dataframe import ArrowDataFrame
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
-        pc = get_pyarrow_compute()
-        pa = get_pyarrow()
+        from narwhals._arrow.dataframe import ArrowDataFrame
 
         index_name_ = "index" if self._name is None else self._name
         value_name_ = name or ("proportion" if normalize else "count")
@@ -421,57 +542,109 @@ class ArrowSeries:
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count,
-            backend_version=self._backend_version,
+            val_count, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
+        mask = mask._native_series.combine_chunks()
         return self._from_native_series(
-            pc.replace_with_mask(
-                self._native_series.combine_chunks(),
-                pc.invert(mask._native_series.combine_chunks()),
-                other._native_series.combine_chunks(),
+            pc.if_else(
+                mask,
+                self._native_series,
+                other._native_series,
             )
         )
 
     def sample(
         self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
-        np = get_numpy()
-        pc = get_pyarrow_compute()
+        import numpy as np  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         num_rows = len(self)
 
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
 
+        rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
-        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        mask = rng.choice(idx, size=n, replace=with_replacement)
+
         return self._from_native_series(pc.take(ser, mask))
 
-    def fill_null(self: Self, value: Any) -> Self:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        def fill_aux(
+            arr: pa.Array,
+            limit: int,
+            direction: Literal["forward", "backward"] | None = None,
+        ) -> pa.Array:
+            # this algorithm first finds the indices of the valid values to fill all the null value positions
+            # then it calculates the distance of each new index and the original index
+            # if the distance is equal to or less than the limit and the original value is null, it is replaced
+            valid_mask = pc.is_valid(arr)
+            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            if direction == "forward":
+                valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
+                distance = indices - valid_index
+            else:
+                valid_index = np.minimum.accumulate(
+                    np.where(valid_mask[::-1], indices[::-1], len(arr))
+                )[::-1]
+                distance = valid_index - indices
+            return pc.if_else(
+                pc.and_(
+                    pc.is_null(arr),
+                    pc.less_equal(distance, pa.scalar(limit)),
+                ),
+                arr.take(valid_index),
+                arr,
+            )
+
         ser = self._native_series
         dtype = ser.type
 
-        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        if value is not None:
+            res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        elif limit is None:
+            fill_func = (
+                pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
+            )
+            res_ser = self._from_native_series(fill_func(ser))
+        else:
+            res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
+
+        return res_ser
 
     def to_frame(self: Self) -> ArrowDataFrame:
+        import pyarrow as pa  # ignore-banned-import()
+
         from narwhals._arrow.dataframe import ArrowDataFrame
 
-        pa = get_pyarrow()
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
-        return ArrowDataFrame(df, backend_version=self._backend_version)
+        return ArrowDataFrame(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def to_pandas(self: Self) -> Any:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
+
         return pd.Series(self._native_series, name=self.name)
 
     def is_duplicated(self: Self) -> ArrowSeries:
@@ -481,12 +654,12 @@ class ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self: Self) -> Self:
-        np = get_numpy()
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -498,12 +671,12 @@ class ArrowSeries:
         return self._from_native_series(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self: Self) -> Self:
-        np = get_numpy()
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -518,21 +691,49 @@ class ArrowSeries:
         if not isinstance(descending, bool):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         ser = self._native_series
         if descending:
             return pc.all(pc.greater_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
         else:
             return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
-    def unique(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+    def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the Polars API
+            and has no effect on the output.
+        """
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._from_native_series(pc.unique(self._native_series))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        # https://stackoverflow.com/a/79111029/4451315
+        idxs = pc.index_in(self._native_series, pa.array(old))
+        result_native = pc.take(pa.array(new), idxs)
+        if return_dtype is not None:
+            result_native.cast(narwhals_to_native_dtype(return_dtype, self._dtypes))
+        result = self._from_native_series(result_native)
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
+            raise ValueError(msg)
+        return result
 
     def sort(
         self: Self, *, descending: bool = False, nulls_last: bool = False
     ) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         series = self._native_series
         order = "descending" if descending else "ascending"
         null_placement = "at_end" if nulls_last else "at_start"
@@ -545,35 +746,77 @@ class ArrowSeries:
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> ArrowDataFrame:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+
         from narwhals._arrow.dataframe import ArrowDataFrame
 
-        np = get_numpy()
-        pa = get_pyarrow()
-
         series = self._native_series
-        da = series.dictionary_encode().combine_chunks()
+        name = self._name
+        da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
-        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
+        null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
+        cols = [
+            {null_col_pa: null_col_pl}.get(
+                f"{name}{separator}{v}", f"{name}{separator}{v}"
+            )
+            for v in da.dictionary
+        ]
 
+        output_order = (
+            [
+                null_col_pl,
+                *sorted([c for c in cols if c != null_col_pl])[int(drop_first) :],
+            ]
+            if null_col_pl in cols
+            else sorted(cols)[int(drop_first) :]
+        )
         return ArrowDataFrame(
-            pa.Table.from_arrays(columns, names=names),
+            pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
-        ).select(*sorted(names)[int(drop_first) :])
+            dtypes=self._dtypes,
+        ).select(*output_order)
 
     def quantile(
         self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Any:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
             0
         ]
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series[offset::n])
+
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        arr = self._native_series
+        arr = pc.max_element_wise(arr, pa.scalar(lower_bound, type=arr.type))
+        arr = pc.min_element_wise(arr, pa.scalar(upper_bound, type=arr.type))
+
+        return self._from_native_series(arr)
+
+    def to_arrow(self: Self) -> pa.Array:
+        return self._native_series.combine_chunks()
+
+    def mode(self: Self) -> ArrowSeries:
+        plx = self.__narwhals_namespace__()
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
+        return self.value_counts(name=col_token, normalize=False).filter(
+            plx.col(col_token) == plx.col(col_token).max()
+        )[self.name]
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
 
     @property
     def shape(self) -> tuple[int]:
@@ -597,7 +840,8 @@ class ArrowSeriesDateTimeNamespace:
         self._arrow_series = series
 
     def to_string(self: Self, format: str) -> ArrowSeries:  # noqa: A002
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
@@ -606,58 +850,151 @@ class ArrowSeriesDateTimeNamespace:
             pc.strftime(self._arrow_series._native_series, format)
         )
 
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        if time_zone is not None:
+            result = pc.assume_timezone(
+                pc.local_timestamp(self._arrow_series._native_series), time_zone
+            )
+        else:
+            result = pc.local_timestamp(self._arrow_series._native_series)
+        return self._arrow_series._from_native_series(result)
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+
+        if self._arrow_series.dtype.time_zone is None:  # type: ignore[attr-defined]
+            result = self.replace_time_zone("UTC")._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+        else:
+            result = self._arrow_series._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+
+        return self._arrow_series._from_native_series(result)
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        s = self._arrow_series._native_series
+        dtype = self._arrow_series.dtype
+        if dtype == self._arrow_series._dtypes.Datetime:
+            unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.cast(pa.int64())
+            if unit == "ns":
+                if time_unit == "ns":
+                    result = s_cast
+                elif time_unit == "us":
+                    result = floordiv_compat(s_cast, 1_000)
+                else:
+                    result = floordiv_compat(s_cast, 1_000_000)
+            elif unit == "us":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000)
+                elif time_unit == "us":
+                    result = s_cast
+                else:
+                    result = floordiv_compat(s_cast, 1_000)
+            elif unit == "ms":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000)
+                else:
+                    result = s_cast
+            elif unit == "s":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000_000)
+                else:
+                    result = pc.multiply(s_cast, 1_000)
+            else:  # pragma: no cover
+                msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
+                raise AssertionError(msg)
+        elif dtype == self._arrow_series._dtypes.Date:
+            time_s = pc.multiply(s.cast(pa.int32()), 86400)
+            if time_unit == "ns":
+                result = pc.multiply(time_s, 1_000_000_000)
+            elif time_unit == "us":
+                result = pc.multiply(time_s, 1_000_000)
+            else:
+                result = pc.multiply(time_s, 1_000)
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        return self._arrow_series._from_native_series(result)
+
+    def date(self: Self) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import()
+
+        return self._arrow_series._from_native_series(
+            self._arrow_series._native_series.cast(pa.date32())
+        )
+
     def year(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.year(self._arrow_series._native_series)
         )
 
     def month(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.month(self._arrow_series._native_series)
         )
 
     def day(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.day(self._arrow_series._native_series)
         )
 
     def hour(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.hour(self._arrow_series._native_series)
         )
 
     def minute(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.minute(self._arrow_series._native_series)
         )
 
     def second(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.second(self._arrow_series._native_series)
         )
 
     def millisecond(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.millisecond(self._arrow_series._native_series)
         )
 
     def microsecond(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         result = pc.add(pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr))
 
         return self._arrow_series._from_native_series(result)
 
     def nanosecond(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         result = pc.add(
             pc.multiply(self.microsecond()._native_series, 1000), pc.nanosecond(arr)
@@ -665,14 +1002,16 @@ class ArrowSeriesDateTimeNamespace:
         return self._arrow_series._from_native_series(result)
 
     def ordinal_day(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.day_of_year(self._arrow_series._native_series)
         )
 
     def total_minutes(self: Self) -> ArrowSeries:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         unit = arr.type.unit
 
@@ -689,8 +1028,9 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_seconds(self: Self) -> ArrowSeries:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         unit = arr.type.unit
 
@@ -707,8 +1047,9 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_milliseconds(self: Self) -> ArrowSeries:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         unit = arr.type.unit
 
@@ -731,8 +1072,9 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_microseconds(self: Self) -> ArrowSeries:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         unit = arr.type.unit
 
@@ -754,8 +1096,9 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_nanoseconds(self: Self) -> ArrowSeries:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         arr = self._arrow_series._native_series
         unit = arr.type.unit
 
@@ -778,9 +1121,11 @@ class ArrowSeriesCatNamespace:
         self._arrow_series = series
 
     def get_categories(self) -> ArrowSeries:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         ca = self._arrow_series._native_series
         # TODO(Unassigned): this looks potentially expensive - is there no better way?
+        # https://github.com/narwhals-dev/narwhals/issues/464
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )
@@ -791,27 +1136,69 @@ class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
+    def len_chars(self) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._arrow_series._from_native_series(
+            pc.utf8_length(self._arrow_series._native_series)
+        )
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        method = "replace_substring" if literal else "replace_substring_regex"
+        return self._arrow_series._from_native_series(
+            getattr(pc, method)(
+                self._arrow_series._native_series,
+                pattern=pattern,
+                replacement=value,
+                max_replacements=n,
+            )
+        )
+
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> ArrowSeries:
+        return self.replace(pattern, value, literal=literal, n=-1)
+
+    def strip_chars(self: Self, characters: str | None = None) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        whitespace = " \t\n\r\v\f"
+        return self._arrow_series._from_native_series(
+            pc.utf8_trim(
+                self._arrow_series._native_series,
+                characters or whitespace,
+            )
+        )
+
     def starts_with(self: Self, prefix: str) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.equal(self.slice(0, len(prefix))._native_series, prefix)
         )
 
     def ends_with(self: Self, suffix: str) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.equal(self.slice(-len(suffix))._native_series, suffix)
         )
 
     def contains(self: Self, pattern: str, *, literal: bool = False) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         check_func = pc.match_substring if literal else pc.match_substring_regex
         return self._arrow_series._from_native_series(
             check_func(self._arrow_series._native_series, pattern)
         )
 
     def slice(self: Self, offset: int, length: int | None = None) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         stop = offset + length if length else None
         return self._arrow_series._from_native_series(
             pc.utf8_slice_codeunits(
@@ -819,20 +1206,26 @@ class ArrowSeriesStringNamespace:
             ),
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
-        pc = get_pyarrow_compute()
+    def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        if format is None:
+            format = parse_datetime_format(self._arrow_series._native_series)
+
         return self._arrow_series._from_native_series(
             pc.strptime(self._arrow_series._native_series, format=format, unit="us")
         )
 
     def to_uppercase(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.utf8_upper(self._arrow_series._native_series),
         )
 
     def to_lowercase(self: Self) -> ArrowSeries:
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         return self._arrow_series._from_native_series(
             pc.utf8_lower(self._arrow_series._native_series),
         )

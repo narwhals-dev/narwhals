@@ -6,13 +6,13 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
 from typing import overload
 
-from narwhals.dependencies import get_numpy
-from narwhals.utils import flatten
+from narwhals.dependencies import is_numpy_array
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -29,17 +29,27 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._polars.typing import IntoPolarsExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
-    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr]
+    CompliantNamespace = Union[
+        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+    ]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    IntoCompliantExpr = Union[
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+    ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
     ListOfCompliantSeries = Union[
-        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr]
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
-    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr]]
+    ListOfCompliantExpr = Union[
+        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+    ]
     CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
 
     T = TypeVar("T")
@@ -85,7 +95,7 @@ def evaluate_into_exprs(
     """Evaluate each expr into Series."""
     series: ListOfCompliantSeries = [  # type: ignore[assignment]
         item
-        for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
+        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
         for item in sublist
     ]
     for name, expr in named_exprs.items():
@@ -132,6 +142,14 @@ def parse_into_exprs(
 ) -> list[DaskExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoPolarsExpr,
+    namespace: PolarsNamespace,
+    **named_exprs: IntoPolarsExpr,
+) -> list[PolarsExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -139,9 +157,7 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    return [  # type: ignore[return-value]
-        parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
-    ] + [
+    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
         parse_into_expr(expr, namespace=namespace).alias(name)
         for name, expr in named_exprs.items()
     ]
@@ -163,18 +179,22 @@ def parse_into_expr(
     - if it's a string, then convert it to an expression
     - else, raise
     """
-
     if hasattr(into_expr, "__narwhals_expr__"):
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
     if isinstance(into_expr, str):
         return namespace.col(into_expr)
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
+    if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
         return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
-    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
-    raise AssertionError(msg)
+    msg = (
+        f"Expected an object which can be converted into an expression, got {type(into_expr)}\n\n"  # pragma: no cover
+        "Hint: if you were trying to select a column which does not have a string column name, then "
+        "you should explicitly use `nw.col`.\nFor example, `df.select(nw.col(0))` if you have a column "
+        "named `0`."
+    )
+    raise TypeError(msg)
 
 
 def reuse_series_implementation(
@@ -199,19 +219,21 @@ def reuse_series_implementation(
     plx = expr.__narwhals_namespace__()
 
     def func(df: CompliantDataFrame) -> list[CompliantSeries]:
-        out: list[CompliantSeries] = []
-        for column in expr._call(df):  # type: ignore[arg-type]
-            _out = getattr(column, attr)(
-                *[maybe_evaluate_expr(df, arg) for arg in args],
-                **{
-                    arg_name: maybe_evaluate_expr(df, arg_value)
-                    for arg_name, arg_value in kwargs.items()
-                },
+        _args = [maybe_evaluate_expr(df, arg) for arg in args]
+        _kwargs = {
+            arg_name: maybe_evaluate_expr(df, arg_value)
+            for arg_name, arg_value in kwargs.items()
+        }
+
+        out: list[CompliantSeries] = [
+            plx._create_series_from_scalar(
+                getattr(series, attr)(*_args, **_kwargs),
+                reference_series=series,  # type: ignore[arg-type]
             )
-            if returns_scalar:
-                out.append(plx._create_series_from_scalar(_out, column))  # type: ignore[arg-type]
-            else:
-                out.append(_out)
+            if returns_scalar
+            else getattr(series, attr)(*_args, **_kwargs)
+            for series in expr._call(df)  # type: ignore[arg-type]
+        ]
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
@@ -287,3 +309,24 @@ def is_simple_aggregation(expr: CompliantExpr) -> bool:
     because then, we can use a fastpath in pandas.
     """
     return expr._depth < 2
+
+
+def combine_root_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
+    root_names = copy(parsed_exprs[0]._root_names)
+    for arg in parsed_exprs[1:]:
+        if root_names is not None and hasattr(arg, "__narwhals_expr__"):
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
+            else:
+                root_names = None
+                break
+    return root_names
+
+
+def reduce_output_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
+    """Returns the left-most output name"""
+    return (
+        parsed_exprs[0]._output_names[:1]
+        if parsed_exprs[0]._output_names is not None
+        else None
+    )

@@ -4,21 +4,25 @@
     handler: python
     options:
       members:
-        - year
-        - month
+        - convert_time_zone
+        - date
         - day
-        - ordinal_day
         - hour
-        - minute
-        - second
-        - millisecond
         - microsecond
+        - millisecond
+        - minute
+        - month
         - nanosecond
-        - total_minutes
-        - total_seconds
-        - total_milliseconds
+        - ordinal_day
+        - replace_time_zone
+        - second
+        - timestamp
         - total_microseconds
+        - total_milliseconds
+        - total_minutes
         - total_nanoseconds
+        - total_seconds
         - to_string
+        - year
       show_source: false
       show_bases: false

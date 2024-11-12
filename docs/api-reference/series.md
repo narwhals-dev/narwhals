@@ -4,12 +4,16 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
+        - __getitem__
+        - __iter__
         - abs
         - alias
         - all
         - any
         - arg_true
         - cast
+        - clip
         - count
         - cum_sum
         - diff
@@ -32,24 +36,32 @@
         - len
         - max
         - mean
+        - median
         - min
+        - mode
         - name
-        - null_count
         - n_unique
+        - null_count
+        - pipe
         - quantile
+        - rename
+        - replace_strict
         - round
         - sample
+        - scatter
         - shape
         - shift
         - sort
         - std
         - sum
         - tail
+        - to_arrow
         - to_dummies
         - to_frame
         - to_list
         - to_numpy
         - to_pandas
+        - to_native
         - unique
         - value_counts
         - zip_with

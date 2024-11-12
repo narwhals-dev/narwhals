@@ -18,6 +18,7 @@
         - filter
         - gather_every
         - head
+        - clip
         - is_between
         - is_duplicated
         - is_first_distinct
@@ -26,13 +27,18 @@
         - is_null
         - is_unique
         - len
+        - map_batches
         - max
         - mean
+        - median
         - min
+        - mode
         - null_count
         - n_unique
         - over
+        - pipe
         - quantile
+        - replace_strict
         - round
         - sample
         - shift
