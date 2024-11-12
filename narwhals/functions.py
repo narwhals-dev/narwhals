@@ -382,6 +382,8 @@ def _from_dict_impl(
                 name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
+        else:
+            schema_pl = None
 
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif implementation in {
