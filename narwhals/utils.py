@@ -541,7 +541,6 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
-        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
     )
     issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
