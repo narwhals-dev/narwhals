@@ -32,3 +32,11 @@ def test_non_string_select_invalid() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(TypeError, match="\n\nHint: if you were trying to select"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
+
+
+def test_select_boolean_cols() -> None:
+    df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}))
+    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    assert_equal_data(result, {True: [1, 2]})  # type: ignore[dict-item]
+    result = df.select(nw.col([False, True]))  # type: ignore[list-item]
+    assert_equal_data(result, {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
