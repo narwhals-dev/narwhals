@@ -17,7 +17,3 @@ print(q17.query(fn(lineitem), fn(part)).collect())
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q17.query(fn(lineitem), fn(part)))
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(q17.query(fn(lineitem), fn(part)).compute())

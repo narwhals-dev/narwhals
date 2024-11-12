@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
@@ -66,7 +67,7 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in column_names]
+            return [df._native_frame[column_name] for column_name in column_names]
 
         return cls(
             func,
@@ -375,12 +376,33 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> NoReturn:
+        msg = "`Expr.map_batches` is not implemented for Dask yet"
+        raise NotImplementedError(msg)
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
             "mean",
             returns_scalar=True,
         )
+
+    def median(self) -> Self:
+        from dask_expr._shuffle import _is_numeric_cast_type
+
+        from narwhals._exceptions import InvalidOperationError
+
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
+            if not _is_numeric_cast_type(_input.dtype):
+                msg = "`median` operation not supported for non-numeric input type."
+                raise InvalidOperationError(msg)
+            return _input.median_approximate()
+
+        return self._from_call(func, "median", returns_scalar=True)
 
     def min(self) -> Self:
         return self._from_call(
@@ -484,6 +506,12 @@ class DaskExpr:
         msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
         raise NotImplementedError(msg)
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        msg = "`replace_strict` is not yet supported for Dask expressions"
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
@@ -512,11 +540,34 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def fill_null(self, value: Any) -> DaskExpr:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> DaskExpr:
+        def func(
+            _input: dask_expr.Series,
+            value: Any | None,
+            strategy: str | None,
+            limit: int | None,
+        ) -> dask_expr.Series:
+            if value is not None:
+                res_ser = _input.fillna(value)
+            else:
+                res_ser = (
+                    _input.ffill(limit=limit)
+                    if strategy == "forward"
+                    else _input.bfill(limit=limit)
+                )
+            return res_ser
+
         return self._from_call(
-            lambda _input, _val: _input.fillna(_val),
+            func,
             "fillna",
             value,
+            strategy,
+            limit,
             returns_scalar=False,
         )
 

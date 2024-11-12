@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import string
+from typing import TYPE_CHECKING
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -14,6 +15,9 @@ from pandas.testing import assert_series_equal
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
+
+if TYPE_CHECKING:
+    from narwhals.series import Series
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -58,19 +62,107 @@ def test_maybe_align_index_polars() -> None:
         nw.maybe_align_index(df, s[1:])
 
 
-def test_maybe_set_index_pandas() -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[1, 2, 0]))
-    result = nw.maybe_set_index(df, "b")
-    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[1, 2, 0]).set_index(
-        "b"
-    )
+@pytest.mark.parametrize(
+    "column_names",
+    ["b", ["a", "b"]],
+)
+def test_maybe_set_index_pandas_column_names(
+    column_names: str | list[str] | None,
+) -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw.maybe_set_index(df, column_names)
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index(column_names)
     assert_frame_equal(nw.to_native(result), expected)
 
 
-def test_maybe_set_index_polars() -> None:
+@pytest.mark.parametrize(
+    "column_names",
+    [
+        "b",
+        ["a", "b"],
+    ],
+)
+def test_maybe_set_index_polars_column_names(
+    column_names: str | list[str] | None,
+) -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_set_index(df, "b")
+    result = nw.maybe_set_index(df, column_names)
     assert result is df
+
+
+@pytest.mark.parametrize(
+    "native_df_or_series",
+    [pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}), pd.Series([0, 1, 2])],
+)
+@pytest.mark.parametrize(
+    ("narwhals_index", "pandas_index"),
+    [
+        (nw.from_native(pd.Series([1, 2, 0]), series_only=True), pd.Series([1, 2, 0])),
+        (
+            [
+                nw.from_native(pd.Series([0, 1, 2]), series_only=True),
+                nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+            ],
+            [
+                pd.Series([0, 1, 2]),
+                pd.Series([1, 2, 0]),
+            ],
+        ),
+    ],
+)
+def test_maybe_set_index_pandas_direct_index(
+    narwhals_index: Series | list[Series] | None,
+    pandas_index: pd.Series | list[pd.Series] | None,
+    native_df_or_series: pd.DataFrame | pd.Series,
+) -> None:
+    df = nw.from_native(native_df_or_series, allow_series=True)
+    result = nw.maybe_set_index(df, index=narwhals_index)
+    if isinstance(native_df_or_series, pd.Series):
+        native_df_or_series.index = pandas_index
+        assert_series_equal(nw.to_native(result), native_df_or_series)
+    else:
+        expected = native_df_or_series.set_index(pandas_index)
+        assert_frame_equal(nw.to_native(result), expected)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+        [
+            nw.from_native(pd.Series([0, 1, 2]), series_only=True),
+            nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+        ],
+    ],
+)
+def test_maybe_set_index_polars_direct_index(
+    index: Series | list[Series] | None,
+) -> None:
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw.maybe_set_index(df, index=index)
+    assert result is df
+
+
+def test_maybe_set_index_pandas_series_column_names() -> None:
+    df = nw.from_native(pd.Series([0, 1, 2]), allow_series=True)
+    with pytest.raises(
+        ValueError, match="Cannot set index using column names on a Series"
+    ):
+        nw.maybe_set_index(df, column_names=["a"])
+
+
+def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    column_names = ["a", "b"]
+    index = nw.from_native(pd.Series([0, 1, 2]), series_only=True)
+    with pytest.raises(
+        ValueError, match="Only one of `column_names` or `index` should be provided"
+    ):
+        nw.maybe_set_index(df, column_names=column_names, index=index)
+    with pytest.raises(
+        ValueError, match="Either `column_names` or `index` should be provided"
+    ):
+        nw.maybe_set_index(df)
 
 
 def test_maybe_get_index_pandas() -> None:

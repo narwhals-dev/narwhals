@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 from typing import TypeVar
 
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -30,6 +32,51 @@ PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.CUDF,
     Implementation.MODIN,
 }
+PD_DATETIME_RGX = r"""^
+    datetime64\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+        (?:,                                      # Begin non-capturing group for optional timezone
+            \s*                                   # Optional whitespace after comma
+            (?P<time_zone>                        # Start named group for timezone
+                [a-zA-Z\/]+                       # Match timezone name, e.g., UTC, America/New_York
+                (?:[+-]\d{2}:\d{2})?              # Optional offset in format +HH:MM or -HH:MM
+                |                                 # OR
+                pytz\.FixedOffset\(\d+\)          # Match pytz.FixedOffset with integer offset in parentheses
+            )                                     # End time_zone group
+        )?                                        # End optional timezone group
+    \]                                            # Closing bracket for datetime64
+$"""
+PATTERN_PD_DATETIME = re.compile(PD_DATETIME_RGX, re.VERBOSE)
+PA_DATETIME_RGX = r"""^
+    timestamp\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+        (?:,                                      # Begin non-capturing group for optional timezone
+            \s?tz=                                # Match "tz=" prefix
+            (?P<time_zone>                        # Start named group for timezone
+                [a-zA-Z\/]*                       # Match timezone name (e.g., UTC, America/New_York)
+                (?:                               # Begin optional non-capturing group for offset
+                    [+-]\d{2}:\d{2}               # Match offset in format +HH:MM or -HH:MM
+                )?                                # End optional offset group
+            )                                     # End time_zone group
+        )?                                        # End optional timezone group
+    \]                                            # Closing bracket for timestamp
+    \[pyarrow\]                                   # Literal string "[pyarrow]"
+$"""
+PATTERN_PA_DATETIME = re.compile(PA_DATETIME_RGX, re.VERBOSE)
+PD_DURATION_RGX = r"""^
+    timedelta64\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+    \]                                            # Closing bracket for timedelta64
+$"""
+
+PATTERN_PD_DURATION = re.compile(PD_DURATION_RGX, re.VERBOSE)
+PA_DURATION_RGX = r"""^
+    duration\[
+        (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
+    \]                                            # Closing bracket for duration
+    \[pyarrow\]                                   # Literal string "[pyarrow]"
+$"""
+PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -83,7 +130,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -96,7 +143,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError(msg)
 
 
-def create_native_series(
+def create_compliant_series(
     iterable: Any,
     index: Any = None,
     *,
@@ -223,14 +270,6 @@ def native_to_narwhals_dtype(
 ) -> DType:
     dtype = str(native_column.dtype)
 
-    pd_datetime_rgx = (
-        r"^datetime64\[(?P<time_unit>s|ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
-    )
-    pa_datetime_rgx = r"^timestamp\[(?P<time_unit>s|ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
-
-    pd_duration_rgx = r"^timedelta64\[(?P<time_unit>s|ms|us|ns)\]$"
-    pa_duration_rgx = r"^duration\[(?P<time_unit>s|ms|us|ns)\]\[pyarrow\]$"
-
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
     if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
@@ -269,14 +308,14 @@ def native_to_narwhals_dtype(
         return dtypes.Boolean()
     if dtype == "category" or dtype.startswith("dictionary<"):
         return dtypes.Categorical()
-    if (match_ := re.match(pd_datetime_rgx, dtype)) or (
-        match_ := re.match(pa_datetime_rgx, dtype)
+    if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
+        match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
         dt_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
-    if (match_ := re.match(pd_duration_rgx, dtype)) or (
-        match_ := re.match(pa_duration_rgx, dtype)
+    if (match_ := PATTERN_PD_DURATION.match(dtype)) or (
+        match_ := PATTERN_PA_DURATION.match(dtype)
     ):
         du_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
@@ -339,7 +378,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     backend_version: tuple[int, ...],
     dtypes: DTypes,
 ) -> Any:
-    if "polars" in str(type(dtype)):
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"
@@ -595,3 +636,20 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
     else:
         result = s * 1_000
     return result
+
+
+def select_columns_by_name(
+    df: T,
+    column_names: Sequence[str],
+    backend_version: tuple[int, ...],
+    implementation: Implementation,
+) -> T:
+    """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
+    generally more performant."""
+    if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
+        implementation is Implementation.PANDAS and backend_version < (1, 5)
+    ):
+        # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
+        # for why we need this
+        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
+    return df[column_names]  # type: ignore[no-any-return, index]

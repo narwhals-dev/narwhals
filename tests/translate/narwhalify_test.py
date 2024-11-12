@@ -61,21 +61,23 @@ def test_narwhalify_method_called() -> None:
 
 
 def test_narwhalify_method_invalid() -> None:
-    class Foo:
-        @nw.narwhalify(strict=True, eager_only=True)
-        def func(self) -> Foo:  # pragma: no cover
-            return self
+    with pytest.deprecated_call(match="please use `pass_through` instead"):
 
-        @nw.narwhalify(strict=True, eager_only=True)
-        def fun2(self, df: Any) -> Any:  # pragma: no cover
-            return df
+        class Foo:
+            @nw.narwhalify(strict=True, eager_only=True)
+            def func(self) -> Foo:  # pragma: no cover
+                return self
 
-    with pytest.raises(TypeError):
-        Foo().func()
+            @nw.narwhalify(strict=True, eager_only=True)
+            def fun2(self, df: Any) -> Any:  # pragma: no cover
+                return df
+
+        with pytest.raises(TypeError):
+            Foo().func()
 
 
 def test_narwhalify_invalid() -> None:
-    @nw.narwhalify(strict=True)
+    @nw.narwhalify(pass_through=False)
     def func() -> None:  # pragma: no cover
         return None
 

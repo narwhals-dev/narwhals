@@ -116,6 +116,8 @@ class DuckDBInterchangeFrame:
                     self._native_frame.columns, self._native_frame.types
                 )
             }
+        elif attr == "columns":
+            return self._native_frame.columns
 
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"

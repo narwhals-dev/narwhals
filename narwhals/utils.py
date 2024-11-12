@@ -274,15 +274,37 @@ def maybe_get_index(obj: T) -> Any | None:
     return None
 
 
-def maybe_set_index(df: T, column_names: str | list[str]) -> T:
+def maybe_set_index(
+    obj: T,
+    column_names: str | list[str] | None = None,
+    *,
+    index: Series | list[Series] | None = None,
+) -> T:
     """
-    Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+    Set the index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
+            or `Series`).
+        column_names: name or list of names of the columns to set as index.
+            For dataframes, only one of `column_names` and `index` can be specified but
+            not both. If `column_names` is passed and `df` is a Series, then a
+            `ValueError` is raised.
+        index: series or list of series to set as index.
+
+    Raises:
+        ValueError: If one of the following condition happens:
+
+            - none of `column_names` and `index` are provided
+            - both `column_names` and `index` are provided
+            - `column_names` is provided and `df` is a Series
 
     Notes:
-        This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        This is only really intended for backwards-compatibility purposes, for example if
+        your library already aligns indices for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
+
         For non-pandas-like inputs, this is a no-op.
 
     Examples:
@@ -297,15 +319,49 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    df_any = cast(Any, df)
-    native_frame = to_native(df_any)
-    if is_pandas_like_dataframe(native_frame):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_frame(
-                native_frame.set_index(column_names)
-            )
+
+    df_any = cast(Any, obj)
+    native_obj = to_native(df_any)
+
+    if column_names is not None and index is not None:
+        msg = "Only one of `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if not column_names and not index:
+        msg = "Either `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if index is not None:
+        keys = (
+            [to_native(idx, pass_through=True) for idx in index]
+            if _is_iterable(index)
+            else to_native(index, pass_through=True)
         )
-    return df_any  # type: ignore[no-any-return]
+    else:
+        keys = column_names
+
+    if is_pandas_like_dataframe(native_obj):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        )
+    elif is_pandas_like_series(native_obj):
+        if column_names:
+            msg = "Cannot set index using column names on a Series"
+            raise ValueError(msg)
+
+        if (
+            df_any._compliant_series._implementation is Implementation.PANDAS
+            and df_any._compliant_series._backend_version < (1,)
+        ):  # pragma: no cover
+            native_obj = native_obj.set_axis(keys, inplace=False)
+        else:
+            native_obj = native_obj.set_axis(keys)
+
+        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+            df_any._compliant_series._from_native_series(native_obj)
+        )
+    else:
+        return df_any  # type: ignore[no-any-return]
 
 
 def maybe_reset_index(obj: T) -> T:
@@ -482,12 +538,11 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    warn(
+    msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
-        "deprecated and it will be removed in future versions",
-        DeprecationWarning,
-        stacklevel=2,
+        "deprecated and it will be removed in future versions"
     )
+    issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
@@ -549,3 +604,84 @@ def parse_columns_to_drop(
 
 def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def find_stacklevel() -> int:
+    """
+    Find the first place in the stack that is not inside narwhals.
+
+    Taken from:
+    https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
+    """
+    import inspect
+    from pathlib import Path
+
+    import narwhals as nw
+
+    pkg_dir = str(Path(nw.__file__).parent)
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    try:
+        while frame:
+            fname = inspect.getfile(frame)
+            if fname.startswith(pkg_dir) or (
+                (qualname := getattr(frame.f_code, "co_qualname", None))
+                # ignore @singledispatch wrappers
+                and qualname.startswith("singledispatch.")
+            ):
+                frame = frame.f_back
+                n += 1
+            else:  # pragma: no cover
+                break
+        else:  # pragma: no cover
+            pass
+    finally:
+        # https://docs.python.org/3/library/inspect.html
+        # > Though the cycle detector will catch these, destruction of the frames
+        # > (and local variables) can be made deterministic by removing the cycle
+        # > in a finally clause.
+        del frame
+    return n
+
+
+def issue_deprecation_warning(message: str, _version: str) -> None:
+    """
+    Issue a deprecation warning.
+
+    Parameters
+    ----------
+    message
+        The message associated with the warning.
+    version
+        Narwhals version when the warning was introduced. Just used for internal
+        bookkeeping.
+    """
+    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+
+
+def validate_strict_and_pass_though(
+    strict: bool | None,
+    pass_through: bool | None,
+    *,
+    pass_through_default: bool,
+    emit_deprecation_warning: bool,
+) -> bool:
+    if strict is None and pass_through is None:
+        pass_through = pass_through_default
+    elif strict is not None and pass_through is None:
+        if emit_deprecation_warning:
+            msg = (
+                "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
+                "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+            )
+            issue_deprecation_warning(msg, _version="1.13.0")
+        pass_through = not strict
+    elif strict is None and pass_through is not None:
+        pass
+    else:
+        msg = "Cannot pass both `strict` and `pass_through`"
+        raise ValueError(msg)
+    return pass_through

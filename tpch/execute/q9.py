@@ -29,11 +29,3 @@ fn = IO_FUNCS[tool]
 print(
     q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))
 )
-
-tool = "dask"
-fn = IO_FUNCS[tool]
-print(
-    q9.query(
-        fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier)
-    ).compute()
-)

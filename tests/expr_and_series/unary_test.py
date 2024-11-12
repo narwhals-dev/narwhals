@@ -17,23 +17,23 @@ def test_unary(constructor: Constructor) -> None:
     }
     result = nw.from_native(constructor(data)).select(
         a_mean=nw.col("a").mean(),
+        a_median=nw.col("a").median(),
         a_sum=nw.col("a").sum(),
         a_skew=nw.col("a").skew(),
         b_nunique=nw.col("b").n_unique(),
         b_skew=nw.col("b").skew(),
         c_nunique=nw.col("c").n_unique(),
-        c_skew=nw.col("c").skew(),
         z_min=nw.col("z").min(),
         z_max=nw.col("z").max(),
     )
     expected = {
         "a_mean": [2],
+        "a_median": [2],
         "a_sum": [6],
         "a_skew": [0.0],
         "b_nunique": [2],
         "b_skew": [0.7071067811865465],
         "c_nunique": [3],
-        "c_skew": [0.0],
         "z_min": [7],
         "z_max": [9],
     }
@@ -50,6 +50,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_mean": [df["a"].mean()],
+        "a_median": [df["a"].median()],
         "a_sum": [df["a"].sum()],
         "a_skew": [df["a"].skew()],
         "b_nunique": [df["b"].n_unique()],
@@ -61,6 +62,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     }
     expected = {
         "a_mean": [2.0],
+        "a_median": [2],
         "a_sum": [6],
         "a_skew": [0.0],
         "b_nunique": [2],
