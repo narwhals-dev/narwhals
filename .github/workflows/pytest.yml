@@ -86,9 +86,9 @@ jobs:
         run: uv pip install ibis-framework[duckdb]>=6.0.0 --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.11'
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.13'
         run: pytest narwhals --doctest-modules
