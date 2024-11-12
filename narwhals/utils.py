@@ -275,16 +275,16 @@ def maybe_get_index(obj: T) -> Any | None:
 
 
 def maybe_set_index(
-    df: T,
+    obj: T,
     column_names: str | list[str] | None = None,
     *,
     index: Series | list[Series] | None = None,
 ) -> T:
     """
-    Set the index of `df`, if `df` is pandas-like, otherwise this is a no-op.
+    Set the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
-        df: object for which maybe set the index (can be either a Narwhals `DataFrame`
+        obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
             or `Series`).
         column_names: name or list of names of the columns to set as index.
             For dataframes, only one of `column_names` and `index` can be specified but
@@ -320,7 +320,7 @@ def maybe_set_index(
         5  2
     """
 
-    df_any = cast(Any, df)
+    df_any = cast(Any, obj)
     native_obj = to_native(df_any)
 
     if column_names is not None and index is not None:
