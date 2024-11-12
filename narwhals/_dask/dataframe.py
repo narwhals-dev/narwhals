@@ -150,7 +150,7 @@ class DaskLazyFrame:
     def schema(self) -> dict[str, DType]:
         return {
             col: native_to_narwhals_dtype(
-                self._native_frame.loc[:, col], self._dtypes, self._implementation
+                self._native_frame[col], self._dtypes, self._implementation
             )
             for col in self._native_frame.columns
         }
@@ -196,7 +196,7 @@ class DaskLazyFrame:
             subset = subset or self.columns
             token = generate_temporary_column_name(n_bytes=8, columns=subset)
             ser = native_frame.groupby(subset).size().rename(token)
-            ser = ser.loc[ser == 1]
+            ser = ser[ser == 1]
             unique = ser.reset_index().drop(columns=token)
             result = native_frame.merge(unique, on=subset, how="inner")
         else:
@@ -272,7 +272,7 @@ class DaskLazyFrame:
                 right_on=left_on,
             )
             return self._from_native_frame(
-                df.loc[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
+                df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
             )
 
         if how == "semi":

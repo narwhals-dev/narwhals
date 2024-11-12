@@ -41,7 +41,7 @@ class DaskNamespace:
 
     def all(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in df.columns]
+            return [df._native_frame[column_name] for column_name in df.columns]
 
         return DaskExpr(
             func,
@@ -76,9 +76,9 @@ class DaskNamespace:
 
         return DaskExpr(
             lambda df: [
-                df._native_frame.assign(literal=value)
-                .loc[:, "literal"]
-                .pipe(convert_if_dtype, dtype)
+                df._native_frame.assign(literal=value)["literal"].pipe(
+                    convert_if_dtype, dtype
+                )
             ],
             depth=0,
             function_name="lit",
@@ -126,7 +126,7 @@ class DaskNamespace:
                         npartitions=df._native_frame.npartitions,
                     )
                 ]
-            return [df._native_frame.loc[:, df.columns[0]].size.to_series().rename("len")]
+            return [df._native_frame[df.columns[0]].size.to_series().rename("len")]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
