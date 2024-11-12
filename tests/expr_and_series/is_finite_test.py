@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import NUMPY_VERSION
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -13,7 +13,7 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if NUMPY_VERSION < (1, 25) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) or "pyarrow_table" in str(constructor):
@@ -30,7 +30,7 @@ def test_is_finite_expr(request: pytest.FixtureRequest, constructor: Constructor
 def test_is_finite_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if NUMPY_VERSION < (1, 25) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor_eager) or "pyarrow_table" in str(constructor_eager):
