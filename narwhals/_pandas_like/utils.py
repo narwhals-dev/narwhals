@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 from typing import TypeVar
 
 from narwhals._arrow.utils import (
@@ -635,3 +636,13 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
     else:
         result = s * 1_000
     return result
+
+
+def select_columns_by_name(df: T, column_names: Sequence[str]) -> T:
+    """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
+    generally more performant."""
+    if df.columns.dtype.kind == "b":  # type: ignore[attr-defined]
+        # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
+        # for why we need this
+        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
+    return df[column_names]  # type: ignore[no-any-return, index]
