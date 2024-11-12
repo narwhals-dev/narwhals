@@ -269,6 +269,7 @@ class DaskLazyFrame:
             indicator_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
+
             if right_on is None:  # pragma: no cover
                 msg = "`right_on` cannot be `None` in anti-join"
                 raise TypeError(msg)
