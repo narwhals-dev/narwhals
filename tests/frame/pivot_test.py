@@ -7,6 +7,8 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
 data = {
@@ -113,14 +115,19 @@ data_no_dups = {
 )
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
-    request: Any,
     constructor_eager: Any,
     agg_func: str,
     expected: dict[str, list[Any]],
     on: str | list[str],
     index: str | list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+    ):
+        # not implemented
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -146,6 +153,11 @@ def test_pivot_no_agg(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+    ):
+        # not implemented
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_), eager_only=True)
     with context:
@@ -163,6 +175,11 @@ def test_pivot_sort_columns(
     request: Any, constructor_eager: Any, sort_columns: Any, expected: list[str]
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+    ):
+        # not implemented
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -208,6 +225,11 @@ def test_pivot_names_out(
     request: Any, constructor_eager: Any, kwargs: Any, expected: list[str]
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+    ):
+        # not implemented
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
