@@ -538,12 +538,11 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    warn(
+    msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
-        "deprecated and it will be removed in future versions",
-        DeprecationWarning,
-        stacklevel=2,
+        "deprecated and it will be removed in future versions"
     )
+    issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
