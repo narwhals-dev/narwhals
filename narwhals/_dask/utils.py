@@ -43,7 +43,7 @@ def parse_exprs_and_named_exprs(
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
         elif isinstance(expr, str):
-            _results = [df._native_frame.loc[:, expr]]
+            _results = [df._native_frame[expr]]
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)

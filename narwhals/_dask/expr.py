@@ -67,7 +67,7 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in column_names]
+            return [df._native_frame[column_name] for column_name in column_names]
 
         return cls(
             func,
@@ -533,11 +533,34 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def fill_null(self, value: Any) -> DaskExpr:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> DaskExpr:
+        def func(
+            _input: dask_expr.Series,
+            value: Any | None,
+            strategy: str | None,
+            limit: int | None,
+        ) -> dask_expr.Series:
+            if value is not None:
+                res_ser = _input.fillna(value)
+            else:
+                res_ser = (
+                    _input.ffill(limit=limit)
+                    if strategy == "forward"
+                    else _input.bfill(limit=limit)
+                )
+            return res_ser
+
         return self._from_call(
-            lambda _input, _val: _input.fillna(_val),
+            func,
             "fillna",
             value,
+            strategy,
+            limit,
             returns_scalar=False,
         )
 
