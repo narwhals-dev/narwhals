@@ -116,7 +116,7 @@ filterwarnings = [
   'ignore:.*You are using pyarrow version',
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
-  'ignore:.*The default coalesce behavior'
+  'ignore:.*The default coalesce behavior',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
