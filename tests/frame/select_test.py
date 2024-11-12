@@ -37,6 +37,6 @@ def test_non_string_select_invalid() -> None:
 def test_select_boolean_cols() -> None:
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}))
     result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
-    assert_equal_data(result, {True: [1, 2]})  # type: ignore[dict-item]
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item, union-attr]
     result = df.select(nw.col([False, True]))  # type: ignore[list-item]
-    assert_equal_data(result, {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item, union-attr]

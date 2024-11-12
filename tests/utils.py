@@ -63,7 +63,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected
-    result = {key: _to_comparable_list(result.get_column(key)) for key in expected}
+    result = {key: _to_comparable_list(result[key]) for key in expected}
     for key in expected:
         result_key = result[key]
         expected_key = expected[key]
