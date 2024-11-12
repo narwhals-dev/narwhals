@@ -125,7 +125,7 @@ def test_pivot(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
-        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
     ):
         # not implemented
         request.applymarker(pytest.mark.xfail)
@@ -154,7 +154,7 @@ def test_pivot_no_agg(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
-        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
     ):
         # not implemented
         request.applymarker(pytest.mark.xfail)
@@ -177,7 +177,7 @@ def test_pivot_sort_columns(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
-        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
     ):
         # not implemented
         request.applymarker(pytest.mark.xfail)
@@ -227,7 +227,7 @@ def test_pivot_names_out(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
-        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5)
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
     ):
         # not implemented
         request.applymarker(pytest.mark.xfail)

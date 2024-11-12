@@ -839,10 +839,12 @@ class PandasLikeDataFrame:
         separator: str = "_",
     ) -> Self:
         if self._implementation is not Implementation.PANDAS or (
-            self._backend_version < (1, 5)
+            self._backend_version < (1, 1)
         ):
-            msg = "pivot is only supported for pandas>=1.5"
+            msg = "pivot is only supported for pandas>=1.1"
             raise NotImplementedError(msg)
+        from itertools import product
+
         frame = self._native_frame
 
         if isinstance(on, str):
@@ -872,16 +874,24 @@ class PandasLikeDataFrame:
                 values=values_,
                 index=index,
                 columns=on,
-                aggfunc="size" if aggregate_function == "len" else aggregate_function,
+                aggfunc=aggregate_function,
                 margins=False,
                 observed=True,
-                sort=False,
             )
 
+        # Put columns in the right order
+        if sort_columns:
+            uniques = {
+                col: sorted(self._native_frame[col].unique().tolist()) for col in on
+            }
+        else:
+            uniques = {col: self._native_frame[col].unique().tolist() for col in on}
+        all_lists = [values_, *list(uniques.values())]
+        ordered_cols = list(product(*all_lists))
+        result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
 
         n_on = len(on)
-
         if n_on == 1:
             new_columns = [
                 separator.join(col).strip() if len(values_) > 1 else col[-1]
@@ -895,22 +905,7 @@ class PandasLikeDataFrame:
                 for col in columns
             ]
         result.columns = new_columns
-
-        if sort_columns:
-            # The inner sorting creates a list of sorted lists of columns for each value
-            # which then needs to be unpacked into a list.
-            # This probably can be done more performantly as suffixes are always same?!
-            sorted_columns = [
-                col_value
-                for col_values in [
-                    sorted([c for c in new_columns if c.startswith(v)]) for v in values_
-                ]
-                for col_value in col_values
-            ]
-
-            result = result.loc[:, sorted_columns]
-
-        result.columns.names = [""]
+        result.columns.names = [""]  # type: ignore[attr-defined]
         return self._from_native_frame(result.reset_index())
 
     def to_arrow(self: Self) -> Any:

@@ -2597,7 +2597,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
                 - A predefined aggregate function string, one of
-                {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
             maintain_order: Sort the grouped keys so that the output order is predictable.
             sort_columns: Sort the transposed columns by name. Default is by order of
                 discovery.
