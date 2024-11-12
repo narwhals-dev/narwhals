@@ -45,8 +45,8 @@ class PolarsExpr:
 
     def cast(self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
-        return self._from_native_expr(expr.cast(dtype))
+        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        return self._from_native_expr(expr.cast(dtype_pl))
 
     def map_batches(
         self,
@@ -54,9 +54,9 @@ class PolarsExpr:
         return_dtype: DType | None = None,
     ) -> Self:
         if return_dtype is not None:
-            return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+            return_dtype_pl = narwhals_to_native_dtype(return_dtype, self._dtypes)
             return self._from_native_expr(
-                self._native_expr.map_batches(function, return_dtype)
+                self._native_expr.map_batches(function, return_dtype_pl)
             )
         else:
             return self._from_native_expr(self._native_expr.map_batches(function))
@@ -65,14 +65,14 @@ class PolarsExpr:
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         expr = self._native_expr
-        return_dtype = (
+        return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
         )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
         return self._from_native_expr(
-            expr.replace_strict(old, new, return_dtype=return_dtype)
+            expr.replace_strict(old, new, return_dtype=return_dtype_pl)
         )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]

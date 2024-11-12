@@ -102,8 +102,8 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
-        return self._from_native_series(ser.cast(dtype))
+        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
