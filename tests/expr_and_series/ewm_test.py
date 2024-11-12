@@ -130,3 +130,42 @@ def test_ewm_mean_nulls(
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
     result = df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=ignore_nulls))
     assert_equal_data(result, expected)
+
+
+def test_ewm_mean_params(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
+        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [2, 5, 3]}))
+    expected = {"a": [2.0, 4.0, 3.4285714285714284]}
+    assert_equal_data(
+        df.select(nw.col("a").ewm_mean(alpha=0.5, adjust=True, ignore_nulls=True)),
+        expected,
+    )
+
+    expected = {"a": [2.0, 4.500000000000001, 3.2903225806451615]}
+    assert_equal_data(
+        df.select(nw.col("a").ewm_mean(span=1.5, adjust=True, ignore_nulls=True)),
+        expected,
+    )
+
+    expected = {"a": [2.0, 3.1101184251576903, 3.0693702609187237]}
+    assert_equal_data(
+        df.select(nw.col("a").ewm_mean(half_life=1.5, adjust=False)), expected
+    )
+
+    expected = {"a": [float("nan"), 4.0, 3.4285714285714284]}
+    assert_equal_data(
+        df.select(
+            nw.col("a").ewm_mean(alpha=0.5, adjust=True, min_periods=2, ignore_nulls=True)
+        ),
+        expected,
+    )
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        df.select(nw.col("a").ewm_mean(span=1.5, half_life=0.75, ignore_nulls=False))
