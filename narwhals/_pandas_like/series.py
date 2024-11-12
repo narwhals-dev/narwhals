@@ -727,11 +727,6 @@ class PandasLikeSeries:
             result = select_columns_by_name(
                 result, output_order, self._backend_version, self._implementation
             ).rename(columns={null_col_pd: null_col_pl}, copy=False)
-        else:
-            output_order = list(result.columns)
-            result = select_columns_by_name(
-                result, output_order, self._backend_version, self._implementation
-            )
 
         return PandasLikeDataFrame(
             result,
