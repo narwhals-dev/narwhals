@@ -14,6 +14,7 @@ from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -707,13 +708,28 @@ class PandasLikeSeries:
         plx = self.__native_namespace__()
         series = self._native_series
         name = str(self._name) if self._name else ""
+
+        null_col_pl = f"{name}{separator}null"
+
+        has_nulls = series.isna().any()
+        result = plx.get_dummies(
+            series,
+            prefix=name,
+            prefix_sep=separator,
+            drop_first=drop_first,
+            # Adds a null column at the end, depending on whether or not there are any.
+            dummy_na=has_nulls,
+            dtype="int8",
+        )
+        if has_nulls:
+            *cols, null_col_pd = list(result.columns)
+            output_order = [null_col_pd, *cols]
+            result = select_columns_by_name(
+                result, output_order, self._backend_version, self._implementation
+            ).rename(columns={null_col_pd: null_col_pl}, copy=False)
+
         return PandasLikeDataFrame(
-            plx.get_dummies(
-                series,
-                prefix=name,
-                prefix_sep=separator,
-                drop_first=drop_first,
-            ).astype(int),
+            result,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
