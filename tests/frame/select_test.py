@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -34,7 +35,10 @@ def test_non_string_select_invalid() -> None:
         nw.to_native(df.select(0))  # type: ignore[arg-type]
 
 
-def test_select_boolean_cols() -> None:
+def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION < (1, 1):
+        # bug in old pandas
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
     result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
