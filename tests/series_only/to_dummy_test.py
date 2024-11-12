@@ -50,3 +50,4 @@ def test_to_dummies_drop_first_na(
     expected = {f"a{sep}null": [0, 0, 1], f"a{sep}y": [0, 1, 0]}
 
     assert_equal_data(result, expected)
+    assert result.schema == {f"a{sep}null": nw.Int8, f"a{sep}y": nw.Int8}

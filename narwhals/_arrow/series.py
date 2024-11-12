@@ -755,7 +755,7 @@ class ArrowSeries:
         name = self._name
         da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
         null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
         cols = [

@@ -719,7 +719,7 @@ class PandasLikeSeries:
             drop_first=drop_first,
             # Adds a null column at the end, depending on whether or not there are any.
             dummy_na=has_nulls,
-            dtype=int,
+            dtype="int8",
         )
         if has_nulls:
             *cols, null_col_pd = list(result.columns)
