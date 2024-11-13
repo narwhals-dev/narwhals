@@ -422,26 +422,30 @@ class PandasLikeDataFrame:
 
         if fast_path:
             new_column_name_to_new_column_map = {s.name: s for s in new_columns}
-            to_concat = []
-            # Make sure to preserve column order
-            for name in self._native_frame.columns:
-                if name in new_column_name_to_new_column_map:
-                    to_concat.append(
-                        validate_dataframe_comparand(
-                            index, new_column_name_to_new_column_map.pop(name)
-                        )
-                    )
-                else:
-                    to_concat.append(self._native_frame[name])
-            to_concat.extend(
-                validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
-                for s in new_column_name_to_new_column_map
+            columns_that_stay_the_same = list(
+                set(self.columns).difference(new_column_name_to_new_column_map)
             )
-
+            frame = select_columns_by_name(
+                self._native_frame,
+                columns_that_stay_the_same,
+                self._backend_version,
+                self._implementation,
+            )
+            other = [
+                validate_dataframe_comparand(index, value).rename(key, copy=False)
+                for key, value in new_column_name_to_new_column_map.items()
+                if key not in frame.columns
+            ]
             df = horizontal_concat(
-                to_concat,
+                [frame, *other],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
+            )
+            order = self.columns + [
+                x for x in new_column_name_to_new_column_map if x not in self.columns
+            ]
+            df = select_columns_by_name(
+                df, order, self._backend_version, self._implementation
             )
         else:
             # This is the logic in pandas' DataFrame.assign
