@@ -9,7 +9,6 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
@@ -411,46 +410,28 @@ class PandasLikeDataFrame:
         if not new_columns and len(self) == 0:
             return self
 
-        # If the inputs are all Expressions
-        # (as opposed to Series), we can use a fast path (concat, instead of assign).
-        # We can't use the fastpath if any input is not an expression (e.g.
-        # if it's a Series) because then we might be changing its flags.
-        # See `test_memmap` for an example of where this is necessary.
-        fast_path = all(isinstance(x, PandasLikeExpr) for x in exprs) and all(
-            isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items()
+        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
+        to_concat = []
+        # Make sure to preserve column order
+        for name in self._native_frame.columns:
+            if name in new_column_name_to_new_column_map:
+                to_concat.append(
+                    validate_dataframe_comparand(
+                        index, new_column_name_to_new_column_map.pop(name)
+                    )
+                )
+            else:
+                to_concat.append(self._native_frame[name])
+        to_concat.extend(
+            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            for s in new_column_name_to_new_column_map
         )
 
-        if fast_path:
-            new_column_name_to_new_column_map = {s.name: s for s in new_columns}
-            to_concat = []
-            # Make sure to preserve column order
-            for name in self._native_frame.columns:
-                if name in new_column_name_to_new_column_map:
-                    to_concat.append(
-                        validate_dataframe_comparand(
-                            index, new_column_name_to_new_column_map.pop(name)
-                        )
-                    )
-                else:
-                    to_concat.append(self._native_frame[name])
-            to_concat.extend(
-                validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
-                for s in new_column_name_to_new_column_map
-            )
-
-            df = horizontal_concat(
-                to_concat,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
-        else:
-            # This is the logic in pandas' DataFrame.assign
-            if self._backend_version < (2,):
-                df = self._native_frame.copy(deep=True)
-            else:
-                df = self._native_frame.copy(deep=False)
-            for s in new_columns:
-                df[s.name] = validate_dataframe_comparand(index, s)
+        df = horizontal_concat(
+            to_concat,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_frame(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
@@ -826,6 +807,90 @@ class PandasLikeDataFrame:
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
+
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None,
+        values: str | list[str] | None,
+        aggregate_function: Any | None,
+        maintain_order: bool,
+        sort_columns: bool,
+        separator: str = "_",
+    ) -> Self:
+        if self._implementation is Implementation.PANDAS and (
+            self._backend_version < (1, 1)
+        ):  # pragma: no cover
+            msg = "pivot is only supported for pandas>=1.1"
+            raise NotImplementedError(msg)
+        if self._implementation is Implementation.MODIN:
+            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            raise NotImplementedError(msg)
+        from itertools import product
+
+        frame = self._native_frame
+
+        if isinstance(on, str):
+            on = [on]
+        if isinstance(index, str):
+            index = [index]
+
+        if values is None:
+            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
+        elif isinstance(values, str):  # pragma: no cover
+            values_ = [values]
+        else:
+            values_ = values
+
+        if aggregate_function is None:
+            result = frame.pivot(columns=on, index=index, values=values_)
+
+        elif aggregate_function == "len":
+            result = (
+                frame.groupby([*on, *index])  # type: ignore[misc]
+                .agg({v: "size" for v in values_})
+                .reset_index()
+                .pivot(columns=on, index=index, values=values_)
+            )
+        else:
+            result = frame.pivot_table(
+                values=values_,
+                index=index,
+                columns=on,
+                aggfunc=aggregate_function,
+                margins=False,
+                observed=True,
+            )
+
+        # Put columns in the right order
+        if sort_columns:
+            uniques = {
+                col: sorted(self._native_frame[col].unique().tolist()) for col in on
+            }
+        else:
+            uniques = {col: self._native_frame[col].unique().tolist() for col in on}
+        all_lists = [values_, *list(uniques.values())]
+        ordered_cols = list(product(*all_lists))
+        result = result.loc[:, ordered_cols]
+        columns = result.columns.tolist()
+
+        n_on = len(on)
+        if n_on == 1:
+            new_columns = [
+                separator.join(col).strip() if len(values_) > 1 else col[-1]
+                for col in columns
+            ]
+        else:
+            new_columns = [
+                separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
+                if len(values_) > 1
+                else '{"' + '","'.join(col[-n_on:]) + '"}'
+                for col in columns
+            ]
+        result.columns = new_columns
+        result.columns.names = [""]  # type: ignore[attr-defined]
+        return self._from_native_frame(result.reset_index())
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:

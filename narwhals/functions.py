@@ -164,7 +164,7 @@ def new_series(
     native_namespace: ModuleType,
 ) -> Series:
     """
-    Instantiate Narwhals Series from raw data.
+    Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -188,7 +188,12 @@ def new_series(
         ... def func(df):
         ...     values = [4, 1, 2]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+        ...     return nw.new_series(
+        ...         name="c",
+        ...         values=values,
+        ...         dtype=nw.Int32,
+        ...         native_namespace=native_namespace,
+        ...     )
 
         Let's see what happens when passing pandas / Polars input:
 
@@ -233,9 +238,11 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+        else:
+            dtype_pl = None
 
-        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -376,12 +383,14 @@ def _from_dict_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            schema = {
+            schema_pl = {
                 name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
+        else:
+            schema_pl = None
 
-        native_frame = native_namespace.from_dict(data, schema=schema)
+        native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,

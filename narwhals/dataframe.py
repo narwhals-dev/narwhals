@@ -2567,6 +2567,91 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().gather_every(n=n, offset=offset)
 
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median", "len"
+        ]
+        | None = None,
+        maintain_order: bool = True,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        r"""
+        Create a spreadsheet-style pivot table as a DataFrame.
+
+        Arguments:
+            on: Name of the column(s) whose values will be used as the header of the
+                output DataFrame.
+            index: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `values` will be used. At least one of `index` and
+                `values` must be specified.
+            values: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `index` will be used. At least one of `index` and
+                `values` must be specified.
+            aggregate_function: Choose from:
+                - None: no aggregation takes place, will raise error if multiple values
+                    are in group.
+                - A predefined aggregate function string, one of
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
+            maintain_order: Sort the grouped keys so that the output order is predictable.
+            sort_columns: Sort the transposed columns by name. Default is by order of
+                discovery.
+            separator: Used as separator/delimiter in generated column names in case of
+                multiple `values` columns.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "ix": [1, 1, 2, 2, 1, 2],
+            ...     "col": ["a", "a", "a", "a", "b", "b"],
+            ...     "foo": [0, 1, 2, 2, 7, 1],
+            ...     "bar": [0, 2, 0, 0, 9, 4],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.pivot("col", index="ix", aggregate_function="sum")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               ix  foo_a  foo_b  bar_a  bar_b
+            0   1      1      7      2      9
+            1   2      4      1      0      4
+            >>> func(df_pl)
+            shape: (2, 5)
+            ┌─────┬───────┬───────┬───────┬───────┐
+            │ ix  ┆ foo_a ┆ foo_b ┆ bar_a ┆ bar_b │
+            │ --- ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
+            │ i64 ┆ i64   ┆ i64   ┆ i64   ┆ i64   │
+            ╞═════╪═══════╪═══════╪═══════╪═══════╡
+            │ 1   ┆ 1     ┆ 7     ┆ 2     ┆ 9     │
+            │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
+            └─────┴───────┴───────┴───────┴───────┘
+        """
+        return self._from_compliant_dataframe(
+            self._compliant_frame.pivot(
+                on=on,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                sort_columns=sort_columns,
+                separator=separator,
+            )
+        )
+
     def to_arrow(self: Self) -> pa.Table:
         r"""
         Convert to arrow table.
