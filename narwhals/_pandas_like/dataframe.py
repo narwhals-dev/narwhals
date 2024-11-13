@@ -843,6 +843,9 @@ class PandasLikeDataFrame:
         ):
             msg = "pivot is only supported for pandas>=1.1"
             raise NotImplementedError(msg)
+        if self._implementation is Implementation.MODIN:
+            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            raise NotImplementedError(msg)
         from itertools import product
 
         frame = self._native_frame
