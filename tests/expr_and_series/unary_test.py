@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-import warnings
+from contextlib import nullcontext as does_not_raise
+
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
@@ -121,8 +123,12 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
 def test_unary_one_element(constructor: Constructor) -> None:
     data = {"a": [1], "b": [2], "c": [float("nan")]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    context = (
+        pytest.warns(RuntimeWarning, match="invalid value encountered in scalar divide")
+        if "dask" in str(constructor)
+        else does_not_raise()
+    )
+    with context:
         result = nw.from_native(constructor(data)).select(
             a_nunique=nw.col("a").n_unique(),
             a_skew=nw.col("a").skew(),
