@@ -11,7 +11,6 @@ import pyarrow.parquet as pq
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
 
-# Data paths
 DATA_DIR = Path("data")
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
 REGION_PATH = DATA_DIR / "region.parquet"
@@ -22,7 +21,6 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-# Read functions for each backend
 BACKEND_READ_FUNC_MAP = {
     # "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"), # noqa: ERA001
     "pandas[pyarrow]": lambda x: pd.read_parquet(
@@ -34,7 +32,6 @@ BACKEND_READ_FUNC_MAP = {
     # "dask": lambda x: dd.read_parquet(x, engine="pyarrow", dtype_backend="pyarrow"), # noqa: ERA001
 }
 
-# Collect functions for the lazy backends
 BACKEND_COLLECT_FUNC_MAP = {
     "polars[lazy]": lambda x: x.collect(),
     # "dask": lambda x: x.compute(), # noqa: ERA001
