@@ -164,7 +164,7 @@ def new_series(
     native_namespace: ModuleType,
 ) -> Series:
     """
-    Instantiate Narwhals Series from raw data.
+    Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -188,7 +188,12 @@ def new_series(
         ... def func(df):
         ...     values = [4, 1, 2]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+        ...     return nw.new_series(
+        ...         name="c",
+        ...         values=values,
+        ...         dtype=nw.Int32,
+        ...         native_namespace=native_namespace,
+        ...     )
 
         Let's see what happens when passing pandas / Polars input:
 
