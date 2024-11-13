@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
+    from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
 
@@ -278,7 +279,7 @@ def maybe_set_index(
     obj: T,
     column_names: str | list[str] | None = None,
     *,
-    index: Series[Any] | list[Series[Any]] | None = None,
+    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
 ) -> T:
     """
     Set the index of a DataFrame or a Series, if it's pandas-like.

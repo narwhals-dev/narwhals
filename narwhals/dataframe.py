@@ -875,7 +875,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
@@ -2274,7 +2276,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> Series:
+    def is_duplicated(self: Self) -> Series[Any]:
         r"""
         Get a mask of all duplicated rows in this DataFrame.
 
@@ -2355,7 +2357,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
-    def is_unique(self: Self) -> Series:
+    def is_unique(self: Self) -> Series[Any]:
         r"""
         Get a mask of all unique rows in this DataFrame.
 
