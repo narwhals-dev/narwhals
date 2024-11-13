@@ -840,7 +840,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
-        ):
+        ):  # pragma: no cover
             msg = "pivot is only supported for pandas>=1.1"
             raise NotImplementedError(msg)
         if self._implementation is Implementation.MODIN:
