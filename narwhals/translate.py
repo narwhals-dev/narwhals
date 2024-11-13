@@ -64,13 +64,15 @@ def to_native(
     narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
 ) -> IntoFrameT: ...
 @overload
-def to_native(narwhals_object: Series, *, pass_through: Literal[False] = ...) -> Any: ...
+def to_native(
+    narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
+) -> Any: ...
 @overload
 def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT],
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
@@ -125,7 +127,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series: ...
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -185,7 +187,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -197,7 +199,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series: ...
+) -> Series[IntoSeriesT]: ...
 
 
 @overload
@@ -265,7 +267,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
+) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]:
     """
     from_native(df, pass_through=False, allow_series=True)
     from_native(df, allow_series=True)
@@ -281,7 +283,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
+) -> Series[IntoSeriesT]:
     """
     from_native(df, pass_through=False, series_only=True)
     from_native(df, series_only=True)

@@ -388,7 +388,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return self.select(all()._l1_norm())
 
 
-class Series(NwSeries):
+class Series(NwSeries[IntoSeriesT]):
     """
     Narwhals Series, backed by a native series.
 

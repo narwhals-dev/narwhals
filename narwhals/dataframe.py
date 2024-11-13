@@ -319,7 +319,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     @property
-    def _series(self) -> type[Series]:
+    def _series(self) -> type[Series[Any]]:
         from narwhals.series import Series
 
         return Series
@@ -661,7 +661,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
 
-    def get_column(self, name: str) -> Series:
+    def get_column(self, name: str) -> Series[Any]:
         """
         Get a single column by name.
 
@@ -713,23 +713,23 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: str) -> Series[Any]: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[str]) -> Self: ...
@@ -752,7 +752,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
             | tuple[slice, slice]
         ),
-    ) -> Series | Self:
+    ) -> Series[Any] | Self:
         """
         Extract column or slice of DataFrame.
 
@@ -871,14 +871,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         return key in self.columns
 
     @overload
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series] | dict[str, list[Any]]:
+    ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         """
         Convert DataFrame to a dictionary mapping column name to values.
 

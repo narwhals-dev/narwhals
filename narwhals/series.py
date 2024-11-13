@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-class Series:
+class Series(Generic[IntoSeriesT]):
     """
     Narwhals Series, backed by a native series.
 
@@ -2705,7 +2706,7 @@ class Series:
         return SeriesCatNamespace(self)
 
 
-T = TypeVar("T", bound=Series)
+T = TypeVar("T", bound=Series[Any])
 
 
 class SeriesCatNamespace(Generic[T]):
