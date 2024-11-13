@@ -65,6 +65,7 @@ lint.ignore = [
   "ISC001",
   "NPY002",
   "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PD010",
   "PLR0911",
   "PLR0912",
   "PLR0913",

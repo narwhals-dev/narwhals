@@ -827,6 +827,90 @@ class PandasLikeDataFrame:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None,
+        values: str | list[str] | None,
+        aggregate_function: Any | None,
+        maintain_order: bool,
+        sort_columns: bool,
+        separator: str = "_",
+    ) -> Self:
+        if self._implementation is Implementation.PANDAS and (
+            self._backend_version < (1, 1)
+        ):  # pragma: no cover
+            msg = "pivot is only supported for pandas>=1.1"
+            raise NotImplementedError(msg)
+        if self._implementation is Implementation.MODIN:
+            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            raise NotImplementedError(msg)
+        from itertools import product
+
+        frame = self._native_frame
+
+        if isinstance(on, str):
+            on = [on]
+        if isinstance(index, str):
+            index = [index]
+
+        if values is None:
+            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
+        elif isinstance(values, str):  # pragma: no cover
+            values_ = [values]
+        else:
+            values_ = values
+
+        if aggregate_function is None:
+            result = frame.pivot(columns=on, index=index, values=values_)
+
+        elif aggregate_function == "len":
+            result = (
+                frame.groupby([*on, *index])  # type: ignore[misc]
+                .agg({v: "size" for v in values_})
+                .reset_index()
+                .pivot(columns=on, index=index, values=values_)
+            )
+        else:
+            result = frame.pivot_table(
+                values=values_,
+                index=index,
+                columns=on,
+                aggfunc=aggregate_function,
+                margins=False,
+                observed=True,
+            )
+
+        # Put columns in the right order
+        if sort_columns:
+            uniques = {
+                col: sorted(self._native_frame[col].unique().tolist()) for col in on
+            }
+        else:
+            uniques = {col: self._native_frame[col].unique().tolist() for col in on}
+        all_lists = [values_, *list(uniques.values())]
+        ordered_cols = list(product(*all_lists))
+        result = result.loc[:, ordered_cols]
+        columns = result.columns.tolist()
+
+        n_on = len(on)
+        if n_on == 1:
+            new_columns = [
+                separator.join(col).strip() if len(values_) > 1 else col[-1]
+                for col in columns
+            ]
+        else:
+            new_columns = [
+                separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
+                if len(values_) > 1
+                else '{"' + '","'.join(col[-n_on:]) + '"}'
+                for col in columns
+            ]
+        result.columns = new_columns
+        result.columns.names = [""]  # type: ignore[attr-defined]
+        return self._from_native_frame(result.reset_index())
+
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:
             return self._native_frame.to_arrow(preserve_index=False)

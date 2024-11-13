@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Sequence
 
 from narwhals._polars.namespace import PolarsNamespace
@@ -246,6 +247,34 @@ class PolarsDataFrame:
                 on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
+
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median", "len"
+        ]
+        | None = None,
+        maintain_order: bool = True,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            msg = "`pivot` is only supported for Polars>=1.0.0"
+            raise NotImplementedError(msg)
+        result = self._native_frame.pivot(
+            on,
+            index=index,
+            values=values,
+            aggregate_function=aggregate_function,
+            maintain_order=maintain_order,
+            sort_columns=sort_columns,
+            separator=separator,
+        )
+        return self._from_native_object(result)  # type: ignore[no-any-return]
 
 
 class PolarsLazyFrame:
