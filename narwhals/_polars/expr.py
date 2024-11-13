@@ -11,6 +11,7 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 class PolarsExpr:
     def __init__(
-        self, expr: Any, dtypes: DTypes, backend_version: tuple[int, ...]
+        self, expr: pl.Expr, dtypes: DTypes, backend_version: tuple[int, ...]
     ) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
@@ -29,7 +30,7 @@ class PolarsExpr:
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
-    def _from_native_expr(self, expr: Any) -> Self:
+    def _from_native_expr(self, expr: pl.Expr) -> Self:
         return self.__class__(
             expr, dtypes=self._dtypes, backend_version=self._backend_version
         )
@@ -147,8 +148,8 @@ class PolarsExprDateTimeNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.dt, attr)(*args, **kwargs)
@@ -161,8 +162,8 @@ class PolarsExprStringNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.str, attr)(*args, **kwargs)
@@ -175,8 +176,8 @@ class PolarsExprCatNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.cat, attr)(*args, **kwargs)
@@ -189,8 +190,8 @@ class PolarsExprNameNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.name, attr)(*args, **kwargs)
