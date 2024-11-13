@@ -233,9 +233,11 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+        else:
+            dtype_pl = None
 
-        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -376,12 +378,14 @@ def _from_dict_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            schema = {
+            schema_pl = {
                 name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
+        else:
+            schema_pl = None
 
-        native_frame = native_namespace.from_dict(data, schema=schema)
+        native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
