@@ -432,7 +432,7 @@ class PandasLikeDataFrame:
                 self._implementation,
             )
             other = [
-                validate_dataframe_comparand(index, value).rename(key, copy=False)
+                validate_dataframe_comparand(index, value)
                 for key, value in new_column_name_to_new_column_map.items()
                 if key not in frame.columns
             ]
