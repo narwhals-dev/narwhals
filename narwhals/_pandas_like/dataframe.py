@@ -838,7 +838,7 @@ class PandasLikeDataFrame:
         sort_columns: bool,
         separator: str = "_",
     ) -> Self:
-        if self._implementation is not Implementation.PANDAS or (
+        if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
         ):
             msg = "pivot is only supported for pandas>=1.1"
