@@ -16,14 +16,16 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import polars as pl
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
 
 class PolarsDataFrame:
     def __init__(
-        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self, df: pl.DataFrame, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -91,19 +93,21 @@ class PolarsDataFrame:
             return self._native_frame.__array__(dtype)
         return self._native_frame.__array__(dtype)
 
-    def collect_schema(self) -> dict[str, Any]:
+    def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
-            schema = self._native_frame.schema
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.schema.items()
+            }
         else:
-            schema = dict(self._native_frame.collect_schema())
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.collect_schema().items()
+            }
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self._native_frame.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape
 
     def __getitem__(self, item: Any) -> Any:
         if self._backend_version > (0, 20, 30):
@@ -179,7 +183,7 @@ class PolarsDataFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def lazy(self) -> PolarsLazyFrame:
         return PolarsLazyFrame(
@@ -246,7 +250,7 @@ class PolarsDataFrame:
 
 class PolarsLazyFrame:
     def __init__(
-        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -285,7 +289,7 @@ class PolarsLazyFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     @property
     def schema(self) -> dict[str, Any]:
@@ -295,15 +299,17 @@ class PolarsLazyFrame:
             for name, dtype in schema.items()
         }
 
-    def collect_schema(self) -> dict[str, Any]:
+    def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
-            schema = self._native_frame.schema
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.schema.items()
+            }
         else:
-            schema = dict(self._native_frame.collect_schema())
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.collect_schema().items()
+            }
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(
