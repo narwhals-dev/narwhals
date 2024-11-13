@@ -9,7 +9,6 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
@@ -411,46 +410,28 @@ class PandasLikeDataFrame:
         if not new_columns and len(self) == 0:
             return self
 
-        # If the inputs are all Expressions
-        # (as opposed to Series), we can use a fast path (concat, instead of assign).
-        # We can't use the fastpath if any input is not an expression (e.g.
-        # if it's a Series) because then we might be changing its flags.
-        # See `test_memmap` for an example of where this is necessary.
-        fast_path = all(isinstance(x, PandasLikeExpr) for x in exprs) and all(
-            isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items()
+        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
+        to_concat = []
+        # Make sure to preserve column order
+        for name in self._native_frame.columns:
+            if name in new_column_name_to_new_column_map:
+                to_concat.append(
+                    validate_dataframe_comparand(
+                        index, new_column_name_to_new_column_map.pop(name)
+                    )
+                )
+            else:
+                to_concat.append(self._native_frame[name])
+        to_concat.extend(
+            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            for s in new_column_name_to_new_column_map
         )
 
-        if fast_path:
-            new_column_name_to_new_column_map = {s.name: s for s in new_columns}
-            to_concat = []
-            # Make sure to preserve column order
-            for name in self._native_frame.columns:
-                if name in new_column_name_to_new_column_map:
-                    to_concat.append(
-                        validate_dataframe_comparand(
-                            index, new_column_name_to_new_column_map.pop(name)
-                        )
-                    )
-                else:
-                    to_concat.append(self._native_frame[name])
-            to_concat.extend(
-                validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
-                for s in new_column_name_to_new_column_map
-            )
-
-            df = horizontal_concat(
-                to_concat,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
-        else:
-            # This is the logic in pandas' DataFrame.assign
-            if self._backend_version < (2,):
-                df = self._native_frame.copy(deep=True)
-            else:
-                df = self._native_frame.copy(deep=False)
-            for s in new_columns:
-                df[s.name] = validate_dataframe_comparand(index, s)
+        df = horizontal_concat(
+            to_concat,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_frame(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
