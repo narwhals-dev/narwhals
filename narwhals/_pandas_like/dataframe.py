@@ -419,6 +419,7 @@ class PandasLikeDataFrame:
         fast_path = all(isinstance(x, PandasLikeExpr) for x in exprs) and all(
             isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items()
         )
+        fast_path = True
 
         if fast_path:
             new_column_name_to_new_column_map = {s.name: s for s in new_columns}
