@@ -93,11 +93,11 @@ def execute_query(query_id: str) -> None:
     data_paths = QUERY_DATA[query_id]
 
     for backend, read_func in READ_FUNCS.items():
-        print(f"\nRunning {query_id} with {backend=}")
+        print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         result = query_module.query(*(read_func(path) for path in data_paths))
         if collect_func := COLLECT_FUNCS.get(backend):
             result = collect_func(result)
-        print(result)
+        print(result)  # noqa: T201
 
 
 def main() -> None:

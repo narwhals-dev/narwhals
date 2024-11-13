@@ -15,7 +15,7 @@ QUERIES_DIR = ROOT_PATH / "queries"
 def test_execute_scripts(query_path: Path) -> None:
     print(f"executing query {query_path.stem}")  # noqa: T201
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "execute.main", str(query_path.stem)],
+        [sys.executable, "-m", "execute", str(query_path.stem)],
         capture_output=True,
         text=True,
         check=False,
