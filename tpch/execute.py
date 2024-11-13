@@ -23,7 +23,7 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 # Read functions for each backend
-READ_FUNCS = {
+BACKEND_READ_FUNC_MAP = {
     # "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"), # noqa: ERA001
     "pandas[pyarrow]": lambda x: pd.read_parquet(
         x, engine="pyarrow", dtype_backend="pyarrow"
@@ -35,12 +35,12 @@ READ_FUNCS = {
 }
 
 # Collect functions for the lazy backends
-COLLECT_FUNCS = {
+BACKEND_COLLECT_FUNC_MAP = {
     "polars[lazy]": lambda x: x.collect(),
     # "dask": lambda x: x.compute(), # noqa: ERA001
 }
 
-QUERY_DATA = {
+QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
     "q2": (REGION_PATH, NATION_PATH, SUPPLIER_PATH, PART_PATH, PARTSUPP_PATH),
     "q3": (CUSTOMER_PATH, LINEITEM_PATH, ORDERS_PATH),
@@ -90,12 +90,12 @@ QUERY_DATA = {
 
 def execute_query(query_id: str) -> None:
     query_module = import_module(f"tpch.queries.{query_id}")
-    data_paths = QUERY_DATA[query_id]
+    data_paths = QUERY_DATA_PATH_MAP[query_id]
 
-    for backend, read_func in READ_FUNCS.items():
+    for backend, read_func in BACKEND_READ_FUNC_MAP.items():
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         result = query_module.query(*(read_func(path) for path in data_paths))
-        if collect_func := COLLECT_FUNCS.get(backend):
+        if collect_func := BACKEND_COLLECT_FUNC_MAP.get(backend):
             result = collect_func(result)
         print(result)  # noqa: T201
 
