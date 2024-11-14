@@ -29,10 +29,13 @@ def test_non_string_select() -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_non_string_select_invalid() -> None:
-    df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(TypeError, match="\n\nHint: if you were trying to select"):
-        nw.to_native(df.select(0))  # type: ignore[arg-type]
+def test_non_string_select_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({0: [1, 2], "b": [3, 4]}))
+    with pytest.raises(
+        TypeError,
+        match="Expected an object which can be converted into an expression, got",
+    ):
+        df.select(0)  # type: ignore[arg-type]
 
 
 def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
