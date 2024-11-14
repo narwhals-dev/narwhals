@@ -261,7 +261,7 @@ jobs:
       - name: install-deps
         run: |
             cd plotly.py
-            uv pip install -r packages/python/plotly/test_requirements/requirements_312_core.txt -r packages/python/plotly/test_requirements/requirements_312_optional.txt --system
+            uv pip install -r packages/python/plotly/test_requirements/requirements_312_optional.txt --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
