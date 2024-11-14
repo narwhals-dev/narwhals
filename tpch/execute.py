@@ -4,6 +4,7 @@ import argparse
 from importlib import import_module
 from pathlib import Path
 
+import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow.parquet as pq
@@ -29,12 +30,12 @@ BACKEND_READ_FUNC_MAP = {
     # "polars[eager]": lambda x: pl.read_parquet(x),
     "polars[lazy]": lambda x: pl.scan_parquet(x),
     "pyarrow": lambda x: pq.read_table(x),
-    # "dask": lambda x: dd.read_parquet(x, engine="pyarrow", dtype_backend="pyarrow"), # noqa: ERA001
+    "dask": lambda x: dd.read_parquet(x, engine="pyarrow", dtype_backend="pyarrow"),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
     "polars[lazy]": lambda x: x.collect(),
-    # "dask": lambda x: x.compute(), # noqa: ERA001
+    "dask": lambda x: x.compute(),
 }
 
 QUERY_DATA_PATH_MAP = {
