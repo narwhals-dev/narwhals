@@ -281,6 +281,15 @@ class PolarsSeries:
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
+    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+        if self._backend_version < (0, 20, 4):
+            not_null_series = ~self._native_series.is_null()
+            result = not_null_series.cum_sum(reverse=reverse)
+        else:
+            result = self._native_series.cum_count(reverse=reverse)
+
+        return self._from_native_series(result)
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
