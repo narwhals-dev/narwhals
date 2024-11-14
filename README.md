@@ -37,13 +37,13 @@ Get started!
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com)
 - [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
-## Used by / integrates with
+## Used by
 
 Join the party!
 
-- [Altair](https://github.com/vega/altair/)
-- [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [altair](https://github.com/vega/altair/)
 - [marimo](https://github.com/marimo-team/marimo)
+- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
