@@ -11,7 +11,7 @@ Run `python generate_data.py` from this folder.
 
 ## Run queries
 
-To run Q1, you can run `python -m execute.q1` from this folder.
+To run Q1, you can run `python -m execute q1` from this folder.
 
 Please add query definitions in `queries`, and scripts to execute them
 in `execute` (see `queries/q1.py` and `execute/q1.py` for examples).
