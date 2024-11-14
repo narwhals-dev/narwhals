@@ -281,7 +281,7 @@ class PolarsSeries:
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
-    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+    def cum_count(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (0, 20, 4):
             not_null_series = ~self._native_series.is_null()
             result = not_null_series.cum_sum(reverse=reverse)
