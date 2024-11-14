@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals._exceptions import InvalidIntoExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -29,13 +32,20 @@ def test_non_string_select() -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_non_string_select_invalid(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(
-        TypeError,
-        match="Expected an object which can be converted into an expression, got",
-    ):
-        df.select(0)  # type: ignore[arg-type]
+def test_int_select_pandas() -> None:
+    df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
+    with pytest.raises(InvalidIntoExprError):
+        nw.to_native(df.select(0))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("invalid_select", [None, 0])
+def test_invalid_select(
+    constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    with pytest.raises(InvalidIntoExprError):
+        nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
 def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:

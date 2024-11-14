@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._exceptions import InvalidIntoExprError
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -44,9 +45,8 @@ def parse_exprs_and_named_exprs(
             _results = expr._call(df)
         elif isinstance(expr, str):
             _results = [df._native_frame[expr]]
-        else:  # pragma: no cover
-            msg = f"Expected expression or column name, got: {expr}"
-            raise TypeError(msg)
+        else:
+            raise InvalidIntoExprError(type(expr))
         return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
             results[_result.name] = _result[0] if return_scalar else _result
