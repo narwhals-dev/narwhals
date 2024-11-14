@@ -1,4 +1,10 @@
-// Copied from ruff 
+/**
+ * Copied from Ruff https://github.com/astral-sh/ruff/blob/924741cb11a68ed037899f9db1bea6969c48385e/docs/js/extra.js
+ *
+ * @author Astral Software Inc. <hey@astral.sh>
+ * @license MIT
+ */
+
 
 function cleanupClipboardText(targetSelector) {
     const targetElement = document.querySelector(targetSelector);
