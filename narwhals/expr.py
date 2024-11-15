@@ -1480,12 +1480,12 @@ class Expr:
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
+        Returns:
+            A new expression.
+
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
