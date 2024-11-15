@@ -155,8 +155,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
-    """
-    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+    """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -244,8 +243,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
 
 
 def maybe_get_index(obj: T) -> Any | None:
-    """
-    Get the index of a DataFrame or a Series, if it's pandas-like.
+    """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -280,8 +278,7 @@ def maybe_set_index(
     *,
     index: Series | list[Series] | None = None,
 ) -> T:
-    """
-    Set the index of a DataFrame or a Series, if it's pandas-like.
+    """Set the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
         obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
@@ -319,7 +316,6 @@ def maybe_set_index(
         4  1
         5  2
     """
-
     df_any = cast(Any, obj)
     native_obj = to_native(df_any)
 
@@ -365,8 +361,7 @@ def maybe_set_index(
 
 
 def maybe_reset_index(obj: T) -> T:
-    """
-    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+    """Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -424,8 +419,7 @@ def _has_default_index(
 
 
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
-    """
-    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    """Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
         obj: DataFrame or Series.
@@ -471,8 +465,7 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
 
 
 def is_ordered_categorical(series: Series) -> bool:
-    """
-    Return whether indices of categories are semantically meaningful.
+    """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
     the `is_ordered` property from the DataFrame Interchange Protocol,
@@ -547,8 +540,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
 
 
 def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
-    """Generates a unique token of specified `n_bytes` that is not present in the given
-    list of columns.
+    """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
     function to return a string nbytes random bytes.
@@ -607,8 +599,7 @@ def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
 
 
 def find_stacklevel() -> int:
-    """
-    Find the first place in the stack that is not inside narwhals.
+    """Find the first place in the stack that is not inside narwhals.
 
     Taken from:
     https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
@@ -647,8 +638,7 @@ def find_stacklevel() -> int:
 
 
 def issue_deprecation_warning(message: str, _version: str) -> None:
-    """
-    Issue a deprecation warning.
+    """Issue a deprecation warning.
 
     Parameters
     ----------

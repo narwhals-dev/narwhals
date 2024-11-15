@@ -197,8 +197,7 @@ def validate_dataframe_comparand(
 
 
 def horizontal_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames horizontally.
+    """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -219,8 +218,7 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
 
 def vertical_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames vertically.
+    """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """

@@ -136,8 +136,7 @@ def agg_pandas(  # noqa: PLR0915
     dataframe_is_empty: bool,
     native_namespace: Any,
 ) -> PandasLikeDataFrame:
-    """
-    This should be the fastpath, but cuDF is too far behind to use it.
+    """This should be the fastpath, but cuDF is too far behind to use it.
 
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084

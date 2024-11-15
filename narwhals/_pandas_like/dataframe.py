@@ -301,11 +301,8 @@ class PandasLikeDataFrame:
         named: bool = False,
         buffer_size: int = 512,
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
-        """
-        NOTE:
-            The param ``buffer_size`` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param ``buffer_size`` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         if not named:
             yield from self._native_frame.itertuples(index=False, name=None)
         else:
@@ -667,11 +664,8 @@ class PandasLikeDataFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         subset = flatten(subset) if subset else None
         return self._from_native_frame(

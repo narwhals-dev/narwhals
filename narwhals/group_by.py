@@ -30,8 +30,7 @@ class GroupBy(Generic[DataFrameT]):
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> DataFrameT:
-        """
-        Compute aggregations for each group of a group by operation.
+        """Compute aggregations for each group of a group by operation.
 
         Arguments:
             aggs: Aggregations to compute for each group of the group by operation,

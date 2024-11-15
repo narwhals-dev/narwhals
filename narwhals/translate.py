@@ -75,12 +75,23 @@ def to_native(
     strict: bool | None = None,
     pass_through: bool | None = None,
 ) -> IntoFrameT | Any:
-    """
-    Convert Narwhals object to native one.
+    """Convert Narwhals object to native one.
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: whether to raise on non-Narwhals input.
+        strict: Determine what happens if the object isn't supported by Narwhals:
+
+            - `True` (default): raise an error
+            - `False`: pass object through as-is
+
+            **Deprecated** (v1.13.0):
+                Please use `pass_through` instead. Note that `strict` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+        pass_through: Determine what happens if the object isn't supported by Narwhals:
+
+            - `False` (default): raise an error
+            - `True`: pass object through as-is
 
     Returns:
         Object of class that user started with.
@@ -233,11 +244,7 @@ def from_native(
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, pass_through=False, eager_or_interchange_only=True)
-    from_native(df, eager_or_interchange_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -249,11 +256,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, pass_through=False, eager_only=True)
-    from_native(df, eager_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -265,11 +268,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
-    """
-    from_native(df, pass_through=False, allow_series=True)
-    from_native(df, allow_series=True)
-    """
+) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
 @overload
@@ -281,11 +280,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
-    """
-    from_native(df, pass_through=False, series_only=True)
-    from_native(df, series_only=True)
-    """
+) -> Series: ...
 
 
 @overload
@@ -297,11 +292,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
-    """
-    from_native(df, pass_through=False)
-    from_native(df)
-    """
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 # All params passed in as variables
@@ -327,8 +318,7 @@ def from_native(
     series_only: bool | None = None,
     allow_series: bool | None = None,
 ) -> Any:
-    """
-    Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
+    """Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
 
     Arguments:
         native_object: Raw object from user.
@@ -724,8 +714,7 @@ def _from_native_impl(  # noqa: PLR0915
 
 
 def get_native_namespace(obj: Any) -> Any:
-    """
-    Get native namespace from object.
+    """Get native namespace from object.
 
     Examples:
         >>> import polars as pl
@@ -751,8 +740,7 @@ def narwhalify(
     series_only: bool | None = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
-    """
-    Decorate function so it becomes dataframe-agnostic.
+    """Decorate function so it becomes dataframe-agnostic.
 
     `narwhalify` will try to convert any dataframe/series-like object into the narwhal
     respective DataFrame/Series, while leaving the other parameters as they are.
@@ -761,7 +749,7 @@ def narwhalify(
     converted back to the original dataframe/series type, while if the output is another
     type it will be left as is.
 
-    By setting `strict=True`, then every input and every output will be required to be a
+    By setting `pass_through=True`, then every input and every output will be required to be a
     dataframe/series-like object.
 
     Instead of writing
@@ -771,7 +759,7 @@ def narwhalify(
 
 
     def func(df):
-        df = nw.from_native(df, strict=False)
+        df = nw.from_native(df, pass_through=True)
         df = df.group_by("a").agg(nw.col("b").sum())
         return nw.to_native(df)
     ```
@@ -797,8 +785,19 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Whether to raise if object can't be converted or to just leave it as-is
-            (default).
+        strict: Determine what happens if the object isn't supported by Narwhals:
+
+            - `True` (default): raise an error
+            - `False`: pass object through as-is
+
+            **Deprecated** (v1.13.0):
+                Please use `pass_through` instead. Note that `strict` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+        pass_through: Determine what happens if the object isn't supported by Narwhals:
+
+            - `False` (default): raise an error
+            - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects.
         eager_or_interchange_only: Whether to only allow eager objects or objects which
             implement the Dataframe Interchange Protocol.

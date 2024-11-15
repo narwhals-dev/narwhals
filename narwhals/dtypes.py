@@ -79,8 +79,7 @@ class Unknown(DType): ...
 
 
 class Datetime(TemporalType):
-    """
-    Data type representing a calendar date and time of day.
+    """Data type representing a calendar date and time of day.
 
     Arguments:
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
@@ -128,8 +127,7 @@ class Datetime(TemporalType):
 
 
 class Duration(TemporalType):
-    """
-    Data type representing a time duration.
+    """Data type representing a time duration.
 
     Arguments:
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
@@ -176,8 +174,7 @@ class Enum(DType): ...
 
 
 class Field:
-    """
-    Definition of a single field within a `Struct` DataType.
+    """Definition of a single field within a `Struct` DataType.
 
     Arguments:
         name: The name of the field within its parent `Struct`.
@@ -204,8 +201,7 @@ class Field:
 
 
 class Struct(DType):
-    """
-    Struct composite type.
+    """Struct composite type.
 
     Arguments:
         fields: The fields that make up the struct. Can be either a sequence of Field objects or a mapping of column names to data types.

@@ -1,6 +1,6 @@
-"""
-Check that `output.txt` doesn't contain the string
-"exited with errors". If it does, exit with status 1.
+"""Check that `output.txt` doesn't contain the string "exited with errors".
+
+If it does, exit with status 1.
 
 This is just used in CI.
 """

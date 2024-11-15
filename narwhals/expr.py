@@ -42,8 +42,7 @@ class Expr:
 
     # --- convert ---
     def alias(self, name: str) -> Self:
-        """
-        Rename the expression.
+        """Rename the expression.
 
         Arguments:
             name: The new name.
@@ -92,8 +91,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
-        """
-        Pipe function call.
+        """Pipe function call.
 
         Returns:
             A new expression.
@@ -143,8 +141,7 @@ class Expr:
         return function(self, *args, **kwargs)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        """
-        Redefine an object's data type.
+        """Redefine an object's data type.
 
         Arguments:
             dtype: Data type that the object will be cast into.
@@ -326,8 +323,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
     def any(self) -> Self:
-        """
-        Return whether any of the values in the column are `True`
+        """Return whether any of the values in the column are `True`.
 
         Returns:
             A new expression.
@@ -372,8 +368,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).any())
 
     def all(self) -> Self:
-        """
-        Return whether all values in the column are `True`.
+        """Return whether all values in the column are `True`.
 
         Returns:
             A new expression.
@@ -418,8 +413,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).all())
 
     def mean(self) -> Self:
-        """
-        Get mean value.
+        """Get mean value.
 
         Returns:
             A new expression.
@@ -464,8 +458,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).mean())
 
     def median(self) -> Self:
-        """
-        Get median value.
+        """Get median value.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -513,8 +506,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).median())
 
     def std(self, *, ddof: int = 1) -> Self:
-        """
-        Get standard deviation.
+        """Get standard deviation.
 
         Arguments:
             ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
@@ -568,17 +560,17 @@ class Expr:
         function: Callable[[Any], Self],
         return_dtype: DType | None = None,
     ) -> Self:
-        """
-        Apply a custom python function to a whole Series or sequence of Series.
+        """Apply a custom python function to a whole Series or sequence of Series.
 
         The output of this custom function is presumed to be either a Series,
         or a NumPy array (in which case it will be automatically converted into
         a Series).
 
         Arguments:
+            function: Function to apply to Series.
             return_dtype: Dtype of the output Series.
-                          If not set, the dtype will be inferred based on the first non-null value
-                          that is returned by the function.
+                If not set, the dtype will be inferred based on the first non-null value
+                that is returned by the function.
 
         Returns:
             A new expression.
@@ -636,8 +628,7 @@ class Expr:
         )
 
     def sum(self) -> Expr:
-        """
-        Return the sum value.
+        """Return the sum value.
 
         Returns:
             A new expression.
@@ -682,8 +673,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).sum())
 
     def min(self) -> Self:
-        """
-        Returns the minimum value(s) from a column(s).
+        """Returns the minimum value(s) from a column(s).
 
         Returns:
             A new expression.
@@ -728,8 +718,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Self:
-        """
-        Returns the maximum value(s) from a column(s).
+        """Returns the maximum value(s) from a column(s).
 
         Returns:
             A new expression.
@@ -774,8 +763,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).max())
 
     def count(self) -> Self:
-        """
-        Returns the number of non-null elements in the column.
+        """Returns the number of non-null elements in the column.
 
         Returns:
             A new expression.
@@ -820,8 +808,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).count())
 
     def n_unique(self) -> Self:
-        """
-         Returns count of unique values
+        """Returns count of unique values.
 
         Returns:
             A new expression.
@@ -866,8 +853,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
     def unique(self, *, maintain_order: bool = False) -> Self:
-        """
-        Return unique values of this expression.
+        """Return unique values of this expression.
 
         Arguments:
             maintain_order: Keep the same order as the original expression. This may be more
@@ -923,8 +909,7 @@ class Expr:
         )
 
     def abs(self) -> Self:
-        """
-        Return absolute value of each element.
+        """Return absolute value of each element.
 
         Returns:
             A new expression.
@@ -972,8 +957,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).abs())
 
     def cum_sum(self) -> Self:
-        """
-        Return cumulative sum.
+        """Return cumulative sum.
 
         Returns:
             A new expression.
@@ -1026,8 +1010,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).cum_sum())
 
     def diff(self) -> Self:
-        """
-        Returns the difference between each element and the previous one.
+        """Returns the difference between each element and the previous one.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1087,8 +1070,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).diff())
 
     def shift(self, n: int) -> Self:
-        """
-        Shift values by `n` positions.
+        """Shift values by `n` positions.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1154,8 +1136,7 @@ class Expr:
         *,
         return_dtype: DType | type[DType] | None = None,
     ) -> Self:
-        """
-        Replace all values by different values.
+        """Replace all values by different values.
 
         This function must replace all non-null input values (else it raises an error).
 
@@ -1235,8 +1216,7 @@ class Expr:
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """
-        Sort this column. Place null values first.
+        """Sort this column. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
@@ -1323,8 +1303,7 @@ class Expr:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
-        """
-        Check if this expression is between the given lower and upper bounds.
+        """Check if this expression is between the given lower and upper bounds.
 
         Arguments:
             lower_bound: Lower bound value.
@@ -1384,8 +1363,7 @@ class Expr:
         )
 
     def is_in(self, other: Any) -> Self:
-        """
-        Check if elements of this expression are present in the other iterable.
+        """Check if elements of this expression are present in the other iterable.
 
         Arguments:
             other: iterable
@@ -1444,8 +1422,7 @@ class Expr:
             raise NotImplementedError(msg)
 
     def filter(self, *predicates: Any) -> Self:
-        """
-        Filters elements based on a condition, returning a new expression.
+        """Filters elements based on a condition, returning a new expression.
 
         Returns:
             A new expression.
@@ -1501,8 +1478,7 @@ class Expr:
         )
 
     def is_null(self) -> Self:
-        """
-        Returns a boolean Series indicating which values are null.
+        """Returns a boolean Series indicating which values are null.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1573,8 +1549,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).is_null())
 
     def arg_true(self) -> Self:
-        """
-        Find elements where boolean expression is True.
+        """Find elements where boolean expression is True.
 
         Returns:
             A new expression.
@@ -1625,8 +1600,7 @@ class Expr:
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
-        """
-        Fill null values with given value.
+        """Fill null values with given value.
 
         Arguments:
             value: Value used to fill null values.
@@ -1769,8 +1743,7 @@ class Expr:
 
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
-        """
-        Remove missing values.
+        """Remove missing values.
 
         Returns:
             A new expression.
@@ -1832,8 +1805,7 @@ class Expr:
         with_replacement: bool = False,
         seed: int | None = None,
     ) -> Self:
-        """
-        Sample randomly from this expression.
+        """Sample randomly from this expression.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
@@ -1891,8 +1863,7 @@ class Expr:
         )
 
     def over(self, *keys: str | Iterable[str]) -> Self:
-        """
-        Compute expressions over the given groups.
+        """Compute expressions over the given groups.
 
         Arguments:
             keys: Names of columns to compute window expression over.
@@ -1949,8 +1920,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
 
     def is_duplicated(self) -> Self:
-        r"""
-        Return a boolean mask indicating duplicated values.
+        r"""Return a boolean mask indicating duplicated values.
 
         Returns:
             A new expression.
@@ -2002,8 +1972,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).is_duplicated())
 
     def is_unique(self) -> Self:
-        r"""
-        Return a boolean mask indicating unique values.
+        r"""Return a boolean mask indicating unique values.
 
         Returns:
             A new expression.
@@ -2055,8 +2024,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
     def null_count(self) -> Self:
-        r"""
-        Count null values.
+        r"""Count null values.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2106,8 +2074,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).null_count())
 
     def is_first_distinct(self) -> Self:
-        r"""
-        Return a boolean mask indicating the first occurrence of each distinct value.
+        r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
         Returns:
             A new expression.
@@ -2273,8 +2240,7 @@ class Expr:
         )
 
     def head(self, n: int = 10) -> Self:
-        r"""
-        Get the first `n` rows.
+        r"""Get the first `n` rows.
 
         Arguments:
             n: Number of rows to return.
@@ -2325,8 +2291,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
-        r"""
-        Get the last `n` rows.
+        r"""Get the last `n` rows.
 
         Arguments:
             n: Number of rows to return.
@@ -2377,11 +2342,11 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
-        r"""
-        Round underlying floating point data by `decimals` digits.
+        r"""Round underlying floating point data by `decimals` digits.
 
         Arguments:
             decimals: Number of decimals to round by.
+
         Returns:
             A new expression.
 
@@ -2438,8 +2403,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
     def len(self) -> Self:
-        r"""
-        Return the number of elements in the column.
+        r"""Return the number of elements in the column.
 
         Null values count towards the total.
 
@@ -2491,8 +2455,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).len())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
-        r"""
-        Take every nth value in the Series and return as new Series.
+        r"""Take every nth value in the Series and return as new Series.
 
         Arguments:
             n: Gather every *n*-th row.
@@ -2551,12 +2514,12 @@ class Expr:
         lower_bound: Any | None = None,
         upper_bound: Any | None = None,
     ) -> Self:
-        r"""
-        Clip values in the Series.
+        r"""Clip values in the Series.
 
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
+
         Returns:
             A new expression.
 
@@ -2681,6 +2644,7 @@ class Expr:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
         Returns:
             A new expression.
 
@@ -2754,8 +2718,7 @@ class ExprCatNamespace(Generic[T]):
         self._expr = expr
 
     def get_categories(self: Self) -> T:
-        """
-        Get unique categories from column.
+        """Get unique categories from column.
 
         Returns:
             A new expression.
@@ -2804,8 +2767,7 @@ class ExprStringNamespace(Generic[T]):
         self._expr = expr
 
     def len_chars(self: Self) -> T:
-        r"""
-        Return the length of each string as the number of characters.
+        r"""Return the length of each string as the number of characters.
 
         Returns:
             A new expression.
@@ -2853,8 +2815,7 @@ class ExprStringNamespace(Generic[T]):
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> T:
-        r"""
-        Replace first matching regex/literal substring with a new string value.
+        r"""Replace first matching regex/literal substring with a new string value.
 
         Arguments:
             pattern: A valid regular expression pattern.
@@ -2896,8 +2857,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
-        r"""
-        Replace all matching regex/literal substring with a new string value.
+        r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
             pattern: A valid regular expression pattern.
@@ -2938,8 +2898,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def strip_chars(self: Self, characters: str | None = None) -> T:
-        r"""
-        Remove leading and trailing characters.
+        r"""Remove leading and trailing characters.
 
         Arguments:
             characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
@@ -2975,8 +2934,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def starts_with(self: Self, prefix: str) -> T:
-        r"""
-        Check if string values start with a substring.
+        r"""Check if string values start with a substring.
 
         Arguments:
             prefix: prefix substring
@@ -3023,8 +2981,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def ends_with(self: Self, suffix: str) -> T:
-        r"""
-        Check if string values end with a substring.
+        r"""Check if string values end with a substring.
 
         Arguments:
             suffix: suffix substring
@@ -3071,8 +3028,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
-        r"""
-        Check if string contains a substring that matches a pattern.
+        r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
             pattern: A Character sequence or valid regular expression pattern.
@@ -3130,8 +3086,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def slice(self: Self, offset: int, length: int | None = None) -> T:
-        r"""
-        Create subslices of the string values of an expression.
+        r"""Create subslices of the string values of an expression.
 
         Arguments:
             offset: Start index. Negative indexing is supported.
@@ -3208,8 +3163,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def head(self: Self, n: int = 5) -> T:
-        r"""
-        Take the first n elements of each string.
+        r"""Take the first n elements of each string.
 
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
@@ -3259,8 +3213,7 @@ class ExprStringNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
 
     def tail(self: Self, n: int = 5) -> T:
-        r"""
-        Take the last n elements of each string.
+        r"""Take the last n elements of each string.
 
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
@@ -3310,8 +3263,7 @@ class ExprStringNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
     def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
-        """
-        Convert to Datetime dtype.
+        """Convert to Datetime dtype.
 
         Notes:
             pandas defaults to nanosecond time unit, Polars to microsecond.
@@ -3326,6 +3278,7 @@ class ExprStringNamespace(Generic[T]):
         Arguments:
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
+
         Returns:
             A new expression.
 
@@ -3373,8 +3326,7 @@ class ExprStringNamespace(Generic[T]):
         )
 
     def to_uppercase(self: Self) -> T:
-        r"""
-        Transform string to uppercase variant.
+        r"""Transform string to uppercase variant.
 
         Returns:
             A new expression.
@@ -3422,8 +3374,7 @@ class ExprStringNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
 
     def to_lowercase(self: Self) -> T:
-        r"""
-        Transform string to lowercase variant.
+        r"""Transform string to lowercase variant.
 
         Returns:
             A new expression.
@@ -3470,8 +3421,7 @@ class ExprDateTimeNamespace(Generic[T]):
         self._expr = expr
 
     def date(self: Self) -> T:
-        """
-        Extract the date from underlying DateTime representation.
+        """Extract the date from underlying DateTime representation.
 
         Returns:
             A new expression.
@@ -3515,8 +3465,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
     def year(self: Self) -> T:
-        """
-        Extract year from underlying DateTime representation.
+        """Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
 
@@ -3566,8 +3515,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
     def month(self: Self) -> T:
-        """
-        Extract month from underlying DateTime representation.
+        """Extract month from underlying DateTime representation.
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
 
@@ -3620,8 +3568,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
 
     def day(self: Self) -> T:
-        """
-        Extract day from underlying DateTime representation.
+        """Extract day from underlying DateTime representation.
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
 
@@ -3675,8 +3622,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
 
     def hour(self: Self) -> T:
-        """
-        Extract hour from underlying DateTime representation.
+        """Extract hour from underlying DateTime representation.
 
         Returns the hour number from 0 to 23.
 
@@ -3726,8 +3672,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
 
     def minute(self: Self) -> T:
-        """
-        Extract minutes from underlying DateTime representation.
+        """Extract minutes from underlying DateTime representation.
 
         Returns the minute number from 0 to 59.
 
@@ -3780,8 +3725,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
 
     def second(self: Self) -> T:
-        """
-        Extract seconds from underlying DateTime representation.
+        """Extract seconds from underlying DateTime representation.
 
         Returns:
             A new expression.
@@ -3833,8 +3777,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
     def millisecond(self: Self) -> T:
-        """
-        Extract milliseconds from underlying DateTime representation.
+        """Extract milliseconds from underlying DateTime representation.
 
         Returns:
             A new expression.
@@ -3887,8 +3830,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
 
     def microsecond(self: Self) -> T:
-        """
-        Extract microseconds from underlying DateTime representation.
+        """Extract microseconds from underlying DateTime representation.
 
         Returns:
             A new expression.
@@ -3941,8 +3883,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
     def nanosecond(self: Self) -> T:
-        """
-        Extract Nanoseconds from underlying DateTime representation
+        """Extract Nanoseconds from underlying DateTime representation.
 
         Returns:
             A new expression.
@@ -3995,8 +3936,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
 
     def ordinal_day(self: Self) -> T:
-        """
-        Get ordinal day.
+        """Get ordinal day.
 
         Returns:
             A new expression.
@@ -4036,8 +3976,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
     def total_minutes(self: Self) -> T:
-        """
-        Get total minutes.
+        """Get total minutes.
 
         Notes:
             The function outputs the total minutes in the int dtype by default,
@@ -4082,8 +4021,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
 
     def total_seconds(self: Self) -> T:
-        """
-        Get total seconds.
+        """Get total seconds.
 
         Notes:
             The function outputs the total seconds in the int dtype by default,
@@ -4128,8 +4066,7 @@ class ExprDateTimeNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
 
     def total_milliseconds(self: Self) -> T:
-        """
-        Get total milliseconds.
+        """Get total milliseconds.
 
         Notes:
             The function outputs the total milliseconds in the int dtype by default,
@@ -4183,8 +4120,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def total_microseconds(self: Self) -> T:
-        """
-        Get total microseconds.
+        """Get total microseconds.
 
         Notes:
             The function outputs the total microseconds in the int dtype by default,
@@ -4238,8 +4174,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def total_nanoseconds(self: Self) -> T:
-        """
-        Get total nanoseconds.
+        """Get total nanoseconds.
 
         Notes:
             The function outputs the total nanoseconds in the int dtype by default,
@@ -4290,8 +4225,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def to_string(self: Self, format: str) -> T:  # noqa: A002
-        """
-        Convert a Date/Time/Datetime column into a String column with the given format.
+        """Convert a Date/Time/Datetime column into a String column with the given format.
 
         Arguments:
             format: Format to format temporal column with.
@@ -4374,8 +4308,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> T:
-        """
-        Replace time zone.
+        """Replace time zone.
 
         Arguments:
             time_zone: Target time zone.
@@ -4432,8 +4365,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> T:
-        """
-        Convert to a new time zone.
+        """Convert to a new time zone.
 
         If converting from a time-zone-naive column, then conversion happens
         as if converting from UTC.
@@ -4496,8 +4428,7 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
-        """
-        Return a timestamp in the given time unit.
+        """Return a timestamp in the given time unit.
 
         Arguments:
             time_unit: {'ns', 'us', 'ms'}
@@ -4570,8 +4501,7 @@ class ExprNameNamespace(Generic[T]):
         self._expr = expr
 
     def keep(self: Self) -> T:
-        r"""
-        Keep the original root name of the expression.
+        r"""Keep the original root name of the expression.
 
         Returns:
             A new expression.
@@ -4605,8 +4535,7 @@ class ExprNameNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
     def map(self: Self, function: Callable[[str], str]) -> T:
-        r"""
-        Rename the output of an expression by mapping a function over the root name.
+        r"""Rename the output of an expression by mapping a function over the root name.
 
         Arguments:
             function: Function that maps a root name to a new name.
@@ -4644,8 +4573,7 @@ class ExprNameNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
     def prefix(self: Self, prefix: str) -> T:
-        r"""
-        Add a prefix to the root column name of the expression.
+        r"""Add a prefix to the root column name of the expression.
 
         Arguments:
             prefix: Prefix to add to the root column name.
@@ -4683,8 +4611,7 @@ class ExprNameNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
 
     def suffix(self: Self, suffix: str) -> T:
-        r"""
-        Add a suffix to the root column name of the expression.
+        r"""Add a suffix to the root column name of the expression.
 
         Arguments:
             suffix: Suffix to add to the root column name.
@@ -4721,8 +4648,7 @@ class ExprNameNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
 
     def to_lowercase(self: Self) -> T:
-        r"""
-        Make the root column name lowercase.
+        r"""Make the root column name lowercase.
 
         Returns:
             A new expression.
@@ -4756,8 +4682,7 @@ class ExprNameNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
 
     def to_uppercase(self: Self) -> T:
-        r"""
-        Make the root column name uppercase.
+        r"""Make the root column name uppercase.
 
         Returns:
             A new expression.
@@ -4791,11 +4716,11 @@ class ExprNameNamespace(Generic[T]):
 
 
 def col(*names: str | Iterable[str]) -> Expr:
-    """
-    Creates an expression that references one or more columns by their name(s).
+    """Creates an expression that references one or more columns by their name(s).
 
     Arguments:
         names: Name(s) of the columns to use in the aggregation function.
+
     Returns:
         A new expression.
 
@@ -4845,14 +4770,14 @@ def col(*names: str | Iterable[str]) -> Expr:
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
-    """
-    Creates an expression that references one or more columns by their index(es).
+    """Creates an expression that references one or more columns by their index(es).
 
     Notes:
         `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
+
     Returns:
         A new expression.
 
@@ -4903,8 +4828,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
 # Add underscore so it doesn't conflict with builtin `all`
 def all_() -> Expr:
-    """
-    Instantiate an expression representing all columns.
+    """Instantiate an expression representing all columns.
 
     Returns:
         A new expression.
@@ -4955,8 +4879,7 @@ def all_() -> Expr:
 
 # Add underscore so it doesn't conflict with builtin `len`
 def len_() -> Expr:
-    """
-    Return the number of rows.
+    """Return the number of rows.
 
     Returns:
         A new expression.
@@ -5004,8 +4927,7 @@ def len_() -> Expr:
 
 
 def sum(*columns: str) -> Expr:
-    """
-    Sum all values.
+    """Sum all values.
 
     Note:
         Syntactic sugar for ``nw.col(columns).sum()``
@@ -5050,13 +4972,11 @@ def sum(*columns: str) -> Expr:
         ----
         a: [[3]]
     """
-
     return Expr(lambda plx: plx.sum(*columns))
 
 
 def mean(*columns: str) -> Expr:
-    """
-    Get the mean value.
+    """Get the mean value.
 
     Note:
         Syntactic sugar for ``nw.col(columns).mean()``
@@ -5101,13 +5021,11 @@ def mean(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-
     return Expr(lambda plx: plx.mean(*columns))
 
 
 def median(*columns: str) -> Expr:
-    """
-    Get the median value.
+    """Get the median value.
 
     Notes:
         - Syntactic sugar for ``nw.col(columns).median()``
@@ -5153,19 +5071,18 @@ def median(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-
     return Expr(lambda plx: plx.median(*columns))
 
 
 def min(*columns: str) -> Expr:
-    """
-    Return the minimum value.
+    """Return the minimum value.
 
     Note:
        Syntactic sugar for ``nw.col(columns).min()``.
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+
     Returns:
         A new expression.
 
@@ -5208,14 +5125,14 @@ def min(*columns: str) -> Expr:
 
 
 def max(*columns: str) -> Expr:
-    """
-    Return the maximum value.
+    """Return the maximum value.
 
     Note:
        Syntactic sugar for ``nw.col(columns).max()``.
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+
     Returns:
         A new expression.
 
@@ -5258,8 +5175,7 @@ def max(*columns: str) -> Expr:
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Sum all values horizontally across columns.
+    """Sum all values horizontally across columns.
 
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
@@ -5267,6 +5183,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
     Returns:
         A new expression.
 
@@ -5321,8 +5238,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Get the minimum value horizontally across columns.
+    """Get the minimum value horizontally across columns.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
@@ -5330,6 +5246,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
     Returns:
         A new expression.
 
@@ -5386,8 +5303,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Get the maximum value horizontally across columns.
+    """Get the maximum value horizontally across columns.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -5475,8 +5391,7 @@ class Then(Expr):
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
-    """
-    Start a `when-then-otherwise` expression.
+    """Start a `when-then-otherwise` expression.
 
     Expression similar to an `if-else` statement in Python. Always initiated by a
     `pl.when(<condition>).then(<value if condition>)`, and optionally followed by
@@ -5490,6 +5405,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+
     Returns:
         A "when" object, which `.then` can be called on.
 
@@ -5542,11 +5458,11 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""
-    Compute the bitwise AND horizontally across columns.
+    r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
     Returns:
         A new expression.
 
@@ -5619,8 +5535,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def lit(value: Any, dtype: DType | None = None) -> Expr:
-    """
-    Return an expression representing a literal value.
+    """Return an expression representing a literal value.
 
     Arguments:
         value: The value to use as literal.
@@ -5628,6 +5543,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
     Returns:
         A new expression.
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -5682,14 +5598,14 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""
-    Compute the bitwise OR horizontally across columns.
+    r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
     Returns:
         A new expression.
+
     Notes:
         pandas and Polars handle null values differently.
 
@@ -5759,12 +5675,12 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Compute the mean of all values horizontally across columns.
+    """Compute the mean of all values horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
     Returns:
         A new expression.
 
@@ -5831,8 +5747,7 @@ def concat_str(
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> Expr:
-    r"""
-    Horizontally concatenate columns into a single string column.
+    r"""Horizontally concatenate columns into a single string column.
 
     Arguments:
         exprs: Columns to concatenate into a single string column. Accepts expression
@@ -5844,6 +5759,7 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
+
     Returns:
         A new expression.
 
