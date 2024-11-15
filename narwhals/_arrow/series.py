@@ -823,7 +823,11 @@ class ArrowSeries:
         )
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
-        import pyarrow.compute as pc  # ignore-banned-import()
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_min method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
 
         native_series = self._native_series
 

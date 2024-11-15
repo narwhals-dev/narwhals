@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -17,6 +18,9 @@ expected = {
 
 def test_cum_min_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
