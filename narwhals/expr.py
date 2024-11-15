@@ -48,6 +48,9 @@ class Expr:
         Arguments:
             name: The new name.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -91,6 +94,9 @@ class Expr:
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """
         Pipe function call.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -142,6 +148,9 @@ class Expr:
 
         Arguments:
             dtype: Data type that the object will be cast into.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -320,6 +329,9 @@ class Expr:
         """
         Return whether any of the values in the column are `True`
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -363,6 +375,9 @@ class Expr:
         """
         Return whether all values in the column are `True`.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -405,6 +420,9 @@ class Expr:
     def mean(self) -> Self:
         """
         Get mean value.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -452,6 +470,9 @@ class Expr:
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -498,6 +519,9 @@ class Expr:
         Arguments:
             ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -556,6 +580,9 @@ class Expr:
                           If not set, the dtype will be inferred based on the first non-null value
                           that is returned by the function.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -612,6 +639,9 @@ class Expr:
         """
         Return the sum value.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -654,6 +684,9 @@ class Expr:
     def min(self) -> Self:
         """
         Returns the minimum value(s) from a column(s).
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -698,6 +731,9 @@ class Expr:
         """
         Returns the maximum value(s) from a column(s).
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -741,6 +777,9 @@ class Expr:
         """
         Returns the number of non-null elements in the column.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -783,6 +822,9 @@ class Expr:
     def n_unique(self) -> Self:
         """
          Returns count of unique values
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -831,6 +873,9 @@ class Expr:
             maintain_order: Keep the same order as the original expression. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
                 to run on the streaming engine for Polars.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -881,6 +926,9 @@ class Expr:
         """
         Return absolute value of each element.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -926,6 +974,9 @@ class Expr:
     def cum_sum(self) -> Self:
         """
         Return cumulative sum.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -987,6 +1038,9 @@ class Expr:
 
                 nw.col("a").diff().fill_null(0).cast(nw.Int64)
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -1044,6 +1098,9 @@ class Expr:
             do:
 
                 nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -1110,6 +1167,9 @@ class Expr:
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -1181,6 +1241,9 @@ class Expr:
         Arguments:
             descending: Sort in descending order.
             nulls_last: Place null values last instead of first.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -1270,6 +1333,9 @@ class Expr:
 
             closed: Define which sides of the interval are closed (inclusive).
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1324,6 +1390,9 @@ class Expr:
         Arguments:
             other: iterable
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1377,6 +1446,9 @@ class Expr:
     def filter(self, *predicates: Any) -> Self:
         """
         Filters elements based on a condition, returning a new expression.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -1435,6 +1507,9 @@ class Expr:
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1501,6 +1576,9 @@ class Expr:
         """
         Find elements where boolean expression is True.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1556,6 +1634,9 @@ class Expr:
             strategy: Strategy used to fill null values.
 
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
+
+        Returns:
+            A new expression.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1691,6 +1772,9 @@ class Expr:
         """
         Remove missing values.
 
+        Returns:
+            A new expression.
+
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
@@ -1758,6 +1842,9 @@ class Expr:
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1812,6 +1899,9 @@ class Expr:
                   Must be names of columns, as opposed to expressions -
                   so, this is a bit less flexible than Polars' `Expr.over`.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1862,6 +1952,9 @@ class Expr:
         r"""
         Return a boolean mask indicating duplicated values.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1911,6 +2004,9 @@ class Expr:
     def is_unique(self) -> Self:
         r"""
         Return a boolean mask indicating unique values.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -1966,6 +2062,9 @@ class Expr:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2009,6 +2108,9 @@ class Expr:
     def is_first_distinct(self) -> Self:
         r"""
         Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -2058,6 +2160,9 @@ class Expr:
 
     def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -2121,6 +2226,9 @@ class Expr:
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2171,6 +2279,9 @@ class Expr:
         Arguments:
             n: Number of rows to return.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2220,6 +2331,9 @@ class Expr:
         Arguments:
             n: Number of rows to return.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2268,6 +2382,9 @@ class Expr:
 
         Arguments:
             decimals: Number of decimals to round by.
+        Returns:
+            A new expression.
+
 
         Notes:
             For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
@@ -2326,6 +2443,10 @@ class Expr:
 
         Null values count towards the total.
 
+        Returns:
+            A new expression.
+
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2376,6 +2497,9 @@ class Expr:
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -2433,6 +2557,9 @@ class Expr:
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
+        Returns:
+            A new expression.
+
 
         Examples:
             >>> import pandas as pd
@@ -2554,6 +2681,9 @@ class Expr:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+        Returns:
+            A new expression.
+
 
         Examples:
             >>> import pandas as pd
@@ -2627,6 +2757,9 @@ class ExprCatNamespace(Generic[T]):
         """
         Get unique categories from column.
 
+        Returns:
+            A new expression.
+
         Examples:
             Let's create some dataframes:
 
@@ -2673,6 +2806,9 @@ class ExprStringNamespace(Generic[T]):
     def len_chars(self: Self) -> T:
         r"""
         Return the length of each string as the number of characters.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2726,6 +2862,9 @@ class ExprStringNamespace(Generic[T]):
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2765,6 +2904,9 @@ class ExprStringNamespace(Generic[T]):
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2802,6 +2944,9 @@ class ExprStringNamespace(Generic[T]):
         Arguments:
             characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2835,6 +2980,9 @@ class ExprStringNamespace(Generic[T]):
 
         Arguments:
             prefix: prefix substring
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2880,6 +3028,9 @@ class ExprStringNamespace(Generic[T]):
 
         Arguments:
             suffix: suffix substring
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2927,6 +3078,9 @@ class ExprStringNamespace(Generic[T]):
             pattern: A Character sequence or valid regular expression pattern.
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2983,6 +3137,9 @@ class ExprStringNamespace(Generic[T]):
             offset: Start index. Negative indexing is supported.
             length: Length of the slice. If set to `None` (default), the slice is taken to the
                 end of the string.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3057,6 +3214,9 @@ class ExprStringNamespace(Generic[T]):
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
 
+        Returns:
+            A new expression.
+
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
 
@@ -3104,6 +3264,9 @@ class ExprStringNamespace(Generic[T]):
 
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
+
+        Returns:
+            A new expression.
 
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
@@ -3163,6 +3326,9 @@ class ExprStringNamespace(Generic[T]):
         Arguments:
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
+        Returns:
+            A new expression.
+
 
         Examples:
             >>> import pandas as pd
@@ -3210,6 +3376,9 @@ class ExprStringNamespace(Generic[T]):
         r"""
         Transform string to uppercase variant.
 
+        Returns:
+            A new expression.
+
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
             For more info see [the related issue](https://github.com/apache/arrow/issues/34599).
@@ -3256,6 +3425,9 @@ class ExprStringNamespace(Generic[T]):
         r"""
         Transform string to lowercase variant.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3301,6 +3473,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Extract the date from underlying DateTime representation.
 
+        Returns:
+            A new expression.
+
         Raises:
             NotImplementedError: If pandas default backend is being used.
 
@@ -3344,6 +3519,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3392,6 +3570,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Extract month from underlying DateTime representation.
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3443,6 +3624,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Extract day from underlying DateTime representation.
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3496,6 +3680,9 @@ class ExprDateTimeNamespace(Generic[T]):
 
         Returns the hour number from 0 to 23.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3543,6 +3730,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Extract minutes from underlying DateTime representation.
 
         Returns the minute number from 0 to 59.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3593,6 +3783,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Extract seconds from underlying DateTime representation.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3642,6 +3835,9 @@ class ExprDateTimeNamespace(Generic[T]):
     def millisecond(self: Self) -> T:
         """
         Extract milliseconds from underlying DateTime representation.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3694,6 +3890,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Extract microseconds from underlying DateTime representation.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3744,6 +3943,9 @@ class ExprDateTimeNamespace(Generic[T]):
     def nanosecond(self: Self) -> T:
         """
         Extract Nanoseconds from underlying DateTime representation
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3796,6 +3998,9 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         Get ordinal day.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3838,6 +4043,9 @@ class ExprDateTimeNamespace(Generic[T]):
             The function outputs the total minutes in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3882,6 +4090,9 @@ class ExprDateTimeNamespace(Generic[T]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3924,6 +4135,9 @@ class ExprDateTimeNamespace(Generic[T]):
             The function outputs the total milliseconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -3977,6 +4191,9 @@ class ExprDateTimeNamespace(Generic[T]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4029,6 +4246,9 @@ class ExprDateTimeNamespace(Generic[T]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4072,6 +4292,12 @@ class ExprDateTimeNamespace(Generic[T]):
     def to_string(self: Self, format: str) -> T:  # noqa: A002
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
+
+        Arguments:
+            format: Format to format temporal column with.
+
+        Returns:
+            A new expression.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -4154,6 +4380,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Arguments:
             time_zone: Target time zone.
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> from datetime import datetime, timezone
             >>> import narwhals as nw
@@ -4211,6 +4440,9 @@ class ExprDateTimeNamespace(Generic[T]):
 
         Arguments:
             time_zone: Target time zone.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -4270,6 +4502,9 @@ class ExprDateTimeNamespace(Generic[T]):
         Arguments:
             time_unit: {'ns', 'us', 'ms'}
                 Time unit.
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> from datetime import date
@@ -4338,6 +4573,9 @@ class ExprNameNamespace(Generic[T]):
         r"""
         Keep the original root name of the expression.
 
+        Returns:
+            A new expression.
+
         Notes:
             This will undo any previous renaming operations on the expression.
             Due to implementation constraints, this method can only be called as the last
@@ -4372,6 +4610,9 @@ class ExprNameNamespace(Generic[T]):
 
         Arguments:
             function: Function that maps a root name to a new name.
+
+        Returns:
+            A new expression.
 
         Notes:
             This will undo any previous renaming operations on the expression.
@@ -4409,6 +4650,9 @@ class ExprNameNamespace(Generic[T]):
         Arguments:
             prefix: Prefix to add to the root column name.
 
+        Returns:
+            A new expression.
+
         Notes:
             This will undo any previous renaming operations on the expression.
             Due to implementation constraints, this method can only be called as the last
@@ -4445,6 +4689,9 @@ class ExprNameNamespace(Generic[T]):
         Arguments:
             suffix: Suffix to add to the root column name.
 
+        Returns:
+            A new expression.
+
         Notes:
             This will undo any previous renaming operations on the expression.
             Due to implementation constraints, this method can only be called as the last
@@ -4477,6 +4724,9 @@ class ExprNameNamespace(Generic[T]):
         r"""
         Make the root column name lowercase.
 
+        Returns:
+            A new expression.
+
         Notes:
             This will undo any previous renaming operations on the expression.
             Due to implementation constraints, this method can only be called as the last
@@ -4508,6 +4758,9 @@ class ExprNameNamespace(Generic[T]):
     def to_uppercase(self: Self) -> T:
         r"""
         Make the root column name uppercase.
+
+        Returns:
+            A new expression.
 
         Notes:
             This will undo any previous renaming operations on the expression.
@@ -4543,6 +4796,9 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     Arguments:
         names: Name(s) of the columns to use in the aggregation function.
+    Returns:
+        A new expression.
+
 
     Examples:
         >>> import pandas as pd
@@ -4597,6 +4853,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -4648,6 +4906,9 @@ def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -4696,6 +4957,9 @@ def all_() -> Expr:
 def len_() -> Expr:
     """
     Return the number of rows.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -4748,6 +5012,8 @@ def sum(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -4797,6 +5063,8 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -4847,6 +5115,8 @@ def median(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -4896,6 +5166,8 @@ def min(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -4944,6 +5216,8 @@ def max(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -4993,6 +5267,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -5054,6 +5330,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -5117,6 +5395,9 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -5197,12 +5478,20 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
 
-    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
-    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
-    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+    Expression similar to an `if-else` statement in Python. Always initiated by a
+    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by
+    chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif`
+    blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to
+    `True` will be picked.
+    If none of the conditions are `True`, an optional
+    `.otherwise(<value if all statements are false>)` can be appended at the end.
+    If not appended, and none of the conditions are `True`, `None` will be returned.
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+    Returns:
+        A "when" object, which `.then` can be called on.
 
     Examples:
         >>> import pandas as pd
@@ -5258,6 +5547,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+    Returns:
+        A new expression.
 
     Notes:
         pandas and Polars handle null values differently.
@@ -5335,6 +5626,8 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will be inferred.
 
+    Returns:
+        A new expression.
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -5395,6 +5688,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
+    Returns:
+        A new expression.
     Notes:
         pandas and Polars handle null values differently.
 
@@ -5470,6 +5765,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -5547,6 +5844,8 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw

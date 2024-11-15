@@ -50,6 +50,7 @@ target-version = "py38"
 
 lint.select = [
   "ALL",
+  "D201",
 ]
 lint.ignore = [
   "A001",
