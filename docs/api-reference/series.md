@@ -16,6 +16,7 @@
         - clip
         - count
         - cum_count
+        - cum_min
         - cum_sum
         - diff
         - drop_nulls

@@ -433,6 +433,9 @@ class ArrowExpr:
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_count", reverse=reverse)
 
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
