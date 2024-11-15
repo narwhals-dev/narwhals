@@ -2692,8 +2692,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).mode())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
-        r"""
-        Return the cumulative count of the non-null values in the column.
+        r"""Return the cumulative count of the non-null values in the column.
 
         Arguments:
             reverse: reverse the operation
