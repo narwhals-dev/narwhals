@@ -11,6 +11,7 @@
         - arg_true
         - cast
         - count
+        - cum_count
         - cum_sum
         - diff
         - drop_nulls

@@ -394,7 +394,9 @@ class ArrowSeries:
     def cum_sum(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return self._from_native_series(pc.cumulative_sum(self._native_series))
+        return self._from_native_series(
+            pc.cumulative_sum(self._native_series, skip_nulls=True)
+        )
 
     def round(self, decimals: int) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -811,6 +813,14 @@ class ArrowSeries:
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        not_na_series = (~self.is_null()).cast(self._dtypes.UInt32())
+        return (
+            not_na_series.cum_sum()
+            if not reverse
+            else len(self) - not_na_series.cum_sum() + not_na_series - 1
+        )
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()

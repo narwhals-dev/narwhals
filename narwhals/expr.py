@@ -2691,6 +2691,63 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
+    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+        r"""
+        Return the cumulative count of the non-null values in the column.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": ["x", "k", None, "d"]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("a").cum_count().alias("cum_count"),
+            ...         nw.col("a").cum_count(reverse=True).alias("cum_count_reverse"),
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                  a  cum_count  cum_count_reverse
+            0     x          1                  3
+            1     k          2                  2
+            2  None          2                  1
+            3     d          3                  1
+
+            >>> func(pl.DataFrame(data))
+            shape: (4, 3)
+            ┌──────┬───────────┬───────────────────┐
+            │ a    ┆ cum_count ┆ cum_count_reverse │
+            │ ---  ┆ ---       ┆ ---               │
+            │ str  ┆ u32       ┆ u32               │
+            ╞══════╪═══════════╪═══════════════════╡
+            │ x    ┆ 1         ┆ 3                 │
+            │ k    ┆ 2         ┆ 2                 │
+            │ null ┆ 2         ┆ 1                 │
+            │ d    ┆ 3         ┆ 1                 │
+            └──────┴───────────┴───────────────────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: string
+            cum_count: uint32
+            cum_count_reverse: int64
+            ----
+            a: [["x","k",null,"d"]]
+            cum_count: [[1,2,2,3]]
+            cum_count_reverse: [[3,2,1,1]]
+        """
+        return self.__class__(lambda plx: self._call(plx).cum_count(reverse=reverse))
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

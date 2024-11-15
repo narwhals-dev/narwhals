@@ -2629,6 +2629,59 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+        r"""
+        Return the cumulative count of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = ["x", "k", None, "d"]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_count(reverse=True)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    3
+            1    2
+            2    1
+            3    1
+            dtype: int64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [u32]
+            [
+                3
+                2
+                1
+                1
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                2,
+                1,
+                1
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_count(reverse=reverse)
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 

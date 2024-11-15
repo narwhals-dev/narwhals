@@ -749,6 +749,10 @@ class DaskExpr:
         msg = "`Expr.mode` is not supported for the Dask backend."
         raise NotImplementedError(msg)
 
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        msg = "`Expr.cum_count` is not supported for the Dask backend."
+        raise NotImplementedError(msg)
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

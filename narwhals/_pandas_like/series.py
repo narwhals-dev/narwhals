@@ -756,6 +756,15 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        not_na_series = ~self._native_series.isna()
+        result = (
+            not_na_series.cumsum()
+            if not reverse
+            else len(self) - not_na_series.cumsum() + not_na_series - 1
+        )
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
