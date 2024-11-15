@@ -749,7 +749,7 @@ def narwhalify(
     converted back to the original dataframe/series type, while if the output is another
     type it will be left as is.
 
-    By setting `pass_through=True`, then every input and every output will be required to be a
+    By setting `pass_through=False`, then every input and every output will be required to be a
     dataframe/series-like object.
 
     Instead of writing
