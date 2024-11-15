@@ -3263,12 +3263,6 @@ class ExprStringNamespace(Generic[T]):
     def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
         """Convert to Datetime dtype.
 
-        Notes:
-            pandas defaults to nanosecond time unit, Polars to microsecond.
-            Prior to pandas 2.0, nanoseconds were the only time unit supported
-            in pandas, with no ability to set any other one. The ability to
-            set the time unit in pandas, if the version permits, will arrive.
-
         Warning:
             As different backends auto-infer format in different ways, if `format=None`
             there is no guarantee that the result will be equal.
@@ -3279,6 +3273,12 @@ class ExprStringNamespace(Generic[T]):
 
         Returns:
             A new expression.
+
+        Notes:
+            pandas defaults to nanosecond time unit, Polars to microsecond.
+            Prior to pandas 2.0, nanoseconds were the only time unit supported
+            in pandas, with no ability to set any other one. The ability to
+            set the time unit in pandas, if the version permits, will arrive.
 
         Examples:
             >>> import pandas as pd
@@ -3975,13 +3975,13 @@ class ExprDateTimeNamespace(Generic[T]):
     def total_minutes(self: Self) -> T:
         """Get total minutes.
 
+        Returns:
+            A new expression.
+
         Notes:
             The function outputs the total minutes in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -4119,13 +4119,13 @@ class ExprDateTimeNamespace(Generic[T]):
     def total_microseconds(self: Self) -> T:
         """Get total microseconds.
 
+        Returns:
+            A new expression.
+
         Notes:
             The function outputs the total microseconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -4173,13 +4173,13 @@ class ExprDateTimeNamespace(Generic[T]):
     def total_nanoseconds(self: Self) -> T:
         """Get total nanoseconds.
 
+        Returns:
+            A new expression.
+
         Notes:
             The function outputs the total nanoseconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -4931,6 +4931,7 @@ def sum(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
     Returns:
         A new expression.
 
@@ -4980,6 +4981,7 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
     Returns:
         A new expression.
 
@@ -5030,6 +5032,7 @@ def median(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
     Returns:
         A new expression.
 
