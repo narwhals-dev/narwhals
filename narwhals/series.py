@@ -2630,8 +2630,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.mode())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
-        r"""
-        Return the cumulative count of the non-null values in the series.
+        r"""Return the cumulative count of the non-null values in the series.
 
         Arguments:
             reverse: reverse the operation
