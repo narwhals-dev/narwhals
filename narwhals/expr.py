@@ -4020,13 +4020,13 @@ class ExprDateTimeNamespace(Generic[T]):
     def total_seconds(self: Self) -> T:
         """Get total seconds.
 
+        Returns:
+            A new expression.
+
         Notes:
             The function outputs the total seconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -4065,13 +4065,13 @@ class ExprDateTimeNamespace(Generic[T]):
     def total_milliseconds(self: Self) -> T:
         """Get total milliseconds.
 
+        Returns:
+            A new expression.
+
         Notes:
             The function outputs the total milliseconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` and `cast` in this case.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
