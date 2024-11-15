@@ -2310,8 +2310,8 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent statement.
-        Accepts one or more boolean expressions, which are implicitly combined with `&`.
-        String input is parsed as a column name.
+            Accepts one or more boolean expressions, which are implicitly combined with `&`.
+            String input is parsed as a column name.
 
     Returns:
         A "when" object, which `.then` can be called on.
