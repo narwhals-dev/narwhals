@@ -1209,6 +1209,9 @@ def narwhalify(
 def all() -> Expr:
     """Instantiate an expression representing all columns.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -1307,6 +1310,9 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1734,6 +1740,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
+    Returns:
+        A new expression.
+
     Notes:
         pandas and Polars handle null values differently.
 
@@ -1800,6 +1809,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Returns:
+        A new expression.
 
     Notes:
         pandas and Polars handle null values differently.
@@ -1869,6 +1881,9 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -1929,6 +1944,9 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import narwhals as nw
         >>> import pandas as pd
@@ -1983,6 +2001,9 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
