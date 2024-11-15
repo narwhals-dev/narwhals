@@ -4721,7 +4721,6 @@ def col(*names: str | Iterable[str]) -> Expr:
     Returns:
         A new expression.
 
-
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -5404,7 +5403,9 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     If not appended, and none of the conditions are `True`, `None` will be returned.
 
     Arguments:
-        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+        predicates: Condition(s) that must be met in order to apply the subsequent statement.
+        Accepts one or more boolean expressions, which are implicitly combined with `&`.
+        String input is parsed as a column name.
 
     Returns:
         A "when" object, which `.then` can be called on.

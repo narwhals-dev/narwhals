@@ -1262,6 +1262,9 @@ def col(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to use in the aggregation function.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -1358,6 +1361,9 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 def len() -> Expr:
     """Return the number of rows.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -1402,6 +1408,9 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
     Arguments:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will be inferred.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1454,6 +1463,9 @@ def min(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -1501,6 +1513,9 @@ def max(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -1547,6 +1562,9 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1596,6 +1614,9 @@ def median(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -1642,6 +1663,9 @@ def sum(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1690,6 +1714,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -2189,6 +2216,9 @@ def concat_str(
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import narwhals as nw
         >>> import pandas as pd
@@ -2268,12 +2298,23 @@ class Then(NwThen, Expr):
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """Start a `when-then-otherwise` expression.
 
-    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
-    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
-    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+    Expression similar to an `if-else` statement in Python. Always initiated by a
+    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by
+    chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif`
+    blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to
+    `True` will be picked.
+    If none of the conditions are `True`, an optional
+    `.otherwise(<value if all statements are false>)` can be appended at the end.
+    If not appended, and none of the conditions are `True`, `None` will be returned.
 
     Arguments:
-        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+        predicates: Condition(s) that must be met in order to apply the subsequent statement.
+        Accepts one or more boolean expressions, which are implicitly combined with `&`.
+        String input is parsed as a column name.
+
+    Returns:
+        A "when" object, which `.then` can be called on.
 
     Examples:
         >>> import pandas as pd
