@@ -460,11 +460,11 @@ class Expr:
     def median(self) -> Self:
         """Get median value.
 
-        Notes:
-            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
-
         Returns:
             A new expression.
+
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
 
         Examples:
             >>> import pandas as pd
@@ -1012,6 +1012,9 @@ class Expr:
     def diff(self) -> Self:
         """Returns the difference between each element and the previous one.
 
+        Returns:
+            A new expression.
+
         Notes:
             pandas may change the dtype here, for example when introducing missing
             values in an integer column. To ensure, that the dtype doesn't change,
@@ -1020,9 +1023,6 @@ class Expr:
             do:
 
                 nw.col("a").diff().fill_null(0).cast(nw.Int64)
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -1072,6 +1072,9 @@ class Expr:
     def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
 
+        Returns:
+            A new expression.
+
         Notes:
             pandas may change the dtype here, for example when introducing missing
             values in an integer column. To ensure, that the dtype doesn't change,
@@ -1080,9 +1083,6 @@ class Expr:
             do:
 
                 nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -2026,12 +2026,12 @@ class Expr:
     def null_count(self) -> Self:
         r"""Count null values.
 
+        Returns:
+            A new expression.
+
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import narwhals as nw
@@ -2184,17 +2184,19 @@ class Expr:
     ) -> Self:
         r"""Get quantile value.
 
-        Note:
-            - pandas and Polars may have implementation differences for a given interpolation method.
-            - [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint'
-            as interpolation method - use 'linear' which is closest to the native 'dask' - method.
-
         Arguments:
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
         Returns:
             A new expression.
+
+        Note:
+            - pandas and Polars may have implementation differences for a given interpolation method.
+            - [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has
+                its own method to approximate quantile and it doesn't implement 'nearest', 'higher',
+                'lower', 'midpoint' as interpolation method - use 'linear' which is closest to the
+                native 'dask' - method.
 
         Examples:
             >>> import narwhals as nw
@@ -2359,7 +2361,6 @@ class Expr:
 
             Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
 
-
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2409,7 +2410,6 @@ class Expr:
 
         Returns:
             A new expression.
-
 
         Examples:
             >>> import narwhals as nw
@@ -2522,7 +2522,6 @@ class Expr:
 
         Returns:
             A new expression.
-
 
         Examples:
             >>> import pandas as pd
@@ -2647,7 +2646,6 @@ class Expr:
 
         Returns:
             A new expression.
-
 
         Examples:
             >>> import pandas as pd
@@ -3281,7 +3279,6 @@ class ExprStringNamespace(Generic[T]):
 
         Returns:
             A new expression.
-
 
         Examples:
             >>> import pandas as pd
