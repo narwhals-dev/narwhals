@@ -1,6 +1,7 @@
-"""
+"""Schema.
+
 Adapted from Polars implementation at:
-https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py
+https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py.
 """
 
 from __future__ import annotations
@@ -22,8 +23,7 @@ __all__ = ["Schema"]
 
 
 class Schema(BaseSchema):
-    """
-    Ordered mapping of column names to their data type.
+    """Ordered mapping of column names to their data type.
 
     Arguments:
         schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None

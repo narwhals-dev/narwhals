@@ -42,8 +42,7 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
-    """
-    Concatenate multiple DataFrames, LazyFrames into a single entity.
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
@@ -61,7 +60,6 @@ def concat(
         NotImplementedError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
-
         Let's take an example of vertical concatenation:
 
         >>> import pandas as pd
@@ -140,7 +138,6 @@ def concat(
         └─────┴─────┴──────┴──────┘
 
     """
-
     if how not in ("horizontal", "vertical"):  # pragma: no cover
         msg = "Only horizontal and vertical concatenations are supported"
         raise NotImplementedError(msg)
@@ -163,8 +160,7 @@ def new_series(
     *,
     native_namespace: ModuleType,
 ) -> Series:
-    """
-    Instantiate Narwhals Series from iterable (e.g. list or array).
+    """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -288,8 +284,7 @@ def from_dict(
     *,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
-    """
-    Instantiate DataFrame from dictionary.
+    """Instantiate DataFrame from dictionary.
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -439,8 +434,7 @@ def _from_dict_impl(
 def from_arrow(
     native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
-    """
-    Construct a DataFrame from an object which supports the PyCapsule Interface.
+    """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
@@ -534,7 +528,7 @@ def from_arrow(
 
 
 def _get_sys_info() -> dict[str, str]:
-    """System information
+    """System information.
 
     Returns system and Python version information
 
@@ -553,7 +547,7 @@ def _get_sys_info() -> dict[str, str]:
 
 
 def _get_deps_info() -> dict[str, str]:
-    """Overview of the installed version of main dependencies
+    """Overview of the installed version of main dependencies.
 
     This function does not import the modules to collect the version numbers
     but instead relies on standard Python package metadata.
@@ -590,15 +584,12 @@ def _get_deps_info() -> dict[str, str]:
 
 
 def show_versions() -> None:
-    """
-    Print useful debugging information
+    """Print useful debugging information.
 
     Examples:
-
         >>> from narwhals import show_versions
         >>> show_versions()  # doctest: +SKIP
     """
-
     sys_info = _get_sys_info()
     deps_info = _get_deps_info()
 
@@ -614,8 +605,7 @@ def show_versions() -> None:
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series,
 ) -> Literal["full", "interchange"]:
-    """
-    Level of support Narwhals has for current object.
+    """Level of support Narwhals has for current object.
 
     This can be one of:
 

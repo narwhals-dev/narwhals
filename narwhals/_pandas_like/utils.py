@@ -171,8 +171,7 @@ def create_compliant_series(
 def horizontal_concat(
     dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
-    """
-    Concatenate (native) DataFrames horizontally.
+    """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -192,8 +191,7 @@ def horizontal_concat(
 def vertical_concat(
     dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
-    """
-    Concatenate (native) DataFrames vertically.
+    """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """
@@ -644,8 +642,11 @@ def select_columns_by_name(
     backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> T:
-    """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
-    generally more performant."""
+    """Select columns by name.
+
+    Prefer this over `df.loc[:, column_names]` as it's
+    generally more performant.
+    """
     if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):

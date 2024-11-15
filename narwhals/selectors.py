@@ -10,8 +10,7 @@ class Selector(Expr): ...
 
 
 def by_dtype(*dtypes: Any) -> Expr:
-    """
-    Select columns based on their dtype.
+    """Select columns based on their dtype.
 
     Arguments:
         dtypes: one or data types to select
@@ -54,8 +53,7 @@ def by_dtype(*dtypes: Any) -> Expr:
 
 
 def numeric() -> Expr:
-    """
-    Select numeric columns.
+    """Select numeric columns.
 
     Examples:
         >>> import narwhals as nw
@@ -95,8 +93,7 @@ def numeric() -> Expr:
 
 
 def boolean() -> Expr:
-    """
-    Select boolean columns.
+    """Select boolean columns.
 
     Examples:
         >>> import narwhals as nw
@@ -136,8 +133,7 @@ def boolean() -> Expr:
 
 
 def string() -> Expr:
-    """
-    Select string columns.
+    """Select string columns.
 
     Examples:
         >>> import narwhals as nw
@@ -177,8 +173,7 @@ def string() -> Expr:
 
 
 def categorical() -> Expr:
-    """
-    Select categorical columns.
+    """Select categorical columns.
 
     Examples:
         >>> import narwhals as nw
@@ -218,8 +213,7 @@ def categorical() -> Expr:
 
 
 def all() -> Expr:
-    """
-    Select all columns.
+    """Select all columns.
 
     Examples:
         >>> import narwhals as nw

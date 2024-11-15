@@ -614,11 +614,8 @@ class ArrowDataFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()

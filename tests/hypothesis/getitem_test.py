@@ -49,9 +49,7 @@ def string_slice(
     draw: st.DrawFn,
     strs: Sequence[str],
 ) -> slice:
-    """
-    Return slices such as `"a":`, `"a":"c"`, `"a":"c":2`, etc.
-    """
+    """Return slices such as `"a":`, `"a":"c"`, `"a":"c":2`, etc."""
     n_cols = len(strs)
     index_slice = draw(
         st.slices(n_cols).filter(
@@ -145,10 +143,7 @@ def test_getitem(
     constructor: Any,
     selector: Any,
 ) -> None:
-    """
-    Compare __getitem__ against polars.
-    """
-
+    """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.
 
