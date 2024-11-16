@@ -20,6 +20,7 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals._exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -289,7 +290,14 @@ class ArrowDataFrame:
     ) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        try:
+            new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        except KeyError as e:
+            missing_columns = [x for x in exprs if x not in self._native_frame.column_names]
+            raise ColumnNotFoundError(
+            f"The following columns were not found: {missing_columns}"
+            f"\n\nHint: Did you mean one of these columns {self._native_frame.column_names}?"
+        ) from e
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))

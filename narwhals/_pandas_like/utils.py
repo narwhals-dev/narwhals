@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
+from narwhals._exceptions import ColumnNotFoundError
 
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
@@ -646,10 +647,19 @@ def select_columns_by_name(
 ) -> T:
     """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
     generally more performant."""
+    msg = ("The following columns were not found: {}\n\nHint: Did you mean one of these columns {}?")
     if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
-    return df[column_names]  # type: ignore[no-any-return, index]
+        try:
+            return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
+        except KeyError as e:
+            missing_columns = [x for x in column_names if x not in df.columns]
+            raise ColumnNotFoundError(msg.format(missing_columns, df.columns.tolist())) from e
+    try:
+        return df[column_names]  # type: ignore[no-any-return, index]
+    except KeyError as e:
+        missing_columns = [x for x in column_names if x not in df.columns]
+        raise ColumnNotFoundError(msg.format(missing_columns, df.columns.tolist())) from e
