@@ -12,6 +12,7 @@
         - cast
         - count
         - cum_count
+        - cum_max
         - cum_min
         - cum_sum
         - diff

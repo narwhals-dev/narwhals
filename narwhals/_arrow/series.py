@@ -838,6 +838,22 @@ class ArrowSeries:
         )
         return self._from_native_series(result)
 
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_max method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        native_series = self._native_series
+
+        result = (
+            pc.cumulative_max(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_max(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
