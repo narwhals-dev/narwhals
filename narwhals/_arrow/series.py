@@ -391,12 +391,16 @@ class ArrowSeries:
 
         return self._from_native_series(pc.abs(self._native_series))
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return self._from_native_series(
-            pc.cumulative_sum(self._native_series, skip_nulls=True)
+        native_series = self._native_series
+        result = (
+            pc.cumulative_sum(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_sum(native_series[::-1], skip_nulls=True)[::-1]
         )
+        return self._from_native_series(result)
 
     def round(self, decimals: int) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -815,12 +819,7 @@ class ArrowSeries:
         )[self.name]
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        not_na_series = (~self.is_null()).cast(self._dtypes.UInt32())
-        return (
-            not_na_series.cum_sum()
-            if not reverse
-            else len(self) - not_na_series.cum_sum() + not_na_series - 1
-        )
+        return (~self.is_null()).cast(self._dtypes.UInt32()).cum_sum(reverse=reverse)
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (13, 0, 0):
@@ -851,6 +850,22 @@ class ArrowSeries:
             pc.cumulative_max(native_series, skip_nulls=True)
             if not reverse
             else pc.cumulative_max(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_max method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        native_series = self._native_series
+
+        result = (
+            pc.cumulative_prod(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_prod(native_series[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 

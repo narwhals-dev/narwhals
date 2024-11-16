@@ -18,6 +18,7 @@
         - cum_count
         - cum_max
         - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls

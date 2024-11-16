@@ -1,38 +1,39 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [0, 1, 2, None, 4],
-    "b": [1, 2, 3, 5, 3],
-    "c": [5, 4, 3, 2, 1],
+data = {"a": [1, 2, None, 4]}
+expected = {
+    "cum_sum": [1, 3, None, 7],
+    "reverse_cum_sum": [7, 6, None, 4],
 }
 
 
-def test_cum_sum_simple(constructor: Constructor) -> None:
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_sum_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
+) -> None:
+    if "dask" in str(constructor) and reverse:
+        request.applymarker(pytest.mark.xfail)
+
+    name = "reverse_cum_sum" if reverse else "cum_sum"
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a", "b", "c").cum_sum())
-    expected = {
-        "a": [0, 1, 3, None, 7],
-        "b": [1, 3, 6, 11, 14],
-        "c": [5, 9, 12, 14, 15],
-    }
-    assert_equal_data(result, expected)
-
-
-def test_cum_sum_simple_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-    expected = {
-        "a": [0, 1, 3, None, 7],
-        "b": [1, 3, 6, 11, 14],
-        "c": [5, 9, 12, 14, 15],
-    }
     result = df.select(
-        df["a"].cum_sum(),
-        df["b"].cum_sum(),
-        df["c"].cum_sum(),
+        nw.col("a").cum_sum(reverse=reverse).alias(name),
+    )
+
+    assert_equal_data(result, {name: expected[name]})
+
+
+def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(
+        cum_sum=df["a"].cum_sum(),
+        reverse_cum_sum=df["a"].cum_sum(reverse=True),
     )
     assert_equal_data(result, expected)

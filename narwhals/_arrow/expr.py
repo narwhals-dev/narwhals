@@ -228,8 +228,8 @@ class ArrowExpr:
     def diff(self) -> Self:
         return reuse_series_implementation(self, "diff")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def round(self, decimals: int) -> Self:
         return reuse_series_implementation(self, "round", decimals)
@@ -438,6 +438,9 @@ class ArrowExpr:
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

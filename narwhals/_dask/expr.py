@@ -434,10 +434,58 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
         return self._from_call(
             lambda _input: _input.cumsum(),
             "cum_sum",
+            returns_scalar=False,
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: (~_input.isna()).astype(int).cumsum(),
+            "cum_count",
+            returns_scalar=False,
+        )
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummin(),
+            "cum_min",
+            returns_scalar=False,
+        )
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummax(),
+            "cum_max",
+            returns_scalar=False,
+        )
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cumprod(),
+            "cum_prod",
             returns_scalar=False,
         )
 
@@ -747,10 +795,6 @@ class DaskExpr:
 
     def mode(self: Self) -> Self:
         msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
-    def cum_count(self: Self, *, reverse: bool) -> Self:
-        msg = "`Expr.cum_count` is not supported for the Dask backend."
         raise NotImplementedError(msg)
 
     @property
