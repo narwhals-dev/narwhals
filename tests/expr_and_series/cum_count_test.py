@@ -9,21 +9,26 @@ from tests.utils import assert_equal_data
 
 data = {"a": ["x", "y", None, "z"]}
 
+expected = {
+    "cum_count": [1, 2, 2, 3],
+    "reverse_cum_count": [3, 2, 1, 1],
+}
 
-def test_cum_count_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask" in str(constructor):
+
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_count_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
+) -> None:
+    if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
 
+    name = "reverse_cum_count" if reverse else "cum_count"
     df = nw.from_native(constructor(data))
     result = df.select(
-        cum_count=nw.col("a").cum_count(),
-        reverse_cum_count=nw.col("a").cum_count(reverse=True),
+        nw.col("a").cum_count(reverse=reverse).alias(name),
     )
-    expected = {
-        "cum_count": [1, 2, 2, 3],
-        "reverse_cum_count": [3, 2, 1, 1],
-    }
-    assert_equal_data(result, expected)
+
+    assert_equal_data(result, {name: expected[name]})
 
 
 def test_cum_count_series(constructor_eager: ConstructorEager) -> None:

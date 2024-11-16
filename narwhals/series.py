@@ -984,8 +984,11 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.abs())
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Calculate the cumulative sum.
+
+        Arguments:
+            reverse: reverse the operation
 
         Examples:
             >>> import pandas as pd
@@ -1017,7 +1020,9 @@ class Series:
                9
             ]
         """
-        return self._from_compliant_series(self._compliant_series.cum_sum())
+        return self._from_compliant_series(
+            self._compliant_series.cum_sum(reverse=reverse)
+        )
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         """Returns unique values of the series.
@@ -2783,6 +2788,58 @@ class Series:
         """
         return self._from_compliant_series(
             self._compliant_series.cum_max(reverse=reverse)
+        )
+
+    def cum_prod(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative product of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1, 3, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_prod()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    1.0
+            1    3.0
+            2    NaN
+            3    6.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               3
+               null
+               6
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                3,
+                null,
+                6
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_prod(reverse=reverse)
         )
 
     def __iter__(self: Self) -> Iterator[Any]:

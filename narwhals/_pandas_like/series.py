@@ -494,8 +494,14 @@ class PandasLikeSeries:
     def abs(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.abs())
 
-    def cum_sum(self) -> PandasLikeSeries:
-        return self._from_native_series(self._native_series.cumsum())
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumsum(skipna=True)
+            if not reverse
+            else native_series[::-1].cumsum(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
 
     def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
@@ -780,6 +786,15 @@ class PandasLikeSeries:
             native_series.cummax(skipna=True)
             if not reverse
             else native_series[::-1].cummax(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumprod(skipna=True)
+            if not reverse
+            else native_series[::-1].cumprod(skipna=True)[::-1]
         )
         return self._from_native_series(result)
 
