@@ -765,6 +765,24 @@ class PandasLikeSeries:
         )
         return self._from_native_series(result)
 
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummin(skipna=True)
+            if not reverse
+            else native_series[::-1].cummin(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummax(skipna=True)
+            if not reverse
+            else native_series[::-1].cummax(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 

@@ -2681,6 +2681,110 @@ class Series:
             self._compliant_series.cum_count(reverse=reverse)
         )
 
+    def cum_min(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative min of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [3, 1, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_min()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    3.0
+            1    1.0
+            2    NaN
+            3    1.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               3
+               1
+               null
+               1
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                1,
+                null,
+                1
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_min(reverse=reverse)
+        )
+
+    def cum_max(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative max of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1, 3, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_max()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    1.0
+            1    3.0
+            2    NaN
+            3    3.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               3
+               null
+               3
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                3,
+                null,
+                3
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_max(reverse=reverse)
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 

@@ -2747,6 +2747,118 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).cum_count(reverse=reverse))
 
+    def cum_min(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative min of the non-null values in the column.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [3, 1, None, 2]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("a").cum_min().alias("cum_min"),
+            ...         nw.col("a").cum_min(reverse=True).alias("cum_min_reverse"),
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                 a  cum_min  cum_min_reverse
+            0  3.0      3.0              1.0
+            1  1.0      1.0              1.0
+            2  NaN      NaN              NaN
+            3  2.0      1.0              2.0
+
+            >>> func(pl.DataFrame(data))
+            shape: (4, 3)
+            ┌──────┬─────────┬─────────────────┐
+            │ a    ┆ cum_min ┆ cum_min_reverse │
+            │ ---  ┆ ---     ┆ ---             │
+            │ i64  ┆ i64     ┆ i64             │
+            ╞══════╪═════════╪═════════════════╡
+            │ 3    ┆ 3       ┆ 1               │
+            │ 1    ┆ 1       ┆ 1               │
+            │ null ┆ null    ┆ null            │
+            │ 2    ┆ 1       ┆ 2               │
+            └──────┴─────────┴─────────────────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: int64
+            cum_min: int64
+            cum_min_reverse: int64
+            ----
+            a: [[3,1,null,2]]
+            cum_min: [[3,1,null,1]]
+            cum_min_reverse: [[1,1,null,2]]
+        """
+        return self.__class__(lambda plx: self._call(plx).cum_min(reverse=reverse))
+
+    def cum_max(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative max of the non-null values in the column.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1, 3, None, 2]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("a").cum_max().alias("cum_max"),
+            ...         nw.col("a").cum_max(reverse=True).alias("cum_max_reverse"),
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                 a  cum_max  cum_max_reverse
+            0  1.0      1.0              3.0
+            1  3.0      3.0              3.0
+            2  NaN      NaN              NaN
+            3  2.0      3.0              2.0
+
+            >>> func(pl.DataFrame(data))
+            shape: (4, 3)
+            ┌──────┬─────────┬─────────────────┐
+            │ a    ┆ cum_max ┆ cum_max_reverse │
+            │ ---  ┆ ---     ┆ ---             │
+            │ i64  ┆ i64     ┆ i64             │
+            ╞══════╪═════════╪═════════════════╡
+            │ 1    ┆ 1       ┆ 3               │
+            │ 3    ┆ 3       ┆ 3               │
+            │ null ┆ null    ┆ null            │
+            │ 2    ┆ 3       ┆ 2               │
+            └──────┴─────────┴─────────────────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: int64
+            cum_max: int64
+            cum_max_reverse: int64
+            ----
+            a: [[1,3,null,2]]
+            cum_max: [[1,3,null,3]]
+            cum_max_reverse: [[3,3,null,2]]
+        """
+        return self.__class__(lambda plx: self._call(plx).cum_max(reverse=reverse))
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

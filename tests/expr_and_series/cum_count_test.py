@@ -7,9 +7,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": ["x", "y", None, "z"],
-}
+data = {"a": ["x", "y", None, "z"]}
 
 
 def test_cum_count_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
