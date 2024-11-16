@@ -33,7 +33,9 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/series/.*|
+                narwhals/series\.py$|
+                # some false positives in this one
+                narwhals/translate\.py$|
                 narwhals/_.*/.*
             )$
 - repo: local
