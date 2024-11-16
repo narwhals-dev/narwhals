@@ -660,12 +660,11 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        try:
-            return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
-        except KeyError as e:  # pragma: no cover
-            available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-            missing_columns = [x for x in column_names if x not in available_columns]
-            raise ColumnNotFoundError(missing_columns, available_columns) from e
+        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
+        missing_columns = [x for x in column_names if x not in available_columns]
+        if missing_columns:
+            raise ColumnNotFoundError(missing_columns, available_columns)
+        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
     try:
         return df[column_names]  # type: ignore[no-any-return, index]
     except KeyError as e:

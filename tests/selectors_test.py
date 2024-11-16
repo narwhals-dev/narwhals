@@ -103,8 +103,6 @@ def test_set_ops_invalid(invalid_constructor: Constructor) -> None:
         df.select(1 & numeric())
 
 
-# old pandas would raise a future warning
-@pytest.mark.filterwarnings("ignore:.*Passing list-likes to .loc.*:FutureWarning")
 def test_missing_columns(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     selected_columns = ["a", "e", "f"]
