@@ -70,7 +70,7 @@ def test_missing_columns(constructor: Constructor) -> None:
         # and we have no way to recover exactly which columns the user
         # tried selecting. So, we just emit their message (which varies
         # across versions...)
-        msg = r"e"
+        msg = "e|f"
         if isinstance(df, nw.LazyFrame):
             with pytest.raises(ColumnNotFoundError, match=msg):
                 df.select(selected_columns).collect()
