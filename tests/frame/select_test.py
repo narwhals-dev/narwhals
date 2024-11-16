@@ -7,6 +7,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -72,8 +73,11 @@ def test_missing_columns(constructor: Constructor) -> None:
         msg = r"e"
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.lazy().select(selected_columns).collect()
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.lazy().drop(selected_columns, strict=True).collect()
+        if POLARS_VERSION >= (1,):
+            # Old Polars versions wouldn't raise an error
+            # at all here
+            with pytest.raises(ColumnNotFoundError, match=msg):
+                df.lazy().drop(selected_columns, strict=True).collect()
     else:
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.select(selected_columns)
