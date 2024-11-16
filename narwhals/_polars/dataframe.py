@@ -88,6 +88,8 @@ class PolarsDataFrame:
                     getattr(self._native_frame, attr)(*args, **kwargs)
                 )
             except pl.exceptions.ColumnNotFoundError as e:
+                msg = str(e)
+                msg += f"\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(str(e)) from e
 
         return func
