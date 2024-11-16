@@ -14,7 +14,6 @@ from narwhals.selectors import by_dtype
 from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
-from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -104,9 +103,9 @@ def test_set_ops_invalid(invalid_constructor: Constructor) -> None:
         df.select(1 & numeric())
 
 
-def test_missing_columns(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
+# old pandas would raise a future warning
+@pytest.mark.filterwarnings("ignore:Passing list-likes to .loc")
+def test_missing_columns(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     selected_columns = ["a", "e", "f"]
     missing_columns = [x for x in selected_columns if x not in df.columns]
@@ -114,8 +113,6 @@ def test_missing_columns(
         f"The following columns were not found: {missing_columns}"
         f"\n\nHint: Did you mean one of these columns: {df.columns}?"
     )
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5):
-        request.applymarker(pytest.mark.xfail)
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(selected_columns)
     with pytest.raises(ColumnNotFoundError, match=msg):
