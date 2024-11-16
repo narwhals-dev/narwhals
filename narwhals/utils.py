@@ -9,6 +9,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import Union
 from typing import cast
 from warnings import warn
 
@@ -40,7 +41,9 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
 
-    FrameOrSeriesT = TypeVar("FrameOrSeriesT", LazyFrame[Any], DataFrame[Any], Series)
+    FrameOrSeriesT = TypeVar(
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+    )
 
 
 class Implementation(Enum):
