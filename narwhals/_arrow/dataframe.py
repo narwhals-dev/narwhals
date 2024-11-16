@@ -297,8 +297,8 @@ class ArrowDataFrame:
                 x for x in exprs if x not in self._native_frame.column_names
             ]
             raise ColumnNotFoundError(
-                missing_columns,  # type: ignore[arg-type]
-                self._native_frame.column_names,
+                missing_columns=missing_columns,  # type: ignore[arg-type]
+                available_columns=self._native_frame.column_names,
             ) from e
         if not new_series:
             # return empty dataframe, like Polars does

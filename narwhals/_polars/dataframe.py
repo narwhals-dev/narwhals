@@ -92,7 +92,8 @@ class PolarsDataFrame:
                     arg for arg in args if arg not in self._native_frame.columns
                 ]
                 raise ColumnNotFoundError(
-                    missing_columns, self._native_frame.columns
+                    missing_columns=missing_columns,
+                    available_columns=self._native_frame.columns,
                 ) from e
 
         return func
