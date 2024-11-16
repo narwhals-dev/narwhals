@@ -748,7 +748,7 @@ def narwhalify(
 ) -> Callable[..., Any]:
     """Decorate function so it becomes dataframe-agnostic.
 
-    This will try to convert any dataframe/series-like object into the Narwhals  # noqa: DAR101
+    This will try to convert any dataframe/series-like object into the Narwhals
     respective DataFrame/Series, while leaving the other parameters as they are.
     Similarly, if the output of the function is a Narwhals DataFrame or Series, it will be
     converted back to the original dataframe/series type, while if the output is another
