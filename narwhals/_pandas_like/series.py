@@ -108,7 +108,7 @@ class PandasLikeSeries:
             Implementation.MODIN,
             Implementation.CUDF,
         }:
-            return self._implementation._to_native_namespace()
+            return self._implementation.to_native_namespace()
 
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)

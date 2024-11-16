@@ -53,7 +53,7 @@ class Implementation(Enum):
     UNKNOWN = auto()
 
     @classmethod
-    def _from_native_namespace(
+    def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
     ) -> Implementation:  # pragma: no cover
         """Instantiate Implementation object from a native namespace module.
@@ -74,7 +74,7 @@ class Implementation(Enum):
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
-    def _to_native_namespace(self: Self) -> ModuleType:
+    def to_native_namespace(self: Self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:

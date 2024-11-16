@@ -161,7 +161,7 @@ def create_compliant_series(
     from narwhals._pandas_like.series import PandasLikeSeries
 
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        series = implementation._to_native_namespace().Series(
+        series = implementation.to_native_namespace().Series(
             iterable, index=index, name=""
         )
         return PandasLikeSeries(
@@ -188,7 +188,7 @@ def horizontal_concat(
             if implementation is Implementation.PANDAS and backend_version < (3,)
             else {}
         )
-        return implementation._to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
+        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
 
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
@@ -218,7 +218,7 @@ def vertical_concat(
             if implementation is Implementation.PANDAS and backend_version < (3,)
             else {}
         )
-        return implementation._to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
+        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
 
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
@@ -234,7 +234,7 @@ def native_series_from_iterable(
     """Return native series."""
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
         extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
-        return implementation._to_native_namespace().Series(
+        return implementation.to_native_namespace().Series(
             data, name=name, index=index, **extra_kwargs
         )
 
@@ -571,7 +571,7 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
 
 def to_datetime(implementation: Implementation) -> Any:
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return implementation._to_native_namespace().to_datetime
+        return implementation.to_native_namespace().to_datetime
 
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
