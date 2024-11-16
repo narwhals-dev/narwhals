@@ -24,9 +24,7 @@ def test_cum_min_expr(
     if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
 
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor
-    ):
+    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
@@ -46,9 +44,7 @@ def test_cum_min_expr(
 def test_cum_min_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
+    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
