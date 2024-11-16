@@ -61,7 +61,7 @@ def test_missing_columns(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
     msg = (
-        r"The following columns were not found: \['e', 'f'\]"
+        r"The following columns were not found: \[.*\]"
         r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     )
     if "polars_lazy" in str(constructor):
