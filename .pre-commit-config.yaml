@@ -32,6 +32,7 @@ repos:
         exclude: |
             (?x)^(
                 tests/.*|
+                # TODO: gradually enable
                 narwhals/series/.*|
                 narwhals/_.*/.*
             )$
