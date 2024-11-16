@@ -2745,7 +2745,7 @@ class Expr:
             pyarrow.Table
             a: string
             cum_count: uint32
-            cum_count_reverse: int64
+            cum_count_reverse: uint32
             ----
             a: [["x","k",null,"d"]]
             cum_count: [[1,2,2,3]]
