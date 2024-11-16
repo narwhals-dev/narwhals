@@ -2954,14 +2954,14 @@ class Expr:
         return ExprNameNamespace(self)
 
 
-T = TypeVar("T", bound=Expr)
+ExprT = TypeVar("ExprT", bound=Expr)
 
 
-class ExprCatNamespace(Generic[T]):
-    def __init__(self: Self, expr: T) -> None:
+class ExprCatNamespace(Generic[ExprT]):
+    def __init__(self: Self, expr: ExprT) -> None:
         self._expr = expr
 
-    def get_categories(self: Self) -> T:
+    def get_categories(self: Self) -> ExprT:
         """Get unique categories from column.
 
         Returns:
@@ -3006,11 +3006,11 @@ class ExprCatNamespace(Generic[T]):
         )
 
 
-class ExprStringNamespace(Generic[T]):
-    def __init__(self: Self, expr: T) -> None:
+class ExprStringNamespace(Generic[ExprT]):
+    def __init__(self: Self, expr: ExprT) -> None:
         self._expr = expr
 
-    def len_chars(self: Self) -> T:
+    def len_chars(self: Self) -> ExprT:
         r"""Return the length of each string as the number of characters.
 
         Returns:
@@ -3058,7 +3058,7 @@ class ExprStringNamespace(Generic[T]):
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> T:
+    ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 
         Arguments:
@@ -3100,7 +3100,9 @@ class ExprStringNamespace(Generic[T]):
             )
         )
 
-    def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
+    def replace_all(
+        self: Self, pattern: str, value: str, *, literal: bool = False
+    ) -> ExprT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
@@ -3141,7 +3143,7 @@ class ExprStringNamespace(Generic[T]):
             )
         )
 
-    def strip_chars(self: Self, characters: str | None = None) -> T:
+    def strip_chars(self: Self, characters: str | None = None) -> ExprT:
         r"""Remove leading and trailing characters.
 
         Arguments:
@@ -3177,7 +3179,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.strip_chars(characters)
         )
 
-    def starts_with(self: Self, prefix: str) -> T:
+    def starts_with(self: Self, prefix: str) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -3224,7 +3226,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.starts_with(prefix)
         )
 
-    def ends_with(self: Self, suffix: str) -> T:
+    def ends_with(self: Self, suffix: str) -> ExprT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -3271,7 +3273,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> ExprT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
@@ -3329,7 +3331,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> T:
+    def slice(self: Self, offset: int, length: int | None = None) -> ExprT:
         r"""Create subslices of the string values of an expression.
 
         Arguments:
@@ -3406,7 +3408,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.slice(offset=offset, length=length)
         )
 
-    def head(self: Self, n: int = 5) -> T:
+    def head(self: Self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
 
         Arguments:
@@ -3456,7 +3458,7 @@ class ExprStringNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
 
-    def tail(self: Self, n: int = 5) -> T:
+    def tail(self: Self, n: int = 5) -> ExprT:
         r"""Take the last n elements of each string.
 
         Arguments:
@@ -3506,7 +3508,7 @@ class ExprStringNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
         """Convert to Datetime dtype.
 
         Warning:
@@ -3568,7 +3570,7 @@ class ExprStringNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
-    def to_uppercase(self: Self) -> T:
+    def to_uppercase(self: Self) -> ExprT:
         r"""Transform string to uppercase variant.
 
         Returns:
@@ -3616,7 +3618,7 @@ class ExprStringNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
 
-    def to_lowercase(self: Self) -> T:
+    def to_lowercase(self: Self) -> ExprT:
         r"""Transform string to lowercase variant.
 
         Returns:
@@ -3659,11 +3661,11 @@ class ExprStringNamespace(Generic[T]):
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
 
 
-class ExprDateTimeNamespace(Generic[T]):
-    def __init__(self: Self, expr: T) -> None:
+class ExprDateTimeNamespace(Generic[ExprT]):
+    def __init__(self: Self, expr: ExprT) -> None:
         self._expr = expr
 
-    def date(self: Self) -> T:
+    def date(self: Self) -> ExprT:
         """Extract the date from underlying DateTime representation.
 
         Returns:
@@ -3707,7 +3709,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
-    def year(self: Self) -> T:
+    def year(self: Self) -> ExprT:
         """Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
@@ -3757,7 +3759,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
-    def month(self: Self) -> T:
+    def month(self: Self) -> ExprT:
         """Extract month from underlying DateTime representation.
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
@@ -3810,7 +3812,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
 
-    def day(self: Self) -> T:
+    def day(self: Self) -> ExprT:
         """Extract day from underlying DateTime representation.
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
@@ -3864,7 +3866,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
 
-    def hour(self: Self) -> T:
+    def hour(self: Self) -> ExprT:
         """Extract hour from underlying DateTime representation.
 
         Returns the hour number from 0 to 23.
@@ -3914,7 +3916,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
 
-    def minute(self: Self) -> T:
+    def minute(self: Self) -> ExprT:
         """Extract minutes from underlying DateTime representation.
 
         Returns the minute number from 0 to 59.
@@ -3967,7 +3969,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
 
-    def second(self: Self) -> T:
+    def second(self: Self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
 
         Returns:
@@ -4019,7 +4021,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
-    def millisecond(self: Self) -> T:
+    def millisecond(self: Self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
 
         Returns:
@@ -4072,7 +4074,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
 
-    def microsecond(self: Self) -> T:
+    def microsecond(self: Self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
 
         Returns:
@@ -4125,7 +4127,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
-    def nanosecond(self: Self) -> T:
+    def nanosecond(self: Self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
 
         Returns:
@@ -4178,7 +4180,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
 
-    def ordinal_day(self: Self) -> T:
+    def ordinal_day(self: Self) -> ExprT:
         """Get ordinal day.
 
         Returns:
@@ -4218,7 +4220,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
-    def total_minutes(self: Self) -> T:
+    def total_minutes(self: Self) -> ExprT:
         """Get total minutes.
 
         Returns:
@@ -4263,7 +4265,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
 
-    def total_seconds(self: Self) -> T:
+    def total_seconds(self: Self) -> ExprT:
         """Get total seconds.
 
         Returns:
@@ -4308,7 +4310,7 @@ class ExprDateTimeNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
 
-    def total_milliseconds(self: Self) -> T:
+    def total_milliseconds(self: Self) -> ExprT:
         """Get total milliseconds.
 
         Returns:
@@ -4362,7 +4364,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.total_milliseconds()
         )
 
-    def total_microseconds(self: Self) -> T:
+    def total_microseconds(self: Self) -> ExprT:
         """Get total microseconds.
 
         Returns:
@@ -4416,7 +4418,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.total_microseconds()
         )
 
-    def total_nanoseconds(self: Self) -> T:
+    def total_nanoseconds(self: Self) -> ExprT:
         """Get total nanoseconds.
 
         Returns:
@@ -4467,7 +4469,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.total_nanoseconds()
         )
 
-    def to_string(self: Self, format: str) -> T:  # noqa: A002
+    def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
         """Convert a Date/Time/Datetime column into a String column with the given format.
 
         Arguments:
@@ -4550,7 +4552,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
-    def replace_time_zone(self: Self, time_zone: str | None) -> T:
+    def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
         """Replace time zone.
 
         Arguments:
@@ -4607,7 +4609,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self: Self, time_zone: str) -> T:
+    def convert_time_zone(self: Self, time_zone: str) -> ExprT:
         """Convert to a new time zone.
 
         If converting from a time-zone-naive column, then conversion happens
@@ -4670,7 +4672,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
         """Return a timestamp in the given time unit.
 
         Arguments:
@@ -4739,11 +4741,11 @@ class ExprDateTimeNamespace(Generic[T]):
         )
 
 
-class ExprNameNamespace(Generic[T]):
-    def __init__(self: Self, expr: T) -> None:
+class ExprNameNamespace(Generic[ExprT]):
+    def __init__(self: Self, expr: ExprT) -> None:
         self._expr = expr
 
-    def keep(self: Self) -> T:
+    def keep(self: Self) -> ExprT:
         r"""Keep the original root name of the expression.
 
         Returns:
@@ -4777,7 +4779,7 @@ class ExprNameNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
-    def map(self: Self, function: Callable[[str], str]) -> T:
+    def map(self: Self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
 
         Arguments:
@@ -4815,7 +4817,7 @@ class ExprNameNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
-    def prefix(self: Self, prefix: str) -> T:
+    def prefix(self: Self, prefix: str) -> ExprT:
         r"""Add a prefix to the root column name of the expression.
 
         Arguments:
@@ -4853,7 +4855,7 @@ class ExprNameNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
 
-    def suffix(self: Self, suffix: str) -> T:
+    def suffix(self: Self, suffix: str) -> ExprT:
         r"""Add a suffix to the root column name of the expression.
 
         Arguments:
@@ -4890,7 +4892,7 @@ class ExprNameNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
 
-    def to_lowercase(self: Self) -> T:
+    def to_lowercase(self: Self) -> ExprT:
         r"""Make the root column name lowercase.
 
         Returns:
@@ -4924,7 +4926,7 @@ class ExprNameNamespace(Generic[T]):
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
 
-    def to_uppercase(self: Self) -> T:
+    def to_uppercase(self: Self) -> ExprT:
         r"""Make the root column name uppercase.
 
         Returns:

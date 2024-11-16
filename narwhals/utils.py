@@ -9,6 +9,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import Union
 from typing import cast
 from warnings import warn
 
@@ -36,10 +37,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeGuard
 
-    from narwhals.dataframe import BaseFrame
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
 
-T = TypeVar("T")
+    FrameOrSeriesT = TypeVar(
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+    )
 
 
 class Implementation(Enum):
@@ -172,7 +176,9 @@ def validate_laziness(items: Iterable[Any]) -> None:
     raise NotImplementedError(msg)
 
 
-def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
+def maybe_align_index(
+    lhs: FrameOrSeriesT, rhs: Series | DataFrame[Any] | LazyFrame[Any]
+) -> FrameOrSeriesT:
     """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
     Arguments:
@@ -267,7 +273,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     return lhs
 
 
-def maybe_get_index(obj: T) -> Any | None:
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -304,11 +310,11 @@ def maybe_get_index(obj: T) -> Any | None:
 
 
 def maybe_set_index(
-    obj: T,
+    obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
     index: Series | list[Series] | None = None,
-) -> T:
+) -> FrameOrSeriesT:
     """Set the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -394,7 +400,7 @@ def maybe_set_index(
         return df_any  # type: ignore[no-any-return]
 
 
-def maybe_reset_index(obj: T) -> T:
+def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
     """Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -458,7 +464,9 @@ def _has_default_index(
     )
 
 
-def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
+def maybe_convert_dtypes(
+    obj: FrameOrSeriesT, *args: bool, **kwargs: bool | str
+) -> FrameOrSeriesT:
     """Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
