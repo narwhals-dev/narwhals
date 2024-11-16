@@ -113,3 +113,5 @@ def test_missing_columns(constructor_eager: ConstructorEager) -> None:
     )
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(selected_columns)
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.drop(selected_columns, strict=True)

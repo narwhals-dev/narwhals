@@ -230,12 +230,10 @@ class PolarsDataFrame:
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):
-            to_drop = parse_columns_to_drop(
-                compliant_frame=self, columns=columns, strict=strict
-            )
-            return self._from_native_frame(self._native_frame.drop(to_drop))
-        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(to_drop))
 
     def unpivot(
         self: Self,
