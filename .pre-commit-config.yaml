@@ -23,6 +23,18 @@ repos:
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
+-   repo: https://github.com/pycqa/flake8
+    rev: '7.1.1'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
+    hooks:
+    -   id: flake8
+        additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
+        entry: flake8 --select DAR --ignore DAR402,DAR401
+        exclude: |
+            (?x)^(
+                tests/.*|
+                narwhals/series/.*|
+                narwhals/_.*/.*
+            )$
 - repo: local
   hooks:
     - id: check-api-reference

@@ -46,7 +46,6 @@ def concat(
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
             * vertical: Stacks Series from DataFrames vertically and fills with `null`
               if the lengths don't match.
@@ -226,7 +225,7 @@ def _new_series_impl(
     native_namespace: ModuleType,
     dtypes: DTypes,
 ) -> Series:
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation._from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
         if dtype:
@@ -370,7 +369,7 @@ def _from_dict_impl(
             msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
         data = {key: to_native(value, pass_through=True) for key, value in data.items()}
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation._from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
         if schema:
@@ -477,7 +476,7 @@ def from_arrow(
     if not hasattr(native_frame, "__arrow_c_stream__"):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation._from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS and parse_version(
         native_namespace.__version__
@@ -534,6 +533,8 @@ def _get_sys_info() -> dict[str, str]:
 
     Copied from sklearn
 
+    Returns:
+        Dictionary with system info.
     """
     python = sys.version.replace("\n", " ")
 
@@ -556,6 +557,8 @@ def _get_deps_info() -> dict[str, str]:
 
     This function and show_versions were copied from sklearn and adapted
 
+    Returns:
+        Mapping from dependency to version.
     """
     deps = (
         "pandas",
@@ -607,9 +610,13 @@ def get_level(
 ) -> Literal["full", "interchange"]:
     """Level of support Narwhals has for current object.
 
-    This can be one of:
+    Arguments:
+        obj: Dataframe or Series.
 
-    - 'full': full Narwhals API support
-    - 'metadata': only metadata operations are supported (`df.schema`)
+    Returns:
+        This can be one of:
+
+            - 'full': full Narwhals API support
+            - 'metadata': only metadata operations are supported (`df.schema`)
     """
     return obj._level

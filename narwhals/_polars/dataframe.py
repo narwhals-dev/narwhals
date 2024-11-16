@@ -44,7 +44,7 @@ class PolarsDataFrame:
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
-            return self._implementation.to_native_namespace()
+            return self._implementation._to_native_namespace()
 
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
@@ -297,7 +297,7 @@ class PolarsLazyFrame:
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
-            return self._implementation.to_native_namespace()
+            return self._implementation._to_native_namespace()
 
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
