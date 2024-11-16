@@ -65,19 +65,29 @@ def test_missing_columns(constructor: Constructor) -> None:
         r"The following columns were not found: \[.*\]"
         r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     )
-    if "polars" in str(constructor):
+    if "polars_lazy" in str(constructor):
         # In the lazy case, Polars only errors when we call `collect`,
         # and we have no way to recover exactly which columns the user
         # tried selecting. So, we just emit their message (which varies
         # across versions...)
         msg = r"e"
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.lazy().select(selected_columns).collect()
+        if isinstance(df, nw.LazyFrame):
+            with pytest.raises(ColumnNotFoundError, match=msg):
+                df.select(selected_columns).collect()
+        else:
+            with pytest.raises(ColumnNotFoundError, match=msg):
+                df.select(selected_columns)
         if POLARS_VERSION >= (1,):
             # Old Polars versions wouldn't raise an error
             # at all here
-            with pytest.raises(ColumnNotFoundError, match=msg):
-                df.lazy().drop(selected_columns, strict=True).collect()
+            if isinstance(df, nw.LazyFrame):
+                with pytest.raises(ColumnNotFoundError, match=msg):
+                    df.drop(selected_columns, strict=True).collect()
+            else:
+                with pytest.raises(ColumnNotFoundError, match=msg):
+                    df.drop(selected_columns, strict=True)
+        else:  # pragma: no cover
+            pass
     else:
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.select(selected_columns)
