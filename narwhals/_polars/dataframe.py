@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from narwhals.utils import parse_version
-
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -83,15 +81,20 @@ class PolarsDataFrame:
 
         def func(*args: Any, **kwargs: Any) -> Any:
             import polars as pl  # ignore-banned-import()
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
                 return self._from_native_object(
                     getattr(self._native_frame, attr)(*args, **kwargs)
                 )
             except pl.exceptions.ColumnNotFoundError as e:
-                missing_columns = [arg for arg in args if arg not in self._native_frame.columns]
-                raise ColumnNotFoundError(f"The following columns were not found: {missing_columns}"
-                                          f"\n\nHint: Did you mean one of these columns {self._native_frame.columns}?") from e
+                missing_columns = [
+                    arg for arg in args if arg not in self._native_frame.columns
+                ]
+                raise ColumnNotFoundError(
+                    missing_columns, self._native_frame.columns
+                ) from e
+
         return func
 
     def __array__(self, dtype: Any | None = None, copy: bool | None = None) -> np.ndarray:

@@ -593,10 +593,11 @@ def parse_columns_to_drop(
     to_drop = list(columns)
 
     if strict:
-        for d in to_drop:
-            if d not in cols:
-                msg = f'"{d}" not found'
-                raise ColumnNotFoundError(msg)
+        missing_columns = [x for x in to_drop if x not in list(cols)]
+        if missing_columns:
+            raise ColumnNotFoundError(
+                missing_columns=missing_columns, available_columns=list(cols)
+            )
     else:
         to_drop = list(cols.intersection(set(to_drop)))
     return to_drop

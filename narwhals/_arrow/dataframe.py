@@ -13,6 +13,7 @@ from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
@@ -20,7 +21,6 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
-from narwhals._exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -293,11 +293,13 @@ class ArrowDataFrame:
         try:
             new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         except KeyError as e:
-            missing_columns = [x for x in exprs if x not in self._native_frame.column_names]
+            missing_columns = [
+                x for x in exprs if x not in self._native_frame.column_names
+            ]
             raise ColumnNotFoundError(
-            f"The following columns were not found: {missing_columns}"
-            f"\n\nHint: Did you mean one of these columns {self._native_frame.column_names}?"
-        ) from e
+                missing_columns,  # type: ignore[arg-type]
+                self._native_frame.column_names,
+            ) from e
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
