@@ -3,6 +3,7 @@ from __future__ import annotations
 
 class FormattedKeyError(KeyError):
     """KeyError with formatted error message.
+
     Python's `KeyError` has special casing around formatting
     (see https://bugs.python.org/issue2651). Use this class when the error
     message has newlines and other special format characters.
