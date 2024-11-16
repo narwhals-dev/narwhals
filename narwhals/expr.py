@@ -961,8 +961,11 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).abs())
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
+
+        Arguments:
+            reverse: reverse the operation
 
         Returns:
             A new expression.
@@ -1012,7 +1015,7 @@ class Expr:
             a: [[1,2,5,10,15]]
             b: [[2,6,10,16,22]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_sum())
+        return self.__class__(lambda plx: self._call(plx).cum_sum(reverse=reverse))
 
     def diff(self) -> Self:
         """Returns the difference between each element and the previous one.
@@ -2749,7 +2752,7 @@ class Expr:
             pyarrow.Table
             a: string
             cum_count: uint32
-            cum_count_reverse: int64
+            cum_count_reverse: uint32
             ----
             a: [["x","k",null,"d"]]
             cum_count: [[1,2,2,3]]
@@ -2874,6 +2877,65 @@ class Expr:
             cum_max_reverse: [[3,3,null,2]]
         """
         return self.__class__(lambda plx: self._call(plx).cum_max(reverse=reverse))
+
+    def cum_prod(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative product of the non-null values in the column.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1, 3, None, 2]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("a").cum_prod().alias("cum_prod"),
+            ...         nw.col("a").cum_prod(reverse=True).alias("cum_prod_reverse"),
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                 a  cum_prod  cum_prod_reverse
+            0  1.0       1.0               6.0
+            1  3.0       3.0               6.0
+            2  NaN       NaN               NaN
+            3  2.0       6.0               2.0
+
+            >>> func(pl.DataFrame(data))
+            shape: (4, 3)
+            ┌──────┬──────────┬──────────────────┐
+            │ a    ┆ cum_prod ┆ cum_prod_reverse │
+            │ ---  ┆ ---      ┆ ---              │
+            │ i64  ┆ i64      ┆ i64              │
+            ╞══════╪══════════╪══════════════════╡
+            │ 1    ┆ 1        ┆ 6                │
+            │ 3    ┆ 3        ┆ 6                │
+            │ null ┆ null     ┆ null             │
+            │ 2    ┆ 6        ┆ 2                │
+            └──────┴──────────┴──────────────────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: int64
+            cum_prod: int64
+            cum_prod_reverse: int64
+            ----
+            a: [[1,3,null,2]]
+            cum_prod: [[1,3,null,6]]
+            cum_prod_reverse: [[6,6,null,2]]
+        """
+        return self.__class__(lambda plx: self._call(plx).cum_prod(reverse=reverse))
 
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:

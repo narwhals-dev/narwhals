@@ -9,16 +9,16 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 3, None, 2]}
+data = {"a": [1, 2, None, 3]}
 
 expected = {
-    "cum_max": [1, 3, None, 3],
-    "reverse_cum_max": [3, 3, None, 2],
+    "cum_prod": [1, 2, None, 6],
+    "reverse_cum_prod": [6, 6, None, 3],
 }
 
 
 @pytest.mark.parametrize("reverse", [True, False])
-def test_cum_max_expr(
+def test_cum_prod_expr(
     request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
 ) -> None:
     if "dask" in str(constructor) and reverse:
@@ -30,16 +30,16 @@ def test_cum_max_expr(
     if PANDAS_VERSION < (2, 1) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    name = "reverse_cum_max" if reverse else "cum_max"
+    name = "reverse_cum_prod" if reverse else "cum_prod"
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("a").cum_max(reverse=reverse).alias(name),
+        nw.col("a").cum_prod(reverse=reverse).alias(name),
     )
 
     assert_equal_data(result, {name: expected[name]})
 
 
-def test_cum_max_series(
+def test_cum_prod_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
@@ -50,7 +50,7 @@ def test_cum_max_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_max=df["a"].cum_max(),
-        reverse_cum_max=df["a"].cum_max(reverse=True),
+        cum_prod=df["a"].cum_prod(),
+        reverse_cum_prod=df["a"].cum_prod(reverse=True),
     )
     assert_equal_data(result, expected)

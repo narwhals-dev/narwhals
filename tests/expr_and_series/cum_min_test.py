@@ -17,8 +17,11 @@ expected = {
 }
 
 
-def test_cum_min_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask" in str(constructor):
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_min_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
+) -> None:
+    if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
 
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
@@ -29,13 +32,13 @@ def test_cum_min_expr(request: pytest.FixtureRequest, constructor: Constructor) 
     ):
         request.applymarker(pytest.mark.xfail)
 
+    name = "reverse_cum_min" if reverse else "cum_min"
     df = nw.from_native(constructor(data))
     result = df.select(
-        cum_min=nw.col("a").cum_min(),
-        reverse_cum_min=nw.col("a").cum_min(reverse=True),
+        nw.col("a").cum_min(reverse=reverse).alias(name),
     )
 
-    assert_equal_data(result, expected)
+    assert_equal_data(result, {name: expected[name]})
 
 
 def test_cum_min_series(
