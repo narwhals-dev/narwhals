@@ -46,12 +46,11 @@ def concat(
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
-            * vertical: Stacks Series from DataFrames vertically and fills with `null`
-              if the lengths don't match.
-            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-              if the lengths don't match.
+            - vertical: Stacks Series from DataFrames vertically and fills with `null`
+                if the lengths don't match.
+            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+                if the lengths don't match.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -534,6 +533,8 @@ def _get_sys_info() -> dict[str, str]:
 
     Copied from sklearn
 
+    Returns:
+        Dictionary with system info.
     """
     python = sys.version.replace("\n", " ")
 
@@ -556,6 +557,8 @@ def _get_deps_info() -> dict[str, str]:
 
     This function and show_versions were copied from sklearn and adapted
 
+    Returns:
+        Mapping from dependency to version.
     """
     deps = (
         "pandas",
@@ -607,9 +610,13 @@ def get_level(
 ) -> Literal["full", "interchange"]:
     """Level of support Narwhals has for current object.
 
-    This can be one of:
+    Arguments:
+        obj: Dataframe or Series.
 
-    - 'full': full Narwhals API support
-    - 'metadata': only metadata operations are supported (`df.schema`)
+    Returns:
+        This can be one of:
+
+            - 'full': full Narwhals API support
+            - 'metadata': only metadata operations are supported (`df.schema`)
     """
     return obj._level

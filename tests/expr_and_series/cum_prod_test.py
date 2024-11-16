@@ -27,7 +27,9 @@ def test_cum_prod_expr(
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if PANDAS_VERSION < (2, 1) and "pandas_pyarrow" in str(constructor):
+    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
+        constructor
+    ):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_prod" if reverse else "cum_prod"
@@ -45,7 +47,9 @@ def test_cum_prod_series(
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if PANDAS_VERSION < (2, 1) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

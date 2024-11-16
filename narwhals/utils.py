@@ -56,7 +56,14 @@ class Implementation(Enum):
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
     ) -> Implementation:  # pragma: no cover
-        """Instantiate Implementation object from a native namespace module."""
+        """Instantiate Implementation object from a native namespace module.
+
+        Arguments:
+            native_namespace: Native namespace.
+
+        Returns:
+            Implementation.
+        """
         mapping = {
             get_pandas(): Implementation.PANDAS,
             get_modin(): Implementation.MODIN,
@@ -68,7 +75,11 @@ class Implementation(Enum):
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
     def to_native_namespace(self: Self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation."""
+        """Return the native namespace module corresponding to Implementation.
+
+        Returns:
+            Native module.
+        """
         mapping = {
             Implementation.PANDAS: get_pandas(),
             Implementation.MODIN: get_modin(),
@@ -127,7 +138,14 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
 
 
 def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
-    """Simple version parser; split into a tuple of ints for comparison."""
+    """Simple version parser; split into a tuple of ints for comparison.
+
+    Arguments:
+        version: Version string to parse.
+
+    Returns:
+        Parsed version number.
+    """
     # lifted from Polars
     if isinstance(version, str):  # pragma: no cover
         version = version.split(".")
@@ -156,6 +174,13 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+
+    Arguments:
+        lhs: Dataframe or Series.
+        rhs: Dataframe or Series to align with.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -245,6 +270,12 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
 def maybe_get_index(obj: T) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
+
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already aligns indices for users.
@@ -288,6 +319,9 @@ def maybe_set_index(
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
         index: series or list of series to set as index.
+
+    Returns:
+        Same type as input.
 
     Raises:
         ValueError: If one of the following condition happens:
@@ -363,6 +397,12 @@ def maybe_set_index(
 def maybe_reset_index(obj: T) -> T:
     """Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
 
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
+
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already resets the index for users.
@@ -426,6 +466,9 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
         *args: Additional arguments which gets passed through.
         **kwargs: Additional arguments which gets passed through.
 
+    Returns:
+        Same type as input.
+
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
@@ -478,6 +521,12 @@ def is_ordered_categorical(series: Series) -> bool:
       - Categoricals are ordered if `dtype.cat.ordered == True`.
     - For PyArrow table:
       - Categoricals are ordered if `dtype.type.ordered == True`.
+
+    Arguments:
+        series: Input Series.
+
+    Returns:
+        Whether the Series is an ordered categorical.
 
     Examples:
         >>> import narwhals as nw
@@ -601,6 +650,9 @@ def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
 def find_stacklevel() -> int:
     """Find the first place in the stack that is not inside narwhals.
 
+    Returns:
+        Stacklevel.
+
     Taken from:
     https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
     """
@@ -640,13 +692,10 @@ def find_stacklevel() -> int:
 def issue_deprecation_warning(message: str, _version: str) -> None:
     """Issue a deprecation warning.
 
-    Parameters
-    ----------
-    message
-        The message associated with the warning.
-    version
-        Narwhals version when the warning was introduced. Just used for internal
-        bookkeeping.
+    Arguments:
+        message: The message associated with the warning.
+        _version: Narwhals version when the warning was introduced. Just used for internal
+            bookkeeping.
     """
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 
