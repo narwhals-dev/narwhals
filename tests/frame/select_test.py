@@ -65,7 +65,7 @@ def test_missing_columns(constructor: Constructor) -> None:
         r"The following columns were not found: \[.*\]"
         r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     )
-    if "polars_lazy" in str(constructor):
+    if "polars" in str(constructor):
         # In the lazy case, Polars only errors when we call `collect`,
         # and we have no way to recover exactly which columns the user
         # tried selecting. So, we just emit their message (which varies
@@ -83,3 +83,5 @@ def test_missing_columns(constructor: Constructor) -> None:
             df.select(selected_columns)
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.drop(selected_columns, strict=True)
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.select(nw.col("fdfa"))

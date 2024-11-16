@@ -88,13 +88,7 @@ class PolarsDataFrame:
                     getattr(self._native_frame, attr)(*args, **kwargs)
                 )
             except pl.exceptions.ColumnNotFoundError as e:
-                missing_columns = [
-                    arg for arg in args if arg not in self._native_frame.columns
-                ]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=self._native_frame.columns,
-                ) from e
+                raise ColumnNotFoundError(str(e)) from e
 
         return func
 
