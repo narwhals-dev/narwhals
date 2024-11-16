@@ -662,7 +662,7 @@ def select_columns_by_name(
         # for why we need this
         available_columns = df.columns.tolist()  # type: ignore[attr-defined]
         missing_columns = [x for x in column_names if x not in available_columns]
-        if missing_columns:
+        if missing_columns:  # pragma: no cover
             raise ColumnNotFoundError(missing_columns, available_columns)
         return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
     try:
