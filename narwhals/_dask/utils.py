@@ -24,7 +24,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
         if len(results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions not supported in this context"
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
         validate_comparand(df._native_frame, result)
@@ -43,7 +43,7 @@ def parse_exprs_and_named_exprs(
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
         elif isinstance(expr, str):
-            _results = [df._native_frame.loc[:, expr]]
+            _results = [df._native_frame[expr]]
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)

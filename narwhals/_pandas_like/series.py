@@ -14,6 +14,7 @@ from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -223,6 +224,8 @@ class PandasLikeSeries:
         )
 
     def to_list(self) -> Any:
+        if self._implementation is Implementation.CUDF:
+            return self._native_series.to_arrow().to_pylist()
         return self._native_series.to_list()
 
     def is_between(
@@ -423,6 +426,15 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.mean()
 
+    def median(self) -> Any:
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+        ser = self._native_series
+        return ser.median()
+
     def std(
         self,
         *,
@@ -440,9 +452,23 @@ class PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.isna())
 
-    def fill_null(self, value: Any) -> PandasLikeSeries:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> PandasLikeSeries:
         ser = self._native_series
-        return self._from_native_series(ser.fillna(value))
+        if value is not None:
+            res_ser = self._from_native_series(ser.fillna(value=value))
+        else:
+            res_ser = self._from_native_series(
+                ser.ffill(limit=limit)
+                if strategy == "forward"
+                else ser.bfill(limit=limit)
+            )
+
+        return res_ser
 
     def drop_nulls(self) -> PandasLikeSeries:
         ser = self._native_series
@@ -468,10 +494,18 @@ class PandasLikeSeries:
     def abs(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.abs())
 
-    def cum_sum(self) -> PandasLikeSeries:
-        return self._from_native_series(self._native_series.cumsum())
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumsum(skipna=True)
+            if not reverse
+            else native_series[::-1].cumsum(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
 
-    def unique(self) -> PandasLikeSeries:
+    def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
@@ -483,6 +517,40 @@ class PandasLikeSeries:
 
     def shift(self, n: int) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> PandasLikeSeries:
+        tmp_name = f"{self.name}_tmp"
+        dtype = (
+            narwhals_to_native_dtype(
+                return_dtype,
+                self._native_series.dtype,
+                self._implementation,
+                self._backend_version,
+                self._dtypes,
+            )
+            if return_dtype
+            else None
+        )
+        other = self.__native_namespace__().DataFrame(
+            {
+                self.name: old,
+                tmp_name: self.__native_namespace__().Series(new, dtype=dtype),
+            }
+        )
+        result = self._from_native_series(
+            self._native_series.to_frame()
+            .merge(other, on=self.name, how="left")[tmp_name]
+            .rename(self.name)
+        )
+        if result.is_null().sum() != self.is_null().sum():
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+            )
+            raise ValueError(msg)
+        return result
 
     def sort(
         self, *, descending: bool = False, nulls_last: bool = False
@@ -539,9 +607,9 @@ class PandasLikeSeries:
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self._native_series.to_pandas()
-        elif self._implementation is Implementation.MODIN:  # pragma: no cover
+        elif self._implementation is Implementation.MODIN:
             return self._native_series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
@@ -588,7 +656,7 @@ class PandasLikeSeries:
         name: str | None = None,
         normalize: bool = False,
     ) -> PandasLikeDataFrame:
-        """Parallel is unused, exists for compatibility"""
+        """Parallel is unused, exists for compatibility."""
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         index_name_ = "index" if self._name is None else self._name
@@ -643,13 +711,28 @@ class PandasLikeSeries:
         plx = self.__native_namespace__()
         series = self._native_series
         name = str(self._name) if self._name else ""
+
+        null_col_pl = f"{name}{separator}null"
+
+        has_nulls = series.isna().any()
+        result = plx.get_dummies(
+            series,
+            prefix=name,
+            prefix_sep=separator,
+            drop_first=drop_first,
+            # Adds a null column at the end, depending on whether or not there are any.
+            dummy_na=has_nulls,
+            dtype="int8",
+        )
+        if has_nulls:
+            *cols, null_col_pd = list(result.columns)
+            output_order = [null_col_pd, *cols]
+            result = select_columns_by_name(
+                result, output_order, self._backend_version, self._implementation
+            ).rename(columns={null_col_pd: null_col_pl}, copy=False)
+
         return PandasLikeDataFrame(
-            plx.get_dummies(
-                series,
-                prefix=name,
-                prefix_sep=separator,
-                drop_first=drop_first,
-            ).astype(int),
+            result,
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -666,7 +749,7 @@ class PandasLikeSeries:
         )
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 
         import pyarrow as pa  # ignore-banned-import()
@@ -677,6 +760,42 @@ class PandasLikeSeries:
         native_series = self._native_series
         result = native_series.mode()
         result.name = native_series.name
+        return self._from_native_series(result)
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        not_na_series = ~self._native_series.isna()
+        result = (
+            not_na_series.cumsum()
+            if not reverse
+            else len(self) - not_na_series.cumsum() + not_na_series - 1
+        )
+        return self._from_native_series(result)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummin(skipna=True)
+            if not reverse
+            else native_series[::-1].cummin(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummax(skipna=True)
+            if not reverse
+            else native_series[::-1].cummax(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumprod(skipna=True)
+            if not reverse
+            else native_series[::-1].cumprod(skipna=True)[::-1]
+        )
         return self._from_native_series(result)
 
     def rolling_mean(

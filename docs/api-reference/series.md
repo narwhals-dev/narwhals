@@ -15,6 +15,10 @@
         - cast
         - clip
         - count
+        - cum_count
+        - cum_max
+        - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls
@@ -36,6 +40,7 @@
         - len
         - max
         - mean
+        - median
         - min
         - mode
         - name
@@ -44,6 +49,7 @@
         - pipe
         - quantile
         - rename
+        - replace_strict
         - rolling_mean
         - round
         - sample

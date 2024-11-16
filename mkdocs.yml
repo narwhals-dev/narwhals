@@ -91,6 +91,10 @@ plugins:
           show_signature_annotations: true
         options:
           members_order: alphabetical
+    enable_inventory: true
+
+extra_javascript:
+  - javascripts/extra.js
 
 hooks:
 - utils/generate_backend_completeness.py

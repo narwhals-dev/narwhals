@@ -11,6 +11,10 @@
         - arg_true
         - cast
         - count
+        - cum_count
+        - cum_max
+        - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls
@@ -27,8 +31,10 @@
         - is_null
         - is_unique
         - len
+        - map_batches
         - max
         - mean
+        - median
         - min
         - mode
         - null_count
@@ -36,6 +42,7 @@
         - over
         - pipe
         - quantile
+        - replace_strict
         - rolling_mean
         - round
         - sample

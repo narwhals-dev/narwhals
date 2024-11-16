@@ -68,7 +68,7 @@ def render_table_and_write_to_output(
     results: list[pl.DataFrame], title: str, output_filename: str
 ) -> None:
     results = (
-        pl.concat(results)  # noqa: PD010
+        pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
         .pivot(on="Backend", values="supported", index=["Class", "Method"])
         .filter(pl.col("narwhals").is_not_null())

@@ -26,6 +26,7 @@
         - lazy
         - null_count
         - pipe
+        - pivot
         - rename
         - row
         - rows
