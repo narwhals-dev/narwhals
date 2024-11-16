@@ -34,9 +34,16 @@ repos:
                 tests/.*|
                 # TODO: gradually enable
                 narwhals/series\.py$|
+                # TODO: gradually enable
+                narwhals/dataframe\.py$|
+                # TODO: gradually enable
+                narwhals/dependencies\.py$|
                 # some false positives in this one
                 narwhals/translate\.py$|
-                narwhals/_.*/.*
+                # some false positives in this one
+                narwhals/stable/v1/__init__\.py$|
+                # private, so less urgent to document too well
+                narwhals/_.*
             )$
 - repo: local
   hooks:

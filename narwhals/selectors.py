@@ -15,6 +15,9 @@ def by_dtype(*dtypes: Any) -> Expr:
     Arguments:
         dtypes: one or data types to select
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
@@ -54,6 +57,9 @@ def by_dtype(*dtypes: Any) -> Expr:
 
 def numeric() -> Expr:
     """Select numeric columns.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -95,6 +101,9 @@ def numeric() -> Expr:
 def boolean() -> Expr:
     """Select boolean columns.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
@@ -134,6 +143,9 @@ def boolean() -> Expr:
 
 def string() -> Expr:
     """Select string columns.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -175,6 +187,9 @@ def string() -> Expr:
 def categorical() -> Expr:
     """Select categorical columns.
 
+    Returns:
+        A new expression.
+
     Examples:
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
@@ -214,6 +229,9 @@ def categorical() -> Expr:
 
 def all() -> Expr:
     """Select all columns.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw

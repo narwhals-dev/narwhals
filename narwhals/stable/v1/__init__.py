@@ -1090,58 +1090,25 @@ def narwhalify(
 ) -> Callable[..., Any]:
     """Decorate function so it becomes dataframe-agnostic.
 
-    `narwhalify` will try to convert any dataframe/series-like object into the narwhal
+    This will try to convert any dataframe/series-like object into the Narwhals  # noqa: DAR101
     respective DataFrame/Series, while leaving the other parameters as they are.
-
-    Similarly, if the output of the function is a narwhals DataFrame or Series, it will be
+    Similarly, if the output of the function is a Narwhals DataFrame or Series, it will be
     converted back to the original dataframe/series type, while if the output is another
     type it will be left as is.
-
     By setting `pass_through=False`, then every input and every output will be required to be a
     dataframe/series-like object.
 
-    Instead of writing
-
-    ```python
-    import narwhals as nw
-
-
-    def func(df):
-        df = nw.from_native(df, pass_through=True)
-        df = df.group_by("a").agg(nw.col("b").sum())
-        return nw.to_native(df)
-    ```
-
-    you can just write
-
-    ```python
-    import narwhals as nw
-
-
-    @nw.narwhalify
-    def func(df):
-        return df.group_by("a").agg(nw.col("b").sum())
-    ```
-
-    You can also pass in extra arguments, e.g.
-
-    ```python
-    @nw.narwhalify(eager_only=True)
-    ```
-
-    that will get passed down to `nw.from_native`.
-
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Determine what happens if the object isn't supported by Narwhals:
+        strict: **Deprecated** (v1.13.0):
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+
+            Determine what happens if the object isn't supported by Narwhals:
 
             - `True` (default): raise an error
             - `False`: pass object through as-is
-
-            **Deprecated** (v1.13.0):
-                Please use `pass_through` instead. Note that `strict` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
         pass_through: Determine what happens if the object isn't supported by Narwhals:
 
             - `False` (default): raise an error
@@ -1151,6 +1118,24 @@ def narwhalify(
             implement the Dataframe Interchange Protocol.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+
+    Returns:
+        Decorated function.
+
+    Examples:
+        Instead of writing
+
+        >>> import narwhals as nw
+        >>> def func(df):
+        ...     df = nw.from_native(df, pass_through=True)
+        ...     df = df.group_by("a").agg(nw.col("b").sum())
+        ...     return nw.to_native(df)
+
+        you can just write
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.group_by("a").agg(nw.col("b").sum())
     """
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
@@ -2102,11 +2087,10 @@ def concat(
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
-            * vertical: Stacks Series from DataFrames vertically and fills with `null`
+            - vertical: Stacks Series from DataFrames vertically and fills with `null`
               if the lengths don't match.
-            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
               if the lengths don't match.
 
     Returns:

@@ -551,7 +551,11 @@ class Struct(DType):
         return f"{class_name}({dict(self)})"
 
     def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
-        """Return Struct dtype as a schema dict."""
+        """Return Struct dtype as a schema dict.
+
+        Returns:
+            Mapping from column name to dtype.
+        """
         return OrderedDict(self)
 
 

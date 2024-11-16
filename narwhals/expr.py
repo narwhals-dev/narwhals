@@ -93,6 +93,11 @@ class Expr:
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
 
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
         Returns:
             A new expression.
 
@@ -1072,6 +1077,9 @@ class Expr:
     def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
 
+        Arguments:
+            n: Number of positions to shift values by.
+
         Returns:
             A new expression.
 
@@ -1307,9 +1315,7 @@ class Expr:
 
         Arguments:
             lower_bound: Lower bound value.
-
             upper_bound: Upper bound value.
-
             closed: Define which sides of the interval are closed (inclusive).
 
         Returns:
@@ -1423,6 +1429,9 @@ class Expr:
 
     def filter(self, *predicates: Any) -> Self:
         """Filters elements based on a condition, returning a new expression.
+
+        Arguments:
+            predicates: Conditions to filter by (which get ANDed together).
 
         Returns:
             A new expression.
@@ -1604,9 +1613,7 @@ class Expr:
 
         Arguments:
             value: Value used to fill null values.
-
             strategy: Strategy used to fill null values.
-
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
         Returns:
@@ -2697,6 +2704,9 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2753,6 +2763,9 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new expression.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2808,6 +2821,9 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new expression.
 
         Examples:
             >>> import narwhals as nw
