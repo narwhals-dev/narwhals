@@ -127,6 +127,15 @@ class PolarsExpr:
     def __invert__(self) -> Self:
         return self._from_native_expr(self._native_expr.__invert__())
 
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (0, 20, 4):
+            not_null = ~self._native_expr.is_null()
+            result = not_null.cum_sum(reverse=reverse)
+        else:
+            result = self._native_expr.cum_count(reverse=reverse)
+
+        return self._from_native_expr(result)
+
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)

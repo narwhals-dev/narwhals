@@ -28,5 +28,5 @@ def test_reindex(df_raw: Any) -> None:
     result = df.with_columns(s.sort())
     expected = {"a": [1, 2, 3], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}  # type: ignore[list-item]
     assert_equal_data(result, expected)
-    with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
+    with pytest.raises(ValueError, match="Multi-output expressions"):
         nw.to_native(df.with_columns(nw.all() + nw.all()))

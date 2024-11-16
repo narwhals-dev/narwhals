@@ -185,8 +185,7 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
 
 
 def is_pandas_like_dataframe(df: Any) -> bool:
-    """
-    Check whether `df` is a pandas-like DataFrame without doing any imports
+    """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
@@ -194,8 +193,7 @@ def is_pandas_like_dataframe(df: Any) -> bool:
 
 
 def is_pandas_like_series(ser: Any) -> bool:
-    """
-    Check whether `ser` is a pandas-like Series without doing any imports
+    """Check whether `ser` is a pandas-like Series without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
@@ -203,8 +201,7 @@ def is_pandas_like_series(ser: Any) -> bool:
 
 
 def is_pandas_like_index(index: Any) -> bool:
-    """
-    Check whether `index` is a pandas-like Index without doing any imports
+    """Check whether `index` is a pandas-like Index without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
@@ -214,8 +211,7 @@ def is_pandas_like_index(index: Any) -> bool:
 
 
 def is_into_series(native_series: IntoSeries) -> bool:
-    """
-    Check whether `native_series` can be converted to a Narwhals Series.
+    """Check whether `native_series` can be converted to a Narwhals Series.
 
     Arguments:
         native_series: The object to check.
@@ -252,8 +248,7 @@ def is_into_series(native_series: IntoSeries) -> bool:
 
 
 def is_into_dataframe(native_dataframe: Any) -> bool:
-    """
-    Check whether `native_dataframe` can be converted to a Narwhals DataFrame.
+    """Check whether `native_dataframe` can be converted to a Narwhals DataFrame.
 
     Arguments:
         native_dataframe: The object to check.

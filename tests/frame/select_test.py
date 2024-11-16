@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -44,3 +45,11 @@ def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
     result = df.select(nw.col([False, True]))  # type: ignore[list-item]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
+
+
+def test_comparison_with_list_error_message() -> None:
+    msg = "Expected scalar value, Series, or Expr, got list of : <class 'int'>"
+    with pytest.raises(ValueError, match=msg):
+        nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
+    with pytest.raises(ValueError, match=msg):
+        nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015

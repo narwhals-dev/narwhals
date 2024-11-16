@@ -152,8 +152,15 @@ def validate_column_comparand(other: Any) -> Any:
 
     if isinstance(other, list):
         if len(other) > 1:
-            # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
+            if hasattr(other[0], "__narwhals_expr__") or hasattr(
+                other[0], "__narwhals_series__"
+            ):
+                # e.g. `plx.all() + plx.all()`
+                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
+                raise ValueError(msg)
+            msg = (
+                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
+            )
             raise ValueError(msg)
         other = other[0]
     if isinstance(other, ArrowDataFrame):
@@ -197,8 +204,7 @@ def validate_dataframe_comparand(
 
 
 def horizontal_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames horizontally.
+    """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -219,8 +225,7 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
 
 def vertical_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames vertically.
+    """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """

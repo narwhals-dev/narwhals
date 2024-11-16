@@ -300,8 +300,8 @@ class PandasLikeExpr:
     def abs(self) -> Self:
         return reuse_series_implementation(self, "abs")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
@@ -440,6 +440,18 @@ class PandasLikeExpr:
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:
