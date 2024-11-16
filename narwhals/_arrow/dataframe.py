@@ -296,7 +296,7 @@ class ArrowDataFrame:
             missing_columns = [
                 x for x in exprs if x not in self._native_frame.column_names
             ]
-            raise ColumnNotFoundError(
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
                 missing_columns=missing_columns,  # type: ignore[arg-type]
                 available_columns=self._native_frame.column_names,
             ) from e

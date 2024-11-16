@@ -643,7 +643,7 @@ def parse_columns_to_drop(
     if strict:
         missing_columns = [x for x in to_drop if x not in cols]
         if missing_columns:
-            raise ColumnNotFoundError(
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
                 missing_columns=missing_columns, available_columns=cols
             )
     else:

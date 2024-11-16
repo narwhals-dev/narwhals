@@ -18,17 +18,19 @@ class FormattedKeyError(KeyError):
 
 
 class ColumnNotFoundError(FormattedKeyError):
-    def __init__(self, missing_columns: list[str], available_columns: list[str]) -> None:
-        self.missing_columns = missing_columns
-        self.available_columns = available_columns
-        self.message = self._error_message()
+    def __init__(self, message: str) -> None:
+        self.message = message
         super().__init__(self.message)
 
-    def _error_message(self) -> str:
-        return (
-            f"The following columns were not found: {self.missing_columns}"
-            f"\n\nHint: Did you mean one of these columns: {self.available_columns}?"
+    @classmethod
+    def from_missing_and_available_column_names(
+        cls, missing_columns: list[str], available_columns: list[str]
+    ) -> ColumnNotFoundError:
+        message = (
+            f"The following columns were not found: {missing_columns}"
+            f"\n\nHint: Did you mean one of these columns: {available_columns}?"
         )
+        return ColumnNotFoundError(message)
 
 
 class InvalidOperationError(Exception): ...

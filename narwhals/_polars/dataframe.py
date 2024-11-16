@@ -91,7 +91,7 @@ class PolarsDataFrame:
                 missing_columns = [
                     arg for arg in args if arg not in self._native_frame.columns
                 ]
-                raise ColumnNotFoundError(
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns=missing_columns,
                     available_columns=self._native_frame.columns,
                 ) from e
@@ -351,8 +351,15 @@ class PolarsLazyFrame:
             }
 
     def collect(self) -> PolarsDataFrame:
+        import polars as pl  # ignore-banned-import
+
+        try:
+            result = self._native_frame.collect()
+        except pl.exceptions.ColumnNotFoundError as e:
+            raise ColumnNotFoundError(str(e)) from e
+
         return PolarsDataFrame(
-            self._native_frame.collect(),
+            result,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )

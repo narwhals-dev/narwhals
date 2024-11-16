@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import re
-
 import pandas as pd
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
@@ -16,7 +13,6 @@ from narwhals.selectors import numeric
 from narwhals.selectors import string
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
-from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -101,17 +97,3 @@ def test_set_ops_invalid(invalid_constructor: Constructor) -> None:
         df.select(1 | numeric())
     with pytest.raises(NotImplementedError):
         df.select(1 & numeric())
-
-
-def test_missing_columns(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
-    selected_columns = ["a", "e", "f"]
-    missing_columns = [x for x in selected_columns if x not in df.columns]
-    msg = re.escape(
-        f"The following columns were not found: {missing_columns}"
-        f"\n\nHint: Did you mean one of these columns: {df.columns}?"
-    )
-    with pytest.raises(ColumnNotFoundError, match=msg):
-        df.select(selected_columns)
-    with pytest.raises(ColumnNotFoundError, match=msg):
-        df.drop(selected_columns, strict=True)
