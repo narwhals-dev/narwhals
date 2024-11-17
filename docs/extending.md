@@ -37,6 +37,7 @@ def func(df: FrameT) -> FrameT:
         b_std=nw.col("b").std(),
     )
 ```
+
 will work for any of pandas, Polars, cuDF, Modin, and PyArrow.
 
 However, sometimes you don't need to do complex operations on dataframes - all you need
@@ -57,8 +58,21 @@ def func(df: Any) -> Schema:
     df = nw.from_native(df, eager_or_interchange_only=True)
     return df.schema
 ```
+
 is also supported, meaning that, in addition to the libraries mentioned above, you can
 also pass Ibis, DuckDB, Vaex, and any library which implements the protocol.
+
+#### Interchange-only support
+
+While libraries for which we have full support can benefit from the whole Narwhals API,
+libraries which have interchange only support can access the following methods after 
+converting to Narwhals DataFrame:
+
+- `.schema`, hence column names via `.schema.names()` and column types via `.schema.dtypes()`
+- `.columns`
+- `.to_pandas()` and `.to_arrow()`, for converting to Pandas and Arrow, respectively.
+- `.select(names)` (Ibis and DuckDB), where `names` is a list of (string) column names. This is useful for
+  selecting columns before converting to another library.
 
 ### Extending Narwhals
 

@@ -15,6 +15,7 @@ Here are the top-level functions available in Narwhals.
         - from_dict
         - from_native
         - from_arrow
+        - generate_temporary_column_name
         - get_level
         - get_native_namespace
         - is_ordered_categorical
@@ -29,6 +30,7 @@ Here are the top-level functions available in Narwhals.
         - maybe_set_index
         - mean
         - mean_horizontal
+        - median
         - min
         - min_horizontal
         - narwhalify

@@ -11,6 +11,7 @@ pytest-cov
 pytest-randomly
 pytest-env
 hypothesis
+hypothesis[numpy]
 scikit-learn
 typing_extensions
 dask[dataframe]; python_version >= '3.9'

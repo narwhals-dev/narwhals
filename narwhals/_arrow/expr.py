@@ -4,9 +4,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -61,15 +65,22 @@ class ArrowExpr:
         from narwhals._arrow.series import ArrowSeries
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            return [
-                ArrowSeries(
-                    df._native_frame[column_name],
-                    name=column_name,
-                    backend_version=df._backend_version,
-                    dtypes=df._dtypes,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    ArrowSeries(
+                        df._native_frame[column_name],
+                        name=column_name,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -204,6 +215,9 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
+    def median(self) -> Self:
+        return reuse_series_implementation(self, "median", returns_scalar=True)
+
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
@@ -222,8 +236,8 @@ class ArrowExpr:
     def diff(self) -> Self:
         return reuse_series_implementation(self, "diff")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def round(self, decimals: int) -> Self:
         return reuse_series_implementation(self, "round", decimals)
@@ -302,8 +316,15 @@ class ArrowExpr:
             seed=seed,
         )
 
-    def fill_null(self: Self, value: Any) -> Self:
-        return reuse_series_implementation(self, "fill_null", value=value)
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "fill_null", value=value, strategy=strategy, limit=limit
+        )
 
     def is_duplicated(self: Self) -> Self:
         return reuse_series_implementation(self, "is_duplicated")
@@ -317,8 +338,15 @@ class ArrowExpr:
     def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
-    def unique(self: Self) -> Self:
-        return reuse_series_implementation(self, "unique")
+    def unique(self: Self, *, maintain_order: bool = False) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
+
+    def replace_strict(
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "replace_strict", old, new, return_dtype=return_dtype
+        )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         return reuse_series_implementation(
@@ -371,6 +399,56 @@ class ArrowExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
+
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            input_series_list = self._call(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
+
+            if is_numpy_array(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series(array)
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            elif (np := get_numpy()) is not None and np.isscalar(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series([array])
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype is not None:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

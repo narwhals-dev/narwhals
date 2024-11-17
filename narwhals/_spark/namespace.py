@@ -34,7 +34,9 @@ class SparkNamespace:
         msg = "`_create_compliant_series` for PySparkNamespace exists only for compatibility"
         raise NotImplementedError(msg)
 
-    def _create_series_from_scalar(self, *_: Any) -> NoReturn:
+    def _create_series_from_scalar(
+        self, value: Any, *, reference_series: SparkExpr
+    ) -> NoReturn:
         msg = "`_create_series_from_scalar` for PySparkNamespace exists only for compatibility"
         raise NotImplementedError(msg)
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Generator
 
 import pandas as pd
@@ -15,6 +14,12 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from tests.utils import PANDAS_VERSION
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -144,7 +149,7 @@ if get_dask_dataframe() is not None:  # pragma: no cover
 @pytest.fixture(params=eager_constructors)
 def constructor_eager(
     request: pytest.FixtureRequest,
-) -> Callable[[Any], IntoDataFrame]:
+) -> ConstructorEager:
     return request.param  # type: ignore[no-any-return]
 
 

@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
@@ -13,8 +14,9 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     import dask_expr
@@ -66,7 +68,14 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame.loc[:, column_name] for column_name in column_names]
+            try:
+                return [df._native_frame[column_name] for column_name in column_names]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -375,12 +384,32 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> NoReturn:
+        msg = "`Expr.map_batches` is not implemented for Dask yet"
+        raise NotImplementedError(msg)
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
             "mean",
             returns_scalar=True,
         )
+
+    def median(self) -> Self:
+        from narwhals.exceptions import InvalidOperationError
+
+        def func(s: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._dtypes, Implementation.DASK)
+            if not dtype.is_numeric():
+                msg = "`median` operation not supported for non-numeric input type."
+                raise InvalidOperationError(msg)
+            return s.median_approximate()
+
+        return self._from_call(func, "median", returns_scalar=True)
 
     def min(self) -> Self:
         return self._from_call(
@@ -412,10 +441,58 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
         return self._from_call(
             lambda _input: _input.cumsum(),
             "cum_sum",
+            returns_scalar=False,
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: (~_input.isna()).astype(int).cumsum(),
+            "cum_count",
+            returns_scalar=False,
+        )
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummin(),
+            "cum_min",
+            returns_scalar=False,
+        )
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummax(),
+            "cum_max",
+            returns_scalar=False,
+        )
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cumprod(),
+            "cum_prod",
             returns_scalar=False,
         )
 
@@ -477,6 +554,12 @@ class DaskExpr:
         msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
         raise NotImplementedError(msg)
 
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        msg = "`replace_strict` is not yet supported for Dask expressions"
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
@@ -505,11 +588,34 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def fill_null(self, value: Any) -> DaskExpr:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> DaskExpr:
+        def func(
+            _input: dask_expr.Series,
+            value: Any | None,
+            strategy: str | None,
+            limit: int | None,
+        ) -> dask_expr.Series:
+            if value is not None:
+                res_ser = _input.fillna(value)
+            else:
+                res_ser = (
+                    _input.ffill(limit=limit)
+                    if strategy == "forward"
+                    else _input.bfill(limit=limit)
+                )
+            return res_ser
+
         return self._from_call(
-            lambda _input, _val: _input.fillna(_val),
+            func,
             "fillna",
             value,
+            strategy,
+            limit,
             returns_scalar=False,
         )
 
@@ -580,7 +686,7 @@ class DaskExpr:
     def is_first_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
@@ -597,7 +703,7 @@ class DaskExpr:
     def is_last_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 

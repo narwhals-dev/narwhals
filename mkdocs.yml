@@ -44,6 +44,7 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
+    - api-reference/exceptions.md
     - api-reference/selectors.md
     - api-reference/typing.md
   - This: this.md
@@ -78,9 +79,7 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
-extra_css:
-  - https://unpkg.com/katex@0/dist/katex.min.css
-  - css/mkdocstrings.css
+
 
 plugins:
 - search
@@ -91,6 +90,12 @@ plugins:
         - https://installer.readthedocs.io/en/stable/objects.inv
         rendering:
           show_signature_annotations: true
+        options:
+          members_order: alphabetical
+    enable_inventory: true
+
+extra_javascript:
+  - javascripts/extra.js
 
 hooks:
 - utils/generate_backend_completeness.py

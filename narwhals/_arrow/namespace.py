@@ -62,14 +62,16 @@ class ArrowNamespace:
             dtypes=self._dtypes,
         )
 
-    def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
+    def _create_series_from_scalar(
+        self, value: Any, *, reference_series: ArrowSeries
+    ) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        if self._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
             value = value.as_py()
         return ArrowSeries._from_iterable(
             [value],
-            name=series.name,
+            name=reference_series.name,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -152,7 +154,7 @@ class ArrowNamespace:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
                 data=[value],
-                name="lit",
+                name="literal",
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
@@ -165,7 +167,7 @@ class ArrowNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=["lit"],
+            output_names=[_lit_arrow_series.__name__],
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -324,6 +326,11 @@ class ArrowNamespace:
         return ArrowExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
+
+    def median(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
 
     def max(self, *column_names: str) -> ArrowExpr:
         return ArrowExpr.from_column_names(

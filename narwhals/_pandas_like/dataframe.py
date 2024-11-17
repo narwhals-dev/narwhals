@@ -9,17 +9,17 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_native_series
+from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -53,8 +53,6 @@ class PandasLikeDataFrame:
         self._implementation = implementation
         self._backend_version = backend_version
         self._dtypes = dtypes
-
-        self._schema_cache: dict[str, DType] | None = None
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -91,7 +89,14 @@ class PandasLikeDataFrame:
             raise ValueError(msg) from None
 
         if len(columns) != len_unique_columns:
-            msg = f"Expected unique column names, got: {columns}"
+            from collections import Counter
+
+            counter = Counter(columns)
+            msg = ""
+            for key, value in counter.items():
+                if value > 1:
+                    msg += f"\n- '{key}' {value} times"
+            msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
@@ -155,7 +160,7 @@ class PandasLikeDataFrame:
         ),
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -227,7 +232,14 @@ class PandasLikeDataFrame:
 
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
-                return self._from_native_frame(self._native_frame.loc[:, item])
+                return self._from_native_frame(
+                    select_columns_by_name(
+                        self._native_frame,
+                        item,
+                        self._backend_version,
+                        self._implementation,
+                    )
+                )
             return self._from_native_frame(self._native_frame.iloc[item])
 
         elif isinstance(item, slice):
@@ -275,7 +287,7 @@ class PandasLikeDataFrame:
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
@@ -289,11 +301,8 @@ class PandasLikeDataFrame:
         named: bool = False,
         buffer_size: int = 512,
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
-        """
-        NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
-            and has no effect on the output.
-        """
+        # The param ``buffer_size`` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         if not named:
             yield from self._native_frame.itertuples(index=False, name=None)
         else:
@@ -305,14 +314,12 @@ class PandasLikeDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        if self._schema_cache is None:
-            self._schema_cache = {
-                col: native_to_narwhals_dtype(
-                    self._native_frame[col], self._dtypes, self._implementation
-                )
-                for col in self._native_frame.columns
-            }
-        return self._schema_cache
+        return {
+            col: native_to_narwhals_dtype(
+                self._native_frame[col], self._dtypes, self._implementation
+            )
+            for col in self._native_frame.columns
+        }
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
@@ -325,7 +332,15 @@ class PandasLikeDataFrame:
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
-            return self._from_native_frame(self._native_frame.loc[:, list(exprs)])
+            column_names = list(exprs)
+            return self._from_native_frame(
+                select_columns_by_name(
+                    self._native_frame,
+                    column_names,  # type: ignore[arg-type]
+                    self._backend_version,
+                    self._implementation,
+                )
+            )
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -346,7 +361,7 @@ class PandasLikeDataFrame:
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def with_row_index(self, name: str) -> Self:
-        row_index = create_native_series(
+        row_index = create_compliant_series(
             range(len(self._native_frame)),
             index=self._native_frame.index,
             implementation=self._implementation,
@@ -392,48 +407,28 @@ class PandasLikeDataFrame:
         if not new_columns and len(self) == 0:
             return self
 
-        # If the inputs are all Expressions which return full columns
-        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
-        # We can't use the fastpath if any input is not an expression (e.g.
-        # if it's a Series) because then we might be changing its flags.
-        # See `test_memmap` for an example of where this is necessary.
-        fast_path = (
-            all(len(s) > 1 for s in new_columns)
-            and all(isinstance(x, PandasLikeExpr) for x in exprs)
-            and all(isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items())
+        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
+        to_concat = []
+        # Make sure to preserve column order
+        for name in self._native_frame.columns:
+            if name in new_column_name_to_new_column_map:
+                to_concat.append(
+                    validate_dataframe_comparand(
+                        index, new_column_name_to_new_column_map.pop(name)
+                    )
+                )
+            else:
+                to_concat.append(self._native_frame[name])
+        to_concat.extend(
+            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            for s in new_column_name_to_new_column_map
         )
 
-        if fast_path:
-            new_column_name_to_new_column_map = {s.name: s for s in new_columns}
-            to_concat = []
-            # Make sure to preserve column order
-            for name in self._native_frame.columns:
-                if name in new_column_name_to_new_column_map:
-                    to_concat.append(
-                        validate_dataframe_comparand(
-                            index, new_column_name_to_new_column_map.pop(name)
-                        )
-                    )
-                else:
-                    to_concat.append(self._native_frame[name])
-            to_concat.extend(
-                validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
-                for s in new_column_name_to_new_column_map
-            )
-
-            df = horizontal_concat(
-                to_concat,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
-        else:
-            # This is the logic in pandas' DataFrame.assign
-            if self._backend_version < (2,):  # pragma: no cover
-                df = self._native_frame.copy(deep=True)
-            else:
-                df = self._native_frame.copy(deep=False)
-            for s in new_columns:
-                df[s.name] = validate_dataframe_comparand(index, s)
+        df = horizontal_concat(
+            to_concat,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_frame(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
@@ -506,7 +501,7 @@ class PandasLikeDataFrame:
                 self._implementation is Implementation.PANDAS
                 and self._backend_version < (1, 4)
             ):
-                key_token = generate_unique_token(
+                key_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 
@@ -531,7 +526,7 @@ class PandasLikeDataFrame:
                 )
 
         if how == "anti":
-            if self._implementation is Implementation.CUDF:  # pragma: no cover
+            if self._implementation is Implementation.CUDF:
                 return self._from_native_frame(
                     self._native_frame.merge(
                         other._native_frame,
@@ -541,12 +536,20 @@ class PandasLikeDataFrame:
                     )
                 )
             else:
-                indicator_token = generate_unique_token(
+                indicator_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
+                if right_on is None:  # pragma: no cover
+                    msg = "`right_on` cannot be `None` in anti-join"
+                    raise TypeError(msg)
 
                 other_native = (
-                    other._native_frame.loc[:, right_on]
+                    select_columns_by_name(
+                        other._native_frame,
+                        right_on,
+                        self._backend_version,
+                        self._implementation,
+                    )
                     .rename(  # rename to avoid creating extra columns in join
                         columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                         copy=False,
@@ -566,8 +569,16 @@ class PandasLikeDataFrame:
                 )
 
         if how == "semi":
+            if right_on is None:  # pragma: no cover
+                msg = "`right_on` cannot be `None` in semi-join"
+                raise TypeError(msg)
             other_native = (
-                other._native_frame.loc[:, right_on]
+                select_columns_by_name(
+                    other._native_frame,
+                    right_on,
+                    self._backend_version,
+                    self._implementation,
+                )
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
                     copy=False,
@@ -653,11 +664,8 @@ class PandasLikeDataFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         subset = flatten(subset) if subset else None
         return self._from_native_frame(
@@ -676,7 +684,6 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
-            # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasLikeSeries(
                     self._native_frame[col],
@@ -695,26 +702,41 @@ class PandasLikeDataFrame:
             # pandas default differs from Polars, but cuDF default is True
             copy = self._implementation is Implementation.CUDF
 
+        to_convert = [
+            key
+            for key, val in self.schema.items()
+            if val == self._dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
+        ]
+        if to_convert:
+            df = self.with_columns(
+                self.__narwhals_namespace__()
+                .col(*to_convert)
+                .dt.convert_time_zone("UTC")
+                .dt.replace_time_zone(None)
+            )._native_frame
+        else:
+            df = self._native_frame
+
         if dtype is not None:
-            return self._native_frame.to_numpy(dtype=dtype, copy=copy)
+            return df.to_numpy(dtype=dtype, copy=copy)
 
         # pandas return `object` dtype for nullable dtypes if dtype=None,
         # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for col_dtype in self._native_frame.dtypes:
+        for col_dtype in df.dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np  # ignore-banned-import
 
                 return np.hstack(
                     [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]
                 )
-        return self._native_frame.to_numpy(copy=copy)
+        return df.to_numpy(copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_frame
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
+        if self._implementation is Implementation.MODIN:
             return self._native_frame._to_pandas()
         return self._native_frame.to_pandas()  # pragma: no cover
 
@@ -780,8 +802,92 @@ class PandasLikeDataFrame:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None,
+        values: str | list[str] | None,
+        aggregate_function: Any | None,
+        maintain_order: bool,
+        sort_columns: bool,
+        separator: str = "_",
+    ) -> Self:
+        if self._implementation is Implementation.PANDAS and (
+            self._backend_version < (1, 1)
+        ):  # pragma: no cover
+            msg = "pivot is only supported for pandas>=1.1"
+            raise NotImplementedError(msg)
+        if self._implementation is Implementation.MODIN:
+            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            raise NotImplementedError(msg)
+        from itertools import product
+
+        frame = self._native_frame
+
+        if isinstance(on, str):
+            on = [on]
+        if isinstance(index, str):
+            index = [index]
+
+        if values is None:
+            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
+        elif isinstance(values, str):  # pragma: no cover
+            values_ = [values]
+        else:
+            values_ = values
+
+        if aggregate_function is None:
+            result = frame.pivot(columns=on, index=index, values=values_)
+
+        elif aggregate_function == "len":
+            result = (
+                frame.groupby([*on, *index])  # type: ignore[misc]
+                .agg({v: "size" for v in values_})
+                .reset_index()
+                .pivot(columns=on, index=index, values=values_)
+            )
+        else:
+            result = frame.pivot_table(
+                values=values_,
+                index=index,
+                columns=on,
+                aggfunc=aggregate_function,
+                margins=False,
+                observed=True,
+            )
+
+        # Put columns in the right order
+        if sort_columns:
+            uniques = {
+                col: sorted(self._native_frame[col].unique().tolist()) for col in on
+            }
+        else:
+            uniques = {col: self._native_frame[col].unique().tolist() for col in on}
+        all_lists = [values_, *list(uniques.values())]
+        ordered_cols = list(product(*all_lists))
+        result = result.loc[:, ordered_cols]
+        columns = result.columns.tolist()
+
+        n_on = len(on)
+        if n_on == 1:
+            new_columns = [
+                separator.join(col).strip() if len(values_) > 1 else col[-1]
+                for col in columns
+            ]
+        else:
+            new_columns = [
+                separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
+                if len(values_) > 1
+                else '{"' + '","'.join(col[-n_on:]) + '"}'
+                for col in columns
+            ]
+        result.columns = new_columns
+        result.columns.names = [""]  # type: ignore[attr-defined]
+        return self._from_native_frame(result.reset_index())
+
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:
             return self._native_frame.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()

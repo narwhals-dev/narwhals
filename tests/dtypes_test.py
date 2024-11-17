@@ -161,3 +161,39 @@ def test_second_time_unit() -> None:
     s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Duration("s")
+
+
+@pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
+def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION >= (3,):
+        # pandas 3.0+ won't allow this kind of inplace modification
+        request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (1, 4):
+        # pandas pre 1.4 wouldn't change the type?
+        request.applymarker(pytest.mark.xfail)
+    s = pd.Series([1, 2, 3])
+    snw = nw.from_native(s, series_only=True)
+    assert snw.dtype == nw.Int64
+    s[0] = 999.5
+    assert snw.dtype == nw.Float64
+
+
+def test_pandas_fixed_offset_1302() -> None:
+    result = nw.from_native(
+        pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
+        series_only=True,
+    ).dtype
+    if PANDAS_VERSION >= (2,):
+        assert result == nw.Datetime("ns", "UTC+01:00")
+    else:  # pragma: no cover
+        assert result == nw.Datetime("ns", "pytz.FixedOffset(60)")
+    if PANDAS_VERSION >= (2,):
+        result = nw.from_native(
+            pd.Series(
+                pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])
+            ).convert_dtypes(dtype_backend="pyarrow"),
+            series_only=True,
+        ).dtype
+        assert result == nw.Datetime("ns", "+01:00")
+    else:  # pragma: no cover
+        pass

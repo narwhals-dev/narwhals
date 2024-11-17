@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Sequence
 
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -16,14 +19,16 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import polars as pl
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
 
 class PolarsDataFrame:
     def __init__(
-        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self, df: pl.DataFrame, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -76,34 +81,52 @@ class PolarsDataFrame:
             }
 
         def func(*args: Any, **kwargs: Any) -> Any:
+            import polars as pl  # ignore-banned-import()
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_object(
-                getattr(self._native_frame, attr)(*args, **kwargs)
-            )
+            try:
+                return self._from_native_object(
+                    getattr(self._native_frame, attr)(*args, **kwargs)
+                )
+            except pl.exceptions.ColumnNotFoundError as e:
+                msg = (
+                    f"t {e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
+                )
+                raise ColumnNotFoundError(msg) from e
+            except TypeError as e:
+                e_str = str(e)
+                if (
+                    "cannot create expression literal" in e_str
+                    or "invalid literal" in e_str
+                ):
+                    raise InvalidIntoExprError(e_str) from e
+                raise
 
         return func
 
     def __array__(self, dtype: Any | None = None, copy: bool | None = None) -> np.ndarray:
-        if self._backend_version < (0, 20, 28) and copy is not None:  # pragma: no cover
+        if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
             raise NotImplementedError(msg)
-        if self._backend_version < (0, 20, 28):  # pragma: no cover
+        if self._backend_version < (0, 20, 28):
             return self._native_frame.__array__(dtype)
         return self._native_frame.__array__(dtype)
 
-    def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):  # pragma: no cover
-            schema = self._native_frame.schema
+    def collect_schema(self) -> dict[str, DType]:
+        if self._backend_version < (1,):
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.schema.items()
+            }
         else:
-            schema = dict(self._native_frame.collect_schema())
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.collect_schema().items()
+            }
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self._native_frame.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape
 
     def __getitem__(self, item: Any) -> Any:
         if self._backend_version > (0, 20, 30):
@@ -179,7 +202,7 @@ class PolarsDataFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def lazy(self) -> PolarsLazyFrame:
         return PolarsLazyFrame(
@@ -209,17 +232,15 @@ class PolarsDataFrame:
         return PolarsGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 4):
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
-            to_drop = parse_columns_to_drop(
-                compliant_frame=self, columns=columns, strict=strict
-            )
-            return self._from_native_frame(self._native_frame.drop(to_drop))
-        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(to_drop))
 
     def unpivot(
         self: Self,
@@ -228,7 +249,7 @@ class PolarsDataFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
                 self._native_frame.melt(
                     id_vars=index,
@@ -243,10 +264,38 @@ class PolarsDataFrame:
             )
         )
 
+    def pivot(
+        self: Self,
+        on: str | list[str],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median", "len"
+        ]
+        | None = None,
+        maintain_order: bool = True,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            msg = "`pivot` is only supported for Polars>=1.0.0"
+            raise NotImplementedError(msg)
+        result = self._native_frame.pivot(
+            on,
+            index=index,
+            values=values,
+            aggregate_function=aggregate_function,
+            maintain_order=maintain_order,
+            sort_columns=sort_columns,
+            separator=separator,
+        )
+        return self._from_native_object(result)  # type: ignore[no-any-return]
+
 
 class PolarsLazyFrame:
     def __init__(
-        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -276,16 +325,29 @@ class PolarsLazyFrame:
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
+            import polars as pl  # ignore-banned-import
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_frame(
-                getattr(self._native_frame, attr)(*args, **kwargs)
-            )
+            try:
+                return self._from_native_frame(
+                    getattr(self._native_frame, attr)(*args, **kwargs)
+                )
+            except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
+                raise ColumnNotFoundError(str(e)) from e
+            except TypeError as e:
+                e_str = str(e)
+                if (
+                    "cannot create expression literal" in e_str
+                    or "invalid literal" in e_str
+                ):
+                    raise InvalidIntoExprError(e_str) from e
+                raise
 
         return func
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     @property
     def schema(self) -> dict[str, Any]:
@@ -295,19 +357,28 @@ class PolarsLazyFrame:
             for name, dtype in schema.items()
         }
 
-    def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):  # pragma: no cover
-            schema = self._native_frame.schema
+    def collect_schema(self) -> dict[str, DType]:
+        if self._backend_version < (1,):
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.schema.items()
+            }
         else:
-            schema = dict(self._native_frame.collect_schema())
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in self._native_frame.collect_schema().items()
+            }
 
     def collect(self) -> PolarsDataFrame:
+        import polars as pl  # ignore-banned-import
+
+        try:
+            result = self._native_frame.collect()
+        except pl.exceptions.ColumnNotFoundError as e:
+            raise ColumnNotFoundError(str(e)) from e
+
         return PolarsDataFrame(
-            self._native_frame.collect(),
+            result,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
@@ -318,12 +389,12 @@ class PolarsLazyFrame:
         return PolarsLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 4):
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
@@ -334,7 +405,7 @@ class PolarsLazyFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
+        if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
                 self._native_frame.melt(
                     id_vars=index,

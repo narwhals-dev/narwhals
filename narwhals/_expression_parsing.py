@@ -13,6 +13,7 @@ from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -177,8 +178,10 @@ def parse_into_exprs(
     namespace: CompliantNamespace,
     **named_exprs: IntoCompliantExpr,
 ) -> ListOfCompliantExpr:
-    """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
-    more details."""
+    """Parse each input as an expression (if it's not already one).
+
+    See `parse_into_expr` for more details.
+    """
     return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
         parse_into_expr(expr, namespace=namespace).alias(name)
         for name, expr in named_exprs.items()
@@ -210,13 +213,7 @@ def parse_into_expr(
     if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
         return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
-    msg = (
-        f"Expected an object which can be converted into an expression, got {type(into_expr)}\n\n"  # pragma: no cover
-        "Hint: if you were trying to select a column which does not have a string column name, then "
-        "you should explicitly use `nw.col`.\nFor example, `df.select(nw.col(0))` if you have a column "
-        "named `0`."
-    )
-    raise TypeError(msg)
+    raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
 def reuse_series_implementation(
@@ -231,12 +228,13 @@ def reuse_series_implementation(
     If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
     leverage this method to do that for us.
 
-    Arguments
+    Arguments:
         expr: expression object.
         attr: name of method.
         returns_scalar: whether the Series version returns a scalar. In this case,
             the expression version should return a 1-row Series.
-        args, kwargs: arguments and keyword arguments to pass to function.
+        args: arguments to pass to function.
+        kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
 
@@ -249,12 +247,12 @@ def reuse_series_implementation(
 
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(column, attr)(*_args, **_kwargs),
-                column,  # type: ignore[arg-type]
+                getattr(series, attr)(*_args, **_kwargs),
+                reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
-            else getattr(column, attr)(*_args, **_kwargs)
-            for column in expr._call(df)  # type: ignore[arg-type]
+            else getattr(series, attr)(*_args, **_kwargs)
+            for series in expr._call(df)  # type: ignore[arg-type]
         ]
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
@@ -300,9 +298,8 @@ def reuse_series_implementation(
 def reuse_series_namespace_implementation(
     expr: CompliantExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
 ) -> CompliantExprT:
-    """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    of `Expr.foo`.
-    """
+    # Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+    # of `Expr.foo`.
     plx = expr.__narwhals_namespace__()
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
@@ -317,16 +314,16 @@ def reuse_series_namespace_implementation(
 
 
 def is_simple_aggregation(expr: CompliantExpr) -> bool:
-    """
-    Check if expr is a very simple one, such as:
+    """Check if expr is a very simple one.
 
-    - nw.col('a').mean()  # depth 1
-    - nw.mean('a')  # depth 1
-    - nw.len()  # depth 0
+    Examples:
+        - nw.col('a').mean()  # depth 1
+        - nw.mean('a')  # depth 1
+        - nw.len()  # depth 0
 
     as opposed to, say
 
-    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+        - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
 
     because then, we can use a fastpath in pandas.
     """
@@ -346,7 +343,7 @@ def combine_root_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | Non
 
 
 def reduce_output_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
-    """Returns the left-most output name"""
+    """Returns the left-most output name."""
     return (
         parsed_exprs[0]._output_names[:1]
         if parsed_exprs[0]._output_names is not None
