@@ -400,15 +400,14 @@ class DaskExpr:
         )
 
     def median(self) -> Self:
-        from dask_expr._shuffle import _is_numeric_cast_type
-
         from narwhals.exceptions import InvalidOperationError
 
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
-            if not _is_numeric_cast_type(_input.dtype):
+        def func(s: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._dtypes, Implementation.DASK)
+            if dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
-            return _input.median_approximate()
+            return s.median_approximate()
 
         return self._from_call(func, "median", returns_scalar=True)
 
