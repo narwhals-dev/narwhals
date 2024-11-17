@@ -8,7 +8,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals._arrow.utils import _window_agg
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
@@ -877,25 +876,28 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
-
-        native_series = self._native_series
-
-        result = pa.chunked_array(
-            [
-                list(
-                    _window_agg(
-                        native_series,
-                        window_size=window_size,
-                        min_periods=min_periods,
-                        center=center,
-                        aggregate_function=pc.mean,
-                    )
-                )
-            ]
-        )
-        return self._from_native_series(result)
+        min_periods_ = min_periods or window_size
+        cum_sum = self.cum_sum(reverse=False).fill_null(strategy="forward")
+        cum_count = self.cum_count(reverse=False)
+        # num = (cum_sum[window_size:] - cum_sum[:-window_size])
+        # den = (cum_count[window_size:] - cum_count[:-window_size])
+        # den.zip_with(den>=min_periods_, None)
+        return (cum_sum[window_size:] - cum_sum[:-window_size]) / cum_count[window_size:]
+    
+        # result = pa.chunked_array(
+        #     [
+        #         list(
+        #             _window_agg(
+        #                 native_series,
+        #                 window_size=window_size,
+        #                 min_periods=min_periods,
+        #                 center=center,
+        #                 aggregate_function=pc.mean,
+        #             )
+        #         )
+        #     ]
+        # )
+        # return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
