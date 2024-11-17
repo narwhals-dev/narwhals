@@ -18,7 +18,7 @@ print("pandas output")
 print(nw.from_native(pd.DataFrame(data)).with_columns(b=nw.col("a") * 2).to_native())
 print("\nPolars output")
 print(nw.from_native(pl.DataFrame(data)).with_columns(b=nw.col("a") * 2).to_native())
-print("\nPolars output")
+print("\nPyArrow output")
 print(nw.from_native(pa.table(data)).with_columns(b=nw.col("a") * 2).to_native())
 ```
 
