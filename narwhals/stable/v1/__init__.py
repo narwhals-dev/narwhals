@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
+from warnings import warn
 
 import narwhals as nw
 from narwhals import dependencies
@@ -492,10 +493,190 @@ class Series(NwSeries):
             sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.rolling_sum(window_size=2)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            0    NaN
+            1    3.0
+            2    5.0
+            3    7.0
+            dtype: float64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               3.0
+               5.0
+               7.0
+            ]
+
+            >>> func(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                3,
+                5,
+                7
+              ]
+            ]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.rolling_sum` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
 
 class Expr(NwExpr):
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  3.0
+            2  NaN  3.0
+            3  4.0  6.0
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 3.0 │
+            │ null ┆ 3.0 │
+            │ 4.0  ┆ 6.0 │
+            └──────┴─────┘
+
+            >>> func(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,3,3,6]]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Expr.rolling_sum` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
 
 
 class Schema(NwSchema):

@@ -43,6 +43,7 @@
         - pipe
         - quantile
         - replace_strict
+        - rolling_sum
         - round
         - sample
         - shift

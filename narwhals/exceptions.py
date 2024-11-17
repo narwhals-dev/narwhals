@@ -55,3 +55,7 @@ class InvalidIntoExprError(TypeError):
             "named `0`."
         )
         return InvalidIntoExprError(message)
+
+
+class NarwhalsUnstableWarning(UserWarning):
+    """Warning issued when a method or function is considered unstable in the stable api."""

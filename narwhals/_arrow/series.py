@@ -869,6 +869,52 @@ class ArrowSeries:
         )
         return self._from_native_series(result)
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        if len(self) == 0:
+            return self
+
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        min_periods = min_periods or window_size
+
+        offset = window_size // 2 if center else 0
+
+        if center:
+            native_series = self._native_series
+
+            pad_values = [0] * offset
+            pad_left = pa.array(pad_values, type=native_series.type)
+            pad_right = pa.array(pad_values, type=native_series.type)
+            padded_arr = self._from_native_series(
+                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+            )
+        else:
+            padded_arr = self
+
+        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        rolling_sum = cum_sum - cum_sum.shift(window_size).fill_null(0)
+
+        valid_count = padded_arr.cum_count(reverse=False)
+        count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
+
+        result = self._from_native_series(
+            pc.if_else(
+                (count_in_window >= min_periods)._native_series,
+                rolling_sum._native_series,
+                None,
+            )
+        )
+        if center:
+            result = result.shift(-offset)[offset:-offset]
+        return result
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 

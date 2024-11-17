@@ -2937,6 +2937,91 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).cum_prod(reverse=reverse))
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  3.0
+            2  NaN  3.0
+            3  4.0  6.0
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 3.0 │
+            │ null ┆ 3.0 │
+            │ 4.0  ┆ 6.0 │
+            └──────┴─────┘
+
+            >>> func(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,3,3,6]]
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

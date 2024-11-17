@@ -2842,6 +2842,89 @@ class Series:
             self._compliant_series.cum_prod(reverse=reverse)
         )
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.rolling_sum(window_size=2)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            0    NaN
+            1    3.0
+            2    5.0
+            3    7.0
+            dtype: float64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               3.0
+               5.0
+               7.0
+            ]
+
+            >>> func(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                3,
+                5,
+                7
+              ]
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 
