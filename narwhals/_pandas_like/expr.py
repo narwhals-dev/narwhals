@@ -6,12 +6,12 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from typing_extensions import Self

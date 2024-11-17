@@ -6,11 +6,11 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:

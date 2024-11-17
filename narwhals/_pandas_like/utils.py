@@ -11,8 +11,8 @@ from typing import TypeVar
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_polars
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 

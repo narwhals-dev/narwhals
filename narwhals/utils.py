@@ -13,7 +13,6 @@ from typing import Union
 from typing import cast
 from warnings import warn
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
@@ -28,6 +27,7 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:

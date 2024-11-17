@@ -18,6 +18,8 @@ class FormattedKeyError(KeyError):
 
 
 class ColumnNotFoundError(FormattedKeyError):
+    """Exception raised when column name isn't present."""
+
     def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
@@ -33,10 +35,13 @@ class ColumnNotFoundError(FormattedKeyError):
         return ColumnNotFoundError(message)
 
 
-class InvalidOperationError(Exception): ...
+class InvalidOperationError(Exception):
+    """Exception raised during invalid operations."""
 
 
 class InvalidIntoExprError(TypeError):
+    """Exception raised when object can't be converted to expression."""
+
     def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)

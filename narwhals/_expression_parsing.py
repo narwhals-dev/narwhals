@@ -12,8 +12,8 @@ from typing import Union
 from typing import cast
 from typing import overload
 
-from narwhals._exceptions import InvalidIntoExprError
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
