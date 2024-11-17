@@ -81,7 +81,7 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
-      - name: install-minimum-versions
+      - name: install-not-so-old-versions
         run: uv pip install tox virtualenv setuptools pandas==2.0.3 polars==0.20.8 numpy==1.24.4 pyarrow==14.0.0 pyspark==3.4.0 scipy==1.8.0 scikit-learn==1.3.0 dask[dataframe]==2024.7 tzdata --system
       - name: install-reqs
         run: uv pip install -r requirements-dev.txt --system

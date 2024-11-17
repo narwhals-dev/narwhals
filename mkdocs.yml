@@ -12,9 +12,10 @@ nav:
     - basics/complete_example.md
     - basics/dataframe_conversion.md
   - Pandas-like concepts:
-    - other/pandas_index.md
-    - other/user_warning.md
-    - other/column_names.md
+    - pandas_like_concepts/pandas_index.md
+    - pandas_like_concepts/user_warning.md
+    - pandas_like_concepts/column_names.md
+    - pandas_like_concepts/boolean.md
   - overhead.md
   - backcompat.md
   - extending.md

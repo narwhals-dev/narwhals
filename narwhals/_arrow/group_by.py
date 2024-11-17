@@ -12,6 +12,8 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
@@ -115,7 +117,7 @@ class ArrowGroupBy:
 
 
 def agg_arrow(
-    grouped: Any,
+    grouped: pa.TableGroupBy,
     exprs: list[ArrowExpr],
     keys: list[str],
     output_names: list[str],
