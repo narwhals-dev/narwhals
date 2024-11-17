@@ -9,6 +9,8 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -79,10 +81,26 @@ class PolarsDataFrame:
             }
 
         def func(*args: Any, **kwargs: Any) -> Any:
+            import polars as pl  # ignore-banned-import()
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_object(
-                getattr(self._native_frame, attr)(*args, **kwargs)
-            )
+            try:
+                return self._from_native_object(
+                    getattr(self._native_frame, attr)(*args, **kwargs)
+                )
+            except pl.exceptions.ColumnNotFoundError as e:
+                msg = (
+                    f"t {e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
+                )
+                raise ColumnNotFoundError(msg) from e
+            except TypeError as e:
+                e_str = str(e)
+                if (
+                    "cannot create expression literal" in e_str
+                    or "invalid literal" in e_str
+                ):
+                    raise InvalidIntoExprError(e_str) from e
+                raise
 
         return func
 
@@ -219,12 +237,10 @@ class PolarsDataFrame:
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        if self._backend_version < (1, 0, 0):
-            to_drop = parse_columns_to_drop(
-                compliant_frame=self, columns=columns, strict=strict
-            )
-            return self._from_native_frame(self._native_frame.drop(to_drop))
-        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(to_drop))
 
     def unpivot(
         self: Self,
@@ -309,10 +325,23 @@ class PolarsLazyFrame:
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
+            import polars as pl  # ignore-banned-import
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_frame(
-                getattr(self._native_frame, attr)(*args, **kwargs)
-            )
+            try:
+                return self._from_native_frame(
+                    getattr(self._native_frame, attr)(*args, **kwargs)
+                )
+            except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
+                raise ColumnNotFoundError(str(e)) from e
+            except TypeError as e:
+                e_str = str(e)
+                if (
+                    "cannot create expression literal" in e_str
+                    or "invalid literal" in e_str
+                ):
+                    raise InvalidIntoExprError(e_str) from e
+                raise
 
         return func
 
@@ -341,8 +370,15 @@ class PolarsLazyFrame:
             }
 
     def collect(self) -> PolarsDataFrame:
+        import polars as pl  # ignore-banned-import
+
+        try:
+            result = self._native_frame.collect()
+        except pl.exceptions.ColumnNotFoundError as e:
+            raise ColumnNotFoundError(str(e)) from e
+
         return PolarsDataFrame(
-            self._native_frame.collect(),
+            result,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )

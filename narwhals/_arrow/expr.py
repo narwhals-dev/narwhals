@@ -10,6 +10,7 @@ from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -64,15 +65,22 @@ class ArrowExpr:
         from narwhals._arrow.series import ArrowSeries
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            return [
-                ArrowSeries(
-                    df._native_frame[column_name],
-                    name=column_name,
-                    backend_version=df._backend_version,
-                    dtypes=df._dtypes,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    ArrowSeries(
+                        df._native_frame[column_name],
+                        name=column_name,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,

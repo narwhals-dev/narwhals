@@ -11,6 +11,7 @@ from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -72,15 +73,22 @@ class PandasLikeExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=df._implementation,
-                    backend_version=df._backend_version,
-                    dtypes=df._dtypes,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    PandasLikeSeries(
+                        df._native_frame[column_name],
+                        implementation=df._implementation,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,

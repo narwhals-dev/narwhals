@@ -14,6 +14,7 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -67,7 +68,14 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame[column_name] for column_name in column_names]
+            try:
+                return [df._native_frame[column_name] for column_name in column_names]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -392,15 +400,14 @@ class DaskExpr:
         )
 
     def median(self) -> Self:
-        from dask_expr._shuffle import _is_numeric_cast_type
+        from narwhals.exceptions import InvalidOperationError
 
-        from narwhals._exceptions import InvalidOperationError
-
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
-            if not _is_numeric_cast_type(_input.dtype):
+        def func(s: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._dtypes, Implementation.DASK)
+            if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
-            return _input.median_approximate()
+            return s.median_approximate()
 
         return self._from_call(func, "median", returns_scalar=True)
 

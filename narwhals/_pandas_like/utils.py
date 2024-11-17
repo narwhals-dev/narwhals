@@ -12,6 +12,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
 from narwhals.dependencies import get_polars
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -659,5 +660,18 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
+        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
+        missing_columns = [x for x in column_names if x not in available_columns]
+        if missing_columns:  # pragma: no cover
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns, available_columns
+            )
         return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
-    return df[column_names]  # type: ignore[no-any-return, index]
+    try:
+        return df[column_names]  # type: ignore[no-any-return, index]
+    except KeyError as e:
+        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
+        missing_columns = [x for x in column_names if x not in available_columns]
+        raise ColumnNotFoundError.from_missing_and_available_column_names(
+            missing_columns, available_columns
+        ) from e

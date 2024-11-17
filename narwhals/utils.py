@@ -13,7 +13,6 @@ from typing import Union
 from typing import cast
 from warnings import warn
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
@@ -28,6 +27,7 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -638,16 +638,16 @@ def parse_columns_to_drop(
     columns: Iterable[str],
     strict: bool,  # noqa: FBT001
 ) -> list[str]:
-    cols = set(compliant_frame.columns)
+    cols = compliant_frame.columns
     to_drop = list(columns)
-
     if strict:
-        for d in to_drop:
-            if d not in cols:
-                msg = f'"{d}" not found'
-                raise ColumnNotFoundError(msg)
+        missing_columns = [x for x in to_drop if x not in cols]
+        if missing_columns:
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns=missing_columns, available_columns=cols
+            )
     else:
-        to_drop = list(cols.intersection(set(to_drop)))
+        to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
 
 
