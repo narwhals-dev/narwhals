@@ -876,14 +876,10 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        if len(self) == 0:  # pragma: no cover
-            return self
-
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
-        min_periods = min_periods or window_size
-
+        min_periods = min_periods if min_periods is not None else window_size
         if center:
             offset_left = window_size // 2
             offset_right = offset_left - (
@@ -901,7 +897,11 @@ class ArrowSeries:
             padded_arr = self
 
         cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
-        rolling_sum = cum_sum - cum_sum.shift(window_size).fill_null(0)
+        rolling_sum = (
+            cum_sum - cum_sum.shift(window_size).fill_null(0)
+            if window_size != 0
+            else cum_sum
+        )
 
         valid_count = padded_arr.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)

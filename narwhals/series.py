@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -2917,6 +2918,39 @@ class Series:
               ]
             ]
         """
+        if window_size < 0:
+            msg = "window_size should be greater or equal than 0"
+            raise ValueError(msg)
+
+        if not isinstance(window_size, int):
+            _type = window_size.__class__.__name__
+            msg = (
+                f"argument 'window_size': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+
+        if min_periods is not None:
+            if min_periods < 0:
+                msg = "min_periods should be greater or equal than 0"
+                raise ValueError(msg)
+
+            if not isinstance(min_periods, int):
+                _type = min_periods.__class__.__name__
+                msg = (
+                    f"argument 'min_periods': '{_type}' object cannot be "
+                    "interpreted as an integer"
+                )
+                raise TypeError(msg)
+            if min_periods > window_size:
+                msg = "`min_periods` should be less or equal than `window_size`"
+                raise InvalidOperationError(msg)
+        else:
+            min_periods = window_size
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
                 window_size=window_size,
