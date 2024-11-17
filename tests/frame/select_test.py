@@ -40,7 +40,7 @@ def test_non_string_select() -> None:
 
 def test_int_select_pandas() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(InvalidIntoExprError, match="\n\nHint: if you were trying"):
+    with pytest.raises(InvalidIntoExprError, match="\n\nHint:\n- if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
 
 
