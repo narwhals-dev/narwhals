@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import GroupedData
 
-    from narwhals._spark.dataframe import SparkLazyFrame
-    from narwhals._spark.expr import SparkExpr
-    from narwhals._spark.typing import IntoSparkExpr
+    from narwhals._spark_like.dataframe import SparkLazyFrame
+    from narwhals._spark_like.expr import SparkExpr
+    from narwhals._spark_like.typing import IntoSparkExpr
 
 POLARS_TO_PYSPARK_AGGREGATIONS = {
     "len": "count",
@@ -69,7 +69,7 @@ class SparkLazyGroupBy:
         )
 
     def _from_native_frame(self, df: SparkLazyFrame) -> SparkLazyFrame:
-        from narwhals._spark.dataframe import SparkLazyFrame
+        from narwhals._spark_like.dataframe import SparkLazyFrame
 
         return SparkLazyFrame(
             df, backend_version=self._df._backend_version, dtypes=self._df._dtypes

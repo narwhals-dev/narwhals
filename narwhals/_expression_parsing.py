@@ -34,10 +34,10 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import IntoPolarsExpr
-    from narwhals._spark.dataframe import SparkLazyFrame
-    from narwhals._spark.expr import SparkExpr
-    from narwhals._spark.namespace import SparkNamespace
-    from narwhals._spark.typing import IntoSparkExpr
+    from narwhals._spark_like.dataframe import SparkLazyFrame
+    from narwhals._spark_like.expr import SparkExpr
+    from narwhals._spark_like.namespace import SparkNamespace
+    from narwhals._spark_like.typing import IntoSparkExpr
 
     CompliantNamespace = Union[
         PandasLikeNamespace,

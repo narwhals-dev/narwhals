@@ -10,14 +10,14 @@ from typing import NoReturn
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
-from narwhals._spark.expr import SparkExpr
-from narwhals._spark.utils import get_column_name
+from narwhals._spark_like.expr import SparkExpr
+from narwhals._spark_like.utils import get_column_name
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
 
-    from narwhals._spark.dataframe import SparkLazyFrame
-    from narwhals._spark.typing import IntoSparkExpr
+    from narwhals._spark_like.dataframe import SparkLazyFrame
+    from narwhals._spark_like.typing import IntoSparkExpr
     from narwhals.typing import DTypes
 
 

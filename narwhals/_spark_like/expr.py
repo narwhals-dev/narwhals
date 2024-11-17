@@ -5,16 +5,16 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Callable
 
-from narwhals._spark.utils import get_column_name
-from narwhals._spark.utils import maybe_evaluate
+from narwhals._spark_like.utils import get_column_name
+from narwhals._spark_like.utils import maybe_evaluate
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._spark.dataframe import SparkLazyFrame
-    from narwhals._spark.namespace import SparkNamespace
+    from narwhals._spark_like.dataframe import SparkLazyFrame
+    from narwhals._spark_like.namespace import SparkNamespace
     from narwhals.typing import DTypes
 
 
@@ -46,7 +46,7 @@ class SparkExpr:
 
     def __narwhals_namespace__(self) -> SparkNamespace:  # pragma: no cover
         # Unused, just for compatibility with PandasLikeExpr
-        from narwhals._spark.namespace import SparkNamespace
+        from narwhals._spark_like.namespace import SparkNamespace
 
         return SparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
