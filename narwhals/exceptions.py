@@ -52,6 +52,9 @@ class InvalidIntoExprError(TypeError):
             f"Expected an object which can be converted into an expression, got {invalid_type}\n\n"
             "Hint: if you were trying to select a column which does not have a string column name, then "
             "you should explicitly use `nw.col`.\nFor example, `df.select(nw.col(0))` if you have a column "
-            "named `0`."
+            "named `0`.\n"
+            "Hint 2: if you were trying to create a new literal column, then you should explicitly use "
+            "`nw.lit`.\nFor example, `df.select(nw.lit(0))` if you want to create a new column with literal "
+            "value `0`."
         )
         return InvalidIntoExprError(message)
