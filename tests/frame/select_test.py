@@ -40,7 +40,7 @@ def test_non_string_select() -> None:
 
 def test_int_select_pandas() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(InvalidIntoExprError):
+    with pytest.raises(InvalidIntoExprError, match="\n\nHint: if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
 
 
@@ -49,6 +49,7 @@ def test_invalid_select(
     constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and not isinstance(invalid_select, Foo):
+        # https://github.com/narwhals-dev/narwhals/issues/1390
         request.applymarker(pytest.mark.xfail)
     with pytest.raises(InvalidIntoExprError):
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
