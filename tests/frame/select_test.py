@@ -5,7 +5,9 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals._exceptions import ColumnNotFoundError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -53,3 +55,43 @@ def test_comparison_with_list_error_message() -> None:
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
     with pytest.raises(ValueError, match=msg):
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
+
+
+def test_missing_columns(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+    selected_columns = ["a", "e", "f"]
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    )
+    if "polars" in str(constructor):
+        # In the lazy case, Polars only errors when we call `collect`,
+        # and we have no way to recover exactly which columns the user
+        # tried selecting. So, we just emit their message (which varies
+        # across versions...)
+        msg = "e|f"
+        if isinstance(df, nw.LazyFrame):
+            with pytest.raises(ColumnNotFoundError, match=msg):
+                df.select(selected_columns).collect()
+        else:
+            with pytest.raises(ColumnNotFoundError, match=msg):
+                df.select(selected_columns)
+        if POLARS_VERSION >= (1,):
+            # Old Polars versions wouldn't raise an error
+            # at all here
+            if isinstance(df, nw.LazyFrame):
+                with pytest.raises(ColumnNotFoundError, match=msg):
+                    df.drop(selected_columns, strict=True).collect()
+            else:
+                with pytest.raises(ColumnNotFoundError, match=msg):
+                    df.drop(selected_columns, strict=True)
+        else:  # pragma: no cover
+            pass
+    else:
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.select(selected_columns)
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.drop(selected_columns, strict=True)
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.select(nw.col("fdfa"))
