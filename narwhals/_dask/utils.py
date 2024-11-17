@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals._exceptions import InvalidIntoExprError
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 

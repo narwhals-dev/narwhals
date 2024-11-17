@@ -5,12 +5,12 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from narwhals._exceptions import ColumnNotFoundError
-from narwhals._exceptions import InvalidIntoExprError
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop

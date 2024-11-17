@@ -11,10 +11,10 @@ from typing import Sequence
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -402,7 +402,7 @@ class DaskExpr:
     def median(self) -> Self:
         from dask_expr._shuffle import _is_numeric_cast_type
 
-        from narwhals._exceptions import InvalidOperationError
+        from narwhals.exceptions import InvalidOperationError
 
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             if not _is_numeric_cast_type(_input.dtype):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data

@@ -8,7 +8,7 @@ import pytest
 from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
-from narwhals._exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
