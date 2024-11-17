@@ -68,7 +68,7 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_frame(self, df: pa.Table) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes
         )

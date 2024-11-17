@@ -44,7 +44,7 @@ class ArrowSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
-    def _from_native_series(self, series: Any) -> Self:
+    def _from_native_series(self, series: pa.ChunkedArray | pa.Array) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
         if isinstance(series, pa.Array):
