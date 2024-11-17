@@ -2918,8 +2918,8 @@ class Series:
               ]
             ]
         """
-        if window_size < 0:
-            msg = "window_size should be greater or equal than 0"
+        if window_size < 1:
+            msg = "window_size must be greater or equal than 1"
             raise ValueError(msg)
 
         if not isinstance(window_size, int):
@@ -2931,8 +2931,8 @@ class Series:
             raise TypeError(msg)
 
         if min_periods is not None:
-            if min_periods < 0:
-                msg = "min_periods should be greater or equal than 0"
+            if min_periods < 1:
+                msg = "min_periods must be greater or equal than 1"
                 raise ValueError(msg)
 
             if not isinstance(min_periods, int):
@@ -2943,7 +2943,7 @@ class Series:
                 )
                 raise TypeError(msg)
             if min_periods > window_size:
-                msg = "`min_periods` should be less or equal than `window_size`"
+                msg = "`min_periods` must be less or equal than `window_size`"
                 raise InvalidOperationError(msg)
         else:
             min_periods = window_size

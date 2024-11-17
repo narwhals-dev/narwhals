@@ -805,9 +805,6 @@ class PandasLikeSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        if window_size == 0:
-            return self.cum_sum(reverse=False).fill_null(strategy="forward")
-
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
         ).sum()

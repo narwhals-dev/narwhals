@@ -30,15 +30,6 @@ kwargs_and_expected = {
         "kwargs": {"window_size": 4, "min_periods": 1, "center": True},
         "expected": [1.0, 3.0, 3.0, 7.0, 12.0, 21.0, 21.0],
     },
-    "x6": {
-        "kwargs": {"window_size": 0},
-        "expected": [float("nan"), 1.0, 3.0, 3.0, 7.0, 13.0, 24.0],
-    },
-    # There are still some edge cases to take care of with nulls and min_periods=0:
-    # "x7": {  # noqa: ERA001
-    #     "kwargs": {"window_size": 2, "min_periods": 0},  # noqa: ERA001
-    #     "expected": [float("nan"), 1.0, 3.0, 2.0, 4.0, 10.0, 17.0],  # noqa: ERA001
-    # },
 }
 
 
@@ -92,7 +83,7 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             -1,
             None,
             pytest.raises(
-                ValueError, match="window_size should be greater or equal than 0"
+                ValueError, match="window_size must be greater or equal than 1"
             ),
         ),
         (
@@ -107,7 +98,7 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             2,
             -1,
             pytest.raises(
-                ValueError, match="min_periods should be greater or equal than 0"
+                ValueError, match="min_periods must be greater or equal than 1"
             ),
         ),
         (
@@ -123,7 +114,7 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             2,
             pytest.raises(
                 InvalidOperationError,
-                match="`min_periods` should be less or equal than `window_size`",
+                match="`min_periods` must be less or equal than `window_size`",
             ),
         ),
     ],
@@ -149,7 +140,7 @@ def test_rolling_sum_expr_invalid_params(
             -1,
             None,
             pytest.raises(
-                ValueError, match="window_size should be greater or equal than 0"
+                ValueError, match="window_size must be greater or equal than 1"
             ),
         ),
         (
@@ -164,7 +155,7 @@ def test_rolling_sum_expr_invalid_params(
             2,
             -1,
             pytest.raises(
-                ValueError, match="min_periods should be greater or equal than 0"
+                ValueError, match="min_periods must be greater or equal than 1"
             ),
         ),
         (
@@ -180,7 +171,7 @@ def test_rolling_sum_expr_invalid_params(
             2,
             pytest.raises(
                 InvalidOperationError,
-                match="`min_periods` should be less or equal than `window_size`",
+                match="`min_periods` must be less or equal than `window_size`",
             ),
         ),
     ],
