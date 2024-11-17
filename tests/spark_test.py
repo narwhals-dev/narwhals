@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import NUMPY_VERSION
 from tests.utils import PYSPARK_VERSION
 from tests.utils import assert_equal_data
