@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
+from narwhals._exceptions import InvalidIntoExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+
+
+class Foo: ...
 
 
 def test_select(constructor: Constructor) -> None:
@@ -32,10 +38,21 @@ def test_non_string_select() -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_non_string_select_invalid() -> None:
+def test_int_select_pandas() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(TypeError, match="\n\nHint: if you were trying to select"):
+    with pytest.raises(InvalidIntoExprError, match="\n\nHint: if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("invalid_select", [None, 0, Foo()])
+def test_invalid_select(
+    constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and not isinstance(invalid_select, Foo):
+        # https://github.com/narwhals-dev/narwhals/issues/1390
+        request.applymarker(pytest.mark.xfail)
+    with pytest.raises(InvalidIntoExprError):
+        nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
 def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:

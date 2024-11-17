@@ -34,3 +34,19 @@ class ColumnNotFoundError(FormattedKeyError):
 
 
 class InvalidOperationError(Exception): ...
+
+
+class InvalidIntoExprError(TypeError):
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+    @classmethod
+    def from_invalid_type(cls, invalid_type: type) -> InvalidIntoExprError:
+        message = (
+            f"Expected an object which can be converted into an expression, got {invalid_type}\n\n"
+            "Hint: if you were trying to select a column which does not have a string column name, then "
+            "you should explicitly use `nw.col`.\nFor example, `df.select(nw.col(0))` if you have a column "
+            "named `0`."
+        )
+        return InvalidIntoExprError(message)
