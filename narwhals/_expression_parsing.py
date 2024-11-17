@@ -191,7 +191,7 @@ def parse_into_expr(
     if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
         return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
-    raise InvalidIntoExprError(type(into_expr))
+    raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
 def reuse_series_implementation(

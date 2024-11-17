@@ -15,6 +15,9 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
+class Foo: ...
+
+
 def test_select(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
@@ -41,11 +44,11 @@ def test_int_select_pandas() -> None:
         nw.to_native(df.select(0))  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("invalid_select", [None, 0])
+@pytest.mark.parametrize("invalid_select", [None, 0, Foo()])
 def test_invalid_select(
     constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor):
+    if "polars" in str(constructor) and not isinstance(invalid_select, Foo):
         request.applymarker(pytest.mark.xfail)
     with pytest.raises(InvalidIntoExprError):
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)

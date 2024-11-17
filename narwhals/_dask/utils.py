@@ -46,7 +46,7 @@ def parse_exprs_and_named_exprs(
         elif isinstance(expr, str):
             _results = [df._native_frame[expr]]
         else:
-            raise InvalidIntoExprError(type(expr))
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
         return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
             results[_result.name] = _result[0] if return_scalar else _result

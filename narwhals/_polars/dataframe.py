@@ -6,6 +6,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._exceptions import ColumnNotFoundError
+from narwhals._exceptions import InvalidIntoExprError
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
@@ -91,6 +92,10 @@ class PolarsDataFrame:
                 msg = str(e)
                 msg += f"\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(str(e)) from e
+            except TypeError as e:
+                if "cannot create expression literal" in str(e):
+                    raise InvalidIntoExprError(str(e)) from e
+                raise
 
         return func
 
@@ -315,10 +320,19 @@ class PolarsLazyFrame:
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
+            import polars as pl  # ignore-banned-import
+
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_frame(
-                getattr(self._native_frame, attr)(*args, **kwargs)
-            )
+            try:
+                return self._from_native_frame(
+                    getattr(self._native_frame, attr)(*args, **kwargs)
+                )
+            except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
+                raise ColumnNotFoundError(str(e)) from e
+            except TypeError as e:
+                if "cannot create expression literal" in str(e):
+                    raise InvalidIntoExprError(str(e)) from e
+                raise
 
         return func
 
