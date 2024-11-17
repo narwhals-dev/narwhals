@@ -335,8 +335,12 @@ class PolarsLazyFrame:
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 raise ColumnNotFoundError(str(e)) from e
             except TypeError as e:
-                if "cannot create expression literal" in str(e):
-                    raise InvalidIntoExprError(str(e)) from e
+                e_str = str(e)
+                if (
+                    "cannot create expression literal" in e_str
+                    or "invalid literal" in e_str
+                ):
+                    raise InvalidIntoExprError(e_str) from e
                 raise
 
         return func
