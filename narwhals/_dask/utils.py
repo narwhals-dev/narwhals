@@ -25,7 +25,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
         if len(results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions not supported in this context"
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
         validate_comparand(df._native_frame, result)

@@ -494,15 +494,18 @@ class PandasLikeSeries:
     def abs(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.abs())
 
-    def cum_sum(self) -> PandasLikeSeries:
-        return self._from_native_series(self._native_series.cumsum())
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumsum(skipna=True)
+            if not reverse
+            else native_series[::-1].cumsum(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
 
     def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
@@ -653,7 +656,7 @@ class PandasLikeSeries:
         name: str | None = None,
         normalize: bool = False,
     ) -> PandasLikeDataFrame:
-        """Parallel is unused, exists for compatibility"""
+        """Parallel is unused, exists for compatibility."""
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         index_name_ = "index" if self._name is None else self._name
@@ -757,6 +760,42 @@ class PandasLikeSeries:
         native_series = self._native_series
         result = native_series.mode()
         result.name = native_series.name
+        return self._from_native_series(result)
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        not_na_series = ~self._native_series.isna()
+        result = (
+            not_na_series.cumsum()
+            if not reverse
+            else len(self) - not_na_series.cumsum() + not_na_series - 1
+        )
+        return self._from_native_series(result)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummin(skipna=True)
+            if not reverse
+            else native_series[::-1].cummin(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummax(skipna=True)
+            if not reverse
+            else native_series[::-1].cummax(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumprod(skipna=True)
+            if not reverse
+            else native_series[::-1].cumprod(skipna=True)[::-1]
+        )
         return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:

@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
@@ -72,15 +73,22 @@ class PandasLikeExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=df._implementation,
-                    backend_version=df._backend_version,
-                    dtypes=df._dtypes,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    PandasLikeSeries(
+                        df._native_frame[column_name],
+                        implementation=df._implementation,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -300,8 +308,8 @@ class PandasLikeExpr:
     def abs(self) -> Self:
         return reuse_series_implementation(self, "abs")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
@@ -440,6 +448,18 @@ class PandasLikeExpr:
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:

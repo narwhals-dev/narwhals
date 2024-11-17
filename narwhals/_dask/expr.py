@@ -11,6 +11,7 @@ from typing import Sequence
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -67,7 +68,14 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame[column_name] for column_name in column_names]
+            try:
+                return [df._native_frame[column_name] for column_name in column_names]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -434,10 +442,58 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
         return self._from_call(
             lambda _input: _input.cumsum(),
             "cum_sum",
+            returns_scalar=False,
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: (~_input.isna()).astype(int).cumsum(),
+            "cum_count",
+            returns_scalar=False,
+        )
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummin(),
+            "cum_min",
+            returns_scalar=False,
+        )
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummax(),
+            "cum_max",
+            returns_scalar=False,
+        )
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cumprod(),
+            "cum_prod",
             returns_scalar=False,
         )
 

@@ -2,13 +2,8 @@
 
 ## Roadmap
 
-Priorities, as of September 2024, are:
-
-- Works towards supporting projects which have shown interest in Narwhals.
-- Add extra docs and tutorials to make the project more accessible and easy to get started with.
-- Improve support for cuDF, which we can't currently test in CI (unless NVIDIA helps us out :wink:) but
-  which we can and do test manually in Kaggle notebooks.
-- Define a lazy-only layer of support which can include DuckDB, Ibis, and PySpark.
+See [roadmap discussion on GitHub](https://github.com/narwhals-dev/narwhals/discussions/1370)
+for an up-to-date plan of future work.
 
 ## Related projects
 
