@@ -15,6 +15,7 @@ nav:
     - pandas_like_concepts/pandas_index.md
     - pandas_like_concepts/user_warning.md
     - pandas_like_concepts/column_names.md
+    - pandas_like_concepts/boolean.md
   - overhead.md
   - backcompat.md
   - extending.md
