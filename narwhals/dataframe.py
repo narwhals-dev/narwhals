@@ -1990,12 +1990,13 @@ class DataFrame(BaseFrame[DataFrameT]):
         r"""Join in SQL-like fashion.
 
         Arguments:
-            other: Lazy DataFrame to join with.
+            other: DataFrame to join with.
             on: Name(s) of the join columns in both DataFrames. If set, `left_on` and
                 `right_on` should be None.
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
+                  * *left*: Returns all rows from the left table, and the matched rows from the right table.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -3965,6 +3966,7 @@ class LazyFrame(BaseFrame[FrameT]):
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
+                  * *left*: Returns all rows from the left table, and the matched rows from the right table.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
