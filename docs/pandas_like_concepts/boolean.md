@@ -34,8 +34,8 @@ Unfortunately, this is backend-dependent:
       filled in with `False`.
 
 pandas is generally moving towards nullable dtypes, and they
-may become the default in the future, so we hope that the
-classical NumPy dtypes not supporting null values will just
+[may become the default in the future](https://github.com/pandas-dev/pandas/pull/58988),
+so we hope that the classical NumPy dtypes not supporting null values will just
 be a temporary legacy pandas issue which will eventually go
 away anyway.
 
