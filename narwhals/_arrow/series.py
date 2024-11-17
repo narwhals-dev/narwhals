@@ -876,7 +876,7 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        if len(self) == 0:
+        if len(self) == 0:  # pragma: no cover
             return self
 
         import pyarrow as pa  # ignore-banned-import
@@ -884,14 +884,16 @@ class ArrowSeries:
 
         min_periods = min_periods or window_size
 
-        offset = window_size // 2 if center else 0
-
         if center:
+            offset_left = window_size // 2
+            offset_right = offset_left - (
+                window_size % 2 == 0
+            )  # subtract one if window_size is even
+
             native_series = self._native_series
 
-            pad_values = [0] * offset
-            pad_left = pa.array(pad_values, type=native_series.type)
-            pad_right = pa.array(pad_values, type=native_series.type)
+            pad_left = pa.array([None] * offset_left, type=native_series.type)
+            pad_right = pa.array([None] * offset_right, type=native_series.type)
             padded_arr = self._from_native_series(
                 pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
             )
@@ -912,7 +914,7 @@ class ArrowSeries:
             )
         )
         if center:
-            result = result.shift(-offset)[offset:-offset]
+            result = result[offset_left + offset_right :]
         return result
 
     def __iter__(self: Self) -> Iterator[Any]:

@@ -13,6 +13,7 @@ expected = {
     "x2": [float("nan"), 1.0, 3.0, 3.0, 6.0, 10.0, 21.0],
     "x3": [float("nan"), 1.0, 3.0, 2.0, 4.0, 10.0, 17.0],
     "x4": [3.0, 3.0, 7.0, 13.0, 23.0, 21.0, 21.0],
+    "x5": [1.0, 3.0, 3.0, 7.0, 12.0, 21.0, 21.0],
 }
 
 
@@ -34,6 +35,7 @@ def test_rolling_sum_expr(
         x2=nw.col("a").rolling_sum(window_size=3, min_periods=1),
         x3=nw.col("a").rolling_sum(window_size=2, min_periods=1),
         x4=nw.col("a").rolling_sum(window_size=5, min_periods=1, center=True),
+        x5=nw.col("a").rolling_sum(window_size=4, min_periods=1, center=True),
     )
 
     assert_equal_data(result, expected)
@@ -50,5 +52,6 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
         x2=df["a"].rolling_sum(window_size=3, min_periods=1),
         x3=df["a"].rolling_sum(window_size=2, min_periods=1),
         x4=df["a"].rolling_sum(window_size=5, min_periods=1, center=True),
+        x5=df["a"].rolling_sum(window_size=4, min_periods=1, center=True),
     )
     assert_equal_data(result, expected)
