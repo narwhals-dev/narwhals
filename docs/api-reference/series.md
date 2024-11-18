@@ -51,6 +51,7 @@
         - quantile
         - rename
         - replace_strict
+        - rolling_sum
         - round
         - sample
         - scatter

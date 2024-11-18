@@ -840,6 +840,32 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).sum()
+
+        return self._from_call(
+            func,
+            "rolling_sum",
+            window_size,
+            min_periods,
+            center,
+            returns_scalar=False,
+        )
+
 
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:

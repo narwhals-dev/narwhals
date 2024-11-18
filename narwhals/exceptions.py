@@ -60,3 +60,7 @@ class InvalidIntoExprError(TypeError):
             "  column with literal value `0`."
         )
         return InvalidIntoExprError(message)
+
+
+class NarwhalsUnstableWarning(UserWarning):
+    """Warning issued when a method or function is considered unstable in the stable api."""

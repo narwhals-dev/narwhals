@@ -457,7 +457,7 @@ class PandasLikeSeries:
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
-    ) -> PandasLikeSeries:
+    ) -> Self:
         ser = self._native_series
         if value is not None:
             res_ser = self._from_native_series(ser.fillna(value=value))
@@ -796,6 +796,18 @@ class PandasLikeSeries:
             if not reverse
             else native_series[::-1].cumprod(skipna=True)[::-1]
         )
+        return self._from_native_series(result)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).sum()
         return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:
