@@ -83,7 +83,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: install ibis
-        run: uv pip install ibis-framework>=6.0.0 atpublic parsy python-dateutil pytz sqlglot toolz typing-extensions --system
+        run: uv pip install ibis-framework>=6.0.0 rich packaging --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
         if: matrix.python-version == '3.11'
