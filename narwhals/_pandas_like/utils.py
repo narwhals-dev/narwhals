@@ -19,6 +19,7 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -675,3 +676,36 @@ def select_columns_by_name(
         raise ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns, available_columns
         ) from e
+
+
+def pivot_table(
+    df: PandasLikeDataFrame,
+    values: list[str],
+    index: str | list[str] | None,
+    columns: list[str],
+    aggregate_function: str | None,
+) -> Any:
+    if df._implementation is Implementation.CUDF:
+        if any(
+            x == df._dtypes.Categorical for x in df.schema.values()
+        ):  # pragma: no cover
+            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+            raise NotImplementedError(msg)
+        # cuDF doesn't support `observed` argument
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+        )
+    else:
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+            observed=True,
+        )
+    return result

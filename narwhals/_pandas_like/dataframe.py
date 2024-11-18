@@ -14,6 +14,7 @@ from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
@@ -816,15 +817,10 @@ class PandasLikeDataFrame:
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
         ):  # pragma: no cover
-            msg = "`pivot` is only supported for pandas>=1.1"
+            msg = "pivot is only supported for pandas>=1.1"
             raise NotImplementedError(msg)
         if self._implementation is Implementation.MODIN:
-            msg = "`pivot` is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
-            raise NotImplementedError(msg)
-        if self._implementation is Implementation.CUDF and any(
-            x == self._dtypes.Categorical for x in self.schema.values()
-        ):  # pragma: no cover
-            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)
         from itertools import product
 
@@ -853,15 +849,13 @@ class PandasLikeDataFrame:
                 .pivot(columns=on, index=index, values=values_)
             )
         else:
-            result = frame.pivot_table(
+            result = pivot_table(
+                df=self,
                 values=values_,
                 index=index,
                 columns=on,
-                aggfunc=aggregate_function,
-                margins=False,
-                observed=True,
+                aggregate_function=aggregate_function,
             )
-
         # Put columns in the right order
         if sort_columns:
             uniques = {
