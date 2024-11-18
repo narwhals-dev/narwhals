@@ -816,10 +816,15 @@ class PandasLikeDataFrame:
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
         ):  # pragma: no cover
-            msg = "pivot is only supported for pandas>=1.1"
+            msg = "`pivot` is only supported for pandas>=1.1"
             raise NotImplementedError(msg)
         if self._implementation is Implementation.MODIN:
-            msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            msg = "`pivot` is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
+            raise NotImplementedError(msg)
+        if self._implementation is Implementation.CUDF and any(
+            x == self._dtypes.Categorical for x in self.schema.values()
+        ):  # pragma: no cover
+            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
         from itertools import product
 
