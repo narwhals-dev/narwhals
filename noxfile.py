@@ -17,7 +17,9 @@ def run_common(session: Session, coverage_threshold: float) -> None:
     session.install("-e.", "-r", "requirements-dev.txt")
 
     if session.python != "3.8":
-        session.install("ibis-framework>=6.0.0")
+        session.install(
+            "ibis-framework>=6.0.0 atpublic parsy python-dateutil pytz sqlglot toolz typing-extensions"
+        )
 
     session.run(
         "pytest",
