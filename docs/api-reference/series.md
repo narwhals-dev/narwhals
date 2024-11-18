@@ -15,6 +15,10 @@
         - cast
         - clip
         - count
+        - cum_count
+        - cum_max
+        - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls
@@ -27,6 +31,7 @@
         - is_between
         - is_duplicated
         - is_empty
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
@@ -47,6 +52,7 @@
         - quantile
         - rename
         - replace_strict
+        - rolling_sum
         - round
         - sample
         - scatter

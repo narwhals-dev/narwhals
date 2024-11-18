@@ -44,7 +44,7 @@ class ArrowSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
-    def _from_native_series(self, series: Any) -> Self:
+    def _from_native_series(self, series: pa.ChunkedArray | pa.Array) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
         if isinstance(series, pa.Array):
@@ -264,7 +264,7 @@ class ArrowSeries:
     def median(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        from narwhals._exceptions import InvalidOperationError
+        from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
@@ -391,10 +391,16 @@ class ArrowSeries:
 
         return self._from_native_series(pc.abs(self._native_series))
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return self._from_native_series(pc.cumulative_sum(self._native_series))
+        native_series = self._native_series
+        result = (
+            pc.cumulative_sum(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_sum(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
 
     def round(self, decimals: int) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -518,7 +524,7 @@ class ArrowSeries:
         name: str | None = None,
         normalize: bool = False,
     ) -> ArrowDataFrame:
-        """Parallel is unused, exists for compatibility"""
+        """Parallel is unused, exists for compatibility."""
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
@@ -700,11 +706,8 @@ class ArrowSeries:
             return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return self._from_native_series(pc.unique(self._native_series))
@@ -752,17 +755,32 @@ class ArrowSeries:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         series = self._native_series
-        da = series.dictionary_encode().combine_chunks()
+        name = self._name
+        da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
-        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
+        null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
+        cols = [
+            {null_col_pa: null_col_pl}.get(
+                f"{name}{separator}{v}", f"{name}{separator}{v}"
+            )
+            for v in da.dictionary
+        ]
 
+        output_order = (
+            [
+                null_col_pl,
+                *sorted([c for c in cols if c != null_col_pl])[int(drop_first) :],
+            ]
+            if null_col_pl in cols
+            else sorted(cols)[int(drop_first) :]
+        )
         return ArrowDataFrame(
-            pa.Table.from_arrays(columns, names=names),
+            pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             dtypes=self._dtypes,
-        ).select(*sorted(names)[int(drop_first) :])
+        ).select(*output_order)
 
     def quantile(
         self: Self,
@@ -799,6 +817,110 @@ class ArrowSeries:
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
+
+    def is_finite(self: Self) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        return self._from_native_series(pc.is_finite(self._native_series))
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return (~self.is_null()).cast(self._dtypes.UInt32()).cum_sum(reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_min method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        native_series = self._native_series
+
+        result = (
+            pc.cumulative_min(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_min(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_max method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        native_series = self._native_series
+
+        result = (
+            pc.cumulative_max(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_max(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (13, 0, 0):
+            msg = "cum_max method is not supported for pyarrow < 13.0.0"
+            raise NotImplementedError(msg)
+
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        native_series = self._native_series
+
+        result = (
+            pc.cumulative_prod(native_series, skip_nulls=True)
+            if not reverse
+            else pc.cumulative_prod(native_series[::-1], skip_nulls=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        min_periods = min_periods if min_periods is not None else window_size
+        if center:
+            offset_left = window_size // 2
+            offset_right = offset_left - (
+                window_size % 2 == 0
+            )  # subtract one if window_size is even
+
+            native_series = self._native_series
+
+            pad_left = pa.array([None] * offset_left, type=native_series.type)
+            pad_right = pa.array([None] * offset_right, type=native_series.type)
+            padded_arr = self._from_native_series(
+                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+            )
+        else:
+            padded_arr = self
+
+        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        rolling_sum = (
+            cum_sum - cum_sum.shift(window_size).fill_null(0)
+            if window_size != 0
+            else cum_sum
+        )
+
+        valid_count = padded_arr.cum_count(reverse=False)
+        count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
+
+        result = self._from_native_series(
+            pc.if_else(
+                (count_in_window >= min_periods)._native_series,
+                rolling_sum._native_series,
+                None,
+            )
+        )
+        if center:
+            result = result[offset_left + offset_right :]
+        return result
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()

@@ -37,13 +37,13 @@ Get started!
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com)
 - [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
-## Used by / integrates with
+## Used by
 
 Join the party!
 
-- [Altair](https://github.com/vega/altair/)
-- [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [altair](https://github.com/vega/altair/)
 - [marimo](https://github.com/marimo-team/marimo)
+- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
@@ -122,9 +122,6 @@ to this list!
 
 Narwhals has been featured in several talks, podcasts, and blog posts:
 
-- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
-  Narwhals: Expanding DataFrame Compatibility Between Libraries
-
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs
 
@@ -136,6 +133,9 @@ Narwhals has been featured in several talks, podcasts, and blog posts:
 
 - [Sample Space Podcast | probabl](https://youtu.be/8hYdq4sWbbQ?si=WG0QP1CZ6gkFf18b)  
   How Narwhals has many end users ... that never use it directly. - Marco Gorelli
+
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
 
 - [Pycon Lithuania](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
   Marco Gorelli - DataFrame interoperatiblity - what's been achieved, and what comes next?

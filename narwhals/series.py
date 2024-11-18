@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -26,8 +27,7 @@ if TYPE_CHECKING:
 
 
 class Series:
-    """
-    Narwhals Series, backed by a native series.
+    """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
 
@@ -73,8 +73,7 @@ class Series:
         return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
-        """
-        Export a Series via the Arrow PyCapsule Interface.
+        """Export a Series via the Arrow PyCapsule Interface.
 
         Narwhals doesn't implement anything itself here:
 
@@ -99,8 +98,7 @@ class Series:
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     def to_native(self) -> Any:
-        """
-        Convert Narwhals series to native series.
+        """Convert Narwhals series to native series.
 
         Returns:
             Series of class that user started with.
@@ -138,8 +136,7 @@ class Series:
         return self._compliant_series._native_series
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        """
-        Set value(s) at given position(s).
+        """Set value(s) at given position(s).
 
         Arguments:
             indices: Position(s) to set items at.
@@ -205,8 +202,7 @@ class Series:
 
     @property
     def shape(self) -> tuple[int]:
-        """
-        Get the shape of the Series.
+        """Get the shape of the Series.
 
         Examples:
             >>> import pandas as pd
@@ -245,8 +241,7 @@ class Series:
         )
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
-        """
-        Pipe function call.
+        """Pipe function call.
 
         Examples:
             >>> import polars as pl
@@ -300,8 +295,7 @@ class Series:
         return len(self._compliant_series)
 
     def len(self) -> int:
-        r"""
-        Return the number of elements in the Series.
+        r"""Return the number of elements in the Series.
 
         Null values count towards the total.
 
@@ -330,8 +324,7 @@ class Series:
 
     @property
     def dtype(self: Self) -> DType:
-        """
-        Get the data type of the Series.
+        """Get the data type of the Series.
 
         Examples:
             >>> import pandas as pd
@@ -358,8 +351,7 @@ class Series:
 
     @property
     def name(self) -> str:
-        """
-        Get the name of the Series.
+        """Get the name of the Series.
 
         Examples:
             >>> import pandas as pd
@@ -507,8 +499,7 @@ class Series:
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        """
-        Cast between data types.
+        """Cast between data types.
 
         Arguments:
             dtype: Data type that the object will be cast into.
@@ -546,8 +537,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
-        """
-        Convert to dataframe.
+        """Convert to dataframe.
 
         Examples:
             >>> import pandas as pd
@@ -588,8 +578,7 @@ class Series:
         )
 
     def to_list(self) -> list[Any]:
-        """
-        Convert to list.
+        """Convert to list.
 
         Notes:
             This function converts to Python scalars. It's typically
@@ -621,8 +610,7 @@ class Series:
         return self._compliant_series.to_list()  # type: ignore[no-any-return]
 
     def mean(self) -> Any:
-        """
-        Reduce this Series to the mean value.
+        """Reduce this Series to the mean value.
 
         Examples:
             >>> import pandas as pd
@@ -648,8 +636,7 @@ class Series:
         return self._compliant_series.mean()
 
     def median(self) -> Any:
-        """
-        Reduce this Series to the median value.
+        """Reduce this Series to the median value.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -682,8 +669,7 @@ class Series:
         return self._compliant_series.median()
 
     def count(self) -> Any:
-        """
-        Returns the number of non-null elements in the Series.
+        """Returns the number of non-null elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -710,8 +696,7 @@ class Series:
         return self._compliant_series.count()
 
     def any(self) -> Any:
-        """
-        Return whether any of the values in the Series are True.
+        """Return whether any of the values in the Series are True.
 
         Notes:
           Only works on Series of data type Boolean.
@@ -740,8 +725,7 @@ class Series:
         return self._compliant_series.any()
 
     def all(self) -> Any:
-        """
-        Return whether all values in the Series are True.
+        """Return whether all values in the Series are True.
 
         Examples:
             >>> import pandas as pd
@@ -768,8 +752,7 @@ class Series:
         return self._compliant_series.all()
 
     def min(self) -> Any:
-        """
-        Get the minimal value in this Series.
+        """Get the minimal value in this Series.
 
         Examples:
             >>> import pandas as pd
@@ -795,8 +778,7 @@ class Series:
         return self._compliant_series.min()
 
     def max(self) -> Any:
-        """
-        Get the maximum value in this Series.
+        """Get the maximum value in this Series.
 
         Examples:
             >>> import pandas as pd
@@ -822,8 +804,7 @@ class Series:
         return self._compliant_series.max()
 
     def sum(self) -> Any:
-        """
-        Reduce this Series to the sum value.
+        """Reduce this Series to the sum value.
 
         Examples:
             >>> import pandas as pd
@@ -849,8 +830,7 @@ class Series:
         return self._compliant_series.sum()
 
     def std(self, *, ddof: int = 1) -> Any:
-        """
-        Get the standard deviation of this Series.
+        """Get the standard deviation of this Series.
 
         Arguments:
             ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
@@ -882,8 +862,7 @@ class Series:
     def clip(
         self, lower_bound: Any | None = None, upper_bound: Any | None = None
     ) -> Self:
-        r"""
-        Clip values in the Series.
+        r"""Clip values in the Series.
 
         Arguments:
             lower_bound: Lower bound value.
@@ -981,8 +960,7 @@ class Series:
         )
 
     def is_in(self, other: Any) -> Self:
-        """
-        Check if the elements of this Series are in the other sequence.
+        """Check if the elements of this Series are in the other sequence.
 
         Arguments:
             other: Sequence of primitive type.
@@ -1021,8 +999,7 @@ class Series:
         )
 
     def arg_true(self) -> Self:
-        """
-        Find elements where boolean Series is True.
+        """Find elements where boolean Series is True.
 
         Examples:
             >>> import pandas as pd
@@ -1055,8 +1032,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.arg_true())
 
     def drop_nulls(self) -> Self:
-        """
-        Drop all null values.
+        """Drop all null values.
 
         Notes:
           pandas and Polars handle null values differently. Polars distinguishes
@@ -1097,8 +1073,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.drop_nulls())
 
     def abs(self) -> Self:
-        """
-        Calculate the absolute value of each element.
+        """Calculate the absolute value of each element.
 
         Examples:
             >>> import pandas as pd
@@ -1132,9 +1107,11 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.abs())
 
-    def cum_sum(self) -> Self:
-        """
-        Calculate the cumulative sum.
+    def cum_sum(self: Self, *, reverse: bool = False) -> Self:
+        """Calculate the cumulative sum.
+
+        Arguments:
+            reverse: reverse the operation
 
         Examples:
             >>> import pandas as pd
@@ -1166,11 +1143,12 @@ class Series:
                9
             ]
         """
-        return self._from_compliant_series(self._compliant_series.cum_sum())
+        return self._from_compliant_series(
+            self._compliant_series.cum_sum(reverse=reverse)
+        )
 
     def unique(self, *, maintain_order: bool = False) -> Self:
-        """
-        Returns unique values of the series.
+        """Returns unique values of the series.
 
         Arguments:
             maintain_order: Keep the same order as the original series. This may be more
@@ -1212,8 +1190,7 @@ class Series:
         )
 
     def diff(self) -> Self:
-        """
-        Calculate the difference with the previous element, for each element.
+        """Calculate the difference with the previous element, for each element.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1257,8 +1234,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.diff())
 
     def shift(self, n: int) -> Self:
-        """
-        Shift values by `n` positions.
+        """Shift values by `n` positions.
 
         Arguments:
             n: Number of indices to shift forward. If a negative value is passed,
@@ -1313,8 +1289,7 @@ class Series:
         with_replacement: bool = False,
         seed: int | None = None,
     ) -> Self:
-        """
-        Sample randomly from this Series.
+        """Sample randomly from this Series.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
@@ -1367,8 +1342,7 @@ class Series:
         )
 
     def alias(self, name: str) -> Self:
-        """
-        Rename the Series.
+        """Rename the Series.
 
         Notes:
             This method is very cheap, but does not guarantee that data
@@ -1436,8 +1410,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.alias(name=name))
 
     def rename(self, name: str) -> Self:
-        """
-        Rename the Series.
+        """Rename the Series.
 
         Alias for `Series.alias()`.
 
@@ -1513,8 +1486,7 @@ class Series:
         *,
         return_dtype: DType | type[DType] | None = None,
     ) -> Self:
-        """
-        Replace all values by different values.
+        """Replace all values by different values.
 
         This function must replace all non-null input values (else it raises an error).
 
@@ -1585,8 +1557,7 @@ class Series:
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """
-        Sort this Series. Place null values first.
+        """Sort this Series. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
@@ -1648,8 +1619,7 @@ class Series:
         )
 
     def is_null(self) -> Self:
-        """
-        Returns a boolean Series indicating which values are null.
+        """Returns a boolean Series indicating which values are null.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1693,8 +1663,7 @@ class Series:
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
-        """
-        Fill null values using the specified value.
+        """Fill null values using the specified value.
 
         Arguments:
             value: Value used to fill null values.
@@ -1774,8 +1743,7 @@ class Series:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
-        """
-        Get a boolean mask of the values that are between the given lower/upper bounds.
+        """Get a boolean mask of the values that are between the given lower/upper bounds.
 
         Arguments:
             lower_bound: Lower bound value.
@@ -1826,8 +1794,7 @@ class Series:
         )
 
     def n_unique(self) -> int:
-        """
-        Count the number of unique values.
+        """Count the number of unique values.
 
         Examples:
             >>> import pandas as pd
@@ -1853,8 +1820,7 @@ class Series:
         return self._compliant_series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> np.ndarray:
-        """
-        Convert to numpy.
+        """Convert to numpy.
 
         Examples:
             >>> import pandas as pd
@@ -1880,8 +1846,7 @@ class Series:
         return self._compliant_series.to_numpy()
 
     def to_pandas(self) -> pd.Series:
-        """
-        Convert to pandas.
+        """Convert to pandas.
 
         Examples:
             >>> import pandas as pd
@@ -2027,8 +1992,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.__invert__())
 
     def filter(self, other: Any) -> Self:
-        """
-        Filter elements in the Series based on a condition.
+        """Filter elements in the Series based on a condition.
 
         Examples:
             >>> import pandas as pd
@@ -2066,8 +2030,7 @@ class Series:
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
-        r"""
-        Get a mask of all duplicated rows in the Series.
+        r"""Get a mask of all duplicated rows in the Series.
 
         Examples:
             >>> import narwhals as nw
@@ -2103,8 +2066,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.is_duplicated())
 
     def is_empty(self: Self) -> bool:
-        r"""
-        Check if the series is empty.
+        r"""Check if the series is empty.
 
         Examples:
             >>> import narwhals as nw
@@ -2133,8 +2095,7 @@ class Series:
         return self._compliant_series.is_empty()  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
-        r"""
-        Get a mask of all unique rows in the Series.
+        r"""Get a mask of all unique rows in the Series.
 
         Examples:
             >>> import narwhals as nw
@@ -2171,8 +2132,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.is_unique())
 
     def null_count(self: Self) -> int:
-        r"""
-        Create a new Series that shows the null counts per column.
+        r"""Create a new Series that shows the null counts per column.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2201,8 +2161,7 @@ class Series:
         return self._compliant_series.null_count()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
-        r"""
-        Return a boolean mask indicating the first occurrence of each distinct value.
+        r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
         Examples:
             >>> import narwhals as nw
@@ -2241,8 +2200,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.is_first_distinct())
 
     def is_last_distinct(self: Self) -> Self:
-        r"""
-        Return a boolean mask indicating the last occurrence of each distinct value.
+        r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
         Examples:
             >>> import narwhals as nw
@@ -2281,8 +2239,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.is_last_distinct())
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
-        r"""
-        Check if the Series is sorted.
+        r"""Check if the Series is sorted.
 
         Arguments:
             descending: Check if the Series is sorted in descending order.
@@ -2321,8 +2278,7 @@ class Series:
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        r"""
-        Count the occurrences of unique values.
+        r"""Count the occurrences of unique values.
 
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
@@ -2377,8 +2333,7 @@ class Series:
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Any:
-        """
-        Get quantile value of the series.
+        """Get quantile value of the series.
 
         Note:
             pandas and Polars may have implementation differences for a given interpolation method.
@@ -2417,8 +2372,7 @@ class Series:
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
-        """
-        Take values from self or other based on the given mask.
+        """Take values from self or other based on the given mask.
 
         Where mask evaluates true, take values from self. Where mask evaluates false,
         take values from other.
@@ -2471,8 +2425,7 @@ class Series:
         )
 
     def item(self: Self, index: int | None = None) -> Any:
-        r"""
-        Return the Series as a scalar, or return the element at the given index.
+        r"""Return the Series as a scalar, or return the element at the given index.
 
         If no index is provided, this is equivalent to `s[0]`, with a check
         that the shape is (1,). With an index, this is equivalent to `s[index]`.
@@ -2499,8 +2452,7 @@ class Series:
         return self._compliant_series.item(index=index)
 
     def head(self: Self, n: int = 10) -> Self:
-        r"""
-        Get the first `n` rows.
+        r"""Get the first `n` rows.
 
         Arguments:
             n: Number of rows to return.
@@ -2539,8 +2491,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
-        r"""
-        Get the last `n` rows.
+        r"""Get the last `n` rows.
 
         Arguments:
             n: Number of rows to return.
@@ -2578,8 +2529,7 @@ class Series:
         return self._from_compliant_series(self._compliant_series.tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
-        r"""
-        Round underlying floating point data by `decimals` digits.
+        r"""Round underlying floating point data by `decimals` digits.
 
         Arguments:
             decimals: Number of decimals to round by.
@@ -2628,8 +2578,7 @@ class Series:
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> DataFrame[Any]:
-        r"""
-        Get dummy/indicator variables.
+        r"""Get dummy/indicator variables.
 
         Arguments:
             separator: Separator/delimiter used when generating column names.
@@ -2672,7 +2621,7 @@ class Series:
             ┌─────┬─────┬─────┐
             │ a_1 ┆ a_2 ┆ a_3 │
             │ --- ┆ --- ┆ --- │
-            │ u8  ┆ u8  ┆ u8  │
+            │ i8  ┆ i8  ┆ i8  │
             ╞═════╪═════╪═════╡
             │ 1   ┆ 0   ┆ 0   │
             │ 0   ┆ 1   ┆ 0   │
@@ -2683,7 +2632,7 @@ class Series:
             ┌─────┬─────┐
             │ a_2 ┆ a_3 │
             │ --- ┆ --- │
-            │ u8  ┆ u8  │
+            │ i8  ┆ i8  │
             ╞═════╪═════╡
             │ 0   ┆ 0   │
             │ 1   ┆ 0   │
@@ -2696,8 +2645,7 @@ class Series:
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
-        r"""
-        Take every nth value in the Series and return as new Series.
+        r"""Take every nth value in the Series and return as new Series.
 
         Arguments:
             n: Gather every *n*-th row.
@@ -2736,8 +2684,7 @@ class Series:
         )
 
     def to_arrow(self: Self) -> pa.Array:
-        r"""
-        Convert to arrow.
+        r"""Convert to arrow.
 
         Examples:
             >>> import narwhals as nw
@@ -2774,8 +2721,7 @@ class Series:
         return self._compliant_series.to_arrow()
 
     def mode(self: Self) -> Self:
-        r"""
-        Compute the most occurring value(s).
+        r"""Compute the most occurring value(s).
 
         Can return multiple values.
 
@@ -2811,6 +2757,388 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def is_finite(self: Self) -> Self:
+        """Returns a boolean Series indicating which values are finite.
+
+        Warning:
+            Different backend handle null values differently. `is_finite` will return
+            False for NaN and Null's in the Dask and pandas non-nullable backend, while
+            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+
+        Returns:
+            Expression of `Boolean` data type.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [float("nan"), float("inf"), 2.0, None]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.is_finite()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    False
+            1    False
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               null
+            ]
+
+            >>> func(pa.chunked_array([data]))  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                null
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_finite())
+
+    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative count of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = ["x", "k", None, "d"]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_count(reverse=True)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    3
+            1    2
+            2    1
+            3    1
+            dtype: int64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [u32]
+            [
+                3
+                2
+                1
+                1
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                2,
+                1,
+                1
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_count(reverse=reverse)
+        )
+
+    def cum_min(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative min of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [3, 1, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_min()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    3.0
+            1    1.0
+            2    NaN
+            3    1.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               3
+               1
+               null
+               1
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                1,
+                null,
+                1
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_min(reverse=reverse)
+        )
+
+    def cum_max(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative max of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1, 3, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_max()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    1.0
+            1    3.0
+            2    NaN
+            3    3.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               3
+               null
+               3
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                3,
+                null,
+                3
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_max(reverse=reverse)
+        )
+
+    def cum_prod(self: Self, *, reverse: bool = False) -> Self:
+        r"""Return the cumulative product of the non-null values in the series.
+
+        Arguments:
+            reverse: reverse the operation
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1, 3, None, 2]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.cum_prod()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    1.0
+            1    3.0
+            2    NaN
+            3    6.0
+            dtype: float64
+            >>> func(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               3
+               null
+               6
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                3,
+                null,
+                6
+              ]
+            ]
+
+        """
+        return self._from_compliant_series(
+            self._compliant_series.cum_prod(reverse=reverse)
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.rolling_sum(window_size=2)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            0    NaN
+            1    3.0
+            2    5.0
+            3    7.0
+            dtype: float64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               3.0
+               5.0
+               7.0
+            ]
+
+            >>> func(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                3,
+                5,
+                7
+              ]
+            ]
+        """
+        if window_size < 1:
+            msg = "window_size must be greater or equal than 1"
+            raise ValueError(msg)
+
+        if not isinstance(window_size, int):
+            _type = window_size.__class__.__name__
+            msg = (
+                f"argument 'window_size': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+
+        if min_periods is not None:
+            if min_periods < 1:
+                msg = "min_periods must be greater or equal than 1"
+                raise ValueError(msg)
+
+            if not isinstance(min_periods, int):
+                _type = min_periods.__class__.__name__
+                msg = (
+                    f"argument 'min_periods': '{_type}' object cannot be "
+                    "interpreted as an integer"
+                )
+                raise TypeError(msg)
+            if min_periods > window_size:
+                msg = "`min_periods` must be less or equal than `window_size`"
+                raise InvalidOperationError(msg)
+        else:
+            min_periods = window_size
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
+        return self._from_compliant_series(
+            self._compliant_series.rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 
@@ -2827,16 +3155,15 @@ class Series:
         return SeriesCatNamespace(self)
 
 
-T = TypeVar("T", bound=Series)
+SeriesT = TypeVar("SeriesT", bound=Series)
 
 
-class SeriesCatNamespace(Generic[T]):
-    def __init__(self: Self, series: T) -> None:
+class SeriesCatNamespace(Generic[SeriesT]):
+    def __init__(self: Self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def get_categories(self: Self) -> T:
-        """
-        Get unique categories from column.
+    def get_categories(self: Self) -> SeriesT:
+        """Get unique categories from column.
 
         Examples:
             Let's create some series:
@@ -2874,13 +3201,12 @@ class SeriesCatNamespace(Generic[T]):
         )
 
 
-class SeriesStringNamespace(Generic[T]):
-    def __init__(self: Self, series: T) -> None:
+class SeriesStringNamespace(Generic[SeriesT]):
+    def __init__(self: Self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def len_chars(self: Self) -> T:
-        r"""
-        Return the length of each string as the number of characters.
+    def len_chars(self: Self) -> SeriesT:
+        r"""Return the length of each string as the number of characters.
 
         Examples:
             >>> import pandas as pd
@@ -2923,9 +3249,8 @@ class SeriesStringNamespace(Generic[T]):
 
     def replace(
         self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> T:
-        r"""
-        Replace first matching regex/literal substring with a new string value.
+    ) -> SeriesT:
+        r"""Replace first matching regex/literal substring with a new string value.
 
         Arguments:
             pattern: A valid regular expression pattern.
@@ -2962,9 +3287,10 @@ class SeriesStringNamespace(Generic[T]):
             )
         )
 
-    def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
-        r"""
-        Replace all matching regex/literal substring with a new string value.
+    def replace_all(
+        self: Self, pattern: str, value: str, *, literal: bool = False
+    ) -> SeriesT:
+        r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
             pattern: A valid regular expression pattern.
@@ -3000,9 +3326,8 @@ class SeriesStringNamespace(Generic[T]):
             )
         )
 
-    def strip_chars(self: Self, characters: str | None = None) -> T:
-        r"""
-        Remove leading and trailing characters.
+    def strip_chars(self: Self, characters: str | None = None) -> SeriesT:
+        r"""Remove leading and trailing characters.
 
         Arguments:
             characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
@@ -3034,9 +3359,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self: Self, prefix: str) -> T:
-        r"""
-        Check if string values start with a substring.
+    def starts_with(self: Self, prefix: str) -> SeriesT:
+        r"""Check if string values start with a substring.
 
         Arguments:
             prefix: prefix substring
@@ -3076,9 +3400,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
-    def ends_with(self: Self, suffix: str) -> T:
-        r"""
-        Check if string values end with a substring.
+    def ends_with(self: Self, suffix: str) -> SeriesT:
+        r"""Check if string values end with a substring.
 
         Arguments:
             suffix: suffix substring
@@ -3118,9 +3441,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
-        r"""
-        Check if string contains a substring that matches a pattern.
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> SeriesT:
+        r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
             pattern: A Character sequence or valid regular expression pattern.
@@ -3166,9 +3488,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> T:
-        r"""
-        Create subslices of the string values of a Series.
+    def slice(self: Self, offset: int, length: int | None = None) -> SeriesT:
+        r"""Create subslices of the string values of a Series.
 
         Arguments:
             offset: Start index. Negative indexing is supported.
@@ -3237,9 +3558,8 @@ class SeriesStringNamespace(Generic[T]):
             )
         )
 
-    def head(self: Self, n: int = 5) -> T:
-        r"""
-        Take the first n elements of each string.
+    def head(self: Self, n: int = 5) -> SeriesT:
+        r"""Take the first n elements of each string.
 
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
@@ -3285,9 +3605,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.slice(0, n)
         )
 
-    def tail(self: Self, n: int = 5) -> T:
-        r"""
-        Take the last n elements of each string.
+    def tail(self: Self, n: int = 5) -> SeriesT:
+        r"""Take the last n elements of each string.
 
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
@@ -3333,9 +3652,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.slice(-n)
         )
 
-    def to_uppercase(self) -> T:
-        r"""
-        Transform string to uppercase variant.
+    def to_uppercase(self) -> SeriesT:
+        r"""Transform string to uppercase variant.
 
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
@@ -3381,9 +3699,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
-    def to_lowercase(self) -> T:
-        r"""
-        Transform string to lowercase variant.
+    def to_lowercase(self) -> SeriesT:
+        r"""Transform string to lowercase variant.
 
         Examples:
             >>> import pandas as pd
@@ -3424,9 +3741,8 @@ class SeriesStringNamespace(Generic[T]):
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
-        """
-        Parse Series with strings to a Series with Datetime dtype.
+    def to_datetime(self: Self, format: str | None = None) -> SeriesT:  # noqa: A002
+        """Parse Series with strings to a Series with Datetime dtype.
 
         Notes:
             pandas defaults to nanosecond time unit, Polars to microsecond.
@@ -3485,13 +3801,12 @@ class SeriesStringNamespace(Generic[T]):
         )
 
 
-class SeriesDateTimeNamespace(Generic[T]):
-    def __init__(self: Self, series: T) -> None:
+class SeriesDateTimeNamespace(Generic[SeriesT]):
+    def __init__(self: Self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def date(self: Self) -> T:
-        """
-        Get the date in a datetime series.
+    def date(self: Self) -> SeriesT:
+        """Get the date in a datetime series.
 
         Raises:
             NotImplementedError: If pandas default backend is being used.
@@ -3530,9 +3845,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.date()
         )
 
-    def year(self: Self) -> T:
-        """
-        Get the year in a datetime series.
+    def year(self: Self) -> SeriesT:
+        """Get the year in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3567,9 +3881,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.year()
         )
 
-    def month(self: Self) -> T:
-        """
-        Gets the month in a datetime series.
+    def month(self: Self) -> SeriesT:
+        """Gets the month in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3604,9 +3917,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.month()
         )
 
-    def day(self: Self) -> T:
-        """
-        Extracts the day in a datetime series.
+    def day(self: Self) -> SeriesT:
+        """Extracts the day in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3641,9 +3953,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.day()
         )
 
-    def hour(self: Self) -> T:
-        """
-         Extracts the hour in a datetime series.
+    def hour(self: Self) -> SeriesT:
+        """Extracts the hour in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3678,9 +3989,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.hour()
         )
 
-    def minute(self: Self) -> T:
-        """
-        Extracts the minute in a datetime series.
+    def minute(self: Self) -> SeriesT:
+        """Extracts the minute in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3715,9 +4025,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.minute()
         )
 
-    def second(self: Self) -> T:
-        """
-        Extracts the second(s) in a datetime series.
+    def second(self: Self) -> SeriesT:
+        """Extracts the seconds in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3752,9 +4061,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.second()
         )
 
-    def millisecond(self: Self) -> T:
-        """
-        Extracts the milliseconds in a datetime series.
+    def millisecond(self: Self) -> SeriesT:
+        """Extracts the milliseconds in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3802,9 +4110,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.millisecond()
         )
 
-    def microsecond(self: Self) -> T:
-        """
-        Extracts the microseconds in a datetime series.
+    def microsecond(self: Self) -> SeriesT:
+        """Extracts the microseconds in a datetime series.
 
         Examples:
             >>> import pandas as pd
@@ -3852,9 +4159,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.microsecond()
         )
 
-    def nanosecond(self: Self) -> T:
-        """
-        Extracts the nanosecond(s) in a date series.
+    def nanosecond(self: Self) -> SeriesT:
+        """Extract the nanoseconds in a date series.
 
         Examples:
             >>> import pandas as pd
@@ -3892,9 +4198,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
-    def ordinal_day(self: Self) -> T:
-        """
-        Get ordinal day.
+    def ordinal_day(self: Self) -> SeriesT:
+        """Get ordinal day.
 
         Examples:
             >>> import pandas as pd
@@ -3929,9 +4234,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
-    def total_minutes(self: Self) -> T:
-        """
-        Get total minutes.
+    def total_minutes(self: Self) -> SeriesT:
+        """Get total minutes.
 
         Notes:
             The function outputs the total minutes in the int dtype by default,
@@ -3971,9 +4275,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
-    def total_seconds(self: Self) -> T:
-        """
-        Get total seconds.
+    def total_seconds(self: Self) -> SeriesT:
+        """Get total seconds.
 
         Notes:
             The function outputs the total seconds in the int dtype by default,
@@ -4013,9 +4316,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
-    def total_milliseconds(self: Self) -> T:
-        """
-        Get total milliseconds.
+    def total_milliseconds(self: Self) -> SeriesT:
+        """Get total milliseconds.
 
         Notes:
             The function outputs the total milliseconds in the int dtype by default,
@@ -4058,9 +4360,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
-    def total_microseconds(self: Self) -> T:
-        """
-        Get total microseconds.
+    def total_microseconds(self: Self) -> SeriesT:
+        """Get total microseconds.
 
         Notes:
             The function outputs the total microseconds in the int dtype by default,
@@ -4103,9 +4404,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
-    def total_nanoseconds(self: Self) -> T:
-        """
-        Get total nanoseconds.
+    def total_nanoseconds(self: Self) -> SeriesT:
+        """Get total nanoseconds.
 
         Notes:
             The function outputs the total nanoseconds in the int dtype by default,
@@ -4145,9 +4445,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
-    def to_string(self: Self, format: str) -> T:  # noqa: A002
-        """
-        Convert a Date/Time/Datetime series into a String series with the given format.
+    def to_string(self: Self, format: str) -> SeriesT:  # noqa: A002
+        """Convert a Date/Time/Datetime series into a String series with the given format.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -4220,9 +4519,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.to_string(format)
         )
 
-    def replace_time_zone(self: Self, time_zone: str | None) -> T:
-        """
-        Replace time zone.
+    def replace_time_zone(self: Self, time_zone: str | None) -> SeriesT:
+        """Replace time zone.
 
         Arguments:
             time_zone: Target time zone.
@@ -4273,9 +4571,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self: Self, time_zone: str) -> T:
-        """
-        Convert time zone.
+    def convert_time_zone(self: Self, time_zone: str) -> SeriesT:
+        """Convert time zone.
 
         If converting from a time-zone-naive column, then conversion happens
         as if converting from UTC.
@@ -4332,9 +4629,8 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
-        """
-        Return a timestamp in the given time unit.
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> SeriesT:
+        """Return a timestamp in the given time unit.
 
         Arguments:
             time_unit: {'ns', 'us', 'ms'}

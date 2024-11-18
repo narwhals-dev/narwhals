@@ -11,6 +11,10 @@
         - arg_true
         - cast
         - count
+        - cum_count
+        - cum_max
+        - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls
@@ -22,6 +26,7 @@
         - clip
         - is_between
         - is_duplicated
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
@@ -40,6 +45,7 @@
         - pipe
         - quantile
         - replace_strict
+        - rolling_sum
         - round
         - sample
         - shift

@@ -16,5 +16,6 @@
 - [narwhals.Series.str](series_str.md)
 - [narwhals.dependencies](dependencies.md)
 - [narwhals.dtypes](dtypes.md)
+- [narwhals.exceptions](exceptions.md)
 - [narwhals.selectors](selectors.md)
 - [narwhals.typing](typing.md)

@@ -7,33 +7,38 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 2, None, 4]}
+data = {"a": ["x", "y", None, "z"]}
+
 expected = {
-    "cum_sum": [1, 3, None, 7],
-    "reverse_cum_sum": [7, 6, None, 4],
+    "cum_count": [1, 2, 2, 3],
+    "reverse_cum_count": [3, 2, 1, 1],
 }
 
 
 @pytest.mark.parametrize("reverse", [True, False])
-def test_cum_sum_expr(
+def test_cum_count_expr(
     request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
 ) -> None:
     if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
 
-    name = "reverse_cum_sum" if reverse else "cum_sum"
+    name = "reverse_cum_count" if reverse else "cum_count"
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("a").cum_sum(reverse=reverse).alias(name),
+        nw.col("a").cum_count(reverse=reverse).alias(name),
     )
 
     assert_equal_data(result, {name: expected[name]})
 
 
-def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
+def test_cum_count_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_sum=df["a"].cum_sum(),
-        reverse_cum_sum=df["a"].cum_sum(reverse=True),
+        cum_count=df["a"].cum_count(),
+        reverse_cum_count=df["a"].cum_count(reverse=True),
     )
+    expected = {
+        "cum_count": [1, 2, 2, 3],
+        "reverse_cum_count": [3, 2, 1, 1],
+    }
     assert_equal_data(result, expected)

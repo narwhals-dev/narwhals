@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -27,7 +28,7 @@ class PolarsSeries:
     def __init__(
         self, series: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
-        self._native_series = series
+        self._native_series: pl.Series = series
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._dtypes = dtypes
@@ -85,7 +86,7 @@ class PolarsSeries:
 
     @property
     def name(self) -> str:
-        return self._native_series.name  # type: ignore[no-any-return]
+        return self._native_series.name
 
     @property
     def dtype(self: Self) -> DType:
@@ -102,8 +103,8 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
-        return self._from_native_series(ser.cast(dtype))
+        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
@@ -192,7 +193,7 @@ class PolarsSeries:
         return self._from_native_series(self._native_series.__invert__())
 
     def median(self) -> Any:
-        from narwhals._exceptions import InvalidOperationError
+        from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
@@ -203,16 +204,23 @@ class PolarsSeries:
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> PolarsDataFrame:
+        import polars as pl  # ignore-banned-import
+
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (0, 20, 15):
+            has_nulls = self._native_series.is_null().any()
             result = self._native_series.to_dummies(separator=separator)
-            result = result.select(result.columns[int(drop_first) :])
+            output_columns = result.columns
+            if drop_first:
+                _ = output_columns.pop(int(has_nulls))
+
+            result = result.select(output_columns)
         else:
             result = self._native_series.to_dummies(
                 separator=separator, drop_first=drop_first
             )
-
+        result = result.with_columns(pl.all().cast(pl.Int8))
         return PolarsDataFrame(
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
@@ -299,6 +307,15 @@ class PolarsSeries:
         return PolarsDataFrame(
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (0, 20, 4):
+            not_null_series = ~self._native_series.is_null()
+            result = not_null_series.cum_sum(reverse=reverse)
+        else:
+            result = self._native_series.cum_count(reverse=reverse)
+
+        return self._from_native_series(result)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
