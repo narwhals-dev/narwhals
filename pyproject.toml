@@ -145,7 +145,7 @@ omit = [
   'narwhals/this.py',
   # we can run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
-  # pyspark 3.5 doesn't officially support 3.12
+  # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
   'tests/spark_test.py',
 ]
