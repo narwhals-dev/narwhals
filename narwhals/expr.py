@@ -429,8 +429,11 @@ class Expr:
         min_periods: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
-        r"""
-        Compute exponentially-weighted moving average.
+        r"""Compute exponentially-weighted moving average.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
 
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
@@ -438,7 +441,6 @@ class Expr:
             half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
             alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
             adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
-
                 - When `adjust=True` (the default) the EW function is calculated
                   using weights $w_i = (1 - \alpha)^i$
                 - When `adjust=False` the EW function is calculated recursively by

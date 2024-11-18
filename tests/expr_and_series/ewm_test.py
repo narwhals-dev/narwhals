@@ -12,6 +12,9 @@ from tests.utils import assert_equal_data
 data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
         "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
@@ -27,6 +30,9 @@ def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor)
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Series.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
@@ -41,6 +47,9 @@ def test_ewm_mean_series(
     assert_equal_data({"a": result}, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 @pytest.mark.parametrize(
     ("adjust", "expected"),
     [
@@ -76,6 +85,9 @@ def test_ewm_mean_expr_adjust(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 def test_ewm_mean_dask_raise() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("dask_expr", exc_type=ImportError)
@@ -89,6 +101,9 @@ def test_ewm_mean_dask_raise() -> None:
         df.select(nw.col("a").ewm_mean(com=1))
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 @pytest.mark.parametrize(
     ("ignore_nulls", "expected"),
     [
@@ -132,6 +147,9 @@ def test_ewm_mean_nulls(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
 def test_ewm_mean_params(
     request: pytest.FixtureRequest,
     constructor: Constructor,

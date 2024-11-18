@@ -387,8 +387,11 @@ class Series:
         min_periods: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
-        r"""
-        Compute exponentially-weighted moving average.
+        r"""Compute exponentially-weighted moving average.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
 
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
