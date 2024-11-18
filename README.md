@@ -122,9 +122,6 @@ to this list!
 
 Narwhals has been featured in several talks, podcasts, and blog posts:
 
-- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
-  Narwhals: Expanding DataFrame Compatibility Between Libraries
-
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs
 
@@ -136,6 +133,9 @@ Narwhals has been featured in several talks, podcasts, and blog posts:
 
 - [Sample Space Podcast | probabl](https://youtu.be/8hYdq4sWbbQ?si=WG0QP1CZ6gkFf18b)  
   How Narwhals has many end users ... that never use it directly. - Marco Gorelli
+
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
 
 - [Pycon Lithuania](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
   Marco Gorelli - DataFrame interoperatiblity - what's been achieved, and what comes next?

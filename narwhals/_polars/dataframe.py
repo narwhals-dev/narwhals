@@ -89,9 +89,7 @@ class PolarsDataFrame:
                     getattr(self._native_frame, attr)(*args, **kwargs)
                 )
             except pl.exceptions.ColumnNotFoundError as e:
-                msg = (
-                    f"t {e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
-                )
+                msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
             except TypeError as e:
                 e_str = str(e)
