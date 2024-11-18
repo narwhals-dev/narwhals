@@ -2919,10 +2919,12 @@ class Series:
         elements before it.
 
         Arguments:
-            window_size: The length of the window in number of elements.
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
             min_periods: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
-                `window_size`.
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
             center: Set the labels at the center of the window.
 
         Returns:
