@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -72,9 +73,8 @@ def parse_exprs_and_named_exprs(
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
             return expr._call(df)
-        else:  # pragma: no cover
-            msg = f"Expected expression or column name, got: {expr}"
-            raise TypeError(msg)
+        else:
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
 
     result_columns: dict[str, list[Column]] = {}
     for expr in exprs:
