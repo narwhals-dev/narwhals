@@ -813,6 +813,10 @@ class PandasLikeSeries:
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
+    def is_finite(self: Self) -> Self:
+        s = self._native_series
+        return self._from_native_series((s > float("-inf")) & (s < float("inf")))
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

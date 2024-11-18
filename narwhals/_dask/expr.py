@@ -831,6 +831,15 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_finite(self: Self) -> Self:
+        import dask.array as da  # ignore-banned-import
+
+        return self._from_call(
+            lambda _input: da.isfinite(_input),
+            "is_finite",
+            returns_scalar=False,
+        )
+
     def rolling_sum(
         self: Self,
         window_size: int,

@@ -30,6 +30,7 @@
         - is_between
         - is_duplicated
         - is_empty
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import random
 from typing import Any
 
+import hypothesis.strategies as st
+import pandas as pd
+import pyarrow as pa
 import pytest
+from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
@@ -186,3 +191,28 @@ def test_rolling_sum_series_invalid_params(
 
     with context:
         df["a"].rolling_sum(window_size=window_size, min_periods=min_periods)
+
+
+@given(  # type: ignore[misc]
+    center=st.booleans(),
+    values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
+)
+@pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
+def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    s = pd.Series(values)
+    n_missing = random.randint(0, len(s) - 1)  # noqa: S311
+    window_size = random.randint(1, len(s))  # noqa: S311
+    min_periods = random.randint(1, window_size)  # noqa: S311
+    mask = random.sample(range(len(s)), n_missing)
+    s[mask] = None
+    df = pd.DataFrame({"a": s})
+    expected = (
+        s.rolling(window=window_size, center=center, min_periods=min_periods)
+        .sum()
+        .to_frame("a")
+    )
+    result = nw.from_native(pa.Table.from_pandas(df)).select(
+        nw.col("a").rolling_sum(window_size, center=center, min_periods=min_periods)
+    )
+    expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
+    assert_equal_data(result, expected_dict)

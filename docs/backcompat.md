@@ -134,7 +134,7 @@ before making any change.
     ```
 
     To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
-    we recommend using `==` instead, as that works consistenty
+    we recommend using `==` instead, as that works consistently
     across namespaces:
 
     ```python exec="1" source="above" session="backcompat"
