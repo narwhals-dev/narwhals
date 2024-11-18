@@ -818,6 +818,11 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def is_finite(self: Self) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        return self._from_native_series(pc.is_finite(self._native_series))
+
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return (~self.is_null()).cast(self._dtypes.UInt32()).cum_sum(reverse=reverse)
 

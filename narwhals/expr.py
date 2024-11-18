@@ -1496,8 +1496,8 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
+            distinguish between NaN and Null, whereas pandas doesn't.
 
         Examples:
             >>> import pandas as pd
@@ -2700,6 +2700,59 @@ class Expr:
             a: [[1]]
         """
         return self.__class__(lambda plx: self._call(plx).mode())
+
+    def is_finite(self: Self) -> Self:
+        """Returns boolean values indicating which original values are finite.
+
+        Warning:
+            Different backend handle null values differently. `is_finite` will return
+            False for NaN and Null's in the Dask and pandas non-nullable backend, while
+            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+
+        Returns:
+            Expression of `Boolean` data type.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [float("nan"), float("inf"), 2.0, None]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").is_finite())
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+                   a
+            0  False
+            1  False
+            2   True
+            3  False
+            >>> func(pl.DataFrame(data))
+            shape: (4, 1)
+            ┌───────┐
+            │ a     │
+            │ ---   │
+            │ bool  │
+            ╞═══════╡
+            │ false │
+            │ false │
+            │ true  │
+            │ null  │
+            └───────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: bool
+            ----
+            a: [[false,false,true,null]]
+        """
+        return self.__class__(lambda plx: self._call(plx).is_finite())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.

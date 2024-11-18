@@ -449,6 +449,9 @@ class PandasLikeExpr:
             dtypes=self._dtypes,
         )
 
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_count", reverse=reverse)
 

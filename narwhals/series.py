@@ -2634,6 +2634,62 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def is_finite(self: Self) -> Self:
+        """Returns a boolean Series indicating which values are finite.
+
+        Warning:
+            Different backend handle null values differently. `is_finite` will return
+            False for NaN and Null's in the Dask and pandas non-nullable backend, while
+            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+
+        Returns:
+            Expression of `Boolean` data type.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [float("nan"), float("inf"), 2.0, None]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.is_finite()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    False
+            1    False
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               null
+            ]
+
+            >>> func(pa.chunked_array([data]))  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                null
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_finite())
+
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the series.
 
