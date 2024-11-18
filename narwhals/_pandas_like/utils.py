@@ -12,6 +12,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
 from narwhals.dependencies import get_polars
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -93,8 +94,15 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
 
     if isinstance(other, list):
         if len(other) > 1:
-            # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
+            if hasattr(other[0], "__narwhals_expr__") or hasattr(
+                other[0], "__narwhals_series__"
+            ):
+                # e.g. `plx.all() + plx.all()`
+                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
+                raise ValueError(msg)
+            msg = (
+                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
+            )
             raise ValueError(msg)
         other = other[0]
     if isinstance(other, PandasLikeDataFrame):
@@ -171,8 +179,7 @@ def create_compliant_series(
 def horizontal_concat(
     dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
-    """
-    Concatenate (native) DataFrames horizontally.
+    """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -192,8 +199,7 @@ def horizontal_concat(
 def vertical_concat(
     dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
-    """
-    Concatenate (native) DataFrames vertically.
+    """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """
@@ -644,12 +650,28 @@ def select_columns_by_name(
     backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> T:
-    """Select columns by name. Prefer this over `df.loc[:, column_names]` as it's
-    generally more performant."""
+    """Select columns by name.
+
+    Prefer this over `df.loc[:, column_names]` as it's
+    generally more performant.
+    """
     if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
+        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
+        missing_columns = [x for x in column_names if x not in available_columns]
+        if missing_columns:  # pragma: no cover
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns, available_columns
+            )
         return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
-    return df[column_names]  # type: ignore[no-any-return, index]
+    try:
+        return df[column_names]  # type: ignore[no-any-return, index]
+    except KeyError as e:
+        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
+        missing_columns = [x for x in column_names if x not in available_columns]
+        raise ColumnNotFoundError.from_missing_and_available_column_names(
+            missing_columns, available_columns
+        ) from e

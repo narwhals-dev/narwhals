@@ -9,10 +9,10 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import Union
 from typing import cast
 from warnings import warn
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
@@ -27,6 +27,7 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -36,10 +37,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeGuard
 
-    from narwhals.dataframe import BaseFrame
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
 
-T = TypeVar("T")
+    FrameOrSeriesT = TypeVar(
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+    )
 
 
 class Implementation(Enum):
@@ -56,7 +60,14 @@ class Implementation(Enum):
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
     ) -> Implementation:  # pragma: no cover
-        """Instantiate Implementation object from a native namespace module."""
+        """Instantiate Implementation object from a native namespace module.
+
+        Arguments:
+            native_namespace: Native namespace.
+
+        Returns:
+            Implementation.
+        """
         mapping = {
             get_pandas(): Implementation.PANDAS,
             get_modin(): Implementation.MODIN,
@@ -68,7 +79,11 @@ class Implementation(Enum):
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
     def to_native_namespace(self: Self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation."""
+        """Return the native namespace module corresponding to Implementation.
+
+        Returns:
+            Native module.
+        """
         mapping = {
             Implementation.PANDAS: get_pandas(),
             Implementation.MODIN: get_modin(),
@@ -127,7 +142,14 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
 
 
 def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
-    """Simple version parser; split into a tuple of ints for comparison."""
+    """Simple version parser; split into a tuple of ints for comparison.
+
+    Arguments:
+        version: Version string to parse.
+
+    Returns:
+        Parsed version number.
+    """
     # lifted from Polars
     if isinstance(version, str):  # pragma: no cover
         version = version.split(".")
@@ -154,9 +176,17 @@ def validate_laziness(items: Iterable[Any]) -> None:
     raise NotImplementedError(msg)
 
 
-def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
-    """
-    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+def maybe_align_index(
+    lhs: FrameOrSeriesT, rhs: Series | DataFrame[Any] | LazyFrame[Any]
+) -> FrameOrSeriesT:
+    """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+
+    Arguments:
+        lhs: Dataframe or Series.
+        rhs: Dataframe or Series to align with.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -243,9 +273,14 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     return lhs
 
 
-def maybe_get_index(obj: T) -> Any | None:
-    """
-    Get the index of a DataFrame or a Series, if it's pandas-like.
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None:
+    """Get the index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -275,13 +310,12 @@ def maybe_get_index(obj: T) -> Any | None:
 
 
 def maybe_set_index(
-    obj: T,
+    obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
     index: Series | list[Series] | None = None,
-) -> T:
-    """
-    Set the index of a DataFrame or a Series, if it's pandas-like.
+) -> FrameOrSeriesT:
+    """Set the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
         obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
@@ -291,6 +325,9 @@ def maybe_set_index(
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
         index: series or list of series to set as index.
+
+    Returns:
+        Same type as input.
 
     Raises:
         ValueError: If one of the following condition happens:
@@ -319,7 +356,6 @@ def maybe_set_index(
         4  1
         5  2
     """
-
     df_any = cast(Any, obj)
     native_obj = to_native(df_any)
 
@@ -364,9 +400,14 @@ def maybe_set_index(
         return df_any  # type: ignore[no-any-return]
 
 
-def maybe_reset_index(obj: T) -> T:
-    """
-    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
+    """Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -423,14 +464,18 @@ def _has_default_index(
     )
 
 
-def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
-    """
-    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+def maybe_convert_dtypes(
+    obj: FrameOrSeriesT, *args: bool, **kwargs: bool | str
+) -> FrameOrSeriesT:
+    """Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
         obj: DataFrame or Series.
         *args: Additional arguments which gets passed through.
         **kwargs: Additional arguments which gets passed through.
+
+    Returns:
+        Same type as input.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -471,8 +516,7 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
 
 
 def is_ordered_categorical(series: Series) -> bool:
-    """
-    Return whether indices of categories are semantically meaningful.
+    """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
     the `is_ordered` property from the DataFrame Interchange Protocol,
@@ -485,6 +529,12 @@ def is_ordered_categorical(series: Series) -> bool:
       - Categoricals are ordered if `dtype.cat.ordered == True`.
     - For PyArrow table:
       - Categoricals are ordered if `dtype.type.ordered == True`.
+
+    Arguments:
+        series: Input Series.
+
+    Returns:
+        Whether the Series is an ordered categorical.
 
     Examples:
         >>> import narwhals as nw
@@ -547,8 +597,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
 
 
 def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
-    """Generates a unique token of specified `n_bytes` that is not present in the given
-    list of columns.
+    """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
     function to return a string nbytes random bytes.
@@ -589,16 +638,16 @@ def parse_columns_to_drop(
     columns: Iterable[str],
     strict: bool,  # noqa: FBT001
 ) -> list[str]:
-    cols = set(compliant_frame.columns)
+    cols = compliant_frame.columns
     to_drop = list(columns)
-
     if strict:
-        for d in to_drop:
-            if d not in cols:
-                msg = f'"{d}" not found'
-                raise ColumnNotFoundError(msg)
+        missing_columns = [x for x in to_drop if x not in cols]
+        if missing_columns:
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns=missing_columns, available_columns=cols
+            )
     else:
-        to_drop = list(cols.intersection(set(to_drop)))
+        to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
 
 
@@ -607,8 +656,10 @@ def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
 
 
 def find_stacklevel() -> int:
-    """
-    Find the first place in the stack that is not inside narwhals.
+    """Find the first place in the stack that is not inside narwhals.
+
+    Returns:
+        Stacklevel.
 
     Taken from:
     https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
@@ -647,16 +698,12 @@ def find_stacklevel() -> int:
 
 
 def issue_deprecation_warning(message: str, _version: str) -> None:
-    """
-    Issue a deprecation warning.
+    """Issue a deprecation warning.
 
-    Parameters
-    ----------
-    message
-        The message associated with the warning.
-    version
-        Narwhals version when the warning was introduced. Just used for internal
-        bookkeeping.
+    Arguments:
+        message: The message associated with the warning.
+        _version: Narwhals version when the warning was introduced. Just used for internal
+            bookkeeping.
     """
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 

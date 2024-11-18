@@ -5,10 +5,11 @@ from typing import Any
 from typing import Literal
 
 if TYPE_CHECKING:
+    import polars as pl
+
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
-from narwhals.dependencies import get_polars
 from narwhals.utils import parse_version
 
 
@@ -33,7 +34,7 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     return args, kwargs
 
 
-def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pl.DataType, dtypes: DTypes) -> DType:
     import polars as pl  # ignore-banned-import()
 
     if dtype == pl.Float64:
@@ -79,25 +80,26 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
         return dtypes.Struct(
             [
                 dtypes.Field(field_name, native_to_narwhals_dtype(field_type, dtypes))
-                for field_name, field_type in dtype
+                for field_name, field_type in dtype  # type: ignore[attr-defined]
             ]
         )
     if dtype == pl.List:
-        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
+        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))  # type: ignore[attr-defined]
     if dtype == pl.Array:
         if parse_version(pl.__version__) < (0, 20, 30):  # pragma: no cover
             return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, dtypes), dtype.width
+                native_to_narwhals_dtype(dtype.inner, dtypes),  # type: ignore[attr-defined]
+                dtype.width,  # type: ignore[attr-defined]
             )
         else:
-            return dtypes.Array(native_to_narwhals_dtype(dtype.inner, dtypes), dtype.size)
+            return dtypes.Array(native_to_narwhals_dtype(dtype.inner, dtypes), dtype.size)  # type: ignore[attr-defined]
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if (pl := get_polars()) is not None and isinstance(
-        dtype, (pl.DataType, pl.DataType.__class__)
-    ):
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pl.DataType:
+    import polars as pl  # ignore-banned-import()
+
+    if isinstance(dtype, (pl.DataType, pl.DataType.__class__)):  # type: ignore[arg-type]
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"
@@ -105,8 +107,6 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
             "- Used `pl.Int64` instead of `nw.Int64`?"
         )
         raise TypeError(msg)
-
-    import polars as pl  # ignore-banned-import()
 
     if dtype == dtypes.Float64:
         return pl.Float64()
@@ -142,7 +142,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
-        dt_time_unit = getattr(dtype, "time_unit", "us")
+        dt_time_unit: Literal["ms", "us", "ns"] = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
         return pl.Datetime(dt_time_unit, dt_time_zone)
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
@@ -151,13 +151,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
 
     if dtype == dtypes.List:  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if dtype == dtypes.Struct:  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if dtype == dtypes.Array:  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 

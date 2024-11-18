@@ -1,3 +1,4 @@
+black  # required by mkdocstrings_handlers
 jinja2
 duckdb
 markdown-exec[ansi]

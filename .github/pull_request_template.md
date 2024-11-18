@@ -14,16 +14,15 @@
 - [ ] ✅ Test
 - [ ] 🐳 Other
 
-## Related issues 
+## Related issues
 
-- Related issue # 
-- Closes #
+- Related issue #\<issue number\>
+- Closes #\<issue number\>
 
 ## Checklist
 
 - [ ] Code follows style guide (ruff)
-- [ ] Tests added 
+- [ ] Tests added
 - [ ] Documented the changes
 
-## If you have comments or can explain your changes, please do so below.
-
+## If you have comments or can explain your changes, please do so below

@@ -18,8 +18,10 @@ def test_is_finite_expr(request: pytest.FixtureRequest, constructor: Constructor
 
     if "polars" in str(constructor) or "pyarrow_table" in str(constructor):
         expected = {"a": [False, False, True, None]}
-    else:
+    elif "pandas_constructor" in str(constructor) or "dask" in str(constructor):
         expected = {"a": [False, False, True, False]}
+    else:  # pandas_nullable_constructor, pandas_pyarrow_constructor, modin
+        expected = {"a": [None, False, True, None]}
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_finite())
@@ -35,8 +37,12 @@ def test_is_finite_series(
 
     if "polars" in str(constructor_eager) or "pyarrow_table" in str(constructor_eager):
         expected = {"a": [False, False, True, None]}
-    else:
+    elif "pandas_constructor" in str(constructor_eager) or "dask" in str(
+        constructor_eager
+    ):
         expected = {"a": [False, False, True, False]}
+    else:  # pandas_nullable_constructor, pandas_pyarrow_constructor, modin
+        expected = {"a": [None, False, True, None]}
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"a": df["a"].is_finite()}

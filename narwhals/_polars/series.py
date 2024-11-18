@@ -103,8 +103,8 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
-        return self._from_native_series(ser.cast(dtype))  # type: ignore[arg-type]
+        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
@@ -193,7 +193,7 @@ class PolarsSeries:
         return self._from_native_series(self._native_series.__invert__())
 
     def median(self) -> Any:
-        from narwhals._exceptions import InvalidOperationError
+        from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
@@ -280,6 +280,15 @@ class PolarsSeries:
         return PolarsDataFrame(
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (0, 20, 4):
+            not_null_series = ~self._native_series.is_null()
+            result = not_null_series.cum_sum(reverse=reverse)
+        else:
+            result = self._native_series.cum_count(reverse=reverse)
+
+        return self._from_native_series(result)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
