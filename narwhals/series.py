@@ -1812,14 +1812,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.n_unique()
 
@@ -1839,14 +1839,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> np.ndarray:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_numpy()
 
@@ -1866,14 +1866,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> pd.Series:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_pandas()
 
