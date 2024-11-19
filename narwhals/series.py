@@ -3390,9 +3390,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
             We can then pass either pandas or Polars to `func`:
 
             >>> my_library_agnostic_function(s_pd)
+            0     123
+            1     123
+            dtype: object
 
-
-            >>> my_library_agnostic_function(s_pl)
+            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                "123"
+                " 123"
+            ]
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.replace_all(
@@ -3420,15 +3428,22 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.strip_chars()
-            ...     return s.to_list()
+            ...     return s.to_native()
 
             We can then pass either pandas or Polars to `func`:
 
             >>> my_library_agnostic_function(s_pd)
-            ['apple', 'mango']
+            0    apple
+            1    mango
+            dtype: object
 
-            >>> my_library_agnostic_function(s_pl)
-            ['apple', 'mango']
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                "apple"
+                "mango"
+            ]
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.strip_chars(characters)
