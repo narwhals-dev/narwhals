@@ -2146,9 +2146,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Returns:
         A new expression.
 
-    Notes:
-        pandas and Polars handle null values differently.
-
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -2159,7 +2156,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
         >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
@@ -2175,9 +2172,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         0  False  False  False
         1  False   True  False
         2   True   True   True
-        3   True   None  False
-        4  False   None  False
-        5   None   None  False
+        3   True   <NA>   <NA>
+        4  False   <NA>  False
+        5   <NA>   <NA>   <NA>
 
         >>> func(df_pl)
         shape: (6, 3)
@@ -2216,9 +2213,6 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Returns:
         A new expression.
 
-    Notes:
-        pandas and Polars handle null values differently.
-
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -2229,7 +2223,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
         >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
@@ -2245,9 +2239,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         0  False  False  False
         1  False   True   True
         2   True   True   True
-        3   True   None   True
-        4  False   None  False
-        5   None   None  False
+        3   True   <NA>   True
+        4  False   <NA>   <NA>
+        5   <NA>   <NA>   <NA>
 
         >>> func(df_pl)
         shape: (6, 3)
