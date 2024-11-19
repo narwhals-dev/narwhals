@@ -140,6 +140,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A new LazyFrame.
+
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
 
@@ -196,6 +199,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             as_series: If set to true ``True``, then the values are Narwhals Series,
                         otherwise the values are Any.
 
+        Returns:
+            A mapping from column name to values / Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -231,6 +237,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     def is_duplicated(self: Self) -> Series:
         r"""Get a mask of all duplicated rows in this DataFrame.
+
+        Returns:
+            A new Series.
 
         Examples:
             >>> import narwhals as nw
@@ -279,6 +288,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def is_unique(self: Self) -> Series:
         r"""Get a mask of all unique rows in this DataFrame.
 
+        Returns:
+            A new Series.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -324,7 +336,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().is_unique()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
-        """Private, just used to test the stable API."""
+        """Private, just used to test the stable API.
+
+        Returns:
+            A new DataFrame.
+        """
         return self.select(all()._l1_norm())
 
 
@@ -379,7 +395,11 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return super().collect()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
-        """Private, just used to test the stable API."""
+        """Private, just used to test the stable API.
+
+        Returns:
+            A new lazyframe.
+        """
         return self.select(all()._l1_norm())
 
 
@@ -402,6 +422,9 @@ class Series(NwSeries):
 
     def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.
+
+        Returns:
+            A new DataFrame.
 
         Examples:
             >>> import pandas as pd
@@ -456,6 +479,9 @@ class Series(NwSeries):
             name: Give the resulting count column a specific name; if `normalize` is True
                 defaults to "proportion", otherwise defaults to "count".
             normalize: If true gives relative frequencies of the unique values
+
+        Returns:
+            A new DataFrame.
 
         Examples:
             >>> import narwhals as nw
@@ -717,6 +743,7 @@ class Expr(NwExpr):
             half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
             alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
             adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
+
                 - When `adjust=True` (the default) the EW function is calculated
                   using weights $w_i = (1 - \alpha)^i$
                 - When `adjust=False` the EW function is calculated recursively by
