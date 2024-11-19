@@ -239,7 +239,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
-            A new Series.
+            A new DataFrame.
 
         Examples:
             >>> import narwhals as nw

@@ -98,7 +98,7 @@ def test_dataframe_docstrings() -> None:
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
             == getattr(df, item).__doc__
-        )
+        ), item
 
 
 def test_lazyframe_docstrings() -> None:

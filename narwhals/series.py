@@ -521,6 +521,9 @@ class Series:
     def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.
 
+        Returns:
+            A new DataFrame.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2045,6 +2048,9 @@ class Series:
     def is_duplicated(self: Self) -> Self:
         r"""Get a mask of all duplicated rows in the Series.
 
+        Returns:
+            A new Series.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -2309,6 +2315,9 @@ class Series:
             name: Give the resulting count column a specific name; if `normalize` is True
                 defaults to "proportion", otherwise defaults to "count".
             normalize: If true gives relative frequencies of the unique values
+
+        Returns:
+            A new DataFrame.
 
         Examples:
             >>> import narwhals as nw
