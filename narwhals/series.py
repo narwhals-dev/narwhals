@@ -525,14 +525,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_frame().to_native()
 
@@ -2312,7 +2312,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> import pandas as pd
             >>> import polars as pl
             >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
@@ -2320,7 +2320,7 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.value_counts(sort=True).to_native()
 
