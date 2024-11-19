@@ -459,7 +459,7 @@ class Series(NwSeries):
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> import pandas as pd
             >>> import polars as pl
             >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
@@ -467,7 +467,7 @@ class Series(NwSeries):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.value_counts(sort=True).to_native()
 
@@ -717,7 +717,6 @@ class Expr(NwExpr):
             half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
             alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
             adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
-
                 - When `adjust=True` (the default) the EW function is calculated
                   using weights $w_i = (1 - \alpha)^i$
                 - When `adjust=False` the EW function is calculated recursively by
@@ -727,7 +726,7 @@ class Expr(NwExpr):
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value (otherwise result is null).
+            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -744,39 +743,44 @@ class Expr(NwExpr):
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
         Returns:
-            Series
+            Expr
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
-            >>> data = [1, 2, 3]
-            >>> s_pd = pd.Series(name="a", data=data)
-            >>> s_pl = pl.Series(name="a", values=data)
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"a": [1, 2, 3]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
-            ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(
+            ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
+            ...     ).to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
-            0    1.000000
-            1    1.666667
-            2    2.428571
-            Name: a, dtype: float64
+            >>> my_library_agnostic_function(df_pd)
+                      a
+            0  1.000000
+            1  1.666667
+            2  2.428571
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3,)
-            Series: 'a' [f64]
-            [
-               1.0
-               1.666667
-               2.428571
-            ]
+            >>> my_library_agnostic_function(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌──────────┐
+            │ a        │
+            │ ---      │
+            │ f64      │
+            ╞══════════╡
+            │ 1.0      │
+            │ 1.666667 │
+            │ 2.428571 │
+            └──────────┘
         """
         from narwhals.exceptions import NarwhalsUnstableWarning
         from narwhals.utils import find_stacklevel
