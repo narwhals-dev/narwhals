@@ -388,6 +388,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A new LazyFrame.
+
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
 
@@ -872,6 +875,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             as_series: If set to true ``True``, then the values are Narwhals Series,
                         otherwise the values are Any.
+
+        Returns:
+            A mapping from column name to values / Series.
 
         Examples:
             >>> import pandas as pd
@@ -2244,6 +2250,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def is_duplicated(self: Self) -> Series:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
+        Returns:
+            A new Series.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2322,6 +2331,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def is_unique(self: Self) -> Series:
         r"""Get a mask of all unique rows in this DataFrame.
+
+        Returns:
+            A new Series.
 
         Examples:
             >>> import narwhals as nw

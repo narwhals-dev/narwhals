@@ -28,7 +28,7 @@ repos:
     hooks:
     -   id: flake8
         additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
-        entry: flake8 --select DAR --ignore DAR402,DAR401
+        entry: flake8 --select DAR --ignore DAR101,DAR402,DAR401
         exclude: |
             (?x)^(
                 tests/.*|
@@ -38,10 +38,6 @@ repos:
                 narwhals/dataframe\.py$|
                 # TODO: gradually enable
                 narwhals/dependencies\.py$|
-                # some false positives in this one
-                narwhals/translate\.py$|
-                # some false positives in this one
-                narwhals/stable/v1/__init__\.py$|
                 # private, so less urgent to document too well
                 narwhals/_.*
             )$
