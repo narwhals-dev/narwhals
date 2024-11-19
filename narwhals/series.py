@@ -3385,15 +3385,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.replace_all("abc", "")
-            ...     return s.to_list()
+            ...     return s.to_native()
 
             We can then pass either pandas or Polars to `func`:
 
             >>> my_library_agnostic_function(s_pd)
-            ['123', ' 123']
+
 
             >>> my_library_agnostic_function(s_pl)
-            ['123', ' 123']
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.replace_all(
