@@ -2090,14 +2090,14 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
 
             Let's define a dataframe-agnostic function that filters rows in which "foo"
             values are greater than 10, and then checks if the result is empty or not:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.filter(s > 10).is_empty()
 
@@ -2162,7 +2162,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
             >>> s_pd = pd.Series([1, None, 3])
@@ -2171,7 +2171,7 @@ class Series:
             Let's define a dataframe-agnostic function that returns the null count of
             the series:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.null_count()
 
@@ -2742,7 +2742,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = [1, 2, 3, 4]
@@ -2751,7 +2751,7 @@ class Series:
 
             Let's define a dataframe-agnostic function that converts to arrow:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_arrow()
 
