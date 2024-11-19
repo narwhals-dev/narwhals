@@ -210,14 +210,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> tuple[int]:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.shape
 
@@ -305,7 +305,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = [1, 2, None]
@@ -314,7 +314,7 @@ class Series:
 
             Let's define a dataframe-agnostic function that computes the len of the series:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> int:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.len()
 
@@ -342,7 +342,7 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> nw.dtypes.DType:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dtype
 
@@ -363,14 +363,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> str:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.name
 
@@ -576,14 +576,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_list()
 
@@ -603,14 +603,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.mean()
 
@@ -634,7 +634,7 @@ class Series:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [5, 3, 8]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
@@ -642,7 +642,7 @@ class Series:
 
             Let's define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.median()
 
@@ -664,14 +664,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.count()
 
@@ -695,14 +695,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [False, True, False]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.any()
 
@@ -722,14 +722,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [True, False, True]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.all()
 
@@ -750,14 +750,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.min()
 
@@ -777,14 +777,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.max()
 
@@ -804,14 +804,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.sum()
 
@@ -835,14 +835,14 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.std()
 
