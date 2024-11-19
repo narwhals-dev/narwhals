@@ -18,6 +18,7 @@
         - cum_sum
         - diff
         - drop_nulls
+        - ewm_mean
         - fill_null
         - filter
         - gather_every

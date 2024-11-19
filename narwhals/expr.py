@@ -418,6 +418,103 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).all())
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        r"""Compute exponentially-weighted moving average.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
+            span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
+            half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
+            alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
+            adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
+                - When `adjust=True` (the default) the EW function is calculated
+                  using weights $w_i = (1 - \alpha)^i$
+                - When `adjust=False` the EW function is calculated recursively by
+                  $$
+                  y_0=x_0
+                  $$
+                  $$
+                  y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
+                  $$
+            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            ignore_nulls: Ignore missing values when calculating weights.
+
+                - When `ignore_nulls=False` (default), weights are based on absolute
+                  positions.
+                  For example, the weights of $x_0$ and $x_2$ used in
+                  calculating the final weighted average of $[x_0, None, x_2]$ are
+                  $(1-\alpha)^2$ and $1$ if `adjust=True`, and
+                  $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
+                - When `ignore_nulls=True`, weights are based
+                  on relative positions. For example, the weights of
+                  $x_0$ and $x_2$ used in calculating the final weighted
+                  average of $[x_0, None, x_2]$ are
+                  $1-\alpha$ and $1$ if `adjust=True`,
+                  and $1-\alpha$ and $\alpha$ if `adjust=False`.
+
+        Returns:
+            Expr
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2, 3]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=False))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                      a
+            0  1.000000
+            1  1.666667
+            2  2.428571
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌──────────┐
+            │ a        │
+            │ ---      │
+            │ f64      │
+            ╞══════════╡
+            │ 1.0      │
+            │ 1.666667 │
+            │ 2.428571 │
+            └──────────┘
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
+
     def mean(self) -> Self:
         """Get mean value.
 
