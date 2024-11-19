@@ -418,7 +418,6 @@ class Series:
                   calculating the final weighted average of $[x_0, None, x_2]$ are
                   $(1-\alpha)^2$ and $1$ if `adjust=True`, and
                   $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
-
                 - When `ignore_nulls=True`, weights are based
                   on relative positions. For example, the weights of
                   $x_0$ and $x_2$ used in calculating the final weighted
@@ -458,35 +457,6 @@ class Series:
                1.0
                1.666667
                2.428571
-            ]
-
-            pandas and Polars handle NaN differently. So, calculating ewm over
-            a sequence with null values leads to distinct results. Narwhals
-            matches Polars' results when "None" is in the input.
-
-            >>> data = [2.0, 4.0, None, 3.0, float("nan"), 3.0]
-            >>> s_pd2 = pd.Series(name="a", data=data)
-            >>> s_pl2 = pl.Series(name="a", values=data)
-
-            >>> func(s_pd2)
-            0    2.000000
-            1    3.333333
-            2         NaN
-            3    3.090909
-            4         NaN
-            5    3.023256
-            Name: a, dtype: float64
-
-            >>> func(s_pl2)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (6,)
-            Series: 'a' [f64]
-            [
-               2.0
-               3.333333
-               null
-               3.090909
-               NaN
-               NaN
             ]
         """
         return self._from_compliant_series(

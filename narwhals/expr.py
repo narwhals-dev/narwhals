@@ -459,7 +459,6 @@ class Expr:
                   calculating the final weighted average of $[x_0, None, x_2]$ are
                   $(1-\alpha)^2$ and $1$ if `adjust=True`, and
                   $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
-
                 - When `ignore_nulls=True`, weights are based
                   on relative positions. For example, the weights of
                   $x_0$ and $x_2$ used in calculating the final weighted
@@ -502,37 +501,6 @@ class Expr:
             │ 1.0      │
             │ 1.666667 │
             │ 2.428571 │
-            └──────────┘
-
-            pandas and Polars handle nulls differently. So, calculating ewm over
-            a sequence with null values leads to distinct results:
-
-            >>> data = {"a": [2.0, 4.0, None, 3.0, float("nan"), 3.0]}
-            >>> df_pd2 = pd.DataFrame(data)
-            >>> df_pl2 = pl.DataFrame(data)
-
-            >>> func(df_pd2)
-                      a
-            0  2.000000
-            1  3.333333
-            2       NaN
-            3  3.090909
-            4       NaN
-            5  3.023256
-
-            >>> func(df_pl2)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (6, 1)
-            ┌──────────┐
-            │ a        │
-            │ ---      │
-            │ f64      │
-            ╞══════════╡
-            │ 2.0      │
-            │ 3.333333 │
-            │ null     │
-            │ 3.090909 │
-            │ NaN      │
-            │ NaN      │
             └──────────┘
         """
         return self.__class__(
