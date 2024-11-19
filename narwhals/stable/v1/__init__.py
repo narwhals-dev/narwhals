@@ -413,8 +413,8 @@ class Series(NwSeries):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(s):
+            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_frame()
 
             We can then pass either pandas or Polars to `func`:
@@ -465,8 +465,8 @@ class Series(NwSeries):
 
             Let's define a dataframe-agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(s):
+            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.value_counts(sort=True)
 
             We can then pass either pandas or Polars to `func`:
@@ -555,8 +555,8 @@ class Series(NwSeries):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(s):
+            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.ewm_mean(com=1, ignore_nulls=False)
 
             We can then pass either pandas or Polars to `func`:
