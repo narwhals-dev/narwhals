@@ -113,7 +113,7 @@ def test_ewm_mean_dask_raise() -> None:
                 "a": [
                     2.0,
                     3.3333333333333335,
-                    float("nan"),
+                    None,
                     3.142857142857143,
                 ]
             },
@@ -124,7 +124,7 @@ def test_ewm_mean_dask_raise() -> None:
                 "a": [
                     2.0,
                     3.3333333333333335,
-                    float("nan"),
+                    None,
                     3.090909090909091,
                 ]
             },
@@ -160,7 +160,7 @@ def test_ewm_mean_params(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2, 5, 3]}))
-    expected = {"a": [2.0, 4.0, 3.4285714285714284]}
+    expected: dict[str, list[float | None]] = {"a": [2.0, 4.0, 3.4285714285714284]}
     assert_equal_data(
         df.select(nw.col("a").ewm_mean(alpha=0.5, adjust=True, ignore_nulls=True)),
         expected,
@@ -177,7 +177,7 @@ def test_ewm_mean_params(
         df.select(nw.col("a").ewm_mean(half_life=1.5, adjust=False)), expected
     )
 
-    expected = {"a": [float("nan"), 4.0, 3.4285714285714284]}
+    expected = {"a": [None, 4.0, 3.4285714285714284]}
     assert_equal_data(
         df.select(
             nw.col("a").ewm_mean(alpha=0.5, adjust=True, min_periods=2, ignore_nulls=True)
