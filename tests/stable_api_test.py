@@ -85,7 +85,7 @@ def test_stable_api_docstrings() -> None:
             continue
         v1_doc = getattr(nw_v1, item).__doc__
         nw_doc = getattr(nw, item).__doc__
-        assert v1_doc == nw_doc
+        assert v1_doc == nw_doc, item
 
 
 def test_dataframe_docstrings() -> None:
