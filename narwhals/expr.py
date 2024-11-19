@@ -56,6 +56,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
             >>> df_pa = pa.table({"a": [1, 2], "b": [4, 5]})
@@ -107,6 +108,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [1, 2, 3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -160,6 +162,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> from datetime import date
             >>> df_pd = pd.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
             >>> df_pl = pl.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
@@ -339,6 +342,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pa = pa.table({"a": [True, False], "b": [True, True]})
@@ -384,6 +388,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pa = pa.table({"a": [True, False], "b": [True, True]})
@@ -473,6 +478,7 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [1, 2, 3]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -526,6 +532,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
             >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
             >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
@@ -574,6 +581,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
             >>> df_pl = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
             >>> df_pa = pa.table({"a": [1, 8, 3], "b": [4, 5, 2]})
@@ -623,6 +631,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
             >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
             >>> df_pa = pa.table({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
@@ -683,6 +692,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -741,6 +751,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [5, 10], "b": [50, 100]})
             >>> df_pl = pl.DataFrame({"a": [5, 10], "b": [50, 100]})
             >>> df_pa = pa.table({"a": [5, 10], "b": [50, 100]})
@@ -786,6 +797,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 3]})
             >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 3]})
             >>> df_pa = pa.table({"a": [1, 2], "b": [4, 3]})
@@ -831,6 +843,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
             >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [50, 100]})
             >>> df_pa = pa.table({"a": [10, 20], "b": [50, 100]})
@@ -876,6 +889,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
             >>> df_pa = pa.table({"a": [1, 2, 3], "b": [None, 4, 4]})
@@ -921,6 +935,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
             >>> df_pa = pa.table({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
@@ -971,6 +986,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
@@ -1022,6 +1038,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [1, -2], "b": [-3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -1073,6 +1090,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
@@ -1135,6 +1153,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5]})
@@ -1198,6 +1217,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5]})
@@ -1263,6 +1283,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -1336,6 +1357,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -1427,6 +1449,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5]})
             >>> df_pa = pa.table({"a": [1, 2, 3, 4, 5]})
@@ -1483,6 +1506,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [1, 2, 9, 10]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 9, 10]})
             >>> df_pa = pa.table({"a": [1, 2, 9, 10]})
@@ -1542,6 +1566,7 @@ class Expr:
             >>> import pandas as pd
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
             >>> df_pl = pl.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
             >>> df_pa = pa.table({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
@@ -1602,6 +1627,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame(
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
@@ -1669,6 +1695,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [1, None, None, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -1729,6 +1756,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> df_pd = pd.DataFrame(
             ...     {
             ...         "a": [2, 4, None, None, 3, 5],
@@ -1862,6 +1890,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -1927,6 +1956,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -1983,6 +2013,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2035,6 +2066,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2087,6 +2119,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2143,6 +2176,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2189,6 +2223,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2241,6 +2276,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2308,6 +2344,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2360,6 +2397,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2411,6 +2449,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2471,6 +2510,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2521,6 +2561,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2574,6 +2615,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2636,6 +2678,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
 
             >>> s = [1, 2, 3]
             >>> df_pd = pd.DataFrame({"s": s})
@@ -2760,6 +2803,7 @@ class Expr:
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
 
             >>> data = {
             ...     "a": [1, 1, 2, 3],
@@ -2812,6 +2856,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2863,6 +2908,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2922,6 +2968,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -2981,6 +3028,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -3040,6 +3088,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -3121,6 +3170,7 @@ class Expr:
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -3241,6 +3291,7 @@ class ExprCatNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["apple", "mango", "mango"]}
             >>> df_pd = pd.DataFrame(data, dtype="category")
             >>> df_pl = pl.DataFrame(data, schema={"fruits": pl.Categorical})
@@ -3288,6 +3339,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"words": ["foo", "Café", "345", "東京", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3342,6 +3394,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"foo": ["123abc", "abc abc123"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3385,6 +3438,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"foo": ["123abc", "abc abc123"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3424,6 +3478,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["apple", "\nmango"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3460,6 +3515,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3507,6 +3563,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3556,6 +3613,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3614,6 +3672,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"s": ["pear", None, "papaya", "dragonfruit"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3692,6 +3751,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3742,6 +3802,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3801,6 +3862,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = ["2020-01-01", "2020-01-02"]
             >>> df_pd = pd.DataFrame({"a": data})
             >>> df_pl = pl.DataFrame({"a": data})
@@ -3853,6 +3915,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3896,6 +3959,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"fruits": ["APPLE", "MANGO", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -3947,6 +4011,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
             >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
@@ -3990,6 +4055,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 6, 1),
@@ -4040,6 +4106,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 6, 1),
@@ -4093,6 +4160,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 6, 1),
@@ -4147,6 +4215,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1),
@@ -4197,6 +4266,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1),
@@ -4248,6 +4318,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1),
@@ -4300,6 +4371,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1, 0),
@@ -4353,6 +4425,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1, 0),
@@ -4406,6 +4479,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1, 0),
@@ -4459,6 +4533,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -4504,6 +4579,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -4549,6 +4625,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -4594,6 +4671,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "a": [
             ...         timedelta(milliseconds=10),
@@ -4648,6 +4726,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "a": [
             ...         timedelta(microseconds=10),
@@ -4702,6 +4781,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = ["2024-01-01 00:00:00.000000001", "2024-01-01 00:00:00.000000002"]
             >>> df_pd = pd.DataFrame({"a": pd.to_datetime(data)})
             >>> df_pl = pl.DataFrame({"a": data}).with_columns(
@@ -4782,6 +4862,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> data = [
             ...     datetime(2020, 3, 1),
             ...     datetime(2020, 4, 1),
@@ -4832,6 +4913,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         Examples:
             >>> from datetime import datetime, timezone
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -4892,6 +4974,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         Examples:
             >>> from datetime import datetime, timezone
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -4953,6 +5036,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         Examples:
             >>> from datetime import date
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -5026,6 +5110,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
@@ -5063,6 +5148,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
@@ -5101,6 +5187,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
@@ -5139,6 +5226,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
@@ -5173,6 +5261,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
@@ -5207,6 +5296,7 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = {"foo": [1, 2], "BAR": [4, 5]}
