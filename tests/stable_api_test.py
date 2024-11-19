@@ -129,7 +129,7 @@ def test_series_docstrings() -> None:
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
             == getattr(df, item).__doc__
-        )
+        ), item
 
 
 def test_dtypes(constructor: Constructor) -> None:

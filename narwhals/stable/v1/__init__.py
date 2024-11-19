@@ -407,24 +407,25 @@ class Series(NwSeries):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.to_frame()
+            ...     return s.to_frame().to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> my_library_agnostic_function(s_pd)
                a
             0  1
             1  2
             2  3
-            >>> func(s_pl)
+            >>> my_library_agnostic_function(s_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -458,6 +459,7 @@ class Series(NwSeries):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
@@ -465,19 +467,19 @@ class Series(NwSeries):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.value_counts(sort=True)
+            ...     return s.value_counts(sort=True).to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
                s  count
             0  1      2
             1  2      2
             2  3      1
 
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
             ┌─────┬───────┐
             │ s   ┆ count │
@@ -549,25 +551,26 @@ class Series(NwSeries):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
 
             We define a library agnostic function:
 
-            >>> def func(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.ewm_mean(com=1, ignore_nulls=False)
+            ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> my_library_agnostic_function(s_pd)
             0    1.000000
             1    1.666667
             2    2.428571
             Name: a, dtype: float64
 
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'a' [f64]
             [
@@ -627,6 +630,7 @@ class Series(NwSeries):
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
@@ -637,20 +641,20 @@ class Series(NwSeries):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.rolling_sum(window_size=2)
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_sum(window_size=2).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> func(s_pd)
+            >>> my_library_agnostic_function(s_pd)
             0    NaN
             1    3.0
             2    5.0
             3    7.0
             dtype: float64
 
-            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [f64]
             [
@@ -660,7 +664,7 @@ class Series(NwSeries):
                7.0
             ]
 
-            >>> func(s_pa)  # doctest:+ELLIPSIS
+            >>> my_library_agnostic_function(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -723,7 +727,7 @@ class Expr(NwExpr):
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            min_periods: Minimum number of observations in window required to have a value (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -740,41 +744,39 @@ class Expr(NwExpr):
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
         Returns:
-            Expr
+            Series
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> data = {"a": [1, 2, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = [1, 2, 3]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=False))
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
-                      a
-            0  1.000000
-            1  1.666667
-            2  2.428571
+            >>> my_library_agnostic_function(s_pd)
+            0    1.000000
+            1    1.666667
+            2    2.428571
+            Name: a, dtype: float64
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3, 1)
-            ┌──────────┐
-            │ a        │
-            │ ---      │
-            │ f64      │
-            ╞══════════╡
-            │ 1.0      │
-            │ 1.666667 │
-            │ 2.428571 │
-            └──────────┘
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [f64]
+            [
+               1.0
+               1.666667
+               2.428571
+            ]
         """
         from narwhals.exceptions import NarwhalsUnstableWarning
         from narwhals.utils import find_stacklevel
