@@ -859,15 +859,18 @@ class PandasLikeDataFrame:
         # Put columns in the right order
         if sort_columns and self._implementation is Implementation.CUDF:
             uniques = {
-                col: sorted(self._native_frame[col].to_arrow().to_pylist()) for col in on
+                col: sorted(self._native_frame[col].unique().to_arrow().to_pylist())
+                for col in on
             }
-        if sort_columns and self._implementation is not Implementation.CUDF:
+        elif sort_columns:
             uniques = {
                 col: sorted(self._native_frame[col].unique().tolist()) for col in on
             }
-        if not sort_columns and self._implementation is Implementation.CUDF:
-            uniques = {col: self._native_frame[col].to_arrow().to_pylist() for col in on}
-        if not sort_columns and self._implementation is not Implementation.CUDF:
+        elif self._implementation is Implementation.CUDF:
+            uniques = {
+                col: self._native_frame[col].unique().to_arrow().to_pylist() for col in on
+            }
+        else:
             uniques = {col: self._native_frame[col].unique().tolist() for col in on}
         all_lists = [values_, *list(uniques.values())]
         ordered_cols = list(product(*all_lists))
