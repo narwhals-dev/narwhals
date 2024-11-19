@@ -2251,7 +2251,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
-            A new DataFrame.
+            A new Series.
 
         Examples:
             >>> import narwhals as nw
