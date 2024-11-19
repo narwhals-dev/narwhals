@@ -2271,7 +2271,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
             >>> unsorted_data = [1, 3, 2]
@@ -2280,8 +2280,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> def my_library_agnostic_function(
-            ...     s_native: IntoSeriesT, descending: bool = False
-            ... ) -> IntoSeriesT:
+            ...     s_native: IntoSeries, descending: bool = False
+            ... ):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.is_sorted(descending=descending)
 
@@ -2376,7 +2376,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = list(range(50))
@@ -2385,7 +2385,7 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return [
             ...         s.quantile(quantile=q, interpolation="nearest")
@@ -2751,7 +2751,7 @@ class Series:
 
             Let's define a dataframe-agnostic function that converts to arrow:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> pa.Array:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_arrow()
 
@@ -3338,15 +3338,22 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.replace("abc", "")
-            ...     return s.to_list()
+            ...     return s.to_native()
 
             We can then pass either pandas or Polars to `func`:
 
             >>> my_library_agnostic_function(s_pd)
-            ['123', ' abc123']
+            0        123
+            1     abc123
+            dtype: object
 
-            >>> my_library_agnostic_function(s_pl)
-            ['123', ' abc123']
+            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                "123"
+                " abc123"
+            ]
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.replace(
