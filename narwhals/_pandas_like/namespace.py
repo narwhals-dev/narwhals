@@ -154,7 +154,7 @@ class PandasLikeNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=[_lit_pandas_series.__name__],
+            output_names=["literal"],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,

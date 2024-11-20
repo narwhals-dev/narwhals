@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import int_dtype_mapper
+from narwhals._pandas_like.utils import maybe_broadcast_scalar_into_series
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -332,8 +333,8 @@ class PandasLikeSeries:
         return self._from_native_series(ser.__ror__(other).rename(ser.name, copy=False))
 
     def __add__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(ser.__add__(other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Any) -> PandasLikeSeries:
@@ -342,8 +343,8 @@ class PandasLikeSeries:
         return self._from_native_series(ser.__radd__(other).rename(ser.name, copy=False))
 
     def __sub__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(ser.__sub__(other).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Any) -> PandasLikeSeries:
@@ -352,8 +353,8 @@ class PandasLikeSeries:
         return self._from_native_series(ser.__rsub__(other).rename(ser.name, copy=False))
 
     def __mul__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(ser.__mul__(other).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Any) -> PandasLikeSeries:
@@ -362,8 +363,8 @@ class PandasLikeSeries:
         return self._from_native_series(ser.__rmul__(other).rename(ser.name, copy=False))
 
     def __truediv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(
             ser.__truediv__(other).rename(ser.name, copy=False)
         )
@@ -376,8 +377,8 @@ class PandasLikeSeries:
         )
 
     def __floordiv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(
             ser.__floordiv__(other).rename(ser.name, copy=False)
         )
@@ -390,8 +391,8 @@ class PandasLikeSeries:
         )
 
     def __pow__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(ser.__pow__(other).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Any) -> PandasLikeSeries:
@@ -400,8 +401,8 @@ class PandasLikeSeries:
         return self._from_native_series(ser.__rpow__(other).rename(ser.name, copy=False))
 
     def __mod__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(ser.__mod__(other).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Any) -> PandasLikeSeries:

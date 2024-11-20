@@ -218,3 +218,65 @@ def test_mod(left: int, right: int) -> None:
         nw.col("a") % right
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("attr", "lhs", "expected"),
+    [
+        ("__add__", nw.lit(1), [2, 3, 5]),
+        ("__sub__", nw.lit(1), [0, -1, -3]),
+        ("__mul__", nw.lit(2), [2, 4, 8]),
+        ("__truediv__", nw.lit(2.0), [2, 1, 0.5]),
+        ("__truediv__", nw.lit(1), [1, 0.5, 0.25]),
+        ("__floordiv__", nw.lit(2), [2, 1, 0]),
+        ("__mod__", nw.lit(3), [0, 1, 3]),
+        ("__pow__", nw.lit(2), [2, 4, 16]),
+    ],
+)
+def test_arithmetic_expr_left_literal(
+    attr: str,
+    lhs: Any,
+    expected: list[Any],
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if attr == "__mod__" and any(
+        x in str(constructor) for x in ["pandas_pyarrow", "modin"]
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1.0, 2, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.select(getattr(lhs, attr)(nw.col("a")))
+    assert_equal_data(result, {"literal": expected})
+
+
+@pytest.mark.parametrize(
+    ("attr", "lhs", "expected"),
+    [
+        ("__add__", nw.lit(1), [2, 3, 5]),
+        ("__sub__", nw.lit(1), [0, -1, -3]),
+        ("__mul__", nw.lit(2), [2, 4, 8]),
+        ("__truediv__", nw.lit(2.0), [2, 1, 0.5]),
+        ("__truediv__", nw.lit(1), [1, 0.5, 0.25]),
+        ("__floordiv__", nw.lit(2), [2, 1, 0]),
+        ("__mod__", nw.lit(3), [0, 1, 3]),
+        ("__pow__", nw.lit(2), [2, 4, 16]),
+    ],
+)
+def test_arithmetic_series_left_literal(
+    attr: str,
+    lhs: Any,
+    expected: list[Any],
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+) -> None:
+    if attr == "__mod__" and any(
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin"]
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1.0, 2, 4]}
+    df = nw.from_native(constructor_eager(data))
+    result = df.select(getattr(lhs, attr)(nw.col("a")))
+    assert_equal_data(result, {"literal": expected})

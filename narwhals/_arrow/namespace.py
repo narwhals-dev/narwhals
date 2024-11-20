@@ -167,7 +167,7 @@ class ArrowNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=[_lit_arrow_series.__name__],
+            output_names=["literal"],
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )

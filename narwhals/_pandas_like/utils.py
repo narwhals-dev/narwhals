@@ -112,7 +112,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             # broadcast
             s = other._native_series
             return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
-        if other._native_series.index is not index:
+        if other._native_series.index is not index and len(index) > 1:
             return set_axis(
                 other._native_series,
                 index,
@@ -121,6 +121,18 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             )
         return other._native_series
     return other
+
+
+def maybe_broadcast_scalar_into_series(series: Any, other: Any) -> Any:
+    import pandas as pd  # ignore-banned-import
+
+    if isinstance(other, pd.Series) and len(series) == 1 and len(other) > 1:
+        return series.__class__(
+            [series.iloc[0]] * len(other),
+            other.index,
+            series.dtype,
+        ).rename(series.name, copy=False)
+    return series
 
 
 def validate_dataframe_comparand(index: Any, other: Any) -> Any:

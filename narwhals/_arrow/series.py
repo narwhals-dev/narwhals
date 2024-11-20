@@ -10,6 +10,7 @@ from typing import overload
 
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
+from narwhals._arrow.utils import maybe_broadcast_scalar_into_series
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
@@ -156,7 +157,8 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.add(self._native_series, other))
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
+        return self._from_native_series(pc.add(ser, other))
 
     def __radd__(self, other: Any) -> Self:
         return self + other  # type: ignore[no-any-return]
@@ -165,7 +167,8 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.subtract(self._native_series, other))
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
+        return self._from_native_series(pc.subtract(ser, other))
 
     def __rsub__(self, other: Any) -> Self:
         return (self - other) * (-1)  # type: ignore[no-any-return]
@@ -174,7 +177,8 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.multiply(self._native_series, other))
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
+        return self._from_native_series(pc.multiply(ser, other))
 
     def __rmul__(self, other: Any) -> Self:
         return self * other  # type: ignore[no-any-return]
@@ -182,8 +186,8 @@ class ArrowSeries:
     def __pow__(self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
         other = validate_column_comparand(other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(pc.power(ser, other))
 
     def __rpow__(self, other: Any) -> Self:
@@ -194,8 +198,8 @@ class ArrowSeries:
         return self._from_native_series(pc.power(other, ser))
 
     def __floordiv__(self, other: Any) -> Self:
-        ser = self._native_series
         other = validate_column_comparand(other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(floordiv_compat(ser, other))
 
     def __rfloordiv__(self, other: Any) -> Self:
@@ -207,11 +211,11 @@ class ArrowSeries:
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
         other = validate_column_comparand(other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = pa.scalar(other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
     def __rtruediv__(self, other: Any) -> Self:
@@ -228,8 +232,8 @@ class ArrowSeries:
     def __mod__(self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
         other = validate_column_comparand(other)
+        ser = maybe_broadcast_scalar_into_series(self._native_series, other)
         floor_div = (self // other)._native_series
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
