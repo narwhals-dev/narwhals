@@ -607,7 +607,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> def agnostic_to_numpy(df_native: IntoDataFrame) -> np.array:
+            >>> def agnostic_to_numpy(df_native: IntoDataFrame) -> np.ndarray:
             ...     df = nw.from_native(df_native)
             ...     return df.to_numpy()
 
