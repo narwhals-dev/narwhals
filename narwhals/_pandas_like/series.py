@@ -175,6 +175,25 @@ class PandasLikeSeries:
             self._native_series, self._dtypes, self._implementation
         )
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> PandasLikeSeries:
+        ser = self._native_series
+        mask_na = ser.isna()
+        result = ser.ewm(
+            com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
+        ).mean()
+        result[mask_na] = None
+        return self._from_native_series(result)
+
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
@@ -427,7 +446,7 @@ class PandasLikeSeries:
         return ser.mean()
 
     def median(self) -> Any:
-        from narwhals._exceptions import InvalidOperationError
+        from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
@@ -457,7 +476,7 @@ class PandasLikeSeries:
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
-    ) -> PandasLikeSeries:
+    ) -> Self:
         ser = self._native_series
         if value is not None:
             res_ser = self._from_native_series(ser.fillna(value=value))
@@ -494,15 +513,18 @@ class PandasLikeSeries:
     def abs(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.abs())
 
-    def cum_sum(self) -> PandasLikeSeries:
-        return self._from_native_series(self._native_series.cumsum())
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumsum(skipna=True)
+            if not reverse
+            else native_series[::-1].cumsum(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
 
     def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
@@ -653,7 +675,7 @@ class PandasLikeSeries:
         name: str | None = None,
         normalize: bool = False,
     ) -> PandasLikeDataFrame:
-        """Parallel is unused, exists for compatibility"""
+        """Parallel is unused, exists for compatibility."""
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         index_name_ = "index" if self._name is None else self._name
@@ -759,8 +781,60 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        not_na_series = ~self._native_series.isna()
+        result = (
+            not_na_series.cumsum()
+            if not reverse
+            else len(self) - not_na_series.cumsum() + not_na_series - 1
+        )
+        return self._from_native_series(result)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummin(skipna=True)
+            if not reverse
+            else native_series[::-1].cummin(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cummax(skipna=True)
+            if not reverse
+            else native_series[::-1].cummax(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        native_series = self._native_series
+        result = (
+            native_series.cumprod(skipna=True)
+            if not reverse
+            else native_series[::-1].cumprod(skipna=True)[::-1]
+        )
+        return self._from_native_series(result)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).sum()
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
+
+    def is_finite(self: Self) -> Self:
+        s = self._native_series
+        return self._from_native_series((s > float("-inf")) & (s < float("inf")))
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

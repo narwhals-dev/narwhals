@@ -68,7 +68,7 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_frame(self, df: pa.Table) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes
         )
@@ -305,35 +305,30 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
+        native_frame = self._native_frame
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
-        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
-        to_concat = []
-        output_names = []
-        # Make sure to preserve column order
+
         length = len(self)
-        for name in self.columns:
-            if name in new_column_name_to_new_column_map:
-                to_concat.append(
-                    validate_dataframe_comparand(
-                        length=length,
-                        other=new_column_name_to_new_column_map.pop(name),
-                        backend_version=self._backend_version,
-                    )
-                )
-            else:
-                to_concat.append(self._native_frame[name])
-            output_names.append(name)
-        for s in new_column_name_to_new_column_map:
-            to_concat.append(
-                validate_dataframe_comparand(
-                    length=length,
-                    other=new_column_name_to_new_column_map[s],
-                    backend_version=self._backend_version,
-                )
+        columns = self.columns
+
+        for col_value in new_columns:
+            col_name = col_value.name
+
+            column = validate_dataframe_comparand(
+                length=length,
+                other=col_value,
+                backend_version=self._backend_version,
             )
-            output_names.append(s)
-        df = self._native_frame.__class__.from_arrays(to_concat, names=output_names)
-        return self._from_native_frame(df)
+
+            native_frame = (
+                native_frame.set_column(
+                    columns.index(col_name), field_=col_name, column=column
+                )
+                if col_name in columns
+                else native_frame.append_column(field_=col_name, column=column)
+            )
+
+        return self._from_native_frame(native_frame)
 
     def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
@@ -619,11 +614,8 @@ class ArrowDataFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()

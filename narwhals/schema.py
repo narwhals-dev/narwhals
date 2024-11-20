@@ -1,6 +1,7 @@
-"""
+"""Schema.
+
 Adapted from Polars implementation at:
-https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py
+https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py.
 """
 
 from __future__ import annotations
@@ -22,8 +23,7 @@ __all__ = ["Schema"]
 
 
 class Schema(BaseSchema):
-    """
-    Ordered mapping of column names to their data type.
+    """Ordered mapping of column names to their data type.
 
     Arguments:
         schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
@@ -60,13 +60,25 @@ class Schema(BaseSchema):
         super().__init__(schema)
 
     def names(self) -> list[str]:
-        """Get the column names of the schema."""
+        """Get the column names of the schema.
+
+        Returns:
+            Column names.
+        """
         return list(self.keys())
 
     def dtypes(self) -> list[DType]:
-        """Get the data types of the schema."""
+        """Get the data types of the schema.
+
+        Returns:
+            Data types of schema.
+        """
         return list(self.values())
 
     def len(self) -> int:
-        """Get the number of columns in the schema."""
+        """Get the number of columns in the schema.
+
+        Returns:
+            Number of columns.
+        """
         return len(self)

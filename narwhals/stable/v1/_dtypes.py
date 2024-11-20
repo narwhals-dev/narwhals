@@ -28,8 +28,7 @@ from narwhals.dtypes import Unknown
 
 
 class Datetime(NwDatetime):
-    """
-    Data type representing a calendar date and time of day.
+    """Data type representing a calendar date and time of day.
 
     Arguments:
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
@@ -46,8 +45,7 @@ class Datetime(NwDatetime):
 
 
 class Duration(NwDuration):
-    """
-    Data type representing a time duration.
+    """Data type representing a time duration.
 
     Arguments:
         time_unit: Unit of time. Defaults to `'us'` (microseconds).

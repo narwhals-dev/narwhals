@@ -29,7 +29,7 @@ To verify the installation, start the Python REPL and execute:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
-'1.13.4'
+'1.14.1'
 ```
 If you see the version number, then the installation was successful!
 

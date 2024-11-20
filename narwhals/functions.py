@@ -43,17 +43,15 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
-    """
-    Concatenate multiple DataFrames, LazyFrames into a single entity.
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
-            * vertical: Stacks Series from DataFrames vertically and fills with `null`
-              if the lengths don't match.
-            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-              if the lengths don't match.
+            - vertical: Stacks Series from DataFrames vertically and fills with `null`
+                if the lengths don't match.
+            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+                if the lengths don't match.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -62,7 +60,6 @@ def concat(
         NotImplementedError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
-
         Let's take an example of vertical concatenation:
 
         >>> import pandas as pd
@@ -141,7 +138,6 @@ def concat(
         └─────┴─────┴──────┴──────┘
 
     """
-
     if how not in ("horizontal", "vertical"):  # pragma: no cover
         msg = "Only horizontal and vertical concatenations are supported"
         raise NotImplementedError(msg)
@@ -164,8 +160,7 @@ def new_series(
     *,
     native_namespace: ModuleType,
 ) -> Series[Any]:
-    """
-    Instantiate Narwhals Series from raw data.
+    """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -189,7 +184,12 @@ def new_series(
         ... def func(df):
         ...     values = [4, 1, 2]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+        ...     return nw.new_series(
+        ...         name="c",
+        ...         values=values,
+        ...         dtype=nw.Int32,
+        ...         native_namespace=native_namespace,
+        ...     )
 
         Let's see what happens when passing pandas / Polars input:
 
@@ -234,9 +234,11 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+        else:
+            dtype_pl = None
 
-        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -282,8 +284,7 @@ def from_dict(
     *,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
-    """
-    Instantiate DataFrame from dictionary.
+    """Instantiate DataFrame from dictionary.
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -377,12 +378,14 @@ def _from_dict_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            schema = {
+            schema_pl = {
                 name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
+        else:
+            schema_pl = None
 
-        native_frame = native_namespace.from_dict(data, schema=schema)
+        native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -431,8 +434,7 @@ def _from_dict_impl(
 def from_arrow(
     native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
-    """
-    Construct a DataFrame from an object which supports the PyCapsule Interface.
+    """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
@@ -526,12 +528,14 @@ def from_arrow(
 
 
 def _get_sys_info() -> dict[str, str]:
-    """System information
+    """System information.
 
     Returns system and Python version information
 
     Copied from sklearn
 
+    Returns:
+        Dictionary with system info.
     """
     python = sys.version.replace("\n", " ")
 
@@ -545,7 +549,7 @@ def _get_sys_info() -> dict[str, str]:
 
 
 def _get_deps_info() -> dict[str, str]:
-    """Overview of the installed version of main dependencies
+    """Overview of the installed version of main dependencies.
 
     This function does not import the modules to collect the version numbers
     but instead relies on standard Python package metadata.
@@ -554,6 +558,8 @@ def _get_deps_info() -> dict[str, str]:
 
     This function and show_versions were copied from sklearn and adapted
 
+    Returns:
+        Mapping from dependency to version.
     """
     deps = (
         "pandas",
@@ -582,15 +588,12 @@ def _get_deps_info() -> dict[str, str]:
 
 
 def show_versions() -> None:
-    """
-    Print useful debugging information
+    """Print useful debugging information.
 
     Examples:
-
         >>> from narwhals import show_versions
         >>> show_versions()  # doctest: +SKIP
     """
-
     sys_info = _get_sys_info()
     deps_info = _get_deps_info()
 
@@ -606,12 +609,15 @@ def show_versions() -> None:
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "interchange"]:
-    """
-    Level of support Narwhals has for current object.
+    """Level of support Narwhals has for current object.
 
-    This can be one of:
+    Arguments:
+        obj: Dataframe or Series.
 
-    - 'full': full Narwhals API support
-    - 'metadata': only metadata operations are supported (`df.schema`)
+    Returns:
+        This can be one of:
+
+            - 'full': full Narwhals API support
+            - 'metadata': only metadata operations are supported (`df.schema`)
     """
     return obj._level

@@ -40,11 +40,7 @@ def test_to_dummies_with_nulls(constructor_eager: ConstructorEager, sep: str) ->
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_drop_first_na(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, sep: str
-) -> None:
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
+def test_to_dummies_drop_first_na(constructor_eager: ConstructorEager, sep: str) -> None:
     s = nw.from_native(constructor_eager({"a": data_na}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(drop_first=True, separator=sep)
     expected = {f"a{sep}null": [0, 0, 1], f"a{sep}y": [0, 1, 0]}
