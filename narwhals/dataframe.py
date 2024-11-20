@@ -914,8 +914,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def agnostic_to_dict(
+            >>> def agnostic_to_dict(
             ...     df_native: IntoDataFrame,
             ... ) -> dict[str, list[int | str | float | None]]:
             ...     df = nw.from_native(df_native)

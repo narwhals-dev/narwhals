@@ -150,6 +150,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrame
+            >>>
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -157,20 +159,20 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.lazy()
+            >>> def agnostic_lazy(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.lazy().to_native()
 
             Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
-            >>> func(df_pd)
+            >>> agnostic_lazy(df_pd)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> func(df_pl)
+            >>> agnostic_lazy(df_pl)
             <LazyFrame ...>
-            >>> func(df_pa)
+            >>> agnostic_lazy(df_pa)
             pyarrow.Table
             foo: int64
             bar: double
@@ -207,6 +209,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
@@ -220,17 +224,19 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_to_dict(
+            ...     df_native: IntoDataFrame,
+            ... ) -> dict[str, list[int | str | float | None]]:
+            ...     df = nw.from_native(df_native)
             ...     return df.to_dict(as_series=False)
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_to_dict`:
 
-            >>> func(df_pd)
+            >>> agnostic_to_dict(df_pd)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
-            >>> func(df_pl)
+            >>> agnostic_to_dict(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
-            >>> func(df_pa)
+            >>> agnostic_to_dict(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
