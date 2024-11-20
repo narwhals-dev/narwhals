@@ -36,7 +36,7 @@ if TYPE_CHECKING:
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
+IntoExpr: TypeAlias = Union["Expr", str, "Series"]
 """Anything which can be converted to an expression."""
 
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
@@ -50,7 +50,7 @@ IntoFrame: TypeAlias = Union[
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
 """Narwhals DataFrame or Narwhals LazyFrame"""
 
-IntoSeries: TypeAlias = Union["Series[Any]", "NativeSeries"]
+IntoSeries: TypeAlias = Union["Series", "NativeSeries"]
 """Anything which can be converted to a Narwhals Series."""
 
 # TypeVars for some of the above

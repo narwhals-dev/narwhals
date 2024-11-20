@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 from typing import Literal
 
 import hypothesis.strategies as st
@@ -18,9 +17,6 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
-
-if TYPE_CHECKING:
-    from narwhals.typing import IntoSeriesT
 
 data = {
     "a": [
@@ -211,7 +207,7 @@ def test_timestamp_hypothesis(
     import polars as pl
 
     @nw.narwhalify
-    def func(s: nw.Series[IntoSeriesT]) -> nw.Series[IntoSeriesT]:
+    def func(s: nw.Series) -> nw.Series:
         return s.dt.timestamp(time_unit)
 
     result_pl = func(pl.Series([inputs], dtype=pl.Datetime(starting_time_unit)))

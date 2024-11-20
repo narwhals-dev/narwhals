@@ -91,7 +91,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self) -> type[Series[Any]]:
+    def _series(self) -> type[Series]:
         return Series
 
     @property
@@ -105,23 +105,23 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[str]) -> Self: ...
@@ -185,16 +185,14 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
+    ) -> dict[str, Series] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
         Arguments:
@@ -237,7 +235,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> Series[Any]:
+    def is_duplicated(self: Self) -> Series:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
@@ -287,7 +285,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_duplicated()  # type: ignore[return-value]
 
-    def is_unique(self: Self) -> Series[Any]:
+    def is_unique(self: Self) -> Series:
         r"""Get a mask of all unique rows in this DataFrame.
 
         Returns:
@@ -405,7 +403,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return self.select(all()._l1_norm())
 
 
-class Series(NwSeries[IntoSeriesT]):
+class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
@@ -960,7 +958,7 @@ def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 @overload
-def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
+def _stableify(obj: NwSeries[IntoSeriesT]) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
@@ -973,7 +971,7 @@ def _stableify(
     | NwSeries[IntoSeriesT]
     | NwExpr
     | Any,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
             obj._compliant_frame,
@@ -1003,7 +1001,7 @@ def from_native(
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoFrameT] | Series: ...
 
 
 @overload
@@ -1015,7 +1013,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -1075,7 +1073,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
@@ -1087,7 +1085,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
+) -> Series: ...
 
 
 @overload
@@ -1147,7 +1145,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
 @overload
@@ -1159,7 +1157,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series[Any]: ...
+) -> Series: ...
 
 
 @overload
@@ -1195,7 +1193,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -1255,7 +1253,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
@@ -1267,7 +1265,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
+) -> Series: ...
 
 
 @overload
@@ -1327,7 +1325,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT]: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
 @overload
@@ -1339,7 +1337,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
+) -> Series: ...
 
 
 @overload
@@ -1445,9 +1443,7 @@ def to_native(
     narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
 ) -> IntoFrameT: ...
 @overload
-def to_native(
-    narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] = ...
-) -> Any: ...
+def to_native(narwhals_object: Series, *, strict: Literal[True] = ...) -> Any: ...
 @overload
 def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 @overload
@@ -1459,15 +1455,13 @@ def to_native(
     narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
 ) -> IntoFrameT: ...
 @overload
-def to_native(
-    narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
-) -> Any: ...
+def to_native(narwhals_object: Series, *, pass_through: Literal[False] = ...) -> Any: ...
 @overload
 def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT],
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
@@ -2782,7 +2776,7 @@ def new_series(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-) -> Series[Any]:
+) -> Series:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
