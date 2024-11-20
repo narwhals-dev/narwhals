@@ -388,6 +388,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A new LazyFrame.
+
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
 
@@ -395,6 +398,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrame
+            >>>
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -402,20 +407,20 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.lazy()
+            >>> def agnostic_lazy(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.lazy().to_native()
 
             Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
-            >>> func(df_pd)
+            >>> agnostic_lazy(df_pd)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> func(df_pl)
+            >>> agnostic_lazy(df_pl)
             <LazyFrame ...>
-            >>> func(df_pa)
+            >>> agnostic_lazy(df_pa)
             pyarrow.Table
             foo: int64
             bar: double
@@ -483,6 +488,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -490,23 +497,23 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_to_pandas(df_native: IntoDataFrame) -> pd.DataFrame:
+            ...     df = nw.from_native(df_native)
             ...     return df.to_pandas()
 
-            We can then pass any supported library such as pandas, Polars (eager), or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars (eager), or PyArrow to `agnostic_to_pandas`:
 
-            >>> func(df_pd)
+            >>> agnostic_to_pandas(df_pd)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> func(df_pl)
+            >>> agnostic_to_pandas(df_pl)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> func(df_pa)
+            >>> agnostic_to_pandas(df_pa)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
@@ -590,6 +597,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> import numpy as np
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -597,21 +607,21 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_to_numpy(df_native: IntoDataFrame) -> np.ndarray:
+            ...     df = nw.from_native(df_native)
             ...     return df.to_numpy()
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_to_numpy`:
 
-            >>> func(df_pd)
+            >>> agnostic_to_numpy(df_pd)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
-            >>> func(df_pl)
+            >>> agnostic_to_numpy(df_pl)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
-            >>> func(df_pa)
+            >>> agnostic_to_numpy(df_pa)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
@@ -629,6 +639,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {"foo": [1, 2, 3, 4, 5]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -636,17 +648,17 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_shape(df_native: IntoDataFrame) -> tuple[int, int]:
+            ...     df = nw.from_native(df_native)
             ...     return df.shape
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_shape`:
 
-            >>> func(df_pd)
+            >>> agnostic_shape(df_pd)
             (5, 1)
-            >>> func(df_pl)
+            >>> agnostic_shape(df_pl)
             (5, 1)
-            >>> func(df_pa)
+            >>> agnostic_shape(df_pa)
             (5, 1)
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
@@ -665,24 +677,27 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+            >>>
             >>> data = {"a": [1, 2], "b": [3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify(eager_only=True)
-            ... def func(df):
+            >>> def agnostic_get_column(df_native: IntoDataFrame) -> IntoSeries:
+            ...     df = nw.from_native(df_native)
             ...     name = df.columns[0]
-            ...     return df.get_column(name)
+            ...     return df.get_column(name).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `agnostic_get_column`:
 
-            >>> func(df_pd)
+            >>> agnostic_get_column(df_pd)
             0    1
             1    2
             Name: a, dtype: int64
-            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_get_column(df_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: 'a' [i64]
             [
@@ -783,6 +798,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+            >>>
             >>> data = {"a": [1, 2], "b": [3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -790,24 +808,24 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify(eager_only=True)
-            ... def func(df):
-            ...     return df["a"]
+            >>> def agnostic_slice(df_native: IntoDataFrame) -> IntoSeries:
+            ...     df = nw.from_native(df_native)
+            ...     return df["a"].to_native()
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_slice`:
 
-            >>> func(df_pd)
+            >>> agnostic_slice(df_pd)
             0    1
             1    2
             Name: a, dtype: int64
-            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_slice(df_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: 'a' [i64]
             [
                 1
                 2
             ]
-            >>> func(df_pa)  # doctest:+ELLIPSIS
+            >>> agnostic_slice(df_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -873,11 +891,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             as_series: If set to true ``True``, then the values are Narwhals Series,
                         otherwise the values are Any.
 
+        Returns:
+            A mapping from column name to values / Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
@@ -891,17 +914,19 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_to_dict(
+            ...     df_native: IntoDataFrame,
+            ... ) -> dict[str, list[int | str | float | None]]:
+            ...     df = nw.from_native(df_native)
             ...     return df.to_dict(as_series=False)
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_to_dict`:
 
-            >>> func(df_pd)
+            >>> agnostic_to_dict(df_pd)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
-            >>> func(df_pl)
+            >>> agnostic_to_dict(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
-            >>> func(df_pa)
+            >>> agnostic_to_dict(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
         if as_series:
@@ -1990,12 +2015,13 @@ class DataFrame(BaseFrame[DataFrameT]):
         r"""Join in SQL-like fashion.
 
         Arguments:
-            other: Lazy DataFrame to join with.
+            other: DataFrame to join with.
             on: Name(s) of the join columns in both DataFrames. If set, `left_on` and
                 `right_on` should be None.
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
+                  * *left*: Returns all rows from the left table, and the matched rows from the right table.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -2243,6 +2269,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def is_duplicated(self: Self) -> Series:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
+        Returns:
+            A new Series.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2321,6 +2350,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def is_unique(self: Self) -> Series:
         r"""Get a mask of all unique rows in this DataFrame.
+
+        Returns:
+            A new Series.
 
         Examples:
             >>> import narwhals as nw
@@ -3965,6 +3997,7 @@ class LazyFrame(BaseFrame[FrameT]):
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
+                  * *left*: Returns all rows from the left table, and the matched rows from the right table.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.

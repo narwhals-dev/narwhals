@@ -9,6 +9,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import polars as pl
@@ -48,6 +49,35 @@ class PolarsExpr:
         expr = self._native_expr
         dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype_pl))
+
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        import polars as pl  # ignore-banned-import()
+
+        if parse_version(pl.__version__) <= (0, 20, 31):  # pragma: no cover
+            msg = "`ewm_mean` not implemented for polars older than 0.20.31"
+            raise NotImplementedError(msg)
+        expr = self._native_expr
+        return self._from_native_expr(
+            expr.ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
 
     def map_batches(
         self,

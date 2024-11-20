@@ -285,6 +285,29 @@ class PandasLikeExpr:
     def arg_true(self) -> Self:
         return reuse_series_implementation(self, "arg_true")
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "ewm_mean",
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
+        )
+
     def filter(self, *predicates: Any) -> Self:
         plx = self.__narwhals_namespace__()
         other = plx.all_horizontal(*predicates)
@@ -449,6 +472,9 @@ class PandasLikeExpr:
             dtypes=self._dtypes,
         )
 
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_count", reverse=reverse)
 
@@ -460,6 +486,21 @@ class PandasLikeExpr:
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
 
     def rolling_mean(
         self: Self,

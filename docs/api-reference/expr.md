@@ -18,6 +18,7 @@
         - cum_sum
         - diff
         - drop_nulls
+        - ewm_mean
         - fill_null
         - filter
         - gather_every
@@ -25,6 +26,7 @@
         - clip
         - is_between
         - is_duplicated
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
@@ -44,6 +46,7 @@
         - quantile
         - replace_strict
         - rolling_mean
+        - rolling_sum
         - round
         - sample
         - shift

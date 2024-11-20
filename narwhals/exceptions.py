@@ -50,8 +50,17 @@ class InvalidIntoExprError(TypeError):
     def from_invalid_type(cls, invalid_type: type) -> InvalidIntoExprError:
         message = (
             f"Expected an object which can be converted into an expression, got {invalid_type}\n\n"
-            "Hint: if you were trying to select a column which does not have a string column name, then "
-            "you should explicitly use `nw.col`.\nFor example, `df.select(nw.col(0))` if you have a column "
-            "named `0`."
+            "Hint:\n"
+            "- if you were trying to select a column which does not have a string\n"
+            "  column name, then you should explicitly use `nw.col`.\n"
+            "  For example, `df.select(nw.col(0))` if you have a column named `0`.\n"
+            "- if you were trying to create a new literal column, then you \n"
+            "  should explicitly use `nw.lit`.\n"
+            "  For example, `df.select(nw.lit(0))` if you want to create a new\n"
+            "  column with literal value `0`."
         )
         return InvalidIntoExprError(message)
+
+
+class NarwhalsUnstableWarning(UserWarning):
+    """Warning issued when a method or function is considered unstable in the stable api."""

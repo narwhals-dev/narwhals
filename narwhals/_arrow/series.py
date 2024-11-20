@@ -44,7 +44,7 @@ class ArrowSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
-    def _from_native_series(self, series: Any) -> Self:
+    def _from_native_series(self, series: pa.ChunkedArray | pa.Array) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
         if isinstance(series, pa.Array):
@@ -818,6 +818,11 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def is_finite(self: Self) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        return self._from_native_series(pc.is_finite(self._native_series))
+
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return (~self.is_null()).cast(self._dtypes.UInt32()).cum_sum(reverse=reverse)
 
@@ -869,6 +874,54 @@ class ArrowSeries:
         )
         return self._from_native_series(result)
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        min_periods = min_periods if min_periods is not None else window_size
+        if center:
+            offset_left = window_size // 2
+            offset_right = offset_left - (
+                window_size % 2 == 0
+            )  # subtract one if window_size is even
+
+            native_series = self._native_series
+
+            pad_left = pa.array([None] * offset_left, type=native_series.type)
+            pad_right = pa.array([None] * offset_right, type=native_series.type)
+            padded_arr = self._from_native_series(
+                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+            )
+        else:
+            padded_arr = self
+
+        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        rolling_sum = (
+            cum_sum - cum_sum.shift(window_size).fill_null(0)
+            if window_size != 0
+            else cum_sum
+        )
+
+        valid_count = padded_arr.cum_count(reverse=False)
+        count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
+
+        result = self._from_native_series(
+            pc.if_else(
+                (count_in_window >= min_periods)._native_series,
+                rolling_sum._native_series,
+                None,
+            )
+        )
+        if center:
+            result = result[offset_left + offset_right :]
+        return result
+
     def rolling_mean(
         self: Self,
         window_size: int,
@@ -876,28 +929,15 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        min_periods_ = min_periods or window_size
-        cum_sum = self.cum_sum(reverse=False).fill_null(strategy="forward")
-        cum_count = self.cum_count(reverse=False)
-        # num = (cum_sum[window_size:] - cum_sum[:-window_size])
-        # den = (cum_count[window_size:] - cum_count[:-window_size])
-        # den.zip_with(den>=min_periods_, None)
-        return (cum_sum[window_size:] - cum_sum[:-window_size]) / cum_count[window_size:]
-    
-        # result = pa.chunked_array(
-        #     [
-        #         list(
-        #             _window_agg(
-        #                 native_series,
-        #                 window_size=window_size,
-        #                 min_periods=min_periods,
-        #                 center=center,
-        #                 aggregate_function=pc.mean,
-        #             )
-        #         )
-        #     ]
-        # )
-        # return self._from_native_series(result)
+        rolling_sum = self.rolling_sum(
+            window_size=window_size, min_periods=min_periods, center=center
+        )
+        rolling_count = (
+            (~self.is_null())
+            .cast(self._dtypes.Int32())
+            .rolling_sum(window_size=window_size, min_periods=min_periods, center=center)
+        )
+        return rolling_sum / rolling_count
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()

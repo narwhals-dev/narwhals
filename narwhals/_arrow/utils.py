@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
-from typing import Generator
 from typing import Sequence
 
 from narwhals.dependencies import get_polars
-from narwhals.translate import to_py_scalar
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -18,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
 
-def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
@@ -287,7 +284,9 @@ def floordiv_compat(left: Any, right: Any) -> Any:
     return result
 
 
-def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
+def cast_for_truediv(
+    arrow_array: pa.ChunkedArray | pa.Scalar, pa_object: pa.ChunkedArray | pa.Scalar
+) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     import pyarrow as pa  # ignore-banned-import
