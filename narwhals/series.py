@@ -876,18 +876,18 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func_lower(s):
-            ...     return s.clip(2)
+            >>> def clip_lower(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.clip(2).to_native()
 
-            We can then pass either pandas or Polars to `func_lower`:
+            We can then pass either pandas or Polars to `clip_lower`:
 
-            >>> func_lower(s_pd)
+            >>> clip_lower(s_pd)
             0    2
             1    2
             2    3
             dtype: int64
-            >>> func_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> clip_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -898,18 +898,18 @@ class Series:
 
             We define another library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func_upper(s):
-            ...     return s.clip(upper_bound=2)
+            >>> def clip_upper(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.clip(upper_bound=2).to_native()
 
-            We can then pass either pandas or Polars to `func_upper`:
+            We can then pass either pandas or Polars to `clip_upper`:
 
-            >>> func_upper(s_pd)
+            >>> clip_upper(s_pd)
             0    1
             1    2
             2    2
             dtype: int64
-            >>> func_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> clip_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -1582,23 +1582,23 @@ class Series:
 
             We define library agnostic functions:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_sort(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.sort().to_native()
 
-            >>> @nw.narwhalify
-            ... def func_descend(s):
+            >>> def agnostic_sort_descending(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.sort(descending=True).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `agnostic_sort`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_sort(s_pd)
             1    NaN
             2    1.0
             3    2.0
             0    5.0
             dtype: float64
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_sort(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
@@ -1607,13 +1607,13 @@ class Series:
                2
                5
             ]
-            >>> func_descend(s_pd)
+            >>> agnostic_sort_descending(s_pd)
             1    NaN
             0    5.0
             3    2.0
             2    1.0
             dtype: float64
-            >>> func_descend(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_sort_descending(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
@@ -1719,17 +1719,17 @@ class Series:
 
             Using a strategy:
 
-            >>> @nw.narwhalify
-            ... def func_strategies(s):
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.fill_null(strategy="forward", limit=1).to_native()
 
-            >>> func_strategies(s_pd)
+            >>> my_library_agnostic_function(s_pd)
             0    1.0
             1    2.0
             2    2.0
             dtype: float64
 
-            >>> func_strategies(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
