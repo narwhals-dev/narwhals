@@ -52,6 +52,7 @@ Join the party!
 - [tabmat](https://github.com/Quantco/tabmat)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
+- [vegafusion](https://github.com/vega/vegafusion)
 - [wimsey](https://github.com/benrutter/wimsey)
 
 Feel free to add your project to the list if it's missing, and/or
