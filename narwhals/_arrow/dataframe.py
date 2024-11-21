@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -465,19 +466,21 @@ class ArrowDataFrame:
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_frame(df.append_column(name, row_indices))
 
-    def filter(
-        self,
-        *predicates: IntoArrowExpr,
-    ) -> Self:
+    def filter(self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             mask = predicates[0]
         else:
             plx = self.__narwhals_namespace__()
-            expr = plx.all_horizontal(*predicates)
+            expr = plx.all_horizontal(
+                *chain(
+                    predicates, (plx.col(name) == v for name, v in constraints.items())
+                )
+            )
             # Safety: all_horizontal's expression only returns a single column.
             mask = expr._call(self)[0]._native_series
         return self._from_native_frame(self._native_frame.filter(mask))
