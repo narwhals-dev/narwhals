@@ -23,6 +23,7 @@
         - diff
         - drop_nulls
         - dtype
+        - ewm_mean
         - fill_null
         - filter
         - gather_every
@@ -30,6 +31,7 @@
         - is_between
         - is_duplicated
         - is_empty
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
@@ -50,6 +52,7 @@
         - quantile
         - rename
         - replace_strict
+        - rolling_sum
         - round
         - sample
         - scatter

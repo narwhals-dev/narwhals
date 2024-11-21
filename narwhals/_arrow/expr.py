@@ -438,6 +438,9 @@ class ArrowExpr:
             dtypes=self._dtypes,
         )
 
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
     def cum_count(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_count", reverse=reverse)
 
@@ -449,6 +452,21 @@ class ArrowExpr:
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

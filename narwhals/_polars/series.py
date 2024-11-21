@@ -225,6 +225,33 @@ class PolarsSeries:
             result, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        if self._backend_version < (0, 20, 31):  # pragma: no cover
+            msg = "`ewm_mean` not implemented for polars older than 0.20.31"
+            raise NotImplementedError(msg)
+        expr = self._native_series
+        return self._from_native_series(
+            expr.ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         if self._backend_version < (0, 20, 6):
             result = self._native_series.sort(descending=descending)

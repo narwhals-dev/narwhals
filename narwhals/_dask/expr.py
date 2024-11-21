@@ -539,6 +539,20 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> NoReturn:
+        msg = "`Expr.ewm_mean` is not supported for the Dask backend"
+        raise NotImplementedError(msg)
+
     def unique(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.unique` is not supported for the Dask backend. Please use `LazyFrame.unique` instead."
@@ -828,6 +842,41 @@ class DaskExpr:
             func,
             "cast",
             dtype,
+            returns_scalar=False,
+        )
+
+    def is_finite(self: Self) -> Self:
+        import dask.array as da  # ignore-banned-import
+
+        return self._from_call(
+            lambda _input: da.isfinite(_input),
+            "is_finite",
+            returns_scalar=False,
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).sum()
+
+        return self._from_call(
+            func,
+            "rolling_sum",
+            window_size,
+            min_periods,
+            center,
             returns_scalar=False,
         )
 

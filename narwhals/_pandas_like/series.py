@@ -175,6 +175,25 @@ class PandasLikeSeries:
             self._native_series, self._dtypes, self._implementation
         )
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> PandasLikeSeries:
+        ser = self._native_series
+        mask_na = ser.isna()
+        result = ser.ewm(
+            com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
+        ).mean()
+        result[mask_na] = None
+        return self._from_native_series(result)
+
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
@@ -457,7 +476,7 @@ class PandasLikeSeries:
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
-    ) -> PandasLikeSeries:
+    ) -> Self:
         ser = self._native_series
         if value is not None:
             res_ser = self._from_native_series(ser.fillna(value=value))
@@ -798,8 +817,24 @@ class PandasLikeSeries:
         )
         return self._from_native_series(result)
 
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).sum()
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
+
+    def is_finite(self: Self) -> Self:
+        s = self._native_series
+        return self._from_native_series((s > float("-inf")) & (s < float("inf")))
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
