@@ -111,16 +111,24 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
         return
 
     import os
+    import warnings
 
     os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
-    session = (
-        SparkSession.builder.appName("unit-tests")
-        .config("spark.ui.enabled", "false")
-        .config("spark.default.parallelism", "1")
-        .config("spark.sql.shuffle.partitions", "2")
-        .getOrCreate()
-    )
-    yield session
+    with warnings.catch_warnings():
+        # The spark session seems to trigger a polars warning.
+        # Polars is imported in the tests, but not used in the spark operations
+        warnings.filterwarnings(
+            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
+        )
+        session = (
+            SparkSession.builder.appName("unit-tests")
+            .master("local[1]")
+            .config("spark.ui.enabled", "false")
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            .getOrCreate()
+        )
+        yield session
     session.stop()
 
 
