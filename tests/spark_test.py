@@ -15,8 +15,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import NUMPY_VERSION
-from tests.utils import PYSPARK_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -361,22 +359,13 @@ def test_std(pyspark_constructor: Constructor) -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    if PYSPARK_VERSION < (3, 4) or NUMPY_VERSION > (2, 0):
-        expected = {
-            "a_ddof_default": [1.0],
-            "a_ddof_1": [1.0],
-            "a_ddof_0": [1.0],
-            "b_ddof_2": [1.154701],
-            "z_ddof_0": [1.0],
-        }
-    else:  # pragma: no cover
-        expected = {
-            "a_ddof_default": [1.0],
-            "a_ddof_1": [1.0],
-            "a_ddof_0": [0.816497],
-            "b_ddof_2": [1.632993],
-            "z_ddof_0": [0.816497],
-        }
+    expected = {
+        "a_ddof_default": [1.0],
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.816497],
+        "b_ddof_2": [1.632993],
+        "z_ddof_0": [0.816497],
+    }
     assert_equal_data(result, expected)
 
 
