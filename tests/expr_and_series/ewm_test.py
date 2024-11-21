@@ -17,7 +17,7 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 )
 def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -37,7 +37,7 @@ def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")) or (
-        "polars" in str(constructor_eager) and POLARS_VERSION <= (0, 20, 3)
+        "polars" in str(constructor_eager) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -76,7 +76,7 @@ def test_ewm_mean_expr_adjust(
     expected: dict[str, list[float]],
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -138,7 +138,7 @@ def test_ewm_mean_nulls(
     constructor: Constructor,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -155,7 +155,7 @@ def test_ewm_mean_params(
     constructor: Constructor,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
