@@ -155,15 +155,19 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+    def filter(
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+    ) -> Self:
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            predicates, _ = self._flatten_and_extract(*predicates)
+            predicates, constraints = self._flatten_and_extract(
+                *predicates, **constraints
+            )
         return self._from_compliant_dataframe(
-            self._compliant_frame.filter(*predicates),
+            self._compliant_frame.filter(*predicates, **constraints),
         )
 
     def sort(
@@ -1757,7 +1761,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+    def filter(
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+    ) -> Self:
         r"""Filter the rows in the DataFrame based on one or more predicate expressions.
 
         The original order of the remaining rows is preserved.
@@ -1765,6 +1771,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             *predicates: Expression(s) that evaluates to a boolean Series. Can
                 also be a (single!) boolean list.
+            **constraints: Column filters; use `name = value` to filter columns by the supplied value.
+                Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
+                joined with the other filter conditions using &.
 
         Examples:
             >>> import pandas as pd
@@ -1860,7 +1869,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
         """
-        return super().filter(*predicates)
+        return super().filter(*predicates, **constraints)
 
     def group_by(
         self, *keys: str | Iterable[str], drop_null_keys: bool = False
@@ -3665,7 +3674,9 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+    def filter(
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
+    ) -> Self:
         r"""Filter the rows in the LazyFrame based on a predicate expression.
 
         The original order of the remaining rows is preserved.
@@ -3673,6 +3684,9 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             *predicates: Expression that evaluates to a boolean Series. Can
                 also be a (single!) boolean list.
+            **constraints: Column filters; use `name = value` to filter columns by the supplied value.
+                Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
+                joined with the other filter conditions using &.
 
         Examples:
             >>> import pandas as pd
@@ -3809,7 +3823,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
         """
-        return super().filter(*predicates)
+        return super().filter(*predicates, **constraints)
 
     def group_by(
         self, *keys: str | Iterable[str], drop_null_keys: bool = False
