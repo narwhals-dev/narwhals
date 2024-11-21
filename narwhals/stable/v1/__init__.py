@@ -673,20 +673,20 @@ class Series(NwSeries):
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_rolling_sum(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_sum(window_size=2).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_rolling_sum(s_pd)
             0    NaN
             1    3.0
             2    5.0
             3    7.0
             dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_rolling_sum(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [f64]
             [
@@ -696,7 +696,7 @@ class Series(NwSeries):
                7.0
             ]
 
-            >>> my_library_agnostic_function(s_pa)  # doctest:+ELLIPSIS
+            >>> agnostic_rolling_sum(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -716,6 +716,98 @@ class Series(NwSeries):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_mean(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_mean(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_mean(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_mean(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.rolling_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_mean(
             window_size=window_size,
             min_periods=min_periods,
             center=center,
@@ -877,21 +969,21 @@ class Expr(NwExpr):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df):
+            ... def agnostic_rolling_sum(df):
             ...     return df.with_columns(
             ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
             ...     )
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> func(df_pd)
+            >>> agnostic_rolling_sum(df_pd)
                  a    b
             0  1.0  1.0
             1  2.0  3.0
             2  NaN  3.0
             3  4.0  6.0
 
-            >>> func(df_pl)
+            >>> agnostic_rolling_sum(df_pl)
             shape: (4, 2)
             ┌──────┬─────┐
             │ a    ┆ b   │
@@ -904,7 +996,7 @@ class Expr(NwExpr):
             │ 4.0  ┆ 6.0 │
             └──────┴─────┘
 
-            >>> func(df_pa)  #  doctest:+ELLIPSIS
+            >>> agnostic_rolling_sum(df_pa)  #  doctest:+ELLIPSIS
             pyarrow.Table
             a: double
             b: double
@@ -921,6 +1013,99 @@ class Expr(NwExpr):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def agnostic_rolling_mean(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  1.5
+            2  NaN  1.5
+            3  4.0  3.0
+
+            >>> agnostic_rolling_mean(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 1.5 │
+            │ null ┆ 1.5 │
+            │ 4.0  ┆ 3.0 │
+            └──────┴─────┘
+
+            >>> agnostic_rolling_mean(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,1.5,1.5,3]]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Expr.rolling_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_mean(
             window_size=window_size,
             min_periods=min_periods,
             center=center,

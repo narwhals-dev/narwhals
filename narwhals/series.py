@@ -11,7 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals.exceptions import InvalidOperationError
+from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -3128,20 +3128,20 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_rolling_sum(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_sum(window_size=2).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_rolling_sum(s_pd)
             0    NaN
             1    3.0
             2    5.0
             3    7.0
             dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_rolling_sum(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [f64]
             [
@@ -3151,7 +3151,7 @@ class Series:
                7.0
             ]
 
-            >>> my_library_agnostic_function(s_pa)  # doctest:+ELLIPSIS
+            >>> agnostic_rolling_sum(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -3162,41 +3162,108 @@ class Series:
               ]
             ]
         """
-        if window_size < 1:
-            msg = "window_size must be greater or equal than 1"
-            raise ValueError(msg)
-
-        if not isinstance(window_size, int):
-            _type = window_size.__class__.__name__
-            msg = (
-                f"argument 'window_size': '{_type}' object cannot be "
-                "interpreted as an integer"
-            )
-            raise TypeError(msg)
-
-        if min_periods is not None:
-            if min_periods < 1:
-                msg = "min_periods must be greater or equal than 1"
-                raise ValueError(msg)
-
-            if not isinstance(min_periods, int):
-                _type = min_periods.__class__.__name__
-                msg = (
-                    f"argument 'min_periods': '{_type}' object cannot be "
-                    "interpreted as an integer"
-                )
-                raise TypeError(msg)
-            if min_periods > window_size:
-                msg = "`min_periods` must be less or equal than `window_size`"
-                raise InvalidOperationError(msg)
-        else:
-            min_periods = window_size
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
 
         if len(self) == 0:  # pragma: no cover
             return self
 
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_mean(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_mean(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_mean(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_mean(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
+        return self._from_compliant_series(
+            self._compliant_series.rolling_mean(
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
