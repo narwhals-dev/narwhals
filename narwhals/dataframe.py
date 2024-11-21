@@ -1779,6 +1779,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrame
+            >>>
             >>> df = {
             ...     "foo": [1, 2, 3],
             ...     "bar": [6, 7, 8],
@@ -1790,17 +1792,17 @@ class DataFrame(BaseFrame[DataFrameT]):
             Let's define a dataframe-agnostic function in which we filter on
             one condition.
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter(nw.col("foo") > 1)
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter(nw.col("foo") > 1).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `agnostic_filter`:
 
-            >>> func(df_pd)
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             1    2    7   b
             2    3    8   c
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1813,13 +1815,13 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             Filter on multiple conditions, combined with and/or operators:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
-            >>> func(df_pd)
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).to_native()
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1829,14 +1831,17 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
-            >>> func(df_pd)
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     dframe = df.filter(
+            ...         (nw.col("foo") == 1) | (nw.col("ham") == "c")
+            ...     ).to_native()
+            ...     return dframe
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
             2    3    8   c
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1849,17 +1854,17 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
             ...     dframe = df.filter(
             ...         nw.col("foo") <= 2,
             ...         ~nw.col("ham").is_in(["b", "c"]),
-            ...     )
+            ...     ).to_native()
             ...     return dframe
-            >>> func(df_pd)
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
