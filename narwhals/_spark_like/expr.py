@@ -199,16 +199,13 @@ class SparkExpr:
 
         def _std(_input: Column) -> Column:  # pragma: no cover
             if self._backend_version < (3, 5) or parse_version(np.__version__) > (2, 0):
-                from pyspark.sql.functions import stddev_samp
+                from pyspark.sql import functions as F  # noqa: N812
 
                 if ddof == 1:
-                    return stddev_samp(_input)
+                    return F.stddev_samp(_input)
 
-                from pyspark.sql.functions import count
-                from pyspark.sql.functions import sqrt
-
-                n_rows = count(_input)
-                return stddev_samp(_input) * sqrt((n_rows - 1) / (n_rows - ddof))
+                n_rows = F.count(_input)
+                return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
             from pyspark.pandas.spark.functions import stddev
 
