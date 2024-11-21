@@ -124,6 +124,7 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
             SparkSession.builder.appName("unit-tests")
             .master("local[1]")
             .config("spark.ui.enabled", "false")
+            # executing one task at a time makes the tests faster
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
             .getOrCreate()
