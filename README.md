@@ -44,6 +44,7 @@ Join the party!
 - [altair](https://github.com/vega/altair/)
 - [marimo](https://github.com/marimo-team/marimo)
 - [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
+- [plotly](https://plotly.com)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
