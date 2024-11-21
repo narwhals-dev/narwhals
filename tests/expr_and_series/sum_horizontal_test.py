@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
@@ -18,7 +20,7 @@ def test_sumh(constructor: Constructor, col_expr: Any) -> None:
         "z": [7.0, 8.0, 9.0],
         "horizontal_sum": [5, 7, 8],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_sumh_nullable(constructor: Constructor) -> None:
@@ -27,4 +29,19 @@ def test_sumh_nullable(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.select(hsum=nw.sum_horizontal("a", "b"))
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
+
+
+def test_sumh_all(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 3], "b": [10, 20, 30]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.sum_horizontal(nw.all()))
+    expected = {
+        "a": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(c=nw.sum_horizontal(nw.all()))
+    expected = {
+        "c": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)

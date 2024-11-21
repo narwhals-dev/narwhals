@@ -11,8 +11,10 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -26,27 +28,42 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 
 class PandasLikeGroupBy:
-    def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         self._df = df
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (1, 0)
+            and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
-            if self._df._native_frame.loc[:, self._keys].isna().any().any():
+            if (
+                not drop_null_keys
+                and select_columns_by_name(
+                    self._df._native_frame,
+                    self._keys,
+                    self._df._backend_version,
+                    self._df._implementation,
+                )
+                .isna()
+                .any()
+                .any()
+            ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
             self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
+                observed=True,
             )
         else:
             self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
-                dropna=False,
+                dropna=drop_null_keys,
+                observed=True,
             )
 
     def agg(
@@ -90,19 +107,21 @@ class PandasLikeGroupBy:
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
+            dtypes=self._df._dtypes,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        with warnings.catch_warnings():
-            # we already use `tupleify` above, so we're already opting in to
-            # the new behaviour
-            warnings.filterwarnings(
-                "ignore",
-                message="In a future version of pandas, a length 1 tuple will be returned",
-                category=FutureWarning,
-            )
-            iterator = self._grouped.__iter__()
-        yield from ((key, self._from_native_frame(sub_df)) for (key, sub_df) in iterator)
+        indices = self._grouped.indices
+        if (
+            self._df._implementation is Implementation.PANDAS
+            and self._df._backend_version < (2, 2)
+        ) or (self._df._implementation is Implementation.CUDF):  # pragma: no cover
+            for key in indices:
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
+        else:
+            for key in indices:
+                key = tupleify(key)  # noqa: PLW2901
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
 def agg_pandas(  # noqa: PLR0915
@@ -117,8 +136,7 @@ def agg_pandas(  # noqa: PLR0915
     dataframe_is_empty: bool,
     native_namespace: Any,
 ) -> PandasLikeDataFrame:
-    """
-    This should be the fastpath, but cuDF is too far behind to use it.
+    """This should be the fastpath, but cuDF is too far behind to use it.
 
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
@@ -183,14 +201,19 @@ def agg_pandas(  # noqa: PLR0915
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
             result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping
-            ).reset_index()
+                columns=name_mapping, copy=False
+            )
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-            result_nunique_aggs = result_nunique_aggs.reset_index()
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_nunique_aggs.reset_index(inplace=True)  # noqa: PD002
         if simple_aggs and nunique_aggs:
             if (
                 set(result_simple_aggs.columns)
@@ -209,8 +232,14 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = result_simple_aggs
         else:
             # No aggregation provided
-            result_aggs = native_namespace.DataFrame(grouped.groups.keys(), columns=keys)
-        return from_dataframe(result_aggs.loc[:, output_names])
+            result_aggs = native_namespace.DataFrame(
+                list(grouped.groups.keys()), columns=keys
+            )
+        return from_dataframe(
+            select_columns_by_name(
+                result_aggs, output_names, backend_version, implementation
+            )
+        )
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -254,6 +283,12 @@ def agg_pandas(  # noqa: PLR0915
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    result = result_complex.reset_index()
+    # Keep inplace=True to avoid making a redundant copy.
+    # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+    result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(
+        select_columns_by_name(
+            result_complex, output_names, backend_version, implementation
+        )
+    )

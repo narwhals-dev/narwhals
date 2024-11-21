@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.8.3"
+version = "1.14.1"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -58,13 +58,20 @@ lint.ignore = [
   "ANN401",
   "C901",
   "COM812",
-  "D",
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D107",
   "DTZ001",
   "E501",
   "FIX",
   "ISC001",
   "NPY002",
   "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PD010",
   "PLR0911",
   "PLR0912",
   "PLR0913",
@@ -94,6 +101,7 @@ convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -116,7 +124,6 @@ filterwarnings = [
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
   'ignore:.*The default coalesce behavior',
-  'ignore:.*df2 = df1.copy\(deep=False\) might not work'
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -130,15 +137,18 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 omit = [
   'narwhals/typing.py',
+  'narwhals/stable/v1/typing.py',
+  'narwhals/this.py',
   # we can run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
 ]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation is Implementation.MODIN",
-  "if implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)'
+  "if (:?self._)?implementation is Implementation.MODIN",
+  "if (:?self._)?implementation is Implementation.CUDF",
+  'request.applymarker\(pytest.mark.xfail\)',
+  'if self._backend_version < '
 ]
 
 [tool.mypy]

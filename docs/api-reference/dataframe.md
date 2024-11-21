@@ -26,6 +26,7 @@
         - lazy
         - null_count
         - pipe
+        - pivot
         - rename
         - row
         - rows
@@ -41,6 +42,7 @@
         - to_numpy
         - to_pandas
         - unique
+        - unpivot
         - with_columns
         - with_row_index
         - write_csv

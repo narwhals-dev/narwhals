@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
@@ -14,6 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
@@ -22,7 +25,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
         if len(results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions not supported in this context"
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
         validate_comparand(df._native_frame, result)
@@ -41,10 +44,9 @@ def parse_exprs_and_named_exprs(
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
         elif isinstance(expr, str):
-            _results = [df._native_frame.loc[:, expr]]
-        else:  # pragma: no cover
-            msg = f"Expected expression or column name, got: {expr}"
-            raise TypeError(msg)
+            _results = [df._native_frame[expr]]
+        else:
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
         return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
             results[_result.name] = _result[0] if return_scalar else _result
@@ -83,8 +85,17 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
-    from narwhals import dtypes
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    if (pl := get_polars()) is not None and isinstance(
+        dtype, (pl.DataType, pl.DataType.__class__)
+    ):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
@@ -122,6 +133,23 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "datetime64[us]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 + s2).rename(s1.name)
+
+
+def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 / s2).rename(s1.name)

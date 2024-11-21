@@ -1,10 +1,16 @@
+from __future__ import annotations
+
+from datetime import datetime
+from datetime import timedelta
+from typing import Any
+
 import polars as pl
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_renamed_taxicab_norm(constructor: Constructor) -> None:
@@ -19,7 +25,7 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
@@ -29,11 +35,38 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # It's new, so it couldn't be backwards-incompatible.
     result = df.with_columns(b=nw_v1.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     # The older `_l1_norm` still works in the stable api
     result = df.with_columns(b=nw_v1.col("a")._l1_norm())
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api.
+    def func(df_any: Any) -> Any:
+        df = nw_v1.from_native(df_any)
+        df = df._l1_norm()
+        return df.to_native()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    assert_equal_data(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api when using `narwhalify`.
+    @nw_v1.narwhalify
+    def func(df: Any) -> Any:
+        return df._l1_norm()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    assert_equal_data(result, expected)
 
 
 def test_stable_api_completeness() -> None:
@@ -52,16 +85,7 @@ def test_stable_api_docstrings() -> None:
             continue
         v1_doc = getattr(nw_v1, item).__doc__
         nw_doc = getattr(nw, item).__doc__
-        if item == "from_native":
-            v1_doc = v1_doc.replace("native_dataframe", "native_object")
-        assert (
-            v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
-            == nw_doc
-        )
-        assert (
-            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
-            == v1_doc
-        )
+        assert v1_doc == nw_doc, item
 
 
 def test_dataframe_docstrings() -> None:
@@ -74,7 +98,7 @@ def test_dataframe_docstrings() -> None:
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
             == getattr(df, item).__doc__
-        )
+        ), item
 
 
 def test_lazyframe_docstrings() -> None:
@@ -105,4 +129,16 @@ def test_series_docstrings() -> None:
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
             == getattr(df, item).__doc__
-        )
+        ), item
+
+
+def test_dtypes(constructor: Constructor) -> None:
+    df = nw_v1.from_native(
+        constructor({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
+    )
+    dtype = df.collect_schema()["b"]
+    assert dtype in {nw_v1.Datetime}
+    assert isinstance(dtype, nw_v1.Datetime)
+    dtype = df.collect_schema()["c"]
+    assert dtype in {nw_v1.Duration}
+    assert isinstance(dtype, nw_v1.Duration)

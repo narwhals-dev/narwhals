@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
+    from narwhals.typing import IntoSeries
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -45,6 +47,11 @@ def get_modin() -> Any:  # pragma: no cover
 def get_cudf() -> Any:
     """Get cudf module (if already imported - else return None)."""
     return sys.modules.get("cudf", None)
+
+
+def get_cupy() -> Any:
+    """Get cupy module (if already imported - else return None)."""
+    return sys.modules.get("cupy", None)
 
 
 def get_fireducks() -> Any:  # pragma: no cover
@@ -97,6 +104,11 @@ def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     return (pd := get_pandas()) is not None and isinstance(ser, pd.Series)
 
 
+def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
+    """Check whether `index` is a pandas Index without importing pandas."""
+    return (pd := get_pandas()) is not None and isinstance(index, pd.Index)
+
+
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
@@ -107,8 +119,16 @@ def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
+def is_modin_index(index: Any) -> TypeGuard[mpd.Index]:
+    """Check whether `index` is a modin Index without importing modin."""
+    return (mpd := get_modin()) is not None and isinstance(
+        index, mpd.Index
+    )  # pragma: no cover
+
+
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
+    return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
@@ -117,14 +137,11 @@ def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
-def is_fireducks_dataframe(df: Any) -> TypeGuard[fpd.DataFrame]:
-    """Check whether `df` is a fireducks DataFrame without importing fireducks."""
-    return (fpd := get_fireducks()) is not None and isinstance(df, fpd.DataFrame)
-
-
-def is_fireducks_series(ser: Any) -> TypeGuard[fpd.Series[Any]]:
-    """Check whether `ser` is a fireducks Series without importing fireducks."""
-    return (fpd := get_fireducks()) is not None and isinstance(ser, fpd.Series)
+def is_cudf_index(index: Any) -> TypeGuard[cudf.Index]:
+    """Check whether `index` is a cudf Index without importing cudf."""
+    return (cudf := get_cudf()) is not None and isinstance(
+        index, cudf.Index
+    )  # pragma: no cover
 
 
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
@@ -174,9 +191,23 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     return (np := get_numpy()) is not None and isinstance(arr, np.ndarray)
 
 
+def is_fireducks_dataframe(df: Any) -> TypeGuard[fpd.DataFrame]:
+    """Check whether `df` is a fireducks DataFrame without importing fireducks."""
+    return (fpd := get_fireducks()) is not None and isinstance(df, fpd.DataFrame)
+
+
+def is_fireducks_series(ser: Any) -> TypeGuard[fpd.Series[Any]]:
+    """Check whether `ser` is a fireducks Series without importing fireducks."""
+    return (fpd := get_fireducks()) is not None and isinstance(ser, fpd.Series)
+
+
+def is_fireducks_index(index: Any) -> TypeGuard[fpd.Index]:
+    """Check whether `index` is a pandas Index without importing pandas."""
+    return (fpd := get_fireducks()) is not None and isinstance(index, fpd.Index)
+
+
 def is_pandas_like_dataframe(df: Any) -> bool:
-    """
-    Check whether `df` is a pandas-like DataFrame without doing any imports
+    """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF or fireducks.
     """
@@ -188,17 +219,103 @@ def is_pandas_like_dataframe(df: Any) -> bool:
     )
 
 
-def is_pandas_like_series(arr: Any) -> bool:
-    """
-    Check whether `arr` is a pandas-like Series without doing any imports
+def is_pandas_like_series(ser: Any) -> bool:
+    """Check whether `ser` is a pandas-like Series without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF or fireducks.
     """
     return (
-        is_pandas_series(arr)
-        or is_modin_series(arr)
-        or is_cudf_series(arr)
-        or is_fireducks_series(arr)
+        is_pandas_series(ser)
+        or is_modin_series(ser)
+        or is_cudf_series(ser)
+        or is_fireducks_series(ser)
+    )
+
+
+def is_pandas_like_index(index: Any) -> bool:
+    """Check whether `index` is a pandas-like Index without doing any imports.
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
+    return (
+        is_pandas_index(index)
+        or is_modin_index(index)
+        or is_cudf_index(index)
+        or is_fireducks_index(index)
+    )  # pragma: no cover
+
+
+def is_into_series(native_series: IntoSeries) -> bool:
+    """Check whether `native_series` can be converted to a Narwhals Series.
+
+    Arguments:
+        native_series: The object to check.
+
+    Returns:
+        `True` if `native_series` can be converted to a Narwhals Series, `False` otherwise.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> import narwhals as nw
+
+        >>> s_pd = pd.Series([1, 2, 3])
+        >>> s_pl = pl.Series([1, 2, 3])
+        >>> np_arr = np.array([1, 2, 3])
+
+        >>> nw.dependencies.is_into_series(s_pd)
+        True
+        >>> nw.dependencies.is_into_series(s_pl)
+        True
+        >>> nw.dependencies.is_into_series(np_arr)
+        False
+    """
+    from narwhals.series import Series
+
+    return (
+        isinstance(native_series, Series)
+        or hasattr(native_series, "__narwhals_series__")
+        or is_polars_series(native_series)
+        or is_pyarrow_chunked_array(native_series)
+        or is_pandas_like_series(native_series)
+    )
+
+
+def is_into_dataframe(native_dataframe: Any) -> bool:
+    """Check whether `native_dataframe` can be converted to a Narwhals DataFrame.
+
+    Arguments:
+        native_dataframe: The object to check.
+
+    Returns:
+        `True` if `native_dataframe` can be converted to a Narwhals DataFrame, `False` otherwise.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> from narwhals.dependencies import is_into_dataframe
+
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> np_arr = np.array([[1, 4], [2, 5], [3, 6]])
+
+        >>> is_into_dataframe(df_pd)
+        True
+        >>> is_into_dataframe(df_pl)
+        True
+        >>> is_into_dataframe(np_arr)
+        False
+    """
+    from narwhals.dataframe import DataFrame
+
+    return (
+        isinstance(native_dataframe, DataFrame)
+        or hasattr(native_dataframe, "__narwhals_dataframe__")
+        or is_polars_dataframe(native_dataframe)
+        or is_pyarrow_table(native_dataframe)
+        or is_pandas_like_dataframe(native_dataframe)
     )
 
 
@@ -226,4 +343,6 @@ __all__ = [
     "is_dask_dataframe",
     "is_pandas_like_dataframe",
     "is_pandas_like_series",
+    "is_into_dataframe",
+    "is_into_series",
 ]

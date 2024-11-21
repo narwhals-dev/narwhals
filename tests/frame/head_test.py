@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_head(constructor: Constructor) -> None:
@@ -13,11 +13,11 @@ def test_head(constructor: Constructor) -> None:
     df = nw.from_native(df_raw)
 
     result = df.head(2)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.head(2)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     # negative indices not allowed for lazyframes
     result = df.lazy().collect().head(-1)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

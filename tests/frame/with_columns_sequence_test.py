@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": ["foo", "bars"],
@@ -21,4 +23,4 @@ def test_with_columns(constructor: Constructor, request: pytest.FixtureRequest) 
         .select("d", "e")
     )
     expected = {"d": [4, 5], "e": [5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

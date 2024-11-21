@@ -7,27 +7,31 @@ from typing import overload
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
-from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import translate_dtype
-
-PL = get_polars()
+from narwhals._polars.utils import native_to_narwhals_dtype
 
 
 class PolarsSeries:
-    def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
-        self._native_series = series
-        self._implementation = Implementation.POLARS
+    def __init__(
+        self, series: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+    ) -> None:
+        self._native_series: pl.Series = series
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"
@@ -35,20 +39,29 @@ class PolarsSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __native_namespace__(self) -> Any:
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_series(self, series: Any) -> Self:
-        return self.__class__(series, backend_version=self._backend_version)
+        return self.__class__(
+            series, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def _from_native_object(self, series: Any) -> Any:
-        pl = get_polars()
+        import polars as pl  # ignore-banned-import()
+
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(series, backend_version=self._backend_version)
+            return PolarsDataFrame(
+                series, backend_version=self._backend_version, dtypes=self._dtypes
+            )
         # scalar
         return series
 
@@ -73,11 +86,11 @@ class PolarsSeries:
 
     @property
     def name(self) -> str:
-        return self._native_series.name  # type: ignore[no-any-return]
+        return self._native_series.name
 
     @property
     def dtype(self: Self) -> DType:
-        return translate_dtype(self._native_series.dtype)
+        return native_to_narwhals_dtype(self._native_series.dtype, self._dtypes)
 
     @overload
     def __getitem__(self, item: int) -> Any: ...
@@ -90,11 +103,23 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype)
-        return self._from_native_series(ser.cast(dtype))
+        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        return self._from_native_series(ser.cast(dtype_pl))
+
+    def replace_strict(
+        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        ser = self._native_series
+        dtype = (
+            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+        )
+        if self._backend_version < (1,):
+            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
+            raise NotImplementedError(msg)
+        return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        if self._backend_version < (0, 20, 29):  # pragma: no cover
+        if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
@@ -167,27 +192,73 @@ class PolarsSeries:
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
+    def median(self) -> Any:
+        from narwhals.exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
+        return self._native_series.median()
+
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> PolarsDataFrame:
+        import polars as pl  # ignore-banned-import
+
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (0, 20, 15):  # pragma: no cover
+        if self._backend_version < (0, 20, 15):
+            has_nulls = self._native_series.is_null().any()
             result = self._native_series.to_dummies(separator=separator)
-            result = result.select(result.columns[int(drop_first) :])
+            output_columns = result.columns
+            if drop_first:
+                _ = output_columns.pop(int(has_nulls))
+
+            result = result.select(output_columns)
         else:
             result = self._native_series.to_dummies(
                 separator=separator, drop_first=drop_first
             )
+        result = result.with_columns(pl.all().cast(pl.Int8))
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        if self._backend_version < (0, 20, 31):  # pragma: no cover
+            msg = "`ewm_mean` not implemented for polars older than 0.20.31"
+            raise NotImplementedError(msg)
+        expr = self._native_series
+        return self._from_native_series(
+            expr.ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        if self._backend_version < (0, 20, 6):  # pragma: no cover
+        if self._backend_version < (0, 20, 6):
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                pl = get_polars()
+                import polars as pl  # ignore-banned-import()
+
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
         else:
@@ -196,6 +267,12 @@ class PolarsSeries:
             )
 
         return self._from_native_series(result)
+
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        values = extract_native(values)
+        s = self._native_series.clone()
+        s.scatter(indices, values)
+        return self._from_native_series(s)
 
     def value_counts(
         self: Self,
@@ -207,8 +284,9 @@ class PolarsSeries:
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
-            pl = get_polars()
+        if self._backend_version < (1, 0, 0):
+            import polars as pl  # ignore-banned-import()
+
             value_name_ = name or ("proportion" if normalize else "count")
 
             result = self._native_series.value_counts(sort=sort, parallel=parallel)
@@ -226,7 +304,18 @@ class PolarsSeries:
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if self._backend_version < (0, 20, 4):
+            not_null_series = ~self._native_series.is_null()
+            result = not_null_series.cum_sum(reverse=reverse)
+        else:
+            result = self._native_series.cum_count(reverse=reverse)
+
+        return self._from_native_series(result)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

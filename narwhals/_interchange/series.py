@@ -7,22 +7,31 @@ from typing import NoReturn
 from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
 
 if TYPE_CHECKING:
-    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class InterchangeSeries:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_series = df
+        self._dtypes = dtypes
 
     def __narwhals_series__(self) -> Any:
         return self
 
-    @property
-    def dtype(self) -> DType:
-        return map_interchange_dtype_to_narwhals_dtype(self._native_series.dtype)
-
-    def __getattr__(self, attr: str) -> NoReturn:
+    def __native_namespace__(self) -> NoReturn:
         msg = (
+            "Cannot access native namespace for metadata-only series with unknown backend. "
+            "If you would like to see this kind of object supported in Narwhals, please "
+            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)
+
+    def __getattr__(self, attr: str) -> Any:
+        if attr == "dtype":
+            return map_interchange_dtype_to_narwhals_dtype(
+                self._native_series.dtype, dtypes=self._dtypes
+            )
+        msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "
             "supported by Narwhals, yet implements `__dataframe__`. If you would like to "

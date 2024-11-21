@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
+    from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
         def columns(self) -> Any: ...
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
+
+    class NativeSeries(Protocol):
+        def __len__(self) -> int: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -44,13 +48,44 @@ IntoFrame: TypeAlias = Union[
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame."""
 
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
-"""DataFrame or LazyFrame"""
+"""Narwhals DataFrame or Narwhals LazyFrame"""
+
+IntoSeries: TypeAlias = Union["Series", "NativeSeries"]
+"""Anything which can be converted to a Narwhals Series."""
 
 # TypeVars for some of the above
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
-FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+FrameT = TypeVar("FrameT", bound="Frame")
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
+
+
+class DTypes:
+    Int64: type[dtypes.Int64]
+    Int32: type[dtypes.Int32]
+    Int16: type[dtypes.Int16]
+    Int8: type[dtypes.Int8]
+    UInt64: type[dtypes.UInt64]
+    UInt32: type[dtypes.UInt32]
+    UInt16: type[dtypes.UInt16]
+    UInt8: type[dtypes.UInt8]
+    Float64: type[dtypes.Float64]
+    Float32: type[dtypes.Float32]
+    String: type[dtypes.String]
+    Boolean: type[dtypes.Boolean]
+    Object: type[dtypes.Object]
+    Categorical: type[dtypes.Categorical]
+    Enum: type[dtypes.Enum]
+    Datetime: type[dtypes.Datetime]
+    Duration: type[dtypes.Duration]
+    Date: type[dtypes.Date]
+    Field: type[dtypes.Field]
+    Struct: type[dtypes.Struct]
+    List: type[dtypes.List]
+    Array: type[dtypes.Array]
+    Unknown: type[dtypes.Unknown]
+
 
 __all__ = [
     "IntoExpr",
@@ -61,4 +96,6 @@ __all__ = [
     "Frame",
     "FrameT",
     "DataFrameT",
+    "IntoSeries",
+    "IntoSeriesT",
 ]

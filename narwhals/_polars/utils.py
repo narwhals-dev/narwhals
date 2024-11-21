@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 
-from narwhals import dtypes
-from narwhals.dependencies import get_polars
+if TYPE_CHECKING:
+    import polars as pl
+
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
+
+from narwhals.utils import parse_version
 
 
 def extract_native(obj: Any) -> Any:
@@ -27,8 +34,9 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     return args, kwargs
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
-    pl = get_polars()
+def native_to_narwhals_dtype(dtype: pl.DataType, dtypes: DTypes) -> DType:
+    import polars as pl  # ignore-banned-import()
+
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -59,18 +67,46 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Categorical()
     if dtype == pl.Enum:
         return dtypes.Enum()
-    if dtype == pl.Datetime:
-        return dtypes.Datetime()
-    if dtype == pl.Duration:
-        return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
+    if dtype == pl.Datetime or isinstance(dtype, pl.Datetime):
+        dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
+    if dtype == pl.Duration or isinstance(dtype, pl.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return dtypes.Duration(time_unit=du_time_unit)
+    if dtype == pl.Struct:
+        return dtypes.Struct(
+            [
+                dtypes.Field(field_name, native_to_narwhals_dtype(field_type, dtypes))
+                for field_name, field_type in dtype  # type: ignore[attr-defined]
+            ]
+        )
+    if dtype == pl.List:
+        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))  # type: ignore[attr-defined]
+    if dtype == pl.Array:
+        if parse_version(pl.__version__) < (0, 20, 30):  # pragma: no cover
+            return dtypes.Array(
+                native_to_narwhals_dtype(dtype.inner, dtypes),  # type: ignore[attr-defined]
+                dtype.width,  # type: ignore[attr-defined]
+            )
+        else:
+            return dtypes.Array(native_to_narwhals_dtype(dtype.inner, dtypes), dtype.size)  # type: ignore[attr-defined]
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    pl = get_polars()
-    from narwhals import dtypes
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pl.DataType:
+    import polars as pl  # ignore-banned-import()
+
+    if isinstance(dtype, (pl.DataType, pl.DataType.__class__)):  # type: ignore[arg-type]
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
 
     if dtype == dtypes.Float64:
         return pl.Float64()
@@ -103,12 +139,25 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if dtype == dtypes.Enum:
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if dtype == dtypes.Datetime:
-        return pl.Datetime()
-    if dtype == dtypes.Duration:
-        return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
+        dt_time_unit: Literal["ms", "us", "ns"] = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return pl.Datetime(dt_time_unit, dt_time_zone)
+    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return pl.Duration(time_unit=du_time_unit)
+
+    if dtype == dtypes.List:  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        raise NotImplementedError(msg)
+    if dtype == dtypes.Struct:  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        raise NotImplementedError(msg)
+    if dtype == dtypes.Array:  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
@@ -13,6 +14,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
 # Missing type parameters for generic type "DataFrame"
@@ -20,12 +22,19 @@ from narwhals.utils import validate_laziness
 # The rest of the annotations seem to work fine with this anyway
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
+
 if TYPE_CHECKING:
     from types import ModuleType
 
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import DTypes
+
+    class ArrowStreamExportable(Protocol):
+        def __arrow_c_stream__(
+            self, requested_schema: object | None = None
+        ) -> object: ...
 
 
 def concat(
@@ -33,17 +42,15 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
-    """
-    Concatenate multiple DataFrames, LazyFrames into a single entity.
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
-            * vertical: Stacks Series from DataFrames vertically and fills with `null`
-              if the lengths don't match.
-            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-              if the lengths don't match.
+            - vertical: Stacks Series from DataFrames vertically and fills with `null`
+                if the lengths don't match.
+            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+                if the lengths don't match.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -52,7 +59,6 @@ def concat(
         NotImplementedError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
-
         Let's take an example of vertical concatenation:
 
         >>> import pandas as pd
@@ -131,7 +137,6 @@ def concat(
         └─────┴─────┴──────┴──────┘
 
     """
-
     if how not in ("horizontal", "vertical"):  # pragma: no cover
         msg = "Only horizontal and vertical concatenations are supported"
         raise NotImplementedError(msg)
@@ -154,8 +159,7 @@ def new_series(
     *,
     native_namespace: ModuleType,
 ) -> Series:
-    """
-    Instantiate Narwhals Series from raw data.
+    """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -163,6 +167,9 @@ def new_series(
         dtype: (Narwhals) dtype. If not provided, the native library
             may auto-infer it from `values`.
         native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new Series
 
     Examples:
         >>> import pandas as pd
@@ -176,7 +183,12 @@ def new_series(
         ... def func(df):
         ...     values = [4, 1, 2]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+        ...     return nw.new_series(
+        ...         name="c",
+        ...         values=values,
+        ...         dtype=nw.Int32,
+        ...         native_namespace=native_namespace,
+        ...     )
 
         Let's see what happens when passing pandas / Polars input:
 
@@ -194,6 +206,25 @@ def new_series(
            2
         ]
     """
+    from narwhals import dtypes
+
+    return _new_series_impl(
+        name,
+        values,
+        dtype,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _new_series_impl(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+    dtypes: DTypes,
+) -> Series:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -202,9 +233,11 @@ def new_series(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+        else:
+            dtype_pl = None
 
-        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -215,7 +248,10 @@ def new_series(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
+            backend_version = parse_version(native_namespace.__version__)
+            dtype = pandas_like_narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version, dtypes
+            )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
@@ -224,7 +260,7 @@ def new_series(
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype)
+            dtype = arrow_narwhals_to_native_dtype(dtype, dtypes=dtypes)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
@@ -247,8 +283,7 @@ def from_dict(
     *,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
-    """
-    Instantiate DataFrame from dictionary.
+    """Instantiate DataFrame from dictionary.
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -260,9 +295,13 @@ def from_dict(
         native_namespace: The native library to use for DataFrame creation. Only
             necessary if inputs are not Narwhals Series.
 
+    Returns:
+        A new DataFrame
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
@@ -274,7 +313,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing pandas / Polars input:
+        Let's see what happens when passing Pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -290,7 +329,31 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        ----
+        c: [[5,2]]
+        d: [[1,4]]
     """
+    from narwhals import dtypes
+
+    return _from_dict_impl(
+        data,
+        schema,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_dict_impl(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+    dtypes: DTypes,
+) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
 
@@ -305,7 +368,7 @@ def from_dict(
         else:
             msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
-        data = {key: to_native(value, strict=False) for key, value in data.items()}
+        data = {key: to_native(value, pass_through=True) for key, value in data.items()}
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -314,12 +377,14 @@ def from_dict(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            schema = {
-                name: polars_narwhals_to_native_dtype(dtype)
+            schema_pl = {
+                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
+        else:
+            schema_pl = None
 
-        native_frame = native_namespace.from_dict(data, schema=schema)
+        native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -332,9 +397,10 @@ def from_dict(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
+            backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation
+                    schema[name], native_type, implementation, backend_version, dtypes
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -348,7 +414,7 @@ def from_dict(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype))
+                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
                     for name, dtype in schema.items()
                 ]
             )
@@ -364,13 +430,111 @@ def from_dict(
     return from_native(native_frame, eager_only=True)
 
 
+def from_arrow(
+    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+) -> DataFrame[Any]:
+    """Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+    Arguments:
+        native_frame: Object which implements `__arrow_c_stream__`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new DataFrame
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function which creates a PyArrow
+        Table.
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return nw.from_arrow(df, native_namespace=pa)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+        >>> func(pl.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    if not hasattr(native_frame, "__arrow_c_stream__"):
+        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+        raise TypeError(msg)
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS and parse_version(
+        native_namespace.__version__
+    ) >= (1, 3):
+        native_frame = native_namespace.DataFrame(native_frame)
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+    }:
+        # These don't (yet?) support the PyCapsule Interface for import
+        # so we go via PyArrow
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
+            raise ModuleNotFoundError(msg) from None
+
+        tbl = pa.table(native_frame)
+        if implementation is Implementation.PANDAS:
+            native_frame = tbl.to_pandas()
+        elif implementation is Implementation.MODIN:  # pragma: no cover
+            from modin.pandas.utils import from_arrow
+
+            native_frame = from_arrow(tbl)
+        elif implementation is Implementation.CUDF:  # pragma: no cover
+            native_frame = native_namespace.DataFrame.from_arrow(tbl)
+        elif implementation is Implementation.POLARS:  # pragma: no cover
+            native_frame = native_namespace.from_arrow(tbl)
+        else:  # pragma: no cover
+            msg = "congratulations, you entered unrecheable code - please report a bug"
+            raise AssertionError(msg)
+    elif implementation is Implementation.PYARROW:
+        native_frame = native_namespace.table(native_frame)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement PyCapsule support
+            native_frame = native_namespace.DataFrame(native_frame)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
+            raise AttributeError(msg) from e
+    return from_native(native_frame, eager_only=True)
+
+
 def _get_sys_info() -> dict[str, str]:
-    """System information
+    """System information.
 
     Returns system and Python version information
 
     Copied from sklearn
 
+    Returns:
+        Dictionary with system info.
     """
     python = sys.version.replace("\n", " ")
 
@@ -384,7 +548,7 @@ def _get_sys_info() -> dict[str, str]:
 
 
 def _get_deps_info() -> dict[str, str]:
-    """Overview of the installed version of main dependencies
+    """Overview of the installed version of main dependencies.
 
     This function does not import the modules to collect the version numbers
     but instead relies on standard Python package metadata.
@@ -393,6 +557,8 @@ def _get_deps_info() -> dict[str, str]:
 
     This function and show_versions were copied from sklearn and adapted
 
+    Returns:
+        Mapping from dependency to version.
     """
     deps = (
         "pandas",
@@ -421,15 +587,12 @@ def _get_deps_info() -> dict[str, str]:
 
 
 def show_versions() -> None:
-    """
-    Print useful debugging information
+    """Print useful debugging information.
 
     Examples:
-
         >>> from narwhals import show_versions
-        >>> show_versions()  # doctest:+SKIP
+        >>> show_versions()  # doctest: +SKIP
     """
-
     sys_info = _get_sys_info()
     deps_info = _get_deps_info()
 
@@ -445,12 +608,15 @@ def show_versions() -> None:
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series,
 ) -> Literal["full", "interchange"]:
-    """
-    Level of support Narwhals has for current object.
+    """Level of support Narwhals has for current object.
 
-    This can be one of:
+    Arguments:
+        obj: Dataframe or Series.
 
-    - 'full': full Narwhals API support
-    - 'metadata': only metadata operations are supported (`df.schema`)
+    Returns:
+        This can be one of:
+
+            - 'full': full Narwhals API support
+            - 'metadata': only metadata operations are supported (`df.schema`)
     """
     return obj._level

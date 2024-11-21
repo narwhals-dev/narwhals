@@ -20,22 +20,25 @@ LazyFrameT = TypeVar("LazyFrameT")
 
 
 class GroupBy(Generic[DataFrameT]):
-    def __init__(self, df: DataFrameT, *keys: str) -> None:
+    def __init__(self, df: DataFrameT, *keys: str, drop_null_keys: bool) -> None:
         self._df = cast(DataFrame[Any], df)
         self._keys = keys
-        self._grouped = self._df._compliant_frame.group_by(*self._keys)
+        self._grouped = self._df._compliant_frame.group_by(
+            *self._keys, drop_null_keys=drop_null_keys
+        )
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> DataFrameT:
-        """
-        Compute aggregations for each group of a group by operation.
+        """Compute aggregations for each group of a group by operation.
 
         Arguments:
             aggs: Aggregations to compute for each group of the group by operation,
                 specified as positional arguments.
-
             named_aggs: Additional aggregations, specified as keyword arguments.
+
+        Returns:
+            A new Dataframe.
 
         Examples:
             Group by one column or by multiple columns and call `agg` to compute
@@ -119,10 +122,12 @@ class GroupBy(Generic[DataFrameT]):
 
 
 class LazyGroupBy(Generic[LazyFrameT]):
-    def __init__(self, df: LazyFrameT, *keys: str) -> None:
+    def __init__(self, df: LazyFrameT, *keys: str, drop_null_keys: bool) -> None:
         self._df = cast(LazyFrame[Any], df)
         self._keys = keys
-        self._grouped = self._df._compliant_frame.group_by(*self._keys)
+        self._grouped = self._df._compliant_frame.group_by(
+            *self._keys, drop_null_keys=drop_null_keys
+        )
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr

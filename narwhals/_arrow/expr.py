@@ -4,9 +4,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -17,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowExpr:
@@ -29,6 +34,7 @@ class ArrowExpr:
         root_names: list[str] | None,
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -38,6 +44,7 @@ class ArrowExpr:
         self._output_names = output_names
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -50,19 +57,30 @@ class ArrowExpr:
 
     @classmethod
     def from_column_names(
-        cls: type[Self], *column_names: str, backend_version: tuple[int, ...]
+        cls: type[Self],
+        *column_names: str,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            return [
-                ArrowSeries(
-                    df._native_frame[column_name],
-                    name=column_name,
-                    backend_version=df._backend_version,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    ArrowSeries(
+                        df._native_frame[column_name],
+                        name=column_name,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -71,12 +89,43 @@ class ArrowExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             backend_version=backend_version,
+            dtypes=dtypes,
+        )
+
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
+    ) -> Self:
+        from narwhals._arrow.series import ArrowSeries
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [
+                ArrowSeries(
+                    df._native_frame[column_index],
+                    name=df._native_frame.column_names[column_index],
+                    backend_version=df._backend_version,
+                    dtypes=df._dtypes,
+                )
+                for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -166,6 +215,9 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
+    def median(self) -> Self:
+        return reuse_series_implementation(self, "median", returns_scalar=True)
+
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
@@ -184,8 +236,8 @@ class ArrowExpr:
     def diff(self) -> Self:
         return reuse_series_implementation(self, "diff")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def round(self, decimals: int) -> Self:
         return reuse_series_implementation(self, "round", decimals)
@@ -221,6 +273,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=[name],
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def null_count(self) -> Self:
@@ -263,8 +316,15 @@ class ArrowExpr:
             seed=seed,
         )
 
-    def fill_null(self: Self, value: Any) -> Self:
-        return reuse_series_implementation(self, "fill_null", value=value)
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "fill_null", value=value, strategy=strategy, limit=limit
+        )
 
     def is_duplicated(self: Self) -> Self:
         return reuse_series_implementation(self, "is_duplicated")
@@ -278,8 +338,15 @@ class ArrowExpr:
     def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
-    def unique(self: Self) -> Self:
-        return reuse_series_implementation(self, "unique")
+    def unique(self: Self, *, maintain_order: bool = False) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
+
+    def replace_strict(
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "replace_strict", old, new, return_dtype=return_dtype
+        )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         return reuse_series_implementation(
@@ -314,7 +381,7 @@ class ArrowExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(*keys).agg(self)
+            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
@@ -327,10 +394,94 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
+
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            input_series_list = self._call(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
+
+            if is_numpy_array(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series(array)
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            elif (np := get_numpy()) is not None and np.isscalar(result[0]):
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series([array])
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype is not None:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
+
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_mean",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
@@ -368,6 +519,21 @@ class ArrowExprDateTimeNamespace:
     def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "replace_time_zone", time_zone
+        )
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "convert_time_zone", time_zone
+        )
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "timestamp", time_unit
         )
 
     def date(self: Self) -> ArrowExpr:
@@ -500,7 +666,7 @@ class ArrowExprStringNamespace:
             self._expr, "str", "slice", offset, length
         )
 
-    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr,
             "str",
@@ -548,6 +714,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=root_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
@@ -573,6 +740,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
@@ -596,6 +764,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
@@ -620,6 +789,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
@@ -644,6 +814,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -668,4 +839,5 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )

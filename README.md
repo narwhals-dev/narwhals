@@ -13,11 +13,12 @@
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Lazy-only support**: Dask
 - **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
-- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
+- ✅ **Just use** [a subset of **the Polars API**](https://narwhals-dev.github.io/narwhals/api-reference/), no need to learn anything new
 - ✅ **Zero dependencies**, Narwhals only uses what
   the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**
@@ -36,15 +37,23 @@ Get started!
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com)
 - [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
-## Used by / integrates with
+## Used by
 
 Join the party!
 
-- [Altair](https://github.com/vega/altair/)
-- [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [altair](https://github.com/vega/altair/)
+- [marimo](https://github.com/marimo-team/marimo)
+- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [py-shiny](https://github.com/posit-dev/py-shiny)
+- [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [tabmat](https://github.com/Quantco/tabmat)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [tubular](https://github.com/lvgig/tubular)
+- [vegafusion](https://github.com/vega/vegafusion)
+- [wimsey](https://github.com/benrutter/wimsey)
 
 Feel free to add your project to the list if it's missing, and/or
 [chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
@@ -117,11 +126,17 @@ Narwhals has been featured in several talks, podcasts, and blog posts:
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs
 
+- [Python Bytes Podcast](https://www.youtube.com/live/N7w_ESVW40I?si=y-wN1uCsAuJOKlOT&t=382)
+  Episode 402, topic #2
+
 - [Super Data Science: ML & AI Podcast](https://www.youtube.com/watch?v=TeG4U8R0U8U)  
   Narwhals: For Pandas-to-Polars DataFrame Compatibility
 
 - [Sample Space Podcast | probabl](https://youtu.be/8hYdq4sWbbQ?si=WG0QP1CZ6gkFf18b)  
   How Narwhals has many end users ... that never use it directly. - Marco Gorelli
+
+- [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
+  Narwhals: Expanding DataFrame Compatibility Between Libraries
 
 - [Pycon Lithuania](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
   Marco Gorelli - DataFrame interoperatiblity - what's been achieved, and what comes next?

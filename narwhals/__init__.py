@@ -1,22 +1,29 @@
+from __future__ import annotations
+
 from narwhals import dependencies
+from narwhals import exceptions
 from narwhals import selectors
 from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
+from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -27,16 +34,22 @@ from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
 from narwhals.expr import col
+from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
+from narwhals.expr import max_horizontal
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
+from narwhals.expr import median
 from narwhals.expr import min
+from narwhals.expr import min_horizontal
+from narwhals.expr import nth
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
 from narwhals.expr import when
 from narwhals.functions import concat
+from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
 from narwhals.functions import get_level
 from narwhals.functions import new_series
@@ -47,68 +60,85 @@ from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
+from narwhals.translate import to_py_scalar
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
+from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.8.3"
+__version__ = "1.14.1"
 
 __all__ = [
-    "dependencies",
-    "selectors",
-    "concat",
-    "from_dict",
-    "get_level",
-    "new_series",
-    "to_native",
-    "from_native",
-    "is_ordered_categorical",
-    "maybe_align_index",
-    "maybe_convert_dtypes",
-    "maybe_get_index",
-    "maybe_set_index",
-    "get_native_namespace",
+    "Array",
+    "Boolean",
+    "Categorical",
+    "DataFrame",
+    "Date",
+    "Datetime",
+    "Duration",
+    "Enum",
+    "Expr",
+    "Field",
+    "Float32",
+    "Float64",
+    "Int16",
+    "Int32",
+    "Int64",
+    "Int8",
+    "LazyFrame",
+    "List",
+    "Object",
+    "Schema",
+    "Series",
+    "String",
+    "Struct",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "UInt8",
+    "Unknown",
     "all",
     "all_horizontal",
     "any_horizontal",
     "col",
+    "concat",
+    "concat_str",
+    "dependencies",
+    "exceptions",
+    "from_arrow",
+    "from_dict",
+    "from_dict",
+    "from_native",
+    "generate_temporary_column_name",
+    "get_level",
+    "get_native_namespace",
+    "is_ordered_categorical",
     "len",
     "lit",
-    "min",
     "max",
+    "max_horizontal",
+    "maybe_align_index",
+    "maybe_convert_dtypes",
+    "maybe_get_index",
+    "maybe_reset_index",
+    "maybe_set_index",
     "mean",
     "mean_horizontal",
-    "sum",
-    "sum_horizontal",
-    "when",
-    "DataFrame",
-    "LazyFrame",
-    "Series",
-    "Expr",
-    "Int64",
-    "Int32",
-    "Int16",
-    "Int8",
-    "UInt64",
-    "UInt32",
-    "UInt16",
-    "UInt8",
-    "Float64",
-    "Float32",
-    "Boolean",
-    "Object",
-    "Unknown",
-    "Categorical",
-    "Enum",
-    "String",
-    "Datetime",
-    "Duration",
-    "Date",
+    "median",
+    "min",
+    "min_horizontal",
     "narwhalify",
+    "new_series",
+    "nth",
+    "selectors",
     "show_versions",
     "stable",
-    "Schema",
-    "from_dict",
+    "sum",
+    "sum_horizontal",
+    "to_native",
+    "to_py_scalar",
+    "when",
 ]
