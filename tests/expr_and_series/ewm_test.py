@@ -36,9 +36,7 @@ def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor)
 def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")) or (
-        "polars" in str(constructor_eager) and POLARS_VERSION <= (0, 20, 31)
-    ):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
