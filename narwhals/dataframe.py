@@ -1873,6 +1873,24 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
+
+            Provide multiple filters using `**kwargs` syntax:
+
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter(foo=2, ham="b").to_native()
+            >>> agnostic_filter(df_pd)
+               foo  bar ham
+            1    2    7   b
+            >>> agnostic_filter(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            └─────┴─────┴─────┘
         """
         return super().filter(*predicates, **constraints)
 
@@ -3697,6 +3715,8 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrame
+            >>>
             >>> data = {
             ...     "foo": [1, 2, 3],
             ...     "bar": [6, 7, 8],
@@ -3709,17 +3729,17 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we filter on
             one condition.
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter(nw.col("foo") > 1)
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter(nw.col("foo") > 1).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `agnostic_filter`:
 
-            >>> func(df_pd)
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             1    2    7   b
             2    3    8   c
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3729,7 +3749,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7   ┆ b   │
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
-            >>> func(lf_pl).collect()
+            >>> agnostic_filter(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3742,13 +3762,14 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Filter on multiple conditions:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
-            >>> func(df_pd)
+
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).to_native()
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3757,7 +3778,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
-            >>> func(lf_pl).collect()
+            >>> agnostic_filter(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3769,17 +3790,17 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
             ...     dframe = df.filter(
             ...         nw.col("foo") == 1,
             ...         nw.col("ham") == "a",
             ...     )
-            ...     return dframe
-            >>> func(df_pd)
+            ...     return dframe.to_native()
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3788,7 +3809,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
-            >>> func(lf_pl).collect()
+            >>> agnostic_filter(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3800,14 +3821,17 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Filter on an OR condition:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
-            >>> func(df_pd)
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     dframe = df.filter(
+            ...         (nw.col("foo") == 1) | (nw.col("ham") == "c")
+            ...     ).to_native()
+            ...     return dframe
+            >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
             2    3    8   c
-            >>> func(df_pl)
+            >>> agnostic_filter(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3817,7 +3841,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1   ┆ 6   ┆ a   │
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
-            >>> func(lf_pl).collect()
+            >>> agnostic_filter(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -3826,6 +3850,33 @@ class LazyFrame(BaseFrame[FrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 6   ┆ a   │
             │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Provide multiple filters using `**kwargs` syntax:
+
+            >>> def agnostic_filter(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.filter(foo=2, ham="b").to_native()
+            >>> agnostic_filter(df_pd)
+               foo  bar ham
+            1    2    7   b
+            >>> agnostic_filter(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> agnostic_filter(lf_pl).collect()
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
             └─────┴─────┴─────┘
         """
         return super().filter(*predicates, **constraints)
