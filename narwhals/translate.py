@@ -80,7 +80,7 @@ def to_native(
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: Determine what happens if the object isn't supported by Narwhals:
+        strict: Determine what happens if the `narwhals_object` isn't a Narwhals class:
 
             - `True` (default): raise an error
             - `False`: pass object through as-is
@@ -89,7 +89,7 @@ def to_native(
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
-        pass_through: Determine what happens if the object isn't supported by Narwhals:
+        pass_through: Determine what happens if the `narwhals_object` isn't a Narwhals class:
 
             - `False` (default): raise an error
             - `True`: pass object through as-is
@@ -328,7 +328,7 @@ def from_native(
             - a Dataframe / Lazyframe / Series supported by Narwhals (pandas, Polars, PyArrow, ...)
             - an object which implements `__narwhals_dataframe__`, `__narwhals_lazyframe__`,
               or `__narwhals_series__`
-        strict: Determine what happens if the object isn't supported by Narwhals:
+        strict: Determine what happens if the object can't be converted to Narwhals:
 
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
@@ -337,7 +337,7 @@ def from_native(
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
-        pass_through: Determine what happens if the object isn't supported by Narwhals:
+        pass_through: Determine what happens if the object can't be converted to Narwhals:
 
             - `False` or `None` (default): raise an error
             - `True`: pass object through as-is
@@ -358,10 +358,10 @@ def from_native(
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
-            - `True`: raise an error if `native_object` is not a Series
+            - `True`: only convert to Narwhals if `native_object` is not a Series
         allow_series: Whether to allow Series (default is only Dataframe / Lazyframe).
 
-            - `False` or `None` (default): raise an error if `native_object` is a Series
+            - `False` or `None` (default): only convert to Narwhals if `native_object` is a Series
             - `True`: allow `native_object` to be a Series
 
     Returns:
@@ -778,11 +778,11 @@ def narwhalify(
             (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
             see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
 
-            Determine what happens if the object isn't supported by Narwhals:
+            Determine what happens if the object can't be converted to Narwhals:
 
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
-        pass_through: Determine what happens if the object isn't supported by Narwhals:
+        pass_through: Determine what happens if the object can't be converted to Narwhals:
 
             - `False` or `None` (default): raise an error
             - `True`: pass object through as-is
@@ -803,10 +803,10 @@ def narwhalify(
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
-            - `True`: raise an error if `native_object` is not a Series
+            - `True`: only convert to Narwhals if `native_object` is not a Series
         allow_series: Whether to allow Series (default is only Dataframe / Lazyframe).
 
-            - `False` or `None`: raise an error if `native_object` is a Series
+            - `False` or `None`: only convert to Narwhals if `native_object` is a Series
             - `True` (default): allow `native_object` to be a Series
 
     Returns:
