@@ -344,13 +344,13 @@ def from_native(
         eager_only: Whether to only allow eager objects:
 
             - `False` (default): don't require `native_object` to be eager
-            - `True`: raise an error if `native_object` is not eager
+            - `True`: only convert to Narwhals if `native_object` is not eager
         eager_or_interchange_only: Whether to only allow eager objects or objects which
-            implement the Dataframe Interchange Protocol:
+            have interchange-level support in Narwhals:
 
             - `False` (default): don't require `native_object` to either be eager or to
               have interchange-level support in Narwhals
-            - `True`: raise an error if `native_object` is not eager and does not have
+            - `True`: only convert to Narwhals if `native_object` is not eager and does not have
               interchange-level support in Narwhals
 
             See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
@@ -786,9 +786,20 @@ def narwhalify(
 
             - `False` or `None` (default): raise an error
             - `True`: pass object through as-is
-        eager_only: Whether to only allow eager objects.
+        eager_only: Whether to only allow eager objects:
+
+            - `False` (default): don't require `native_object` to be eager
+            - `True`: only convert to Narwhals if `native_object` is not eager
         eager_or_interchange_only: Whether to only allow eager objects or objects which
-            implement the Dataframe Interchange Protocol.
+            have interchange-level support in Narwhals:
+
+            - `False` (default): don't require `native_object` to either be eager or to
+              have interchange-level support in Narwhals
+            - `True`: only convert to Narwhals if `native_object` is not eager and does not have
+              interchange-level support in Narwhals
+
+            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            for more details.
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
