@@ -124,7 +124,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
 
 
 def maybe_broadcast_scalar_into_series(series: Any, other: Any) -> Any:
-    """Broadcast a single-element series into a `series` that matches the length of `other`."""
+    """Broadcast a single-element `series` into a series that matches the length of `other`."""
     import pandas as pd  # ignore-banned-import
 
     if isinstance(other, pd.Series) and len(series) == 1 and len(other) > 1:
