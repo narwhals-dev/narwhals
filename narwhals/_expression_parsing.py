@@ -199,6 +199,7 @@ def reuse_series_implementation(
     attr: str,
     *args: Any,
     returns_scalar: bool = False,
+    alias: str | None = None,
     **kwargs: Any,
 ) -> CompliantExprT:
     """Reuse Series implementation for expression.
@@ -211,10 +212,14 @@ def reuse_series_implementation(
         attr: name of method.
         returns_scalar: whether the Series version returns a scalar. In this case,
             the expression version should return a 1-row Series.
+        alias: the new name.
         args: arguments to pass to function.
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
+
+    if alias is not None and expr._output_names is not None:
+        expr._output_names = [alias]  # type: ignore[union-attr]
 
     def func(df: CompliantDataFrame) -> list[CompliantSeries]:
         _args = [maybe_evaluate_expr(df, arg) for arg in args]

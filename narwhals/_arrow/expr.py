@@ -163,43 +163,43 @@ class ArrowExpr:
         return reuse_series_implementation(self, "__add__", other)
 
     def __radd__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__radd__", other)
+        return reuse_series_implementation(self, "__radd__", other, alias="literal")
 
     def __sub__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other)
 
     def __rsub__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rsub__", other)
+        return reuse_series_implementation(self, "__rsub__", other, alias="literal")
 
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
     def __rmul__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rmul__", other)
+        return reuse_series_implementation(self, "__rmul__", other, alias="literal")
 
     def __pow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
 
     def __rpow__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rpow__", other)
+        return reuse_series_implementation(self, "__rpow__", other, alias="literal")
 
     def __floordiv__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other)
 
     def __rfloordiv__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rfloordiv__", other)
+        return reuse_series_implementation(self, "__rfloordiv__", other, alias="literal")
 
     def __truediv__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other)
 
     def __rtruediv__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rtruediv__", other)
+        return reuse_series_implementation(self, "__rtruediv__", other, alias="literal")
 
     def __mod__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other)
 
     def __rmod__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rmod__", other)
+        return reuse_series_implementation(self, "__rmod__", other, alias="literal")
 
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")

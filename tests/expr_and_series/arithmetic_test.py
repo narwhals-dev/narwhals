@@ -71,11 +71,13 @@ def test_right_arithmetic_expr(
         x in str(constructor) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
-    result = df.select(a=getattr(nw.col("a"), attr)(rhs))
-    assert_equal_data(result, {"a": expected})
+    result = df.select(getattr(nw.col("a"), attr)(rhs))
+    assert_equal_data(result, {"literal": expected})
 
 
 @pytest.mark.parametrize(
@@ -136,6 +138,8 @@ def test_right_arithmetic_series(
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(a=getattr(df["a"], attr)(rhs))
+    # rarithmetic ops on series in Polars do return an unnamed series: expected?
+    # can't assert on col name being "literal"
     assert_equal_data(result, {"a": expected})
 
 

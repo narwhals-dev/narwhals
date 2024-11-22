@@ -339,8 +339,8 @@ class PandasLikeSeries:
 
     def __radd__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__radd__(other).rename(ser.name, copy=False))
+        other = validate_column_comparand(ser.index, other)
+        return self._from_native_series(ser.__radd__(other).rename("literal", copy=False))
 
     def __sub__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
@@ -349,8 +349,8 @@ class PandasLikeSeries:
 
     def __rsub__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__rsub__(other).rename(ser.name, copy=False))
+        other = validate_column_comparand(ser.index, other)
+        return self._from_native_series(ser.__rsub__(other).rename("literal", copy=False))
 
     def __mul__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
@@ -359,8 +359,8 @@ class PandasLikeSeries:
 
     def __rmul__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__rmul__(other).rename(ser.name, copy=False))
+        other = validate_column_comparand(ser.index, other)
+        return self._from_native_series(ser.__rmul__(other).rename("literal", copy=False))
 
     def __truediv__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
@@ -371,9 +371,9 @@ class PandasLikeSeries:
 
     def __rtruediv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        other = validate_column_comparand(ser.index, other)
         return self._from_native_series(
-            ser.__rtruediv__(other).rename(ser.name, copy=False)
+            ser.__rtruediv__(other).rename("literal", copy=False)
         )
 
     def __floordiv__(self, other: Any) -> PandasLikeSeries:
@@ -385,9 +385,9 @@ class PandasLikeSeries:
 
     def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        other = validate_column_comparand(ser.index, other)
         return self._from_native_series(
-            ser.__rfloordiv__(other).rename(ser.name, copy=False)
+            ser.__rfloordiv__(other).rename("literal", copy=False)
         )
 
     def __pow__(self, other: Any) -> PandasLikeSeries:
@@ -397,8 +397,8 @@ class PandasLikeSeries:
 
     def __rpow__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__rpow__(other).rename(ser.name, copy=False))
+        other = validate_column_comparand(ser.index, other)
+        return self._from_native_series(ser.__rpow__(other).rename("literal", copy=False))
 
     def __mod__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
@@ -407,8 +407,8 @@ class PandasLikeSeries:
 
     def __rmod__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__rmod__(other).rename(ser.name, copy=False))
+        other = validate_column_comparand(ser.index, other)
+        return self._from_native_series(ser.__rmod__(other).rename("literal", copy=False))
 
     # Unary
 
