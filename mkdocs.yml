@@ -37,6 +37,7 @@ nav:
     - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
+    - api-reference/lazy_group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
     - api-reference/series.md
