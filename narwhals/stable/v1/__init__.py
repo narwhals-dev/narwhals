@@ -1563,7 +1563,7 @@ def from_native(
     series_only: bool = False,
     allow_series: bool | None = None,
 ) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series | T:
-    """Convert native object to Narwhals Dataframe, Lazyframe, or Series.
+    """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
         native_object: Raw object from user.
@@ -1588,13 +1588,13 @@ def from_native(
         eager_only: Whether to only allow eager objects:
 
             - `False` (default): don't require `native_object` to be eager
-            - `True`: only convert to Narwhals if `native_object` is not eager
+            - `True`: only convert to Narwhals if `native_object` is eager
         eager_or_interchange_only: Whether to only allow eager objects or objects which
             have interchange-level support in Narwhals:
 
             - `False` (default): don't require `native_object` to either be eager or to
               have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is not eager and does not have
+            - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
             See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
@@ -1602,15 +1602,15 @@ def from_native(
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
-            - `True`: only convert to Narwhals if `native_object` is not a Series
-        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe).
+            - `True`: only convert to Narwhals if `native_object` is a Series
+        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe):
 
-            - `False` or `None` (default): only convert to Narwhals if `native_object` is a Series
+            - `False` or `None` (default): don't convert to Narwhals if `native_object` is a Series
             - `True`: allow `native_object` to be a Series
 
     Returns:
         DataFrame, LazyFrame, Series, or original object, depending
-        on which combination of parameters was passed.
+            on which combination of parameters was passed.
     """
     from narwhals.stable.v1 import dtypes
 
@@ -1672,7 +1672,7 @@ def to_native(
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: Determine what happens if the object isn't a Narwhals class
+        strict: Determine what happens if `narwhals_object` isn't a Narwhals class:
 
             - `True` (default): raise an error
             - `False`: pass object through as-is
@@ -1681,7 +1681,7 @@ def to_native(
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
-        pass_through: Determine what happens if the object isn't a Narwhals class:
+        pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class:
 
             - `False` (default): raise an error
             - `True`: pass object through as-is
@@ -1746,13 +1746,13 @@ def narwhalify(
         eager_only: Whether to only allow eager objects:
 
             - `False` (default): don't require `native_object` to be eager
-            - `True`: only convert to Narwhals if `native_object` is not eager
+            - `True`: only convert to Narwhals if `native_object` is eager
         eager_or_interchange_only: Whether to only allow eager objects or objects which
             have interchange-level support in Narwhals:
 
             - `False` (default): don't require `native_object` to either be eager or to
               have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is not eager and does not have
+            - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
             See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
@@ -1760,10 +1760,10 @@ def narwhalify(
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
-            - `True`: only convert to Narwhals if `native_object` is not a Series
-        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe).
+            - `True`: only convert to Narwhals if `native_object` is a Series
+        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe):
 
-            - `False` or `None`: only convert to Narwhals if `native_object` is a Series
+            - `False` or `None`: don't convert to Narwhals if `native_object` is a Series
             - `True` (default): allow `native_object` to be a Series
 
     Returns:
