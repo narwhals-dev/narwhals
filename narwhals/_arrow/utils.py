@@ -174,6 +174,7 @@ def validate_column_comparand(other: Any) -> Any:
 
 
 def maybe_broadcast_scalar_into_series(series: Any, other: Any) -> Any:
+    """Broadcast a single-element series into a `series` that matches the length of `other`."""
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance(other, pa.ChunkedArray) and len(series) == 1 and len(other) > 1:
