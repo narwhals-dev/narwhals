@@ -31,7 +31,9 @@ jobs:
       - name: local-install
         run: uv pip install -e . --system
       - name: check-no-errors
-        run: python -m mkdocs build > output.txt 2>&1
+        run: |
+          python -m mkdocs build > output.txt 2>&1
+          cat output.txt
       - name: assert-no-errors
         run: python utils/check_for_no_build_errors.py
       - name: strict-docs-build
