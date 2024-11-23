@@ -744,8 +744,7 @@ class Expr:
         )
 
     def skew(self: Self) -> Self:
-        """
-        Calculate the sample skewness of a column.
+        """Calculate the sample skewness of a column.
 
         Returns:
             An expression representing the sample skewness of the column.

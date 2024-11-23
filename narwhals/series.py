@@ -658,8 +658,7 @@ class Series:
         return self._compliant_series.median()
 
     def skew(self: Self) -> Any:
-        """
-        Calculate the sample skewness of the Series.
+        """Calculate the sample skewness of the Series.
 
         Returns:
             The sample skewness of the Series.
