@@ -90,17 +90,32 @@ def get_ibis() -> Any:
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)
+    # Check for fireducks to allow for the test suite to be run as-is for fireducks input
+    # https://github.com/fireducks-dev/fireducks/issues/29
+    return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or (
+        (fd := sys.modules.get("fireducks", None)) is not None
+        and isinstance(df, fd.pandas.DataFrame)
+    )
 
 
 def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(ser, pd.Series)
+    # Check for fireducks to allow for the test suite to be run as-is for fireducks input
+    # https://github.com/fireducks-dev/fireducks/issues/29
+    return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or (
+        (fd := sys.modules.get("fireducks", None)) is not None
+        and isinstance(ser, fd.pandas.Series)
+    )
 
 
 def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
     """Check whether `index` is a pandas Index without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(index, pd.Index)
+    # Check for fireducks to allow for the test suite to be run as-is for fireducks input
+    # https://github.com/fireducks-dev/fireducks/issues/29
+    return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or (
+        (fd := sys.modules.get("fireducks", None)) is not None
+        and isinstance(index, fd.pandas.Index)
+    )
 
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
