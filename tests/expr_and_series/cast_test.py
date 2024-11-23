@@ -174,17 +174,7 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-def test_cast_raises_for_unknown_dtype(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
-        15,
-    ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_cast_raises_for_unknown_dtype(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data)).select(
         nw.col(key).cast(value) for key, value in schema.items()
     )
@@ -192,7 +182,7 @@ def test_cast_raises_for_unknown_dtype(
     class Banana:
         pass
 
-    with pytest.raises(AssertionError, match=r"Unknown dtype"):
+    with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select(nw.col("a").cast(Banana))  # type: ignore[arg-type]
 
 
@@ -229,5 +219,5 @@ def test_cast_datetime_tz_aware(
 @pytest.mark.parametrize("dtype", [pl.String, pl.String()])
 def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    with pytest.raises(TypeError, match="Expected Narwhals object, got:"):
+    with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
         df.select(nw.col("a").cast(dtype))
