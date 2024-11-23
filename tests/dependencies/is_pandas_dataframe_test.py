@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 
-from narwhals.dependencies import is_pandas_dataframe
+from narwhals.stable.v1.dependencies import is_pandas_dataframe
 
 
 def test_is_pandas_dataframe() -> None:

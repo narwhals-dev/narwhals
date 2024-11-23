@@ -295,6 +295,7 @@ __all__ = [
     "is_ibis_table",
     "is_pandas_dataframe",
     "is_pandas_series",
+    "is_pandas_index",
     "is_polars_dataframe",
     "is_polars_lazyframe",
     "is_polars_series",
