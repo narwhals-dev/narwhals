@@ -1078,7 +1078,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
+            >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
@@ -1086,7 +1086,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_with_row_index(df_native: IntoFrame) -> IntoFrame:
+            >>> def agnostic_with_row_index(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_row_index().to_native()
 
@@ -2971,7 +2971,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
+            >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1, 2, 3], "ba": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
@@ -2979,7 +2979,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_pipe(df_native: IntoFrame) -> IntoFrame:
+            >>> def agnostic_pipe(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.pipe(lambda _df: _df.select("a")).to_native()
 
@@ -3019,7 +3019,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
+            >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
@@ -3027,7 +3027,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_drop_nulls(df_native: IntoFrame) -> IntoFrame:
+            >>> def agnostic_drop_nulls(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
@@ -3055,7 +3055,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
+            >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
@@ -3063,7 +3063,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_with_row_index(df_native: IntoFrame) -> IntoFrame:
+            >>> def agnostic_with_row_index(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_row_index().to_native()
 
