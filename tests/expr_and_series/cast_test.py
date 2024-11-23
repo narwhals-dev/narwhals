@@ -174,7 +174,12 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-def test_cast_raises_for_unknown_dtype(constructor: Constructor) -> None:
+def test_cast_raises_for_unknown_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+        # Unsupported cast from string to dictionary using function cast_dictionary
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)).select(
         nw.col(key).cast(value) for key, value in schema.items()
     )
