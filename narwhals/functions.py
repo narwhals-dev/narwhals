@@ -48,7 +48,7 @@ def concat(
         items: DataFrames, LazyFrames to concatenate.
         how: {'vertical', 'horizontal'}:
 
-            - vertical: Concatenate vertically. Schemas must match.
+            - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
                 missing rows are filled with null values.
 

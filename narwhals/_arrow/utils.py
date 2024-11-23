@@ -221,9 +221,9 @@ def vertical_concat(dfs: list[Any]) -> Any:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
 
-    cols = set(dfs[0].column_names)
+    cols = dfs[0].column_names
     for i, df in enumerate(dfs[1:], start=1):
-        cols_current = set(df.column_names)
+        cols_current = df.column_names
         if cols_current != cols:
             msg = (
                 "unable to vstack, column names don't match:\n"
