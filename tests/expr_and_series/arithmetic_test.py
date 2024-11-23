@@ -71,8 +71,6 @@ def test_right_arithmetic_expr(
         x in str(constructor) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))

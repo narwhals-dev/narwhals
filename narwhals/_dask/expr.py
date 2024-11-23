@@ -133,7 +133,7 @@ class DaskExpr:
                 result = call(_input, *_args, **_kwargs)
                 if returns_scalar:
                     result = result.to_series()
-                result = result.rename(_input.name)
+                result = result.rename(alias or _input.name)
                 results.append(result)
             return results
 
