@@ -222,10 +222,14 @@ def vertical_concat(dfs: list[Any]) -> Any:
         raise AssertionError(msg)
 
     cols = set(dfs[0].column_names)
-    for df in dfs:
+    for i, df in enumerate(dfs[1:], start=1):
         cols_current = set(df.column_names)
         if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {dfs[0].column_names}\n"
+                f"   - dataframe {i}: {df.column_names}\n"
+            )
             raise TypeError(msg)
 
     import pyarrow as pa  # ignore-banned-import
