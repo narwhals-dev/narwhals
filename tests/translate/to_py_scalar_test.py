@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.dependencies import get_cudf
+from narwhals.stable.v1.dependencies import get_cudf
 from tests.utils import PANDAS_VERSION
 
 

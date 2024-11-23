@@ -17,6 +17,7 @@ from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_index
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
@@ -37,6 +38,7 @@ __all__ = [
     "is_ibis_table",
     "is_pandas_dataframe",
     "is_pandas_series",
+    "is_pandas_index",
     "is_polars_dataframe",
     "is_polars_lazyframe",
     "is_polars_series",
