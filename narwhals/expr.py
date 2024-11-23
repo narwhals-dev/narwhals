@@ -1611,7 +1611,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._call(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
+                *[extract_compliant(plx, pred) for pred in flatten(predicates)],
             )
         )
 
