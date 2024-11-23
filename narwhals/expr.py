@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals.dependencies import is_numpy_array
+from narwhals.dtypes import _validate_dtype
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 
@@ -202,6 +203,7 @@ class Expr:
             foo: [[1,2,3]]
             bar: [[6,7,8]]
         """
+        _validate_dtype(dtype)
         return self.__class__(
             lambda plx: self._call(plx).cast(dtype),
         )

@@ -162,7 +162,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
-    return isinstance(obj, cls) or issubclass(obj, cls)
+    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
 
 
 def validate_laziness(items: Iterable[Any]) -> None:

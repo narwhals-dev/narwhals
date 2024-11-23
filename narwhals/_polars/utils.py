@@ -99,15 +99,6 @@ def native_to_narwhals_dtype(dtype: pl.DataType, dtypes: DTypes) -> DType:
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pl.DataType:
     import polars as pl  # ignore-banned-import()
 
-    if isinstance(dtype, (pl.DataType, pl.DataType.__class__)):  # type: ignore[arg-type]
-        msg = (
-            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
-            "Perhaps you:\n"
-            "- Forgot a `nw.from_native` somewhere?\n"
-            "- Used `pl.Int64` instead of `nw.Int64`?"
-        )
-        raise TypeError(msg)
-
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:

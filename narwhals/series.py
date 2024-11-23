@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.dtypes import _validate_dtype
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import parse_version
 
@@ -516,6 +517,7 @@ class Series:
                1
             ]
         """
+        _validate_dtype(dtype)
         return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
