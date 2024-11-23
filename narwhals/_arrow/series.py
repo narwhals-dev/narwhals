@@ -14,6 +14,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.translate import to_py_scalar
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -437,12 +438,12 @@ class ArrowSeries:
     def any(self) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.any(self._native_series)  # type: ignore[no-any-return]
+        return to_py_scalar(pc.any(self._native_series))  # type: ignore[no-any-return]
 
     def all(self) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.all(self._native_series)  # type: ignore[no-any-return]
+        return to_py_scalar(pc.all(self._native_series))  # type: ignore[no-any-return]
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -719,9 +720,10 @@ class ArrowSeries:
 
         ser = self._native_series
         if descending:
-            return pc.all(pc.greater_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
+            result = pc.all(pc.greater_equal(ser[:-1], ser[1:]))
         else:
-            return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
+            result = pc.all(pc.less_equal(ser[:-1], ser[1:]))
+        return to_py_scalar(result)  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
