@@ -1,0 +1,9 @@
+[
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[dask_lazy_p2_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[pandas_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[pandas_nullable_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[pandas_pyarrow_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[polars_eager_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[polars_lazy_constructor]",
+  "tests/expr_and_series/count_cast_test.py::test_count_cast[pyarrow_table_constructor]"
+]

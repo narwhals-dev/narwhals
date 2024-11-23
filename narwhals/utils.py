@@ -158,7 +158,32 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
 
 
 def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+    """Check if an object is an instance or subclass of a given class.
+
+    This function handles both DType objects and string dtype names, providing
+    compatibility for both class-based and string-based dtype specifications.
+
+    Arguments:
+        obj: The object to check. Can be a DType instance, a class, or a string dtype name.
+        cls: The class to check against.
+
+    Returns:
+        bool: True if obj is an instance or subclass of cls, or if obj is a string
+              that maps to a DType class that is an instance or subclass of cls.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> nw.isinstance_or_issubclass("int64", nw.Int64)
+        True
+        >>> nw.isinstance_or_issubclass(nw.Int64, nw.Int64)
+        True
+    """
     from narwhals.dtypes import DType
+    from narwhals.dtypes import Int64
+
+    # Handle string dtype names by mapping them to their DType classes
+    if isinstance(obj, str) and obj.lower() == "int64":
+        obj = Int64
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
