@@ -2728,11 +2728,11 @@ def concat(
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-        how: {'vertical', 'horizontal'}
-            - vertical: Stacks Series from DataFrames vertically and fills with `null`
-                if the lengths don't match.
-            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-                if the lengths don't match.
+        how: {'vertical', 'horizontal'}:
+
+            - vertical: Concatenate vertically. Schemas must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
