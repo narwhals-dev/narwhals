@@ -14,6 +14,7 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -67,7 +68,14 @@ class DaskExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame[column_name] for column_name in column_names]
+            try:
+                return [df._native_frame[column_name] for column_name in column_names]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -392,15 +400,14 @@ class DaskExpr:
         )
 
     def median(self) -> Self:
-        from dask_expr._shuffle import _is_numeric_cast_type
+        from narwhals.exceptions import InvalidOperationError
 
-        from narwhals._exceptions import InvalidOperationError
-
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
-            if not _is_numeric_cast_type(_input.dtype):
+        def func(s: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._dtypes, Implementation.DASK)
+            if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
-            return _input.median_approximate()
+            return s.median_approximate()
 
         return self._from_call(func, "median", returns_scalar=True)
 
@@ -441,10 +448,58 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def cum_sum(self) -> Self:
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
         return self._from_call(
             lambda _input: _input.cumsum(),
             "cum_sum",
+            returns_scalar=False,
+        )
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: (~_input.isna()).astype(int).cumsum(),
+            "cum_count",
+            returns_scalar=False,
+        )
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummin(),
+            "cum_min",
+            returns_scalar=False,
+        )
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cummax(),
+            "cum_max",
+            returns_scalar=False,
+        )
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        if reverse:
+            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._from_call(
+            lambda _input: _input.cumprod(),
+            "cum_prod",
             returns_scalar=False,
         )
 
@@ -490,6 +545,20 @@ class DaskExpr:
             decimals,
             returns_scalar=False,
         )
+
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> NoReturn:
+        msg = "`Expr.ewm_mean` is not supported for the Dask backend"
+        raise NotImplementedError(msg)
 
     def unique(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
@@ -780,6 +849,67 @@ class DaskExpr:
             func,
             "cast",
             dtype,
+            returns_scalar=False,
+        )
+
+    def is_finite(self: Self) -> Self:
+        import dask.array as da  # ignore-banned-import
+
+        return self._from_call(
+            lambda _input: da.isfinite(_input),
+            "is_finite",
+            returns_scalar=False,
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).sum()
+
+        return self._from_call(
+            func,
+            "rolling_sum",
+            window_size,
+            min_periods,
+            center,
+            returns_scalar=False,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).mean()
+
+        return self._from_call(
+            func,
+            "rolling_mean",
+            window_size,
+            min_periods,
+            center,
             returns_scalar=False,
         )
 

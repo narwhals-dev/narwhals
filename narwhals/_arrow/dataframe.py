@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -68,7 +69,7 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_frame(self, df: pa.Table) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes
         )
@@ -465,19 +466,21 @@ class ArrowDataFrame:
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_frame(df.append_column(name, row_indices))
 
-    def filter(
-        self,
-        *predicates: IntoArrowExpr,
-    ) -> Self:
+    def filter(self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             mask = predicates[0]
         else:
             plx = self.__narwhals_namespace__()
-            expr = plx.all_horizontal(*predicates)
+            expr = plx.all_horizontal(
+                *chain(
+                    predicates, (plx.col(name) == v for name, v in constraints.items())
+                )
+            )
             # Safety: all_horizontal's expression only returns a single column.
             mask = expr._call(self)[0]._native_series
         return self._from_native_frame(self._native_frame.filter(mask))
@@ -614,11 +617,8 @@ class ArrowDataFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()

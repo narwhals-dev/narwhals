@@ -11,6 +11,7 @@ from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -72,15 +73,22 @@ class PandasLikeExpr:
         dtypes: DTypes,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=df._implementation,
-                    backend_version=df._backend_version,
-                    dtypes=df._dtypes,
-                )
-                for column_name in column_names
-            ]
+            try:
+                return [
+                    PandasLikeSeries(
+                        df._native_frame[column_name],
+                        implementation=df._implementation,
+                        backend_version=df._backend_version,
+                        dtypes=df._dtypes,
+                    )
+                    for column_name in column_names
+                ]
+            except KeyError as e:
+                missing_columns = [x for x in column_names if x not in df.columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                ) from e
 
         return cls(
             func,
@@ -280,6 +288,29 @@ class PandasLikeExpr:
     def arg_true(self) -> Self:
         return reuse_series_implementation(self, "arg_true")
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "ewm_mean",
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
+        )
+
     def filter(self, *predicates: Any) -> Self:
         plx = self.__narwhals_namespace__()
         other = plx.all_horizontal(*predicates)
@@ -303,8 +334,8 @@ class PandasLikeExpr:
     def abs(self) -> Self:
         return reuse_series_implementation(self, "abs")
 
-    def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+    def cum_sum(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
@@ -442,6 +473,51 @@ class PandasLikeExpr:
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
+        )
+
+    def is_finite(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_finite")
+
+    def cum_count(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+
+    def cum_min(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+
+    def cum_max(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+
+    def cum_prod(self: Self, *, reverse: bool) -> Self:
+        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_mean",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
         )
 
     @property

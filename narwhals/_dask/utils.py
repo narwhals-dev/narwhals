@@ -6,6 +6,7 @@ from typing import Any
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
@@ -24,7 +25,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
         if len(results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions not supported in this context"
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
         validate_comparand(df._native_frame, result)
@@ -44,9 +45,8 @@ def parse_exprs_and_named_exprs(
             _results = expr._call(df)
         elif isinstance(expr, str):
             _results = [df._native_frame[expr]]
-        else:  # pragma: no cover
-            msg = f"Expected expression or column name, got: {expr}"
-            raise TypeError(msg)
+        else:
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
         return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
             results[_result.name] = _result[0] if return_scalar else _result

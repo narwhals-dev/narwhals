@@ -9,9 +9,11 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
+from warnings import warn
 
 import narwhals as nw
 from narwhals import dependencies
+from narwhals import exceptions
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
@@ -72,13 +74,13 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoSeries
 
 T = TypeVar("T")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
-    """
-    Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native dataframe.
 
     The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
 
@@ -135,10 +137,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().__getitem__(item)
 
     def lazy(self) -> LazyFrame[Any]:
-        """
-        Lazify the DataFrame (if possible).
+        """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.
+
+        Returns:
+            A new LazyFrame.
 
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
@@ -147,6 +151,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrame
+            >>>
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -154,20 +160,20 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.lazy()
+            >>> def agnostic_lazy(df_native: IntoFrame) -> IntoFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.lazy().to_native()
 
             Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
-            >>> func(df_pd)
+            >>> agnostic_lazy(df_pd)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> func(df_pl)
+            >>> agnostic_lazy(df_pl)
             <LazyFrame ...>
-            >>> func(df_pa)
+            >>> agnostic_lazy(df_pa)
             pyarrow.Table
             foo: int64
             bar: double
@@ -190,18 +196,22 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series] | dict[str, list[Any]]:
-        """
-        Convert DataFrame to a dictionary mapping column name to values.
+        """Convert DataFrame to a dictionary mapping column name to values.
 
         Arguments:
             as_series: If set to true ``True``, then the values are Narwhals Series,
                         otherwise the values are Any.
+
+        Returns:
+            A mapping from column name to values / Series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>>
             >>> df = {
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
@@ -215,24 +225,28 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
+            >>> def agnostic_to_dict(
+            ...     df_native: IntoDataFrame,
+            ... ) -> dict[str, list[int | str | float | None]]:
+            ...     df = nw.from_native(df_native)
             ...     return df.to_dict(as_series=False)
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas, Polars or PyArrow to `agnostic_to_dict`:
 
-            >>> func(df_pd)
+            >>> agnostic_to_dict(df_pd)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
-            >>> func(df_pl)
+            >>> agnostic_to_dict(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
-            >>> func(df_pa)
+            >>> agnostic_to_dict(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self: Self) -> Series:
-        r"""
-        Get a mask of all duplicated rows in this DataFrame.
+        r"""Get a mask of all duplicated rows in this DataFrame.
+
+        Returns:
+            A new Series.
 
         Examples:
             >>> import narwhals as nw
@@ -279,8 +293,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().is_duplicated()  # type: ignore[return-value]
 
     def is_unique(self: Self) -> Series:
-        r"""
-        Get a mask of all unique rows in this DataFrame.
+        r"""Get a mask of all unique rows in this DataFrame.
+
+        Returns:
+            A new Series.
 
         Examples:
             >>> import narwhals as nw
@@ -327,13 +343,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().is_unique()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
-        """Private, just used to test the stable API."""
+        """Private, just used to test the stable API.
+
+        Returns:
+            A new DataFrame.
+        """
         return self.select(all()._l1_norm())
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
-    """
-    Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native dataframe.
 
     The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
 
@@ -346,8 +365,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def collect(self) -> DataFrame[Any]:
-        r"""
-        Materialize this LazyFrame into a DataFrame.
+        r"""Materialize this LazyFrame into a DataFrame.
 
         Returns:
             DataFrame
@@ -384,13 +402,16 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return super().collect()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
-        """Private, just used to test the stable API."""
+        """Private, just used to test the stable API.
+
+        Returns:
+            A new lazyframe.
+        """
         return self.select(all()._l1_norm())
 
 
 class Series(NwSeries):
-    """
-    Narwhals Series, backed by a native series.
+    """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
 
@@ -407,31 +428,34 @@ class Series(NwSeries):
         return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
-        """
-        Convert to dataframe.
+        """Convert to dataframe.
+
+        Returns:
+            A new DataFrame.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
             >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(s):
-            ...     return s.to_frame()
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.to_frame().to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> my_library_agnostic_function(s_pd)
                a
             0  1
             1  2
             2  3
-            >>> func(s_pl)
+            >>> my_library_agnostic_function(s_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -453,8 +477,7 @@ class Series(NwSeries):
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        r"""
-        Count the occurrences of unique values.
+        r"""Count the occurrences of unique values.
 
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
@@ -464,8 +487,12 @@ class Series(NwSeries):
                 defaults to "proportion", otherwise defaults to "count".
             normalize: If true gives relative frequencies of the unique values
 
+        Returns:
+            A new DataFrame.
+
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> import pandas as pd
             >>> import polars as pl
             >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
@@ -473,19 +500,19 @@ class Series(NwSeries):
 
             Let's define a dataframe-agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(s):
-            ...     return s.value_counts(sort=True)
+            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.value_counts(sort=True).to_native()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
                s  count
             0  1      2
             1  2      2
             2  3      1
 
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
             ┌─────┬───────┐
             │ s   ┆ count │
@@ -501,15 +528,593 @@ class Series(NwSeries):
             sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        r"""Compute exponentially-weighted moving average.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
+            span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
+            half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
+            alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
+            adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
+
+                - When `adjust=True` (the default) the EW function is calculated
+                  using weights $w_i = (1 - \alpha)^i$
+                - When `adjust=False` the EW function is calculated recursively by
+                  $$
+                  y_0=x_0
+                  $$
+                  $$
+                  y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
+                  $$
+            min_periods: Minimum number of observations in window required to have a value (otherwise result is null).
+            ignore_nulls: Ignore missing values when calculating weights.
+
+                - When `ignore_nulls=False` (default), weights are based on absolute
+                  positions.
+                  For example, the weights of $x_0$ and $x_2$ used in
+                  calculating the final weighted average of $[x_0, None, x_2]$ are
+                  $(1-\alpha)^2$ and $1$ if `adjust=True`, and
+                  $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
+                - When `ignore_nulls=True`, weights are based
+                  on relative positions. For example, the weights of
+                  $x_0$ and $x_2$ used in calculating the final weighted
+                  average of $[x_0, None, x_2]$ are
+                  $1-\alpha$ and $1$ if `adjust=True`,
+                  and $1-\alpha$ and $\alpha$ if `adjust=False`.
+
+        Returns:
+            Series
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = [1, 2, 3]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            We define a library agnostic function:
+
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(s_pd)
+            0    1.000000
+            1    1.666667
+            2    2.428571
+            Name: a, dtype: float64
+
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [f64]
+            [
+               1.0
+               1.666667
+               2.428571
+            ]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.ewm_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_sum(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_sum(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_sum(s_pd)
+            0    NaN
+            1    3.0
+            2    5.0
+            3    7.0
+            dtype: float64
+
+            >>> agnostic_rolling_sum(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               3.0
+               5.0
+               7.0
+            ]
+
+            >>> agnostic_rolling_sum(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                3,
+                5,
+                7
+              ]
+            ]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.rolling_sum` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_mean(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_mean(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_mean(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_mean(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.rolling_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_mean(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
 
 class Expr(NwExpr):
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        r"""Compute exponentially-weighted moving average.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
+            span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
+            half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
+            alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
+            adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
+
+                - When `adjust=True` (the default) the EW function is calculated
+                  using weights $w_i = (1 - \alpha)^i$
+                - When `adjust=False` the EW function is calculated recursively by
+                  $$
+                  y_0=x_0
+                  $$
+                  $$
+                  y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
+                  $$
+            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            ignore_nulls: Ignore missing values when calculating weights.
+
+                - When `ignore_nulls=False` (default), weights are based on absolute
+                  positions.
+                  For example, the weights of $x_0$ and $x_2$ used in
+                  calculating the final weighted average of $[x_0, None, x_2]$ are
+                  $(1-\alpha)^2$ and $1$ if `adjust=True`, and
+                  $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
+                - When `ignore_nulls=True`, weights are based
+                  on relative positions. For example, the weights of
+                  $x_0$ and $x_2$ used in calculating the final weighted
+                  average of $[x_0, None, x_2]$ are
+                  $1-\alpha$ and $1$ if `adjust=True`,
+                  and $1-\alpha$ and $\alpha$ if `adjust=False`.
+
+        Returns:
+            Expr
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"a": [1, 2, 3]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(
+            ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
+            ...     ).to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(df_pd)
+                      a
+            0  1.000000
+            1  1.666667
+            2  2.428571
+
+            >>> my_library_agnostic_function(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌──────────┐
+            │ a        │
+            │ ---      │
+            │ f64      │
+            ╞══════════╡
+            │ 1.0      │
+            │ 1.666667 │
+            │ 2.428571 │
+            └──────────┘
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Expr.ewm_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling sum (moving sum) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their sum.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def agnostic_rolling_sum(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_sum(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  3.0
+            2  NaN  3.0
+            3  4.0  6.0
+
+            >>> agnostic_rolling_sum(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 3.0 │
+            │ null ┆ 3.0 │
+            │ 4.0  ┆ 6.0 │
+            └──────┴─────┘
+
+            >>> agnostic_rolling_sum(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,3,3,6]]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Expr.rolling_sum` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_sum(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def agnostic_rolling_mean(df):
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
+            ...     )
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  1.5
+            2  NaN  1.5
+            3  4.0  3.0
+
+            >>> agnostic_rolling_mean(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 1.5 │
+            │ null ┆ 1.5 │
+            │ 4.0  ┆ 3.0 │
+            └──────┴─────┘
+
+            >>> agnostic_rolling_mean(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,1.5,1.5,3]]
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Expr.rolling_mean` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().rolling_mean(
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
 
 class Schema(NwSchema):
-    """
-    Ordered mapping of column names to their data type.
+    """Ordered mapping of column names to their data type.
 
     Arguments:
         schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
@@ -580,11 +1185,11 @@ def from_native(
     native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | Series: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -593,8 +1198,8 @@ def from_native(
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoDataFrameT] | Series: ...
 
@@ -604,9 +1209,9 @@ def from_native(
     native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
 
@@ -616,9 +1221,9 @@ def from_native(
     native_object: T,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -629,8 +1234,8 @@ def from_native(
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
 
@@ -641,8 +1246,8 @@ def from_native(
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -652,9 +1257,9 @@ def from_native(
     native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
@@ -664,8 +1269,8 @@ def from_native(
     native_object: IntoSeriesT,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series: ...
@@ -676,9 +1281,9 @@ def from_native(
     native_object: IntoFrameT,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
@@ -688,9 +1293,9 @@ def from_native(
     native_object: T,
     *,
     strict: Literal[False],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -700,15 +1305,11 @@ def from_native(
     native_object: IntoDataFrameT,
     *,
     strict: Literal[True] = ...,
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, strict=True, eager_or_interchange_only=True)
-    from_native(df, eager_or_interchange_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -717,14 +1318,10 @@ def from_native(
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, strict=True, eager_only=True)
-    from_native(df, eager_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -732,15 +1329,11 @@ def from_native(
     native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
-    """
-    from_native(df, strict=True, allow_series=True)
-    from_native(df, allow_series=True)
-    """
+) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
 @overload
@@ -748,15 +1341,11 @@ def from_native(
     native_object: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
     *,
     strict: Literal[True] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
-    """
-    from_native(df, strict=True, series_only=True)
-    from_native(df, series_only=True)
-    """
+) -> Series: ...
 
 
 @overload
@@ -764,15 +1353,11 @@ def from_native(
     native_object: IntoFrameT,
     *,
     strict: Literal[True] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
-    """
-    from_native(df, strict=True)
-    from_native(df)
-    """
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 @overload
@@ -780,9 +1365,9 @@ def from_native(
     native_object: IntoDataFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoDataFrameT]: ...
 
@@ -793,8 +1378,8 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoDataFrameT] | Series: ...
 
@@ -804,9 +1389,9 @@ def from_native(
     native_object: IntoDataFrameT,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
 
@@ -816,9 +1401,9 @@ def from_native(
     native_object: T,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -829,8 +1414,8 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
 
@@ -841,8 +1426,8 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -852,9 +1437,9 @@ def from_native(
     native_object: IntoFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
@@ -864,8 +1449,8 @@ def from_native(
     native_object: IntoSeriesT,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series: ...
@@ -876,9 +1461,9 @@ def from_native(
     native_object: IntoFrameT,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
@@ -888,9 +1473,9 @@ def from_native(
     native_object: T,
     *,
     pass_through: Literal[True],
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
 
@@ -900,15 +1485,11 @@ def from_native(
     native_object: IntoDataFrameT,
     *,
     pass_through: Literal[False] = ...,
-    eager_only: None = ...,
+    eager_only: Literal[False] = ...,
     eager_or_interchange_only: Literal[True],
-    series_only: None = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, pass_through=False, eager_or_interchange_only=True)
-    from_native(df, eager_or_interchange_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -917,14 +1498,10 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[True],
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]:
-    """
-    from_native(df, pass_through=False, eager_only=True)
-    from_native(df, eager_only=True)
-    """
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -932,15 +1509,11 @@ def from_native(
     native_object: IntoFrameT | IntoSeriesT,
     *,
     pass_through: Literal[False] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
-    """
-    from_native(df, pass_through=False, allow_series=True)
-    from_native(df, allow_series=True)
-    """
+) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
 @overload
@@ -948,15 +1521,11 @@ def from_native(
     native_object: IntoSeriesT,
     *,
     pass_through: Literal[False] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
-    """
-    from_native(df, pass_through=False, series_only=True)
-    from_native(df, series_only=True)
-    """
+) -> Series: ...
 
 
 @overload
@@ -964,15 +1533,11 @@ def from_native(
     native_object: IntoFrameT,
     *,
     pass_through: Literal[False] = ...,
-    eager_only: None = ...,
-    eager_or_interchange_only: None = ...,
-    series_only: None = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
-    """
-    from_native(df, pass_through=False)
-    from_native(df)
-    """
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 # All params passed in as variables
@@ -981,58 +1546,71 @@ def from_native(
     native_object: Any,
     *,
     pass_through: bool,
-    eager_only: bool | None,
-    eager_or_interchange_only: bool | None = None,
-    series_only: bool | None,
+    eager_only: bool,
+    eager_or_interchange_only: bool = False,
+    series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
 
 
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
-    eager_only: bool | None = None,
-    eager_or_interchange_only: bool | None = None,
-    series_only: bool | None = None,
+    eager_only: bool = False,
+    eager_or_interchange_only: bool = False,
+    series_only: bool = False,
     allow_series: bool | None = None,
-) -> Any:
-    """
-    Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
+) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series | T:
+    """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
         native_object: Raw object from user.
             Depending on the other arguments, input object can be:
 
-            - pandas.DataFrame
-            - polars.DataFrame
-            - polars.LazyFrame
-            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
-            - pandas.Series
-            - polars.Series
-            - anything with a `__narwhals_series__` method
-        strict: Determine what happens if the object isn't supported by Narwhals:
+            - a Dataframe / Lazyframe / Series supported by Narwhals (pandas, Polars, PyArrow, ...)
+            - an object which implements `__narwhals_dataframe__`, `__narwhals_lazyframe__`,
+              or `__narwhals_series__`
+        strict: Determine what happens if the object can't be converted to Narwhals:
 
-            - `True` (default): raise an error
+            - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
 
             **Deprecated** (v1.13.0):
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
-        pass_through: Determine what happens if the object isn't supported by Narwhals:
+        pass_through: Determine what happens if the object can't be converted to Narwhals:
 
-            - `False` (default): raise an error
+            - `False` or `None` (default): raise an error
             - `True`: pass object through as-is
-        eager_only: Whether to only allow eager objects.
+        eager_only: Whether to only allow eager objects:
+
+            - `False` (default): don't require `native_object` to be eager
+            - `True`: only convert to Narwhals if `native_object` is eager
         eager_or_interchange_only: Whether to only allow eager objects or objects which
-            implement the Dataframe Interchange Protocol.
-        series_only: Whether to only allow series.
-        allow_series: Whether to allow series (default is only dataframe / lazyframe).
+            have interchange-level support in Narwhals:
+
+            - `False` (default): don't require `native_object` to either be eager or to
+              have interchange-level support in Narwhals
+            - `True`: only convert to Narwhals if `native_object` is eager or has
+              interchange-level support in Narwhals
+
+            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            for more details.
+        series_only: Whether to only allow Series:
+
+            - `False` (default): don't require `native_object` to be a Series
+            - `True`: only convert to Narwhals if `native_object` is a Series
+        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe):
+
+            - `False` or `None` (default): don't convert to Narwhals if `native_object` is a Series
+            - `True`: allow `native_object` to be a Series
 
     Returns:
-        narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
+        DataFrame, LazyFrame, Series, or original object, depending
+            on which combination of parameters was passed.
     """
     from narwhals.stable.v1 import dtypes
 
@@ -1055,7 +1633,7 @@ def from_native(
         allow_series=allow_series,
         dtypes=dtypes,  # type: ignore[arg-type]
     )
-    return _stableify(result)
+    return _stableify(result)  # type: ignore[no-any-return]
 
 
 @overload
@@ -1090,12 +1668,23 @@ def to_native(
     strict: bool | None = None,
     pass_through: bool | None = None,
 ) -> IntoFrameT | Any:
-    """
-    Convert Narwhals object to native one.
+    """Convert Narwhals object to native one.
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: whether to raise on non-Narwhals input.
+        strict: Determine what happens if `narwhals_object` isn't a Narwhals class:
+
+            - `True` (default): raise an error
+            - `False`: pass object through as-is
+
+            **Deprecated** (v1.13.0):
+                Please use `pass_through` instead. Note that `strict` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+        pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class:
+
+            - `False` (default): raise an error
+            - `True`: pass object through as-is
 
     Returns:
         Object of class that user started with.
@@ -1124,66 +1713,77 @@ def narwhalify(
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
-    eager_only: bool | None = False,
-    eager_or_interchange_only: bool | None = False,
-    series_only: bool | None = False,
+    eager_only: bool = False,
+    eager_or_interchange_only: bool = False,
+    series_only: bool = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
-    """
-    Decorate function so it becomes dataframe-agnostic.
+    """Decorate function so it becomes dataframe-agnostic.
 
-    `narwhalify` will try to convert any dataframe/series-like object into the narwhal
+    This will try to convert any dataframe/series-like object into the Narwhals
     respective DataFrame/Series, while leaving the other parameters as they are.
-
-    Similarly, if the output of the function is a narwhals DataFrame or Series, it will be
+    Similarly, if the output of the function is a Narwhals DataFrame or Series, it will be
     converted back to the original dataframe/series type, while if the output is another
     type it will be left as is.
-
-    By setting `strict=True`, then every input and every output will be required to be a
+    By setting `pass_through=False`, then every input and every output will be required to be a
     dataframe/series-like object.
-
-    Instead of writing
-
-    ```python
-    import narwhals as nw
-
-
-    def func(df):
-        df = nw.from_native(df, strict=False)
-        df = df.group_by("a").agg(nw.col("b").sum())
-        return nw.to_native(df)
-    ```
-
-    you can just write
-
-    ```python
-    import narwhals as nw
-
-
-    @nw.narwhalify
-    def func(df):
-        return df.group_by("a").agg(nw.col("b").sum())
-    ```
-
-    You can also pass in extra arguments, e.g.
-
-    ```python
-    @nw.narwhalify(eager_only=True)
-    ```
-
-    that will get passed down to `nw.from_native`.
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Whether to raise if object can't be converted or to just leave it as-is
-            (default).
-        eager_only: Whether to only allow eager objects.
-        eager_or_interchange_only: Whether to only allow eager objects or objects which
-            implement the Dataframe Interchange Protocol.
-        series_only: Whether to only allow series.
-        allow_series: Whether to allow series (default is only dataframe / lazyframe).
-    """
+        strict: **Deprecated** (v1.13.0):
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
 
+            Determine what happens if the object can't be converted to Narwhals:
+
+            - `True` or `None` (default): raise an error
+            - `False`: pass object through as-is
+        pass_through: Determine what happens if the object can't be converted to Narwhals:
+
+            - `False` or `None` (default): raise an error
+            - `True`: pass object through as-is
+        eager_only: Whether to only allow eager objects:
+
+            - `False` (default): don't require `native_object` to be eager
+            - `True`: only convert to Narwhals if `native_object` is eager
+        eager_or_interchange_only: Whether to only allow eager objects or objects which
+            have interchange-level support in Narwhals:
+
+            - `False` (default): don't require `native_object` to either be eager or to
+              have interchange-level support in Narwhals
+            - `True`: only convert to Narwhals if `native_object` is eager or has
+              interchange-level support in Narwhals
+
+            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            for more details.
+        series_only: Whether to only allow Series:
+
+            - `False` (default): don't require `native_object` to be a Series
+            - `True`: only convert to Narwhals if `native_object` is a Series
+        allow_series: Whether to allow Series (default is only Dataframe / Lazyframe):
+
+            - `False` or `None`: don't convert to Narwhals if `native_object` is a Series
+            - `True` (default): allow `native_object` to be a Series
+
+    Returns:
+        Decorated function.
+
+    Examples:
+        Instead of writing
+
+        >>> import narwhals as nw
+        >>> def func(df):
+        ...     df = nw.from_native(df, pass_through=True)
+        ...     df = df.group_by("a").agg(nw.col("b").sum())
+        ...     return nw.to_native(df)
+
+        you can just write
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.group_by("a").agg(nw.col("b").sum())
+    """
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
     )
@@ -1239,8 +1839,10 @@ def narwhalify(
 
 
 def all() -> Expr:
-    """
-    Instantiate an expression representing all columns.
+    """Instantiate an expression representing all columns.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1253,18 +1855,18 @@ def all() -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.all() * 2)
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.all() * 2).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a   b
         0  2   8
         1  4  10
         2  6  12
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (3, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -1275,7 +1877,7 @@ def all() -> Expr:
         │ 4   ┆ 10  │
         │ 6   ┆ 12  │
         └─────┴─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         b: int64
@@ -1287,11 +1889,13 @@ def all() -> Expr:
 
 
 def col(*names: str | Iterable[str]) -> Expr:
-    """
-    Creates an expression that references one or more columns by their name(s).
+    """Creates an expression that references one or more columns by their name(s).
 
     Arguments:
         names: Name(s) of the columns to use in the aggregation function.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1304,17 +1908,17 @@ def col(*names: str | Iterable[str]) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.col("a") * nw.col("b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.col("a") * nw.col("b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a
         0  3
         1  8
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -1324,7 +1928,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 3   │
         │ 8   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1334,14 +1938,16 @@ def col(*names: str | Iterable[str]) -> Expr:
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
-    """
-    Creates an expression that references one or more columns by their index(es).
+    """Creates an expression that references one or more columns by their index(es).
 
     Notes:
         `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1355,17 +1961,17 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.nth(0) * 2)
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.nth(0) * 2).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a
         0  2
         1  4
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -1375,7 +1981,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         │ 2   │
         │ 4   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1385,8 +1991,10 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
 
 def len() -> Expr:
-    """
-    Return the number of rows.
+    """Return the number of rows.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1399,16 +2007,16 @@ def len() -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.len())
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.len()).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            len
         0    2
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ len │
@@ -1417,7 +2025,7 @@ def len() -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         len: int64
         ----
@@ -1427,12 +2035,14 @@ def len() -> Expr:
 
 
 def lit(value: Any, dtype: DType | None = None) -> Expr:
-    """
-    Return an expression representing a literal value.
+    """Return an expression representing a literal value.
 
     Arguments:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will be inferred.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1445,17 +2055,17 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.with_columns(nw.lit(3))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.with_columns(nw.lit(3)).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a  literal
         0  1        3
         1  2        3
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (2, 2)
         ┌─────┬─────────┐
         │ a   ┆ literal │
@@ -1465,7 +2075,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         │ 1   ┆ 3       │
         │ 2   ┆ 3       │
         └─────┴─────────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         literal: int64
@@ -1477,14 +2087,16 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
 
 def min(*columns: str) -> Expr:
-    """
-    Return the minimum value.
+    """Return the minimum value.
 
     Note:
        Syntactic sugar for ``nw.col(columns).min()``.
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1497,16 +2109,16 @@ def min(*columns: str) -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.min("b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.min("b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            b
         0  5
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ b   │
@@ -1515,7 +2127,7 @@ def min(*columns: str) -> Expr:
         ╞═════╡
         │ 5   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         b: int64
         ----
@@ -1525,14 +2137,16 @@ def min(*columns: str) -> Expr:
 
 
 def max(*columns: str) -> Expr:
-    """
-    Return the maximum value.
+    """Return the maximum value.
 
     Note:
        Syntactic sugar for ``nw.col(columns).max()``.
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1545,16 +2159,16 @@ def max(*columns: str) -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.max("a"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.max("a")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a
         0  2
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ a   │
@@ -1563,7 +2177,7 @@ def max(*columns: str) -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1573,14 +2187,16 @@ def max(*columns: str) -> Expr:
 
 
 def mean(*columns: str) -> Expr:
-    """
-    Get the mean value.
+    """Get the mean value.
 
     Note:
         Syntactic sugar for ``nw.col(columns).mean()``
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1593,16 +2209,16 @@ def mean(*columns: str) -> Expr:
 
         We define a dataframe agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.mean("a"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.mean("a")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
              a
         0  4.0
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ a   │
@@ -1611,7 +2227,7 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: double
         ----
@@ -1621,8 +2237,7 @@ def mean(*columns: str) -> Expr:
 
 
 def median(*columns: str) -> Expr:
-    """
-    Get the median value.
+    """Get the median value.
 
     Notes:
         - Syntactic sugar for ``nw.col(columns).median()``
@@ -1630,6 +2245,9 @@ def median(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1642,16 +2260,16 @@ def median(*columns: str) -> Expr:
 
         Let's define a dataframe agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.median("a"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.median("a")).to_native()
 
         We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
              a
         0  4.0
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ a   │
@@ -1660,7 +2278,7 @@ def median(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: double
         ----
@@ -1670,14 +2288,16 @@ def median(*columns: str) -> Expr:
 
 
 def sum(*columns: str) -> Expr:
-    """
-    Sum all values.
+    """Sum all values.
 
     Note:
         Syntactic sugar for ``nw.col(columns).sum()``
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1690,16 +2310,16 @@ def sum(*columns: str) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.sum("a"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.sum("a")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a
         0  3
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (1, 1)
         ┌─────┐
         │ a   │
@@ -1708,7 +2328,7 @@ def sum(*columns: str) -> Expr:
         ╞═════╡
         │ 3   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1718,8 +2338,7 @@ def sum(*columns: str) -> Expr:
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Sum all values horizontally across columns.
+    """Sum all values horizontally across columns.
 
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
@@ -1727,6 +2346,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1740,18 +2362,18 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.sum_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.sum_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
               a
         0   6.0
         1  12.0
         2   3.0
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (3, 1)
         ┌─────┐
         │ a   │
@@ -1762,7 +2384,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 12  │
         │ 3   │
         └─────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1772,14 +2394,13 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""
-    Compute the bitwise AND horizontally across columns.
+    r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
-    Notes:
-        pandas and Polars handle null values differently.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1791,27 +2412,27 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
         >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
                a      b    all
         0  False  False  False
         1  False   True  False
         2   True   True   True
-        3   True   None  False
-        4  False   None  False
-        5   None   None  False
+        3   True   <NA>   <NA>
+        4  False   <NA>  False
+        5   <NA>   <NA>   <NA>
 
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (6, 3)
         ┌───────┬───────┬───────┐
         │ a     ┆ b     ┆ all   │
@@ -1826,7 +2447,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
 
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: bool
         b: bool
@@ -1840,14 +2461,13 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""
-    Compute the bitwise OR horizontally across columns.
+    r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
-    Notes:
-        pandas and Polars handle null values differently.
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1859,27 +2479,27 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
         >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select("a", "b", any=nw.any_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select("a", "b", any=nw.any_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
                a      b    any
         0  False  False  False
         1  False   True   True
         2   True   True   True
-        3   True   None   True
-        4  False   None  False
-        5   None   None  False
+        3   True   <NA>   True
+        4  False   <NA>   <NA>
+        5   <NA>   <NA>   <NA>
 
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (6, 3)
         ┌───────┬───────┬───────┐
         │ a     ┆ b     ┆ any   │
@@ -1894,7 +2514,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
 
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: bool
         b: bool
@@ -1908,12 +2528,14 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Compute the mean of all values horizontally across columns.
+    """Compute the mean of all values horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1932,19 +2554,19 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function that computes the horizontal mean of "a"
         and "b" columns:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.mean_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.mean_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
              a
         0  2.5
         1  6.5
         2  3.0
 
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (3, 1)
         ┌─────┐
         │ a   │
@@ -1956,7 +2578,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3.0 │
         └─────┘
 
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: double
         ----
@@ -1966,8 +2588,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Get the minimum value horizontally across columns.
+    """Get the minimum value horizontally across columns.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
@@ -1975,6 +2596,9 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -1990,18 +2614,18 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function that computes the horizontal min of "a"
         and "b" columns:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.min_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.min_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(pd.DataFrame(data))
+        >>> my_library_agnostic_function(pd.DataFrame(data))
              a
         0  1.0
         1  5.0
         2  3.0
-        >>> func(pl.DataFrame(data))
+        >>> my_library_agnostic_function(pl.DataFrame(data))
         shape: (3, 1)
         ┌─────┐
         │ a   │
@@ -2012,7 +2636,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 5   │
         │ 3   │
         └─────┘
-        >>> func(pa.table(data))
+        >>> my_library_agnostic_function(pa.table(data))
         pyarrow.Table
         a: int64
         ----
@@ -2022,8 +2646,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """
-    Get the maximum value horizontally across columns.
+    """Get the maximum value horizontally across columns.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -2031,6 +2654,9 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -2046,18 +2672,18 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function that computes the horizontal max of "a"
         and "b" columns:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.max_horizontal("a", "b"))
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.max_horizontal("a", "b")).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(pd.DataFrame(data))
+        >>> my_library_agnostic_function(pd.DataFrame(data))
              a
         0  4.0
         1  8.0
         2  3.0
-        >>> func(pl.DataFrame(data))
+        >>> my_library_agnostic_function(pl.DataFrame(data))
         shape: (3, 1)
         ┌─────┐
         │ a   │
@@ -2068,7 +2694,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 8   │
         │ 3   │
         └─────┘
-        >>> func(pa.table(data))
+        >>> my_library_agnostic_function(pa.table(data))
         pyarrow.Table
         a: int64
         ----
@@ -2098,17 +2724,15 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
-    """
-    Concatenate multiple DataFrames, LazyFrames into a single entity.
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-
         how: {'vertical', 'horizontal'}
-            * vertical: Stacks Series from DataFrames vertically and fills with `null`
-              if the lengths don't match.
-            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-              if the lengths don't match.
+            - vertical: Stacks Series from DataFrames vertically and fills with `null`
+                if the lengths don't match.
+            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+                if the lengths don't match.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -2117,7 +2741,6 @@ def concat(
         NotImplementedError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
-
         Let's take an example of vertical concatenation:
 
         >>> import pandas as pd
@@ -2205,8 +2828,7 @@ def concat_str(
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> Expr:
-    r"""
-    Horizontally concatenate columns into a single string column.
+    r"""Horizontally concatenate columns into a single string column.
 
     Arguments:
         exprs: Columns to concatenate into a single string column. Accepts expression
@@ -2218,6 +2840,9 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
+
+    Returns:
+        A new expression.
 
     Examples:
         >>> import narwhals as nw
@@ -2233,8 +2858,8 @@ def concat_str(
         We define a dataframe-agnostic function that computes the horizontal string
         concatenation of different columns
 
-        >>> @nw.narwhalify
-        ... def func(df):
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
         ...     return df.select(
         ...         nw.concat_str(
         ...             [
@@ -2244,17 +2869,17 @@ def concat_str(
         ...             ],
         ...             separator=" ",
         ...         ).alias("full_sentence")
-        ...     )
+        ...     ).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(pd.DataFrame(data))
+        >>> my_library_agnostic_function(pd.DataFrame(data))
           full_sentence
         0   2 dogs play
         1   4 cats swim
         2          None
 
-        >>> func(pl.DataFrame(data))
+        >>> my_library_agnostic_function(pl.DataFrame(data))
         shape: (3, 1)
         ┌───────────────┐
         │ full_sentence │
@@ -2266,13 +2891,12 @@ def concat_str(
         │ null          │
         └───────────────┘
 
-        >>> func(pa.table(data))
+        >>> my_library_agnostic_function(pa.table(data))
         pyarrow.Table
         full_sentence: string
         ----
         full_sentence: [["2 dogs play","4 cats swim",null]]
     """
-
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
@@ -2297,15 +2921,25 @@ class Then(NwThen, Expr):
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
-    """
-    Start a `when-then-otherwise` expression.
+    """Start a `when-then-otherwise` expression.
 
-    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
-    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
-    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+    Expression similar to an `if-else` statement in Python. Always initiated by a
+    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by
+    chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif`
+    blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to
+    `True` will be picked.
+    If none of the conditions are `True`, an optional
+    `.otherwise(<value if all statements are false>)` can be appended at the end.
+    If not appended, and none of the conditions are `True`, `None` will be returned.
 
     Arguments:
-        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+        predicates: Condition(s) that must be met in order to apply the subsequent statement.
+            Accepts one or more boolean expressions, which are implicitly combined with `&`.
+            String input is parsed as a column name.
+
+    Returns:
+        A "when" object, which `.then` can be called on.
 
     Examples:
         >>> import pandas as pd
@@ -2318,20 +2952,20 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
         We define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.with_columns(
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.with_columns(
         ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
-        ...     )
+        ...     ).to_native()
 
         We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-        >>> func(df_pd)
+        >>> my_library_agnostic_function(df_pd)
            a   b  a_when
         0  1   5       5
         1  2  10       5
         2  3  15       6
-        >>> func(df_pl)
+        >>> my_library_agnostic_function(df_pl)
         shape: (3, 3)
         ┌─────┬─────┬────────┐
         │ a   ┆ b   ┆ a_when │
@@ -2342,7 +2976,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 2   ┆ 10  ┆ 5      │
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
-        >>> func(df_pa)
+        >>> my_library_agnostic_function(df_pa)
         pyarrow.Table
         a: int64
         b: int64
@@ -2362,8 +2996,7 @@ def new_series(
     *,
     native_namespace: ModuleType,
 ) -> Series:
-    """
-    Instantiate Narwhals Series from iterable (e.g. list or array).
+    """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
         name: Name of resulting Series.
@@ -2426,8 +3059,7 @@ def new_series(
 def from_arrow(
     native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
-    """
-    Construct a DataFrame from an object which supports the PyCapsule Interface.
+    """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
@@ -2478,8 +3110,7 @@ def from_dict(
     *,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
-    """
-    Instantiate DataFrame from dictionary.
+    """Instantiate DataFrame from dictionary.
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -2546,70 +3177,71 @@ def from_dict(
 
 
 __all__ = [
-    "selectors",
+    "Array",
+    "Boolean",
+    "Categorical",
+    "DataFrame",
+    "Date",
+    "Datetime",
+    "Duration",
+    "Enum",
+    "Expr",
+    "Field",
+    "Float32",
+    "Float64",
+    "Int16",
+    "Int32",
+    "Int64",
+    "Int8",
+    "LazyFrame",
+    "List",
+    "Object",
+    "Schema",
+    "Series",
+    "String",
+    "Struct",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "UInt8",
+    "Unknown",
+    "all",
+    "all_horizontal",
+    "any_horizontal",
+    "col",
     "concat",
+    "concat_str",
     "dependencies",
-    "to_native",
+    "exceptions",
+    "from_arrow",
+    "from_dict",
     "from_native",
-    "to_py_scalar",
+    "generate_temporary_column_name",
+    "get_level",
+    "get_native_namespace",
     "is_ordered_categorical",
+    "len",
+    "lit",
+    "max",
+    "max_horizontal",
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_get_index",
     "maybe_reset_index",
     "maybe_set_index",
-    "generate_temporary_column_name",
-    "get_native_namespace",
-    "get_level",
-    "all",
-    "all_horizontal",
-    "any_horizontal",
-    "col",
-    "concat_str",
-    "nth",
-    "len",
-    "lit",
-    "max",
-    "max_horizontal",
     "mean",
     "mean_horizontal",
     "median",
     "min",
     "min_horizontal",
+    "narwhalify",
+    "new_series",
+    "nth",
+    "selectors",
+    "show_versions",
     "sum",
     "sum_horizontal",
+    "to_native",
+    "to_py_scalar",
     "when",
-    "DataFrame",
-    "LazyFrame",
-    "Series",
-    "Expr",
-    "Int64",
-    "Int32",
-    "Int16",
-    "Int8",
-    "UInt64",
-    "UInt32",
-    "UInt16",
-    "UInt8",
-    "Float64",
-    "Float32",
-    "Boolean",
-    "Object",
-    "Unknown",
-    "Categorical",
-    "Enum",
-    "String",
-    "Datetime",
-    "Duration",
-    "Field",
-    "Struct",
-    "Array",
-    "List",
-    "Date",
-    "narwhalify",
-    "show_versions",
-    "Schema",
-    "from_dict",
-    "from_arrow",
-    "new_series",
 ]

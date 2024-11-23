@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
 
-def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
@@ -152,8 +152,15 @@ def validate_column_comparand(other: Any) -> Any:
 
     if isinstance(other, list):
         if len(other) > 1:
-            # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
+            if hasattr(other[0], "__narwhals_expr__") or hasattr(
+                other[0], "__narwhals_series__"
+            ):
+                # e.g. `plx.all() + plx.all()`
+                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
+                raise ValueError(msg)
+            msg = (
+                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
+            )
             raise ValueError(msg)
         other = other[0]
     if isinstance(other, ArrowDataFrame):
@@ -197,8 +204,7 @@ def validate_dataframe_comparand(
 
 
 def horizontal_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames horizontally.
+    """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -219,8 +225,7 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
 
 def vertical_concat(dfs: list[Any]) -> Any:
-    """
-    Concatenate (native) DataFrames vertically.
+    """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """
@@ -279,7 +284,9 @@ def floordiv_compat(left: Any, right: Any) -> Any:
     return result
 
 
-def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
+def cast_for_truediv(
+    arrow_array: pa.ChunkedArray | pa.Scalar, pa_object: pa.ChunkedArray | pa.Scalar
+) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     import pyarrow as pa  # ignore-banned-import

@@ -12,9 +12,10 @@ nav:
     - basics/complete_example.md
     - basics/dataframe_conversion.md
   - Pandas-like concepts:
-    - other/pandas_index.md
-    - other/user_warning.md
-    - other/column_names.md
+    - pandas_like_concepts/pandas_index.md
+    - pandas_like_concepts/user_warning.md
+    - pandas_like_concepts/column_names.md
+    - pandas_like_concepts/boolean.md
   - overhead.md
   - backcompat.md
   - extending.md
@@ -36,6 +37,7 @@ nav:
     - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
+    - api-reference/lazy_group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
     - api-reference/series.md
@@ -44,6 +46,7 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
+    - api-reference/exceptions.md
     - api-reference/selectors.md
     - api-reference/typing.md
   - This: this.md
@@ -93,6 +96,8 @@ plugins:
           members_order: alphabetical
     enable_inventory: true
 
+extra_javascript:
+  - javascripts/extra.js
 
 hooks:
 - utils/generate_backend_completeness.py
@@ -114,3 +119,12 @@ markdown_extensions:
 - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.arithmatex:
+      generic: true
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css

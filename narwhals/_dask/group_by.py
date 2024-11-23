@@ -97,8 +97,7 @@ def agg_dask(
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
-    """
-    This should be the fastpath, but cuDF is too far behind to use it.
+    """This should be the fastpath, but cuDF is too far behind to use it.
 
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084

@@ -9,9 +9,9 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_modin
+from narwhals.stable.v1.dependencies import get_cudf
+from narwhals.stable.v1.dependencies import get_modin
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:

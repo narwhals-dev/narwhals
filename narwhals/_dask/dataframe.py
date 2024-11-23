@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -86,14 +87,12 @@ class DaskLazyFrame:
     def columns(self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
-    def filter(
-        self,
-        *predicates: DaskExpr,
-    ) -> Self:
+    def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             msg = (
                 "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
@@ -103,7 +102,9 @@ class DaskLazyFrame:
         from narwhals._dask.namespace import DaskNamespace
 
         plx = DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
-        expr = plx.all_horizontal(*predicates)
+        expr = plx.all_horizontal(
+            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
+        )
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
@@ -198,11 +199,8 @@ class DaskLazyFrame:
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
-        """
-        NOTE:
-            The param `maintain_order` is only here for compatibility with the Polars API
-            and has no effect on the output.
-        """
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         subset = flatten(subset) if subset else None
         native_frame = self._native_frame
         if keep == "none":
