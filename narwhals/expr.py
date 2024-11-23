@@ -623,7 +623,7 @@ class Expr:
         """Get standard deviation.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
 
         Returns:
@@ -742,6 +742,51 @@ class Expr:
                 function=function, return_dtype=return_dtype
             )
         )
+
+    def skew(self: Self) -> Self:
+        """Calculate the sample skewness of a column.
+
+        Returns:
+            An expression representing the sample skewness of the column.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pa = pa.Table.from_pandas(df_pd)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").skew())
+
+            We can then pass pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a         b
+            0  0.0  1.472427
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬──────────┐
+            │ a   ┆ b        │
+            │ --- ┆ ---      │
+            │ f64 ┆ f64      │
+            ╞═════╪══════════╡
+            │ 0.0 ┆ 1.472427 │
+            └─────┴──────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[1.4724267269058975]]
+        """
+        return self.__class__(lambda plx: self._call(plx).skew())
 
     def sum(self) -> Expr:
         """Return the sum value.

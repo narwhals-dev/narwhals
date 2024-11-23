@@ -454,13 +454,24 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.median()
 
-    def std(
-        self,
-        *,
-        ddof: int = 1,
-    ) -> Any:
+    def std(self: Self, *, ddof: int = 1) -> float:
         ser = self._native_series
-        return ser.std(ddof=ddof)
+        return ser.std(ddof=ddof)  # type: ignore[no-any-return]
+
+    def skew(self: Self) -> float | None:
+        ser = self._native_series
+        ser_not_null = ser.dropna()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        elif len(ser_not_null) == 2:
+            return 0.0
+        else:
+            m = ser_not_null - ser_not_null.mean()
+            m2 = (m**2).mean()
+            m3 = (m**3).mean()
+            return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def len(self) -> Any:
         return len(self._native_series)

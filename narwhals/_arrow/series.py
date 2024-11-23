@@ -305,10 +305,28 @@ class ArrowSeries:
             result = ca
         return self._from_native_series(result)
 
-    def std(self, ddof: int = 1) -> int:
+    def std(self, ddof: int = 1) -> float:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
+
+    def skew(self: Self) -> float | None:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        ser = self._native_series
+        ser_not_null = pc.drop_null(ser)
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        elif len(ser_not_null) == 2:
+            return 0.0
+        else:
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+            m2 = pc.mean(pc.power(m, 2))
+            m3 = pc.mean(pc.power(m, 3))
+            # Biased population skewness
+            return pc.divide(m3, pc.power(m2, 1.5))  # type: ignore[no-any-return]
 
     def count(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()

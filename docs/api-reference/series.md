@@ -60,6 +60,7 @@
         - shape
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail
