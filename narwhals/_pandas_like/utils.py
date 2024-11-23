@@ -205,11 +205,15 @@ def vertical_concat(
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
-    cols = set(dfs[0].columns)
-    for df in dfs:
-        cols_current = set(df.columns)
-        if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+    cols_0 = dfs[0].columns
+    for i, df in enumerate(dfs[1:], start=1):
+        cols_current = df.columns
+        if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()):
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {cols_0.to_list()}\n"
+                f"   - dataframe {i}: {cols_current.to_list()}\n"
+            )
             raise TypeError(msg)
 
     if implementation in PANDAS_LIKE_IMPLEMENTATION:

@@ -221,11 +221,15 @@ def vertical_concat(dfs: list[Any]) -> Any:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
 
-    cols = set(dfs[0].column_names)
-    for df in dfs:
-        cols_current = set(df.column_names)
-        if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+    cols_0 = dfs[0].column_names
+    for i, df in enumerate(dfs[1:], start=1):
+        cols_current = df.column_names
+        if cols_current != cols_0:
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {cols_0}\n"
+                f"   - dataframe {i}: {cols_current}\n"
+            )
             raise TypeError(msg)
 
     import pyarrow as pa  # ignore-banned-import
