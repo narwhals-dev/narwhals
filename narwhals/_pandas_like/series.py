@@ -471,8 +471,7 @@ class PandasLikeSeries:
             m = ser_not_null - ser_not_null.mean()
             m2 = (m**2).mean()
             m3 = (m**3).mean()
-            g1 = m3 / (m2**1.5) if m2 != 0 else 0
-            return float(g1)  # Biased population skewness
+            return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def len(self) -> Any:
         return len(self._native_series)
