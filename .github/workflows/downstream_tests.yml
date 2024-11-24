@@ -83,6 +83,8 @@ jobs:
         run: |
             cd marimo
             . .venv/bin/activate
+            # temporary pin
+            # uv pip install "altair<5.5"
             uv pip install -e ".[dev]"
             which python
       - name: install-narwhals-dev
