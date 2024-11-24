@@ -34,8 +34,6 @@ jobs:
       - name: install-altair-dev
         run: |
             cd altair
-            # temporarily pin vegafusion for CI
-            uv pip install "vegafusion<2" --system
             uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
