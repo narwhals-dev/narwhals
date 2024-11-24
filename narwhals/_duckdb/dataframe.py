@@ -90,6 +90,12 @@ class DuckDBInterchangeFrame:
             self._native_frame.select(item), dtypes=self._dtypes
         )
 
+    def write_csv(self, file: Any) -> Any:
+        if not isinstance(file, str):
+            msg = f"`write_csv` only support str for `file`, got: {type(file)}"
+            raise NotImplementedError(msg)
+        return self._native_frame.to_csv(file)
+
     def select(
         self: Self,
         *exprs: Any,

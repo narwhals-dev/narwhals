@@ -79,6 +79,12 @@ class IbisInterchangeFrame:
 
         return IbisInterchangeSeries(self._native_frame[item], dtypes=self._dtypes)
 
+    def write_csv(self, file: Any) -> Any:
+        if not isinstance(file, str):
+            msg = f"`write_csv` only support str for `file`, got: {type(file)}"
+            raise NotImplementedError(msg)
+        return self._native_frame.to_csv(file)
+
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
 
