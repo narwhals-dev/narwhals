@@ -25,6 +25,11 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoSeries
 
+# We silently allow these but - given that they claim
+# to be drop-in replacements for pandas - testing is
+# their responsibility.
+IMPORT_HOOKS = frozenset(["cudf", "fireducks"])
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -92,9 +97,10 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     # Check for fireducks to allow for the test suite to be run as-is for fireducks input
     # https://github.com/fireducks-dev/fireducks/issues/29
-    return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or (
-        (fd := sys.modules.get("fireducks", None)) is not None
-        and isinstance(df, fd.pandas.DataFrame)
+    return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(df, mod.pandas.DataFrame)
+        for module_name in IMPORT_HOOKS
     )
 
 
@@ -102,9 +108,10 @@ def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
     # Check for fireducks to allow for the test suite to be run as-is for fireducks input
     # https://github.com/fireducks-dev/fireducks/issues/29
-    return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or (
-        (fd := sys.modules.get("fireducks", None)) is not None
-        and isinstance(ser, fd.pandas.Series)
+    return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(ser, mod.pandas.Series)
+        for module_name in IMPORT_HOOKS
     )
 
 
@@ -112,9 +119,10 @@ def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
     """Check whether `index` is a pandas Index without importing pandas."""
     # Check for fireducks to allow for the test suite to be run as-is for fireducks input
     # https://github.com/fireducks-dev/fireducks/issues/29
-    return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or (
-        (fd := sys.modules.get("fireducks", None)) is not None
-        and isinstance(index, fd.pandas.Index)
+    return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(index, mod.pandas.Index)
+        for module_name in IMPORT_HOOKS
     )
 
 
