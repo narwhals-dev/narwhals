@@ -90,7 +90,9 @@ class PolarsSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.dtype, self._dtypes)
+        return native_to_narwhals_dtype(
+            self._native_series.dtype, self._dtypes, self._backend_version
+        )
 
     @overload
     def __getitem__(self, item: int) -> Any: ...
