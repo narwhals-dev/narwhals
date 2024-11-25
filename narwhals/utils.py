@@ -123,21 +123,24 @@ def tupleify(arg: Any) -> Any:
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
 
-    if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
-    if (pl := get_polars()) is not None and isinstance(
-        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
-    ):
-        msg = (
-            f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
-            "Hint: Perhaps you\n"
-            "- forgot a `nw.from_native` somewhere?\n"
-            "- used `pl.col` instead of `nw.col`?"
-        )
-        raise TypeError(msg)
+    if not isinstance(arg, (Series, DataFrame, LazyFrame)):
+        if is_pandas_dataframe(arg) or is_pandas_series(arg):
+            msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+            raise TypeError(msg)
+        if (pl := get_polars()) is not None and isinstance(
+            arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+        ):
+            msg = (
+                f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
+                "Hint: Perhaps you\n"
+                "- forgot a `nw.from_native` somewhere?\n"
+                "- used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
