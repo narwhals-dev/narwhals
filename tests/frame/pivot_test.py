@@ -157,7 +157,7 @@ def test_pivot_no_agg(
         # The first one fails, the second one passes. Let's just skip
         # the test until they address their pivot shortcomings in the next
         # release https://github.com/rapidsai/cudf/pull/17373.
-        request.applymarker(pytest.mark.skip)
+        return
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
     ):
