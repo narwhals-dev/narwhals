@@ -188,6 +188,9 @@ class PandasLikeSeries:
     ) -> PandasLikeSeries:
         ser = self._native_series
         mask_na = ser.isna()
+        if self._implementation is Implementation.CUDF and sum(mask_na) > 0:
+            msg = "`ewm_mean` with null values is not yet implemented for cuDF"
+            raise NotImplementedError(msg)
         result = ser.ewm(
             com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
         ).mean()

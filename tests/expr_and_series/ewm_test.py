@@ -137,9 +137,9 @@ def test_ewm_mean_nulls(
     expected: dict[str, list[float]],
     constructor: Constructor,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1,)
-    ):
+    if any(
+        x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "cudf")
+    ) or ("polars" in str(constructor) and POLARS_VERSION < (1,)):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
