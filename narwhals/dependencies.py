@@ -7,6 +7,8 @@ import sys
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.exceptions import InvalidIsDataFrameSeriesError
+
 if TYPE_CHECKING:
     import numpy as np
 
@@ -95,6 +97,13 @@ def get_ibis() -> Any:
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_pandas_dataframe
+        )
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(df, mod.pandas.DataFrame)
@@ -104,6 +113,12 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
 
 def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_pandas_series
+        )
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -122,11 +137,24 @@ def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_modin_dataframe
+        )
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
 def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     """Check whether `ser` is a modin Series without importing modin."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_modin_series
+        )
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -139,11 +167,24 @@ def is_modin_index(index: Any) -> TypeGuard[mpd.Index]:
 
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_cudf_dataframe
+        )
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
 def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     """Check whether `ser` is a cudf Series without importing cudf."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_cudf_series
+        )
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -168,31 +209,71 @@ def is_duckdb_relation(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
 
 def is_ibis_table(df: Any) -> TypeGuard[ibis.Table]:
     """Check whether `df` is a Ibis Table without importing Ibis."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_ibis_table
+        )
     return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
     """Check whether `df` is a Polars DataFrame without importing Polars."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_polars_dataframe
+        )
     return (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
 
 
 def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
     """Check whether `df` is a Polars LazyFrame without importing Polars."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_polars_lazyframe
+        )
     return (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
 
 
 def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
     """Check whether `ser` is a Polars Series without importing Polars."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_polars_series
+        )
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
 def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_pyarrow_chunked_array
+        )
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
 def is_pyarrow_table(df: Any) -> TypeGuard[pa.Table]:
     """Check whether `df` is a PyArrow Table without importing PyArrow."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_pyarrow_table
+        )
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
 
 
@@ -206,6 +287,13 @@ def is_pandas_like_dataframe(df: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(df), function=is_pandas_like_dataframe
+        )
     return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
 
 
@@ -214,6 +302,12 @@ def is_pandas_like_series(ser: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        raise InvalidIsDataFrameSeriesError.from_input_func_name_type(
+            input_type=type(ser), function=is_pandas_like_series
+        )
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 
