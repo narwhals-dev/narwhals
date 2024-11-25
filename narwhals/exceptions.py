@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Callable
-
 
 class FormattedKeyError(KeyError):
     """KeyError with formatted error message.
@@ -66,31 +64,3 @@ class InvalidIntoExprError(TypeError):
 
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
-
-
-class InvalidIsDataFrameSeriesError(TypeError):
-    """Exception for `is_*_dataframe` or `is_*_series` methods.
-
-    Raised when `nw.DataFrame` or `nw.Series` is passed.
-    """
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-    @classmethod
-    def from_input_func_name_type(
-        cls,
-        input_type: type,
-        function: Callable,  # type: ignore[type-arg]
-    ) -> InvalidIsDataFrameSeriesError:
-        from narwhals.series import Series
-
-        obj_name = "ser" if input_type == Series else "df"
-        function_name = function.__name__
-        message = (
-            f"You passed a `{input_type}` to `{function_name}`.\n\n"
-            f"Hint: Instead of e.g. `{function_name}({obj_name})`, "
-            f"did you mean `{function_name}({obj_name}.to_native())`?"
-        )
-        return InvalidIsDataFrameSeriesError(message)
