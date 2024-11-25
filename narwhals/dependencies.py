@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
 # their responsibility.
-IMPORT_HOOKS = frozenset(["cudf", "fireducks"])
+IMPORT_HOOKS = frozenset(["fireducks"])
 
 
 def get_polars() -> Any:
