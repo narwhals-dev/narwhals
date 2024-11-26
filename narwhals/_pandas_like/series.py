@@ -190,7 +190,9 @@ class PandasLikeSeries:
         mask_na = ser.isna()
         if self._implementation is Implementation.CUDF:
             if (min_periods == 0 and not ignore_nulls) or (not mask_na.any()):
-                result = ser.ewm(com, span, half_life, alpha, adjust).mean()
+                result = ser.ewm(
+                    com=com, span=span, halflife=half_life, alpha=alpha, adjust=adjust
+                ).mean()
             else:
                 msg = (
                     "cuDF only supports `ewm_mean` when there are no missing values "
