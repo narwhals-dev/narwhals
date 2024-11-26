@@ -14,33 +14,28 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1.0, 2.0, 4.0, 8.0, 12.0, 16.0, 2.0]}
+data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 
 kwargs_and_expected = {
-    "x1": {"kwargs": {"window_size": 3}, "expected": [float("nan")] * 6 + [13.0]},
+    "x1": {
+        "kwargs": {"window_size": 3},
+        "expected": [float("nan"), float("nan"), 1/3, 1, 4/3, 7/3, 3]
+    },
     "x2": {
         "kwargs": {"window_size": 3, "min_periods": 1},
-        "expected": [float("nan"), 0.0, 0.5, 0.5, 2.0, 2.0, 13.0],
+        "expected": [float("nan"), 0.5, 1/3, 1., 4/3, 7/3, 3],
     },
     "x3": {
         "kwargs": {"window_size": 2, "min_periods": 1},
-        "expected": [float("nan"), 0.0, 0.5, 0.0, 0.0, 2.0, 12.5],
+        "expected": [float("nan"), 0.5, 0.5, 2.0, 2.0, 4.5, 4.5],
     },
     "x4": {
         "kwargs": {"window_size": 5, "min_periods": 1, "center": True},
-        "expected": [
-            0.5,
-            0.5,
-            2.333333333333332,
-            4.916666666666667,
-            14.916666666666666,
-            13.0,
-            13.0,
-        ],
+        "expected": [1/3, 29/30, 4/5, 17/10, 2., 2.25, 3]
     },
     "x5": {
         "kwargs": {"window_size": 4, "min_periods": 1, "center": True},
-        "expected": [0.0, 0.5, 0.5, 2.333333333333332, 4.0, 13.0, 13.0],
+        "expected": [0.5, 1/3, 29/30, 29/30, 2.25, 2.25, 3],
     },
 }
 

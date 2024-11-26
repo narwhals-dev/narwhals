@@ -659,7 +659,7 @@ class Series(NwSeries):
             center: Set the labels at the center of the window.
 
         Returns:
-            A new expression.
+            A new series.
 
         Examples:
             >>> import narwhals as nw
@@ -751,7 +751,7 @@ class Series(NwSeries):
             center: Set the labels at the center of the window.
 
         Returns:
-            A new expression.
+            A new series.
 
         Examples:
             >>> import narwhals as nw
@@ -845,7 +845,7 @@ class Series(NwSeries):
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
         Returns:
-            A new expression.
+            A new series.
 
         Examples:
             >>> import narwhals as nw
@@ -940,7 +940,7 @@ class Series(NwSeries):
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
         Returns:
-            A new expression.
+            A new series.
 
         Examples:
             >>> import narwhals as nw
