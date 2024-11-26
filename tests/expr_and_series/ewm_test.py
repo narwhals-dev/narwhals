@@ -211,7 +211,7 @@ def test_ewm_mean_cudf_default_params(
 @pytest.mark.filterwarnings(
     "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
 )
-def test_ewm_mean_cudf_raise() -> None:
+def test_ewm_mean_cudf_raise() -> None:  # pragma: no cover
     pytest.importorskip("cudf")
     import cudf
 
