@@ -1028,19 +1028,25 @@ class ArrowSeries:
             else cum_sum
         )
 
+        cum_sum_sq = (
+            padded_arr.__pow__(2).cum_sum(reverse=False).fill_null(strategy="forward")
+        )
+        rolling_sum_sq = (
+            cum_sum_sq - cum_sum_sq.shift(window_size).fill_null(0)
+            if window_size != 0
+            else cum_sum_sq
+        )
+
         valid_count = padded_arr.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
 
-        result = (
-            self._from_native_series(
-                pc.if_else(
-                    (count_in_window >= min_periods)._native_series,
-                    rolling_sum._native_series,
-                    None,
-                )
+        result = self._from_native_series(
+            pc.if_else(
+                (count_in_window >= min_periods)._native_series,
+                (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
+                None,
             )
-            / count_in_window
-        )
+        ) / (count_in_window - ddof)
         if center:
             result = result[offset_left + offset_right :]
         return result
