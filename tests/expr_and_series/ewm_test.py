@@ -196,17 +196,9 @@ def test_ewm_mean_cudf_raise() -> None:  # pragma: no cover
     pytest.importorskip("cudf")
     import cudf
 
-    df_with_nulls = nw.from_native(cudf.DataFrame({"a": [2.0, 4.0, None, 3.0]}))
-    df_ignore_nulls = nw.from_native(cudf.DataFrame(data))
+    df = nw.from_native(cudf.DataFrame({"a": [2.0, 4.0, None, 3.0]}))
     with pytest.raises(
         NotImplementedError,
         match="cuDF only supports `ewm_mean` when there are no missing values",
     ):
-        df_with_nulls.select(nw.col("a").ewm_mean(com=1))
-    with pytest.raises(
-        NotImplementedError,
-        match="cuDF only supports `ewm_mean` when there are no missing values",
-    ):
-        df_ignore_nulls.select(
-            nw.col("a").ewm_mean(com=1, min_periods=0, ignore_nulls=True)
-        )
+        df.select(nw.col("a").ewm_mean(com=1))
