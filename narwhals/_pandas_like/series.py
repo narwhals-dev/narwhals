@@ -188,9 +188,15 @@ class PandasLikeSeries:
     ) -> PandasLikeSeries:
         ser = self._native_series
         mask_na = ser.isna()
-        if self._implementation is Implementation.CUDF and sum(mask_na) > 0:
-            msg = "`ewm_mean` with null values is not yet implemented for cuDF"
-            raise NotImplementedError(msg)
+        if self._implementation is Implementation.CUDF:
+            if min_periods == 0 and not ignore_nulls:
+                result = ser.ewm(com, span, half_life, alpha, adjust).mean()
+            elif min_periods != 0:
+                msg = "`min_periods != 0` is not yet implemented for cuDF"
+                raise NotImplementedError(msg)
+            else:
+                msg = "`ignore_nulls=True` is not yet implemented for cuDF"
+                raise NotImplementedError(msg)
         result = ser.ewm(
             com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
         ).mean()
