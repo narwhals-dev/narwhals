@@ -5,12 +5,23 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Mapping
 
+from narwhals.utils import isinstance_or_issubclass
+
 if TYPE_CHECKING:
     from typing import Iterator
     from typing import Literal
     from typing import Sequence
 
     from typing_extensions import Self
+
+
+def _validate_dtype(dtype: DType | type[DType]) -> None:
+    if not isinstance_or_issubclass(dtype, DType):
+        msg = (
+            f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
+            "Hint: if you were trying to cast to a type, use e.g. nw.Int64 instead of 'int64'."
+        )
+        raise TypeError(msg)
 
 
 class DType:

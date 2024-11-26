@@ -89,6 +89,8 @@ jobs:
             . .venv/bin/activate
             uv pip uninstall narwhals
             uv pip install -e ./..
+            # temporary pin
+            uv pip install "altair<5.5"
       - name: show-deps
         run: |
             cd marimo
@@ -184,8 +186,8 @@ jobs:
         run: |
             uv pip uninstall narwhals --system
             uv pip install -e . --system
-            # temporarily pin websockets to get CI green
-            uv pip install "websockets<14.0" --system
+            # temporarily pin ollama to get CI green
+            uv pip install "ollama<0.4.0" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run `make narwhals-test-integration`

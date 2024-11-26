@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -379,19 +380,21 @@ class PandasLikeDataFrame:
     def row(self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(
-        self,
-        *predicates: IntoPandasLikeExpr,
-    ) -> Self:
+    def filter(self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             _mask = predicates[0]
         else:
-            expr = plx.all_horizontal(*predicates)
+            expr = plx.all_horizontal(
+                *chain(
+                    predicates, (plx.col(name) == v for name, v in constraints.items())
+                )
+            )
             # Safety: all_horizontal's expression only returns a single column.
             mask = expr._call(self)[0]
             _mask = validate_dataframe_comparand(self._native_frame.index, mask)

@@ -90,7 +90,9 @@ class PolarsSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.dtype, self._dtypes)
+        return native_to_narwhals_dtype(
+            self._native_series.dtype, self._dtypes, self._backend_version
+        )
 
     @overload
     def __getitem__(self, item: int) -> Any: ...
@@ -236,8 +238,8 @@ class PolarsSeries:
         min_periods: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
-        if self._backend_version < (0, 20, 31):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 0.20.31"
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`ewm_mean` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
         expr = self._native_series
         return self._from_native_series(

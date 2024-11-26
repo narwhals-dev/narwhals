@@ -76,7 +76,7 @@ class PolarsDataFrame:
         if attr == "schema":
             schema = self._native_frame.schema
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in schema.items()
             }
 
@@ -113,12 +113,12 @@ class PolarsDataFrame:
     def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
@@ -351,19 +351,19 @@ class PolarsLazyFrame:
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
+            name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
             for name, dtype in schema.items()
         }
 
     def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 

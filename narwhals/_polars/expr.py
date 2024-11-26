@@ -9,7 +9,6 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import polars as pl
@@ -61,10 +60,8 @@ class PolarsExpr:
         min_periods: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
-        import polars as pl  # ignore-banned-import()
-
-        if parse_version(pl.__version__) <= (0, 20, 31):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 0.20.31"
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`ewm_mean` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
         expr = self._native_expr
         return self._from_native_expr(

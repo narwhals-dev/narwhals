@@ -46,3 +46,5 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     with pytest.raises((Exception, TypeError), match="unable to vstack"):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
+    with pytest.raises((Exception, TypeError), match="unable to vstack|unable to append"):
+        nw.concat([df_left, df_left.select("d")], how="vertical").collect()

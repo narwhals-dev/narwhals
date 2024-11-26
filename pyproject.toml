@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.14.1"
+version = "1.14.2"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -148,7 +148,8 @@ exclude_also = [
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)',
-  'if self._backend_version < '
+  'if self._backend_version < ',
+  'if "cudf" in str\(constructor',
 ]
 
 [tool.mypy]

@@ -236,6 +236,9 @@ class PandasLikeExpr:
     def std(self, *, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
+    def skew(self: Self) -> Self:
+        return reuse_series_implementation(self, "skew", returns_scalar=True)
+
     def any(self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
 
@@ -497,6 +500,21 @@ class PandasLikeExpr:
         return reuse_series_implementation(
             self,
             "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_mean",
             window_size=window_size,
             min_periods=min_periods,
             center=center,

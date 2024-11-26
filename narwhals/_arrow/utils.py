@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -77,17 +76,6 @@ def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if (pl := get_polars()) is not None and isinstance(
-        dtype, (pl.DataType, pl.DataType.__class__)
-    ):
-        msg = (
-            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
-            "Perhaps you:\n"
-            "- Forgot a `nw.from_native` somewhere?\n"
-            "- Used `pl.Int64` instead of `nw.Int64`?"
-        )
-        raise TypeError(msg)
-
     import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -233,11 +221,15 @@ def vertical_concat(dfs: list[Any]) -> Any:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
 
-    cols = set(dfs[0].column_names)
-    for df in dfs:
-        cols_current = set(df.column_names)
-        if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+    cols_0 = dfs[0].column_names
+    for i, df in enumerate(dfs[1:], start=1):
+        cols_current = df.column_names
+        if cols_current != cols_0:
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {cols_0}\n"
+                f"   - dataframe {i}: {cols_current}\n"
+            )
             raise TypeError(msg)
 
     import pyarrow as pa  # ignore-banned-import

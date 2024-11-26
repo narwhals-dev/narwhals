@@ -433,6 +433,13 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def skew(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.skew(),
+            "skew",
+            returns_scalar=True,
+        )
+
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
@@ -874,6 +881,32 @@ class DaskExpr:
         return self._from_call(
             func,
             "rolling_sum",
+            window_size,
+            min_periods,
+            center,
+            returns_scalar=False,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).mean()
+
+        return self._from_call(
+            func,
+            "rolling_mean",
             window_size,
             min_periods,
             center,

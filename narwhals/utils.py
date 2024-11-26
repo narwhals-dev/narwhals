@@ -28,6 +28,7 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -162,7 +163,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
-    return isinstance(obj, cls) or issubclass(obj, cls)
+    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -733,3 +734,39 @@ def validate_strict_and_pass_though(
         msg = "Cannot pass both `strict` and `pass_through`"
         raise ValueError(msg)
     return pass_through
+
+
+def _validate_rolling_arguments(
+    window_size: int, min_periods: int | None
+) -> tuple[int, int]:
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
+
+    if not isinstance(window_size, int):
+        _type = window_size.__class__.__name__
+        msg = (
+            f"argument 'window_size': '{_type}' object cannot be "
+            "interpreted as an integer"
+        )
+        raise TypeError(msg)
+
+    if min_periods is not None:
+        if min_periods < 1:
+            msg = "min_periods must be greater or equal than 1"
+            raise ValueError(msg)
+
+        if not isinstance(min_periods, int):
+            _type = min_periods.__class__.__name__
+            msg = (
+                f"argument 'min_periods': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+        if min_periods > window_size:
+            msg = "`min_periods` must be less or equal than `window_size`"
+            raise InvalidOperationError(msg)
+    else:
+        min_periods = window_size
+
+    return window_size, min_periods

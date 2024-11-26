@@ -14,6 +14,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.translate import to_py_scalar
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -305,10 +306,28 @@ class ArrowSeries:
             result = ca
         return self._from_native_series(result)
 
-    def std(self, ddof: int = 1) -> int:
+    def std(self, ddof: int = 1) -> float:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
+
+    def skew(self: Self) -> float | None:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        ser = self._native_series
+        ser_not_null = pc.drop_null(ser)
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        elif len(ser_not_null) == 2:
+            return 0.0
+        else:
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+            m2 = pc.mean(pc.power(m, 2))
+            m3 = pc.mean(pc.power(m, 3))
+            # Biased population skewness
+            return pc.divide(m3, pc.power(m2, 1.5))  # type: ignore[no-any-return]
 
     def count(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -419,12 +438,12 @@ class ArrowSeries:
     def any(self) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.any(self._native_series)  # type: ignore[no-any-return]
+        return to_py_scalar(pc.any(self._native_series))  # type: ignore[no-any-return]
 
     def all(self) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.all(self._native_series)  # type: ignore[no-any-return]
+        return to_py_scalar(pc.all(self._native_series))  # type: ignore[no-any-return]
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -701,9 +720,10 @@ class ArrowSeries:
 
         ser = self._native_series
         if descending:
-            return pc.all(pc.greater_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
+            result = pc.all(pc.greater_equal(ser[:-1], ser[1:]))
         else:
-            return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
+            result = pc.all(pc.less_equal(ser[:-1], ser[1:]))
+        return to_py_scalar(result)  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool = False) -> ArrowSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
@@ -917,6 +937,57 @@ class ArrowSeries:
                 rolling_sum._native_series,
                 None,
             )
+        )
+        if center:
+            result = result[offset_left + offset_right :]
+        return result
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        min_periods = min_periods if min_periods is not None else window_size
+        if center:
+            offset_left = window_size // 2
+            offset_right = offset_left - (
+                window_size % 2 == 0
+            )  # subtract one if window_size is even
+
+            native_series = self._native_series
+
+            pad_left = pa.array([None] * offset_left, type=native_series.type)
+            pad_right = pa.array([None] * offset_right, type=native_series.type)
+            padded_arr = self._from_native_series(
+                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+            )
+        else:
+            padded_arr = self
+
+        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        rolling_sum = (
+            cum_sum - cum_sum.shift(window_size).fill_null(0)
+            if window_size != 0
+            else cum_sum
+        )
+
+        valid_count = padded_arr.cum_count(reverse=False)
+        count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
+
+        result = (
+            self._from_native_series(
+                pc.if_else(
+                    (count_in_window >= min_periods)._native_series,
+                    rolling_sum._native_series,
+                    None,
+                )
+            )
+            / count_in_window
         )
         if center:
             result = result[offset_left + offset_right :]

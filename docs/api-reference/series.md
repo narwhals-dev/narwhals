@@ -52,6 +52,7 @@
         - quantile
         - rename
         - replace_strict
+        - rolling_mean
         - rolling_sum
         - round
         - sample
@@ -59,6 +60,7 @@
         - shape
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail

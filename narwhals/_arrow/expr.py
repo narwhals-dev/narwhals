@@ -227,6 +227,9 @@ class ArrowExpr:
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
+    def skew(self: Self) -> Self:
+        return reuse_series_implementation(self, "skew", returns_scalar=True)
+
     def cast(self, dtype: DType) -> Self:
         return reuse_series_implementation(self, "cast", dtype)
 
@@ -463,6 +466,21 @@ class ArrowExpr:
         return reuse_series_implementation(
             self,
             "rolling_sum",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_mean",
             window_size=window_size,
             min_periods=min_periods,
             center=center,

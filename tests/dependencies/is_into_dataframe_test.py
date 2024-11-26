@@ -9,7 +9,7 @@ import polars as pl
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals.dependencies import is_into_dataframe
+from narwhals.stable.v1.dependencies import is_into_dataframe
 
 if TYPE_CHECKING:
     from typing_extensions import Self
