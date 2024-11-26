@@ -1150,7 +1150,7 @@ def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 @overload
-def _stableify(obj: NwSeries[IntoSeriesT]) -> Series: ...
+def _stableify(obj: NwSeries[Any]) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
@@ -1158,11 +1158,7 @@ def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT]
-    | NwLazyFrame[IntoFrameT]
-    | NwSeries[IntoSeriesT]
-    | NwExpr
-    | Any,
+    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries[Any] | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
