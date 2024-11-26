@@ -852,6 +852,32 @@ class PandasLikeSeries:
         ).mean()
         return self._from_native_series(result)
 
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).var(ddof=ddof)
+        return self._from_native_series(result)
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).std(ddof=ddof)
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 

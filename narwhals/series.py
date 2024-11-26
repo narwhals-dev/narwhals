@@ -3307,6 +3307,192 @@ class Series:
             )
         )
 
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        """Apply a rolling variance (moving variance) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their variance.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`.
+            center: Set the labels at the center of the window.
+            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_var(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_var(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_var(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_var(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_var(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
+        return self._from_compliant_series(
+            self._compliant_series.rolling_var(
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+            )
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        """Apply a rolling standard deviation (moving standard deviation) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their standard deviation.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`.
+            center: Set the labels at the center of the window.
+            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_std(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_std(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_std(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_std(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_std(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
+        return self._from_compliant_series(
+            self._compliant_series.rolling_std(
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+            )
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 

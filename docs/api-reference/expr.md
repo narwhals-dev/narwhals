@@ -46,7 +46,9 @@
         - quantile
         - replace_strict
         - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - shift
