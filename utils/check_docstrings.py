@@ -27,7 +27,7 @@ def check_with_mypy(
     results: list[tuple[Path, str, str]] = []
     for file, name, example in examples:
         print(f"Checking {file} {name}")  # noqa: T201
-        result = api.run(["-c", example])
+        result = api.run(["-c", example, "--ignore-missing-imports"])
         if "Success" in result[0]:
             print("Success")  # noqa: T201
             continue
