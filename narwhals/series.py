@@ -3346,7 +3346,7 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
             >>> s_pa = pa.chunked_array([data])
@@ -3355,15 +3355,15 @@ class Series:
 
             >>> def agnostic_rolling_var(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.rolling_var(window_size=2).to_native()
+            ...     return s.rolling_var(window_size=2, min_periods=1).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> agnostic_rolling_var(s_pd)
             0    NaN
-            1    1.5
-            2    2.5
-            3    3.5
+            1    2.0
+            2    2.0
+            3    4.5
             dtype: float64
 
             >>> agnostic_rolling_var(s_pl)  # doctest:+NORMALIZE_WHITESPACE
@@ -3371,19 +3371,19 @@ class Series:
             Series: '' [f64]
             [
                null
-               1.5
-               2.5
-               3.5
+               2.0
+               2.0
+               4.5
             ]
 
             >>> agnostic_rolling_var(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
-                null,
-                1.5,
-                2.5,
-                3.5
+                nan,
+                2,
+                2,
+                4.5
               ]
             ]
         """
@@ -3439,7 +3439,7 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
             >>> s_pa = pa.chunked_array([data])
@@ -3448,15 +3448,15 @@ class Series:
 
             >>> def agnostic_rolling_std(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.rolling_std(window_size=2).to_native()
+            ...     return s.rolling_std(window_size=2, min_periods=1).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> agnostic_rolling_std(s_pd)
-            0    NaN
-            1    1.5
-            2    2.5
-            3    3.5
+            0         NaN
+            1    1.414214
+            2    1.414214
+            3    2.121320
             dtype: float64
 
             >>> agnostic_rolling_std(s_pl)  # doctest:+NORMALIZE_WHITESPACE
@@ -3464,19 +3464,19 @@ class Series:
             Series: '' [f64]
             [
                null
-               1.5
-               2.5
-               3.5
+               1.414214
+               1.414214
+               2.12132
             ]
 
             >>> agnostic_rolling_std(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
-                null,
-                1.5,
-                2.5,
-                3.5
+                nan,
+                1.4142135623730951,
+                1.4142135623730951,
+                2.1213203435596424
               ]
             ]
         """

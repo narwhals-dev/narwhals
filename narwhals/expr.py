@@ -3433,10 +3433,10 @@ class Expr:
 
             >>> agnostic_rolling_var(df_pd)
                  a    b
-            0  1.0  1.0
-            1  2.0  1.5
-            2  NaN  1.5
-            3  4.0  3.0
+            0  1.0  NaN
+            1  2.0  0.5
+            2  NaN  0.5
+            3  4.0  2.0
 
             >>> agnostic_rolling_var(df_pl)
             shape: (4, 2)
@@ -3445,10 +3445,10 @@ class Expr:
             │ ---  ┆ --- │
             │ f64  ┆ f64 │
             ╞══════╪═════╡
-            │ 1.0  ┆ 1.0 │
-            │ 2.0  ┆ 1.5 │
-            │ null ┆ 1.5 │
-            │ 4.0  ┆ 3.0 │
+            │ 1.0  ┆ 0.0 │
+            │ 2.0  ┆ 0.5 │
+            │ null ┆ 0.5 │
+            │ 4.0  ┆ 2.0 │
             └──────┴─────┘
 
             >>> agnostic_rolling_var(df_pa)  #  doctest:+ELLIPSIS
@@ -3457,7 +3457,7 @@ class Expr:
             b: double
             ----
             a: [[1,2,null,4]]
-            b: [[1,1.5,1.5,3]]
+            b: [[nan,0.5,0.5,2]]
         """
         window_size, min_periods = _validate_rolling_arguments(
             window_size=window_size, min_periods=min_periods
@@ -3524,24 +3524,24 @@ class Expr:
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> agnostic_rolling_std(df_pd)
-                 a    b
-            0  1.0  1.0
-            1  2.0  1.5
-            2  NaN  1.5
-            3  4.0  3.0
+                 a         b
+            0  1.0       NaN
+            1  2.0  0.707107
+            2  NaN  0.707107
+            3  4.0  1.414214
 
             >>> agnostic_rolling_std(df_pl)
             shape: (4, 2)
-            ┌──────┬─────┐
-            │ a    ┆ b   │
-            │ ---  ┆ --- │
-            │ f64  ┆ f64 │
-            ╞══════╪═════╡
-            │ 1.0  ┆ 1.0 │
-            │ 2.0  ┆ 1.5 │
-            │ null ┆ 1.5 │
-            │ 4.0  ┆ 3.0 │
-            └──────┴─────┘
+            ┌──────┬──────────┐
+            │ a    ┆ b        │
+            │ ---  ┆ ---      │
+            │ f64  ┆ f64      │
+            ╞══════╪══════════╡
+            │ 1.0  ┆ 0.0      │
+            │ 2.0  ┆ 0.707107 │
+            │ null ┆ 0.707107 │
+            │ 4.0  ┆ 1.414214 │
+            └──────┴──────────┘
 
             >>> agnostic_rolling_std(df_pa)  #  doctest:+ELLIPSIS
             pyarrow.Table
@@ -3549,7 +3549,7 @@ class Expr:
             b: double
             ----
             a: [[1,2,null,4]]
-            b: [[1,1.5,1.5,3]]
+            b: [[nan,0.7071067811865476,0.7071067811865476,1.4142135623730951]]
         """
         window_size, min_periods = _validate_rolling_arguments(
             window_size=window_size, min_periods=min_periods

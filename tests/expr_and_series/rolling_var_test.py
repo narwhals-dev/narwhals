@@ -37,6 +37,10 @@ kwargs_and_expected = {
         "kwargs": {"window_size": 4, "min_periods": 1, "center": True},
         "expected": [0.5, 1 / 3, 11 / 12, 11 / 12, 2.25, 2.25, 3],
     },
+    "x6": {
+        "kwargs": {"window_size": 3, "ddof": 2},
+        "expected": [float("nan"), float("nan"), 2 / 3, 2.0, 8 / 3, 14 / 3, 6.0],
+    },
 }
 
 

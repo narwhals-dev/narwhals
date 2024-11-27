@@ -12,6 +12,7 @@ from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import pad_series
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.translate import to_py_scalar
@@ -901,34 +902,19 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         min_periods = min_periods if min_periods is not None else window_size
-        if center:
-            offset_left = window_size // 2
-            offset_right = offset_left - (
-                window_size % 2 == 0
-            )  # subtract one if window_size is even
+        padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
-            native_series = self._native_series
-
-            pad_left = pa.array([None] * offset_left, type=native_series.type)
-            pad_right = pa.array([None] * offset_right, type=native_series.type)
-            padded_arr = self._from_native_series(
-                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
-            )
-        else:
-            padded_arr = self
-
-        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        cum_sum = padded_series.cum_sum(reverse=False).fill_null(strategy="forward")
         rolling_sum = (
             cum_sum - cum_sum.shift(window_size).fill_null(0)
             if window_size != 0
             else cum_sum
         )
 
-        valid_count = padded_arr.cum_count(reverse=False)
+        valid_count = padded_series.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
 
         result = self._from_native_series(
@@ -938,9 +924,7 @@ class ArrowSeries:
                 None,
             )
         )
-        if center:
-            result = result[offset_left + offset_right :]
-        return result
+        return result[offset:]
 
     def rolling_mean(
         self: Self,
@@ -949,34 +933,19 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         min_periods = min_periods if min_periods is not None else window_size
-        if center:
-            offset_left = window_size // 2
-            offset_right = offset_left - (
-                window_size % 2 == 0
-            )  # subtract one if window_size is even
+        padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
-            native_series = self._native_series
-
-            pad_left = pa.array([None] * offset_left, type=native_series.type)
-            pad_right = pa.array([None] * offset_right, type=native_series.type)
-            padded_arr = self._from_native_series(
-                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
-            )
-        else:
-            padded_arr = self
-
-        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        cum_sum = padded_series.cum_sum(reverse=False).fill_null(strategy="forward")
         rolling_sum = (
             cum_sum - cum_sum.shift(window_size).fill_null(0)
             if window_size != 0
             else cum_sum
         )
 
-        valid_count = padded_arr.cum_count(reverse=False)
+        valid_count = padded_series.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
 
         result = (
@@ -989,9 +958,7 @@ class ArrowSeries:
             )
             / count_in_window
         )
-        if center:
-            result = result[offset_left + offset_right :]
-        return result
+        return result[offset:]
 
     def rolling_var(
         self: Self,
@@ -1001,27 +968,12 @@ class ArrowSeries:
         center: bool,
         ddof: int,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         min_periods = min_periods if min_periods is not None else window_size
-        if center:
-            offset_left = window_size // 2
-            offset_right = offset_left - (
-                window_size % 2 == 0
-            )  # subtract one if window_size is even
+        padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
-            native_series = self._native_series
-
-            pad_left = pa.array([None] * offset_left, type=native_series.type)
-            pad_right = pa.array([None] * offset_right, type=native_series.type)
-            padded_arr = self._from_native_series(
-                pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
-            )
-        else:
-            padded_arr = self
-
-        cum_sum = padded_arr.cum_sum(reverse=False).fill_null(strategy="forward")
+        cum_sum = padded_series.cum_sum(reverse=False).fill_null(strategy="forward")
         rolling_sum = (
             cum_sum - cum_sum.shift(window_size).fill_null(0)
             if window_size != 0
@@ -1029,7 +981,7 @@ class ArrowSeries:
         )
 
         cum_sum_sq = (
-            padded_arr.__pow__(2).cum_sum(reverse=False).fill_null(strategy="forward")
+            padded_series.__pow__(2).cum_sum(reverse=False).fill_null(strategy="forward")
         )
         rolling_sum_sq = (
             cum_sum_sq - cum_sum_sq.shift(window_size).fill_null(0)
@@ -1037,7 +989,7 @@ class ArrowSeries:
             else cum_sum_sq
         )
 
-        valid_count = padded_arr.cum_count(reverse=False)
+        valid_count = padded_series.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
 
         result = self._from_native_series(
@@ -1047,9 +999,8 @@ class ArrowSeries:
                 None,
             )
         ) / (count_in_window - ddof)
-        if center:
-            result = result[offset_left + offset_right :]
-        return result
+
+        return result[offset:]
 
     def rolling_std(
         self: Self,
