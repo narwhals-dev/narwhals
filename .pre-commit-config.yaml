@@ -10,6 +10,9 @@ repos:
     # Run the linter.
     - id: ruff
       args: [--fix]
+    - id: ruff
+      alias: check-docstrings
+      entry: python utils/check_docstrings.py
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: 'v1.13.0'
   hooks:
@@ -56,11 +59,6 @@ repos:
       language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
-    - id: check-docstrings-execute
-      name: check docstrings execute
-      entry: python utils/check_docstrings.py
-      language: python
-      files: ^narwhals/
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.0
   hooks:
