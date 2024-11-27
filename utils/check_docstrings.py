@@ -1,3 +1,5 @@
+"""Run ruff on Python examples in docstrings."""
+
 from __future__ import annotations
 
 import ast
