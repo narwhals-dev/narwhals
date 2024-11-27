@@ -33,13 +33,14 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/series\.py$|
+                narwhals/series\.py|
                 # TODO: gradually enable
-                narwhals/dataframe\.py$|
+                narwhals/dataframe\.py|
                 # TODO: gradually enable
-                narwhals/dependencies\.py$|
+                narwhals/dependencies\.py|
                 # private, so less urgent to document too well
-                narwhals/_.*
+                narwhals/_.*|
+                ^utils/.*
             )$
 - repo: local
   hooks:
@@ -55,6 +56,11 @@ repos:
       language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
+    - id: check-docstrings-execute
+      name: check docstrings execute
+      entry: python utils/check_docstrings.py
+      language: python
+      files: ^narwhals/
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.0
   hooks:

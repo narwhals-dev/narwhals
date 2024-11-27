@@ -9,6 +9,7 @@ pytest
 pytest-cov
 pytest-randomly
 pytest-env
+ruff
 hypothesis
 hypothesis[numpy]
 scikit-learn

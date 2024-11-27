@@ -1773,7 +1773,7 @@ def narwhalify(
         Instead of writing
 
         >>> import narwhals as nw
-        >>> def func(df):
+        >>> def agnostic_group_by_sum(df):
         ...     df = nw.from_native(df, pass_through=True)
         ...     df = df.group_by("a").agg(nw.col("b").sum())
         ...     return nw.to_native(df)
@@ -1781,7 +1781,7 @@ def narwhalify(
         you can just write
 
         >>> @nw.narwhalify
-        ... def func(df):
+        ... def agnostic_group_by_sum(df):
         ...     return df.group_by("a").agg(nw.col("b").sum())
     """
     pass_through = validate_strict_and_pass_though(
