@@ -70,7 +70,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.14.2"
+__version__ = "1.14.3"
 
 __all__ = [
     "Array",
