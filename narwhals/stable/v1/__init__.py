@@ -2736,7 +2736,7 @@ def concat(
 
 
 def concat(
-    items: Iterable[DataFrame[Any]] | Iterable[LazyFrame[Any]],
+    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
@@ -2744,7 +2744,7 @@ def concat(
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-        how: {'vertical', 'horizontal'}:
+        how: concatenating strategy:
 
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
@@ -2775,17 +2775,17 @@ def concat(
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_vertical_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="vertical")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_vertical_concat(df_pd_1, df_pd_2)
            a  b
         0  1  4
         1  2  5
         2  3  6
         0  5  1
         1  2  4
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_vertical_concat(df_pl_1, df_pl_2)
         shape: (5, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -2815,16 +2815,16 @@ def concat(
         Defining a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_horizontal_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="horizontal")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_horizontal_concat(df_pd_1, df_pd_2)
            a  b    c    d
         0  1  4  5.0  1.0
         1  2  5  2.0  4.0
         2  3  6  NaN  NaN
 
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_horizontal_concat(df_pl_1, df_pl_2)
         shape: (3, 4)
         ┌─────┬─────┬──────┬──────┐
         │ a   ┆ b   ┆ c    ┆ d    │
@@ -2836,6 +2836,44 @@ def concat(
         │ 3   ┆ 6   ┆ null ┆ null │
         └─────┴─────┴──────┴──────┘
 
+        Let's look at case a for diagonal concatenation:
+
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data_1 = {"a": [1, 2], "b": [3.5, 4.5]}
+        >>> data_2 = {"a": [3, 4], "z": ["x", "y"]}
+
+        >>> df_pd_1 = pd.DataFrame(data_1)
+        >>> df_pd_2 = pd.DataFrame(data_2)
+        >>> df_pl_1 = pl.DataFrame(data_1)
+        >>> df_pl_2 = pl.DataFrame(data_2)
+
+        Defining a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def agnostic_diagonal_concat(df1, df2):
+        ...     return nw.concat([df1, df2], how="diagonal")
+
+        >>> agnostic_diagonal_concat(df_pd_1, df_pd_2)
+           a    b    z
+        0  1  3.5  NaN
+        1  2  4.5  NaN
+        0  3  NaN    x
+        1  4  NaN    y
+
+        >>> agnostic_diagonal_concat(df_pl_1, df_pl_2)
+        shape: (4, 3)
+        ┌─────┬──────┬──────┐
+        │ a   ┆ b    ┆ z    │
+        │ --- ┆ ---  ┆ ---  │
+        │ i64 ┆ f64  ┆ str  │
+        ╞═════╪══════╪══════╡
+        │ 1   ┆ 3.5  ┆ null │
+        │ 2   ┆ 4.5  ┆ null │
+        │ 3   ┆ null ┆ x    │
+        │ 4   ┆ null ┆ y    │
+        └─────┴──────┴──────┘
     """
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
