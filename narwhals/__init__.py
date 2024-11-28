@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from narwhals import dependencies
+from narwhals import dtypes
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals import stable
@@ -107,6 +108,7 @@ __all__ = [
     "concat",
     "concat_str",
     "dependencies",
+    "dtypes",
     "exceptions",
     "from_arrow",
     "from_dict",
