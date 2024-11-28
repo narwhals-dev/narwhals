@@ -237,7 +237,7 @@ def vertical_concat(dfs: list[Any]) -> Any:
     return pa.concat_tables(dfs).combine_chunks()
 
 
-def diagonal_concat(dfs: list[Any]) -> Any:
+def diagonal_concat(dfs: list[Any], backend_version: tuple[int, ...]) -> Any:
     """Concatenate (native) DataFrames diagonally.
 
     Should be in namespace.
@@ -248,7 +248,13 @@ def diagonal_concat(dfs: list[Any]) -> Any:
 
     import pyarrow as pa  # ignore-banned-import
 
-    return pa.concat_tables(dfs, promote_options="default").combine_chunks()
+    kwargs = (
+        {"promote": True}
+        if backend_version < (14, 0, 0)
+        else {"promote_options": "default"}  # type: ignore[dict-item]
+    )
+
+    return pa.concat_tables(dfs, **kwargs).combine_chunks()
 
 
 def floordiv_compat(left: Any, right: Any) -> Any:

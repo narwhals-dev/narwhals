@@ -242,7 +242,9 @@ def diagonal_concat(
 
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
         extra_kwargs = (
-            {"copy": False}
+            {"copy": False, "sort": False}
+            if implementation is Implementation.PANDAS and backend_version < (1,)
+            else {"copy": False}
             if implementation is Implementation.PANDAS and backend_version < (3,)
             else {}
         )

@@ -318,7 +318,7 @@ class ArrowNamespace:
             )
         if how == "diagonal":
             return ArrowDataFrame(
-                diagonal_concat(dfs),
+                diagonal_concat(dfs, self._backend_version),
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
