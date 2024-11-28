@@ -26,6 +26,8 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
+
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
@@ -466,6 +468,163 @@ def _from_dict_impl(
             native_frame = native_namespace.from_dict(data)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
+    return from_native(native_frame, eager_only=True)
+
+
+def from_numpy(
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+) -> DataFrame[Any]:
+    """Construct a DataFrame from a NumPy ndarray.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Two-dimensional data represented as a NumPy ndarray.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
+
+    Returns:
+        A new DataFrame
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import numpy as np
+        >>> from narwhals.typing import IntoFrameT
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+
+        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+
+        Let's see what happens when passing pandas, Polars or PyArrow input:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           column_0  column_1
+        0         5         1
+        1         2         4
+        2         1         3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (3, 2)
+        ┌──────────┬──────────┐
+        │ column_0 ┆ column_1 │
+        │ ---      ┆ ---      │
+        │ i64      ┆ i64      │
+        ╞══════════╪══════════╡
+        │ 5        ┆ 1        │
+        │ 2        ┆ 4        │
+        │ 1        ┆ 3        │
+        └──────────┴──────────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        column_0: int64
+        column_1: int64
+        ----
+        column_0: [[5,2,1]]
+        column_1: [[1,4,3]]
+    """
+    from narwhals import dtypes
+
+    return _from_numpy_impl(
+        data,
+        schema,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_numpy_impl(
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+    dtypes: DTypes,
+) -> DataFrame[Any]:
+    if data.shape == (0,):
+        msg = "`from_numpy` cannot be called with empty array"
+        raise ValueError(msg)
+    if native_namespace is None:
+        msg = "Calling `from_numpy` without `native_namespace` is not supported"
+        raise TypeError(msg)
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS:
+        if schema:
+            from narwhals._polars.utils import (
+                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
+            )
+
+            schema_pl = {
+                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+                for name, dtype in schema.items()
+            }
+            native_frame = native_namespace.from_numpy(data, schema=schema_pl)
+        else:
+            native_frame = native_namespace.from_numpy(data, orient="col")
+
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        if schema:
+            from narwhals._pandas_like.utils import (
+                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
+            )
+
+            backend_version = parse_version(native_namespace.__version__)
+            schema = {
+                name: pandas_like_narwhals_to_native_dtype(
+                    schema[name], native_type, implementation, backend_version, dtypes
+                )
+                for name, native_type in schema.items()
+            }
+            native_frame = native_namespace.DataFrame(
+                data.T, columns=schema.keys()
+            ).astype(schema)
+        else:
+            native_frame = native_namespace.DataFrame(
+                data.T, columns=["column_" + str(x) for x in range(data.shape[0])]
+            )
+
+    elif implementation is Implementation.PYARROW:
+        pa_arrays = [native_namespace.array(val) for val in data]
+        if schema:
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
+
+            schema = native_namespace.schema(
+                [
+                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    for name, dtype in schema.items()
+                ]
+            )
+            native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema)
+        else:
+            native_frame = native_namespace.Table.from_arrays(
+                pa_arrays, names=["column_" + str(x) for x in range(data.shape[0])]
+            )
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement `from_numpy` function in the top-level namespace.
+            native_frame = native_namespace.from_numpy(data)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 

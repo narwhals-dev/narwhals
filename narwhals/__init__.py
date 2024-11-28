@@ -52,6 +52,7 @@ from narwhals.expr import when
 from narwhals.functions import concat
 from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
+from narwhals.functions import from_numpy
 from narwhals.functions import get_level
 from narwhals.functions import new_series
 from narwhals.functions import show_versions
@@ -113,6 +114,7 @@ __all__ = [
     "from_arrow",
     "from_dict",
     "from_dict",
+    "from_numpy",
     "from_native",
     "generate_temporary_column_name",
     "get_level",

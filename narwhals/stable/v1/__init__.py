@@ -22,6 +22,7 @@ from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
+from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
@@ -70,6 +71,7 @@ from narwhals.utils import validate_strict_and_pass_though
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -3166,7 +3168,7 @@ def from_arrow(
 
 
 def from_dict(
-    data: dict[str, Any],
+    data: np.ndarray,
     schema: dict[str, DType] | Schema | None = None,
     *,
     native_namespace: ModuleType | None = None,
@@ -3237,6 +3239,82 @@ def from_dict(
     )
 
 
+def from_numpy(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+) -> DataFrame[Any]:
+    """Construct a DataFrame from a NumPy ndarray.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Two-dimensional data represented as a NumPy ndarray.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
+
+    Returns:
+        A new DataFrame
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import numpy as np
+        >>> from narwhals.typing import IntoFrameT
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+
+        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+
+        Let's see what happens when passing pandas, Polars or PyArrow input:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           column_0  column_1
+        0         5         1
+        1         2         4
+        2         1         3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (3, 2)
+        ┌──────────┬──────────┐
+        │ column_0 ┆ column_1 │
+        │ ---      ┆ ---      │
+        │ i64      ┆ i64      │
+        ╞══════════╪══════════╡
+        │ 5        ┆ 1        │
+        │ 2        ┆ 4        │
+        │ 1        ┆ 3        │
+        └──────────┴──────────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        column_0: int64
+        column_1: int64
+        ----
+        column_0: [[5,2,1]]
+        column_1: [[1,4,3]]
+    """
+    from narwhals.stable.v1 import dtypes
+
+    return _stableify(
+        _from_numpy_impl(
+            data,
+            schema,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
+    )
+
+
 __all__ = [
     "Array",
     "Boolean",
@@ -3278,6 +3356,7 @@ __all__ = [
     "from_arrow",
     "from_dict",
     "from_native",
+    "from_numpy",
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
