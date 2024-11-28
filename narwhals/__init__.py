@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from narwhals import dependencies
+from narwhals import dtypes
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals import stable
@@ -69,7 +70,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.14.2"
+__version__ = "1.14.3"
 
 __all__ = [
     "Array",
@@ -107,6 +108,7 @@ __all__ = [
     "concat",
     "concat_str",
     "dependencies",
+    "dtypes",
     "exceptions",
     "from_arrow",
     "from_dict",

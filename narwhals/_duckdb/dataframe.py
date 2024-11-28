@@ -139,5 +139,8 @@ class DuckDBInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.arrow()
 
+    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+        return self.__class__(self._native_frame, dtypes=dtypes)
+
     def _from_native_frame(self: Self, df: Any) -> Self:
         return self.__class__(df, dtypes=self._dtypes)

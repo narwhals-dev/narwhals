@@ -5696,6 +5696,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [3, 4]})
@@ -5752,6 +5753,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
@@ -5804,6 +5806,7 @@ def all_() -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pa = pa.table({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -5855,6 +5858,7 @@ def len_() -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -5909,6 +5913,7 @@ def sum(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
         >>> df_pa = pa.table({"a": [1, 2]})
@@ -5959,6 +5964,7 @@ def mean(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
         >>> df_pa = pa.table({"a": [1, 8, 3]})
@@ -6010,6 +6016,7 @@ def median(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
         >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
         >>> df_pa = pa.table({"a": [4, 5, 2]})
@@ -6060,6 +6067,7 @@ def min(*columns: str) -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -6110,6 +6118,7 @@ def max(*columns: str) -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -6161,6 +6170,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
@@ -6221,6 +6231,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
@@ -6286,6 +6297,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
@@ -6385,6 +6397,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pa = pa.table({"a": [1, 2, 3], "b": [5, 10, 15]})
@@ -6442,6 +6455,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
@@ -6517,6 +6531,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
         >>> df_pa = pa.table({"a": [1, 2]})
@@ -6579,6 +6594,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
@@ -6654,6 +6670,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [1, 8, 3],
         ...     "b": [4, 5, None],
@@ -6730,6 +6747,7 @@ def concat_str(
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa

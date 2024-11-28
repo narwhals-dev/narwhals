@@ -127,6 +127,14 @@ class PandasLikeSeries:
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_series,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            dtypes=dtypes,
+        )
+
     def _from_native_series(self, series: Any) -> Self:
         return self.__class__(
             series,
@@ -188,9 +196,21 @@ class PandasLikeSeries:
     ) -> PandasLikeSeries:
         ser = self._native_series
         mask_na = ser.isna()
-        result = ser.ewm(
-            com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
-        ).mean()
+        if self._implementation is Implementation.CUDF:
+            if (min_periods == 0 and not ignore_nulls) or (not mask_na.any()):
+                result = ser.ewm(
+                    com=com, span=span, halflife=half_life, alpha=alpha, adjust=adjust
+                ).mean()
+            else:
+                msg = (
+                    "cuDF only supports `ewm_mean` when there are no missing values "
+                    "or when both `min_period=0` and `ignore_nulls=False`"
+                )
+                raise NotImplementedError(msg)
+        else:
+            result = ser.ewm(
+                com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
+            ).mean()
         result[mask_na] = None
         return self._from_native_series(result)
 

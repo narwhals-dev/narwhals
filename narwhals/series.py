@@ -1079,6 +1079,7 @@ class Series:
           >>> import polars as pl
           >>> import numpy as np
           >>> import narwhals as nw
+          >>> from narwhals.typing import IntoSeriesT
           >>> s_pd = pd.Series([2, 4, None, 3, 5])
           >>> s_pl = pl.Series("a", [2, 4, None, 3, 5])
 
@@ -1876,6 +1877,7 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> import numpy as np
             >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
@@ -2509,7 +2511,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
 
@@ -2780,6 +2782,7 @@ class Series:
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+            >>> import pyarrow as pa
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = [1, 2, 3, 4]
