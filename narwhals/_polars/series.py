@@ -46,6 +46,11 @@ class PolarsSeries:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_series, backend_version=self._backend_version, dtypes=dtypes
+        )
+
     def _from_native_series(self, series: Any) -> Self:
         return self.__class__(
             series, backend_version=self._backend_version, dtypes=self._dtypes

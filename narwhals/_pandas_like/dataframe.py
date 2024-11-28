@@ -100,6 +100,14 @@ class PandasLikeDataFrame:
             msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_frame,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            dtypes=dtypes,
+        )
+
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(
             df,
