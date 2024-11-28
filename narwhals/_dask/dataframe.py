@@ -59,6 +59,11 @@ class DaskLazyFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_frame, backend_version=self._backend_version, dtypes=dtypes
+        )
+
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes

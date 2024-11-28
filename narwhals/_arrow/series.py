@@ -45,6 +45,14 @@ class ArrowSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_series,
+            name=self._name,
+            backend_version=self._backend_version,
+            dtypes=dtypes,
+        )
+
     def _from_native_series(self, series: pa.ChunkedArray | pa.Array) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
