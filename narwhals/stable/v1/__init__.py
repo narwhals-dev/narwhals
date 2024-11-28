@@ -1160,19 +1160,21 @@ def _stableify(obj: Any) -> Any: ...
 def _stableify(
     obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
+    from narwhals.stable.v1 import dtypes
+
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame,
+            obj._compliant_frame._change_dtypes(dtypes),
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame,
+            obj._compliant_frame._change_dtypes(dtypes),
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._compliant_series,
+            obj._compliant_series._change_dtypes(dtypes),
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
