@@ -553,8 +553,8 @@ def _from_numpy_impl(
     native_namespace: ModuleType | None = None,
     dtypes: DTypes,
 ) -> DataFrame[Any]:
-    if data.shape == (0,):
-        msg = "`from_numpy` cannot be called with empty array"
+    if data.ndim != 2:
+        msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
     if native_namespace is None:
         msg = "Calling `from_numpy` without `native_namespace` is not supported"

@@ -63,5 +63,5 @@ def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_from_numpy_empty() -> None:
-    with pytest.raises(ValueError, match="empty"):
-        nw.from_numpy(np.array([]))
+    with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
+        nw.from_numpy(np.array([0]))
