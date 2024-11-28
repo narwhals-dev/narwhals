@@ -42,6 +42,7 @@ Get started!
 Join the party!
 
 - [altair](https://github.com/vega/altair/)
+- [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 - [marimo](https://github.com/marimo-team/marimo)
 - [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 - [plotly](https://plotly.com)

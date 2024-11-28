@@ -272,3 +272,43 @@ jobs:
         run: |
             cd plotly.py
             pytest packages/python/plotly/plotly/tests/test_optional/test_px
+
+  hierarchicalforecast:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
+      - name: clone-hierarchicalforecast
+        run: |
+            git clone https://github.com/Nixtla/hierarchicalforecast --depth=1
+            cd hierarchicalforecast
+            git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools --system
+      - name: install-deps
+        run: |
+            cd hierarchicalforecast
+             uv pip install --system ".[dev]"
+      - name: install-narwhals-dev
+        run: |
+            uv pip uninstall narwhals --system
+            uv pip install -e . --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run tests
+        run: |
+            cd hierarchicalforecast
+            nbdev_test --do_print --timing --n_workers 0
