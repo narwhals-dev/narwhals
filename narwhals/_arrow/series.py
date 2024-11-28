@@ -1000,13 +1000,13 @@ class ArrowSeries:
         valid_count = padded_series.cum_count(reverse=False)
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(0)
 
-        result = self._from_native_series(
+        result: Self = self._from_native_series(
             pc.if_else(
                 (count_in_window >= min_periods)._native_series,
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
                 None,
             )
-        ) / (count_in_window - ddof)
+        ) / max(count_in_window - ddof, 0)  # type: ignore[call-overload]
 
         return result[offset:]
 
