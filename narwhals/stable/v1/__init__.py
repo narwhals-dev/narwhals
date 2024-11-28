@@ -28,6 +28,7 @@ from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
+from narwhals.stable.v1 import dtypes
 from narwhals.stable.v1.dtypes import Array
 from narwhals.stable.v1.dtypes import Boolean
 from narwhals.stable.v1.dtypes import Categorical
@@ -3232,6 +3233,7 @@ __all__ = [
     "concat",
     "concat_str",
     "dependencies",
+    "dtypes",
     "exceptions",
     "from_arrow",
     "from_dict",
