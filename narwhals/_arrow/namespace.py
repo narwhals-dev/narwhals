@@ -12,6 +12,7 @@ from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import broadcast_series
+from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_root_names
@@ -299,7 +300,7 @@ class ArrowNamespace:
         self,
         items: Iterable[ArrowDataFrame],
         *,
-        how: Literal["horizontal", "vertical"],
+        how: Literal["horizontal", "vertical", "diagonal"],
     ) -> ArrowDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
 
@@ -312,6 +313,12 @@ class ArrowNamespace:
         if how == "vertical":
             return ArrowDataFrame(
                 vertical_concat(dfs),
+                backend_version=self._backend_version,
+                dtypes=self._dtypes,
+            )
+        if how == "diagonal":
+            return ArrowDataFrame(
+                diagonal_concat(dfs),
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )

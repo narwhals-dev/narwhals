@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 def concat(
     items: Iterable[FrameT],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
@@ -51,6 +51,8 @@ def concat(
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
                 missing rows are filled with null values.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -137,8 +139,8 @@ def concat(
         └─────┴─────┴──────┴──────┘
 
     """
-    if how not in ("horizontal", "vertical"):  # pragma: no cover
-        msg = "Only horizontal and vertical concatenations are supported"
+    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
+        msg = "Only vertical, horizontal and diagonal concatenations are supported."
         raise NotImplementedError(msg)
     if not items:
         msg = "No items to concatenate"

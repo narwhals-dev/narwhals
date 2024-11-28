@@ -198,7 +198,7 @@ class DaskNamespace:
         self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: Literal["horizontal", "vertical"],
+        how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
         import dask.dataframe as dd  # ignore-banned-import
 
@@ -242,6 +242,13 @@ class DaskNamespace:
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
+        if how == "diagonal":
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="outer"),
+                backend_version=self._backend_version,
+                dtypes=self._dtypes,
+            )
+
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:

@@ -2723,7 +2723,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def concat(
     items: Iterable[DataFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> DataFrame[Any]: ...
 
 
@@ -2731,14 +2731,14 @@ def concat(
 def concat(
     items: Iterable[LazyFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> LazyFrame[Any]: ...
 
 
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[Any]] | Iterable[LazyFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
@@ -2749,6 +2749,8 @@ def concat(
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
                 missing rows are filled with null values.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
