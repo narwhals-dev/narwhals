@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from narwhals import dependencies
+from narwhals import dtypes
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals import stable
@@ -51,6 +52,7 @@ from narwhals.expr import when
 from narwhals.functions import concat
 from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
+from narwhals.functions import from_numpy
 from narwhals.functions import get_level
 from narwhals.functions import new_series
 from narwhals.functions import show_versions
@@ -69,7 +71,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.14.2"
+__version__ = "1.14.3"
 
 __all__ = [
     "Array",
@@ -107,10 +109,11 @@ __all__ = [
     "concat",
     "concat_str",
     "dependencies",
+    "dtypes",
     "exceptions",
     "from_arrow",
     "from_dict",
-    "from_dict",
+    "from_numpy",
     "from_native",
     "generate_temporary_column_name",
     "get_level",

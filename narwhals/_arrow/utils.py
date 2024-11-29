@@ -237,6 +237,26 @@ def vertical_concat(dfs: list[Any]) -> Any:
     return pa.concat_tables(dfs).combine_chunks()
 
 
+def diagonal_concat(dfs: list[Any], backend_version: tuple[int, ...]) -> Any:
+    """Concatenate (native) DataFrames diagonally.
+
+    Should be in namespace.
+    """
+    if not dfs:
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
+
+    import pyarrow as pa  # ignore-banned-import
+
+    kwargs = (
+        {"promote": True}
+        if backend_version < (14, 0, 0)
+        else {"promote_options": "default"}  # type: ignore[dict-item]
+    )
+
+    return pa.concat_tables(dfs, **kwargs).combine_chunks()
+
+
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154

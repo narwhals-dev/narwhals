@@ -229,6 +229,32 @@ def vertical_concat(
         raise TypeError(msg)
 
 
+def diagonal_concat(
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
+) -> Any:
+    """Concatenate (native) DataFrames diagonally.
+
+    Should be in namespace.
+    """
+    if not dfs:
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
+
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False, "sort": False}
+            if implementation is Implementation.PANDAS and backend_version < (1,)
+            else {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
+
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
+
+
 def native_series_from_iterable(
     data: Iterable[Any],
     name: str,

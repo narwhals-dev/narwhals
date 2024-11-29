@@ -10,6 +10,9 @@ repos:
     # Run the linter.
     - id: ruff
       args: [--fix]
+    - id: ruff
+      alias: check-docstrings
+      entry: python utils/check_docstrings.py
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: 'v1.13.0'
   hooks:
@@ -33,13 +36,14 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/series\.py$|
+                narwhals/series\.py|
                 # TODO: gradually enable
-                narwhals/dataframe\.py$|
+                narwhals/dataframe\.py|
                 # TODO: gradually enable
-                narwhals/dependencies\.py$|
+                narwhals/dependencies\.py|
                 # private, so less urgent to document too well
-                narwhals/_.*
+                narwhals/_.*|
+                ^utils/.*
             )$
 - repo: local
   hooks:
