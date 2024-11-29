@@ -3168,7 +3168,7 @@ def from_arrow(
 
 
 def from_dict(
-    data: np.ndarray,
+    data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
     native_namespace: ModuleType | None = None,
@@ -3240,8 +3240,8 @@ def from_dict(
 
 
 def from_numpy(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> DataFrame[Any]:
@@ -3255,7 +3255,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema or dict of {name: type}.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
@@ -3270,7 +3270,7 @@ def from_numpy(
         >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2], "b": [3, 4]}
 
-        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
+        Let's create a new dataframe of the same class as the dataframe we started with, from a NumPy ndarray of new data:
 
         >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
@@ -3304,6 +3304,43 @@ def from_numpy(
         column_1: [[2,4]]
         column_2: [[1,3]]
 
+        Let's specify the column names:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = ["c", "d", "e"]
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the modified outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c  d  e
+        0  5  2  1
+        1  1  4  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2   ┆ 1   │
+        │ 1   ┆ 4   ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        e: int64
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+
         Let's modify the function so that it specifies the schema:
 
         >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
@@ -3315,7 +3352,7 @@ def from_numpy(
         ...         new_data, native_namespace=native_namespace, schema=schema
         ...     ).to_native()
 
-        Let's see what happens when passing pandas, Polars or PyArrow input:
+        Let's see the outputs:
 
         >>> agnostic_from_numpy(pd.DataFrame(data))
            c    d  e

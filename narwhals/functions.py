@@ -474,7 +474,7 @@ def _from_dict_impl(
 
 def from_numpy(
     data: np.ndarray,
-    schema: dict[str, DType] | Schema | None = None,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> DataFrame[Any]:
@@ -488,7 +488,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema or dict of {name: type}.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
@@ -503,7 +503,7 @@ def from_numpy(
         >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2], "b": [3, 4]}
 
-        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
+        Let's create a new dataframe of the same class as the dataframe we started with, from a NumPy ndarray of new data:
 
         >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
@@ -537,6 +537,43 @@ def from_numpy(
         column_1: [[2,4]]
         column_2: [[1,3]]
 
+        Let's specify the column names:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = ["c", "d", "e"]
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the modified outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c  d  e
+        0  5  2  1
+        1  1  4  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2   ┆ 1   │
+        │ 1   ┆ 4   ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        e: int64
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+
         Let's modify the function so that it specifies the schema:
 
         >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
@@ -548,7 +585,7 @@ def from_numpy(
         ...         new_data, native_namespace=native_namespace, schema=schema
         ...     ).to_native()
 
-        Let's see what happens when passing pandas, Polars or PyArrow input:
+        Let's see the outputs:
 
         >>> agnostic_from_numpy(pd.DataFrame(data))
            c    d  e
@@ -586,11 +623,13 @@ def from_numpy(
 
 def _from_numpy_impl(
     data: np.ndarray,
-    schema: dict[str, DType] | Schema | None = None,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
     dtypes: DTypes,
 ) -> DataFrame[Any]:
+    from narwhals.schema import Schema
+
     if data.ndim != 2:
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
@@ -598,15 +637,23 @@ def _from_numpy_impl(
 
     if implementation is Implementation.POLARS:
         if schema:
-            from narwhals._polars.utils import (
-                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
-            )
+            if isinstance(schema, (dict, Schema)):
+                from narwhals._polars.utils import (
+                    narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
+                )
 
-            schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
-                for name, dtype in schema.items()
-            }
-            native_frame = native_namespace.from_numpy(data, schema=schema_pl)
+                schema = {
+                    name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)  # type: ignore[misc]
+                    for name, dtype in schema.items()
+                }
+            elif not isinstance(schema, (list)):
+                msg = (
+                    "`schema` is expected to be one of the following types: "
+                    "dict[str, DType] | Schema | list[str]. "
+                    f"Got {type(schema)}."
+                )
+                raise TypeError(msg)
+            native_frame = native_namespace.from_numpy(data, schema=schema)
         else:
             native_frame = native_namespace.from_numpy(data)
 
@@ -616,20 +663,30 @@ def _from_numpy_impl(
         Implementation.CUDF,
     }:
         if schema:
-            from narwhals._pandas_like.utils import (
-                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
-            )
-
-            backend_version = parse_version(native_namespace.__version__)
-            schema = {
-                name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, dtypes
+            if isinstance(schema, (dict, Schema)):
+                from narwhals._pandas_like.utils import (
+                    narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
                 )
-                for name, native_type in schema.items()
-            }
-            native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
-                schema
-            )
+
+                backend_version = parse_version(native_namespace.__version__)
+                schema = {
+                    name: pandas_like_narwhals_to_native_dtype(
+                        schema[name], native_type, implementation, backend_version, dtypes
+                    )
+                    for name, native_type in schema.items()
+                }
+                native_frame = native_namespace.DataFrame(
+                    data, columns=schema.keys()
+                ).astype(schema)
+            elif isinstance(schema, list):
+                native_frame = native_namespace.DataFrame(data, columns=schema)
+            else:
+                msg = (
+                    "`schema` is expected to be one of the following types: "
+                    "dict[str, DType] | Schema | list[str]. "
+                    f"Got {type(schema)}."
+                )
+                raise TypeError(msg)
         else:
             native_frame = native_namespace.DataFrame(
                 data, columns=["column_" + str(x) for x in range(data.shape[1])]
@@ -638,17 +695,29 @@ def _from_numpy_impl(
     elif implementation is Implementation.PYARROW:
         pa_arrays = [native_namespace.array(val) for val in data.T]
         if schema:
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-            )
+            if isinstance(schema, (dict, Schema)):
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+                )
 
-            schema = native_namespace.schema(
-                [
-                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
-                    for name, dtype in schema.items()
-                ]
-            )
-            native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema)
+                schema = native_namespace.schema(
+                    [
+                        (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                        for name, dtype in schema.items()
+                    ]
+                )
+                native_frame = native_namespace.Table.from_arrays(
+                    pa_arrays, schema=schema
+                )
+            elif isinstance(schema, list):
+                native_frame = native_namespace.Table.from_arrays(pa_arrays, names=schema)
+            else:
+                msg = (
+                    "`schema` is expected to be one of the following types: "
+                    "dict[str, DType] | Schema | list[str]. "
+                    f"Got {type(schema)}."
+                )
+                raise TypeError(msg)
         else:
             native_frame = native_namespace.Table.from_arrays(
                 pa_arrays, names=["column_" + str(x) for x in range(data.shape[1])]

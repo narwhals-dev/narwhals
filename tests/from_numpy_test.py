@@ -28,7 +28,7 @@ def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) ->
     assert isinstance(result, nw.DataFrame)
 
 
-def test_from_numpy_schema(
+def test_from_numpy_schema_dict(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
@@ -49,6 +49,35 @@ def test_from_numpy_schema(
     assert result.collect_schema() == schema
 
 
+def test_from_numpy_schema_list(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    schema = ["c", "d", "e", "f"]
+    df = nw_v1.from_native(constructor(data))
+    native_namespace = nw_v1.get_native_namespace(df)
+    result = nw_v1.from_numpy(
+        arr,
+        native_namespace=native_namespace,
+        schema=schema,
+    )
+    assert result.columns == schema
+
+
+def test_from_numpy_schema_notvalid(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data))
+    native_namespace = nw_v1.get_native_namespace(df)
+    with pytest.raises(
+        TypeError, match="`schema` is expected to be one of the following types"
+    ):
+        nw.from_numpy(arr, schema="a", native_namespace=native_namespace)  # type: ignore[arg-type]
+
+
 def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -59,7 +88,7 @@ def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest)
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_from_numpy_empty(constructor: Constructor) -> None:
+def test_from_numpy_not2d(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
