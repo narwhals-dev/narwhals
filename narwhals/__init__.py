@@ -113,7 +113,6 @@ __all__ = [
     "exceptions",
     "from_arrow",
     "from_dict",
-    "from_dict",
     "from_numpy",
     "from_native",
     "generate_temporary_column_name",

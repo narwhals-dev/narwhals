@@ -3129,7 +3129,7 @@ def from_arrow(
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -3186,7 +3186,7 @@ def from_dict(
             necessary if inputs are not Narwhals Series.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -3203,7 +3203,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing Pandas, Polars or PyArrow input:
+        Let's see what happens when passing pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -3254,11 +3254,10 @@ def from_numpy(
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
-            necessary if inputs are not Narwhals Series.
+        native_namespace: The native library to use for DataFrame creation.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -3302,6 +3301,43 @@ def from_numpy(
         ----
         column_0: [[5,2,1]]
         column_1: [[1,4,3]]
+
+        Let's modify the function so that it specifies the schema:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = {"c": nw.Int16(), "d": nw.Float32()}
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see what happens when passing pandas, Polars or PyArrow input:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c    d
+        0  5  1.0
+        1  2  4.0
+        2  1  3.0
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i16 ┆ f32 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1.0 │
+        │ 2   ┆ 4.0 │
+        │ 1   ┆ 3.0 │
+        └─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int16
+        d: float
+        ----
+        c: [[5,2,1]]
+        d: [[1,4,3]]
     """
     from narwhals.stable.v1 import dtypes
 
