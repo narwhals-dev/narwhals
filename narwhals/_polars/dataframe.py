@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
     T = TypeVar("T")
-    R = TypeVar("R")
 
 
 class PolarsDataFrame:
