@@ -302,27 +302,24 @@ class ArrowNamespace:
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> ArrowDataFrame:
-        dfs: list[Any] = [item._native_frame for item in items]
+        dfs = [item._native_frame for item in items]
+
+        if not dfs:
+            msg = "No dataframes to concatenate"  # pragma: no cover
+            raise AssertionError(msg)
 
         if how == "horizontal":
-            return ArrowDataFrame(
-                horizontal_concat(dfs),
-                backend_version=self._backend_version,
-                dtypes=self._dtypes,
-            )
-        if how == "vertical":
-            return ArrowDataFrame(
-                vertical_concat(dfs),
-                backend_version=self._backend_version,
-                dtypes=self._dtypes,
-            )
-        if how == "diagonal":
-            return ArrowDataFrame(
-                diagonal_concat(dfs, self._backend_version),
-                backend_version=self._backend_version,
-                dtypes=self._dtypes,
-            )
-        raise NotImplementedError
+            result_table = horizontal_concat(dfs)
+        elif how == "vertical":
+            result_table = vertical_concat(dfs)
+        elif how == "diagonal":
+            result_table = diagonal_concat(dfs, self._backend_version)
+        else:
+            raise NotImplementedError
+
+        return ArrowDataFrame(
+            result_table, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def sum(self, *column_names: str) -> ArrowExpr:
         return ArrowExpr.from_column_names(
