@@ -47,15 +47,26 @@ and deprecate the old one? The answer is...no!
 Narwhals offers a `stable` namespace, which allows you to write your code once and forget about
 it. That is to say, if you write your code like this:
 
-```python
-import narwhals.stable.v1 as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.with_columns(nw.col("a").cum_sum())
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return nw.from_native(df).with_columns(nw.col("a").cum_sum()).to_native()
+    ```
+
+=== "@narwhalify"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.with_columns(nw.col("a").cum_sum())
+    ```
 
 then we, in Narwhals, promise that your code will keep working, even in newer versions of Polars
 after they have renamed their method.
