@@ -41,9 +41,10 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import IntoSeriesT
 
     FrameOrSeriesT = TypeVar(
-        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
 
 
@@ -178,7 +179,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 
 def maybe_align_index(
-    lhs: FrameOrSeriesT, rhs: Series | DataFrame[Any] | LazyFrame[Any]
+    lhs: FrameOrSeriesT, rhs: Series[Any] | DataFrame[Any] | LazyFrame[Any]
 ) -> FrameOrSeriesT:
     """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
@@ -274,7 +275,7 @@ def maybe_align_index(
     return lhs
 
 
-def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None:
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -314,7 +315,7 @@ def maybe_set_index(
     obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
-    index: Series | list[Series] | None = None,
+    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
 ) -> FrameOrSeriesT:
     """Set the index of a DataFrame or a Series, if it's pandas-like.
 
@@ -516,7 +517,7 @@ def maybe_convert_dtypes(
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be

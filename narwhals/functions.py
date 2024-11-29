@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import DTypes
+    from narwhals.typing import IntoSeriesT
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -200,7 +201,7 @@ def new_series(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-) -> Series:
+) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
@@ -266,7 +267,7 @@ def _new_series_impl(
     *,
     native_namespace: ModuleType,
     dtypes: DTypes,
-) -> Series:
+) -> Series[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -904,7 +905,7 @@ def show_versions() -> None:
 
 
 def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "interchange"]:
     """Level of support Narwhals has for current object.
 

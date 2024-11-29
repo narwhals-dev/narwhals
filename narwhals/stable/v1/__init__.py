@@ -413,7 +413,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return self.select(all()._l1_norm())
 
 
-class Series(NwSeries):
+class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
@@ -1153,7 +1153,7 @@ def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 @overload
-def _stableify(obj: NwSeries) -> Series: ...
+def _stableify(obj: NwSeries[Any]) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
@@ -1161,7 +1161,7 @@ def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries | NwExpr | Any,
+    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries[Any] | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     from narwhals.stable.v1 import dtypes
 
