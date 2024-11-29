@@ -476,7 +476,7 @@ def from_numpy(
     data: np.ndarray,
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -586,15 +586,12 @@ def _from_numpy_impl(
     data: np.ndarray,
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType,
     dtypes: DTypes,
 ) -> DataFrame[Any]:
     if data.ndim != 2:
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
-    if native_namespace is None:
-        msg = "Calling `from_numpy` without `native_namespace` is not supported"
-        raise TypeError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:

@@ -3243,7 +3243,7 @@ def from_numpy(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
