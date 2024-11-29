@@ -16,6 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_compliant_series
+from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 
@@ -344,7 +345,7 @@ class PandasLikeNamespace:
         self,
         items: Iterable[PandasLikeDataFrame],
         *,
-        how: Literal["horizontal", "vertical"],
+        how: Literal["horizontal", "vertical", "diagonal"],
     ) -> PandasLikeDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
@@ -361,6 +362,18 @@ class PandasLikeNamespace:
         if how == "vertical":
             return PandasLikeDataFrame(
                 vertical_concat(
+                    dfs,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                ),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                dtypes=self._dtypes,
+            )
+
+        if how == "diagonal":
+            return PandasLikeDataFrame(
+                diagonal_concat(
                     dfs,
                     implementation=self._implementation,
                     backend_version=self._backend_version,

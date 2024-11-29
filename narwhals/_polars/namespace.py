@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import overload
 
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
@@ -68,11 +69,27 @@ class PolarsNamespace:
             pl.len(), dtypes=self._dtypes, backend_version=self._backend_version
         )
 
+    @overload
     def concat(
         self,
-        items: Sequence[PolarsDataFrame | PolarsLazyFrame],
+        items: Sequence[PolarsDataFrame],
         *,
-        how: Literal["vertical", "horizontal"],
+        how: Literal["vertical", "horizontal", "diagonal"],
+    ) -> PolarsDataFrame: ...
+
+    @overload
+    def concat(
+        self,
+        items: Sequence[PolarsLazyFrame],
+        *,
+        how: Literal["vertical", "horizontal", "diagonal"],
+    ) -> PolarsLazyFrame: ...
+
+    def concat(
+        self,
+        items: Sequence[PolarsDataFrame] | Sequence[PolarsLazyFrame],
+        *,
+        how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
         import polars as pl  # ignore-banned-import()
 
