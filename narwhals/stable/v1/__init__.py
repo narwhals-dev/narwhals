@@ -3248,7 +3248,7 @@ def from_numpy(
     """Construct a DataFrame from a NumPy ndarray.
 
     Notes:
-        Only the row orientation is currently supported.
+        Only row orientation is currently supported.
 
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
