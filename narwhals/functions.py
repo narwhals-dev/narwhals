@@ -481,6 +481,8 @@ def from_numpy(
     """Construct a DataFrame from a NumPy ndarray.
 
     Notes:
+        Only the row orientation is currently supported.
+
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
 
@@ -512,34 +514,34 @@ def from_numpy(
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
         >>> agnostic_from_numpy(pd.DataFrame(data))
-           column_0  column_1
-        0         5         1
-        1         2         4
-        2         1         3
+           column_0  column_1  column_2
+        0         5         2         1
+        1         1         4         3
         >>> agnostic_from_numpy(pl.DataFrame(data))
-        shape: (3, 2)
-        ┌──────────┬──────────┐
-        │ column_0 ┆ column_1 │
-        │ ---      ┆ ---      │
-        │ i64      ┆ i64      │
-        ╞══════════╪══════════╡
-        │ 5        ┆ 1        │
-        │ 2        ┆ 4        │
-        │ 1        ┆ 3        │
-        └──────────┴──────────┘
+        shape: (2, 3)
+        ┌──────────┬──────────┬──────────┐
+        │ column_0 ┆ column_1 ┆ column_2 │
+        │ ---      ┆ ---      ┆ ---      │
+        │ i64      ┆ i64      ┆ i64      │
+        ╞══════════╪══════════╪══════════╡
+        │ 5        ┆ 2        ┆ 1        │
+        │ 1        ┆ 4        ┆ 3        │
+        └──────────┴──────────┴──────────┘
         >>> agnostic_from_numpy(pa.table(data))
         pyarrow.Table
         column_0: int64
         column_1: int64
+        column_2: int64
         ----
-        column_0: [[5,2,1]]
-        column_1: [[1,4,3]]
+        column_0: [[5,1]]
+        column_1: [[2,4]]
+        column_2: [[1,3]]
 
         Let's modify the function so that it specifies the schema:
 
         >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
-        ...     schema = {"c": nw.Int16(), "d": nw.Float32()}
+        ...     schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
         ...     df = nw.from_native(df_native)
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_numpy(
@@ -549,28 +551,28 @@ def from_numpy(
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
         >>> agnostic_from_numpy(pd.DataFrame(data))
-           c    d
-        0  5  1.0
-        1  2  4.0
-        2  1  3.0
+           c    d  e
+        0  5  2.0  1
+        1  1  4.0  3
         >>> agnostic_from_numpy(pl.DataFrame(data))
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ c   ┆ d   │
-        │ --- ┆ --- │
-        │ i16 ┆ f32 │
-        ╞═════╪═════╡
-        │ 5   ┆ 1.0 │
-        │ 2   ┆ 4.0 │
-        │ 1   ┆ 3.0 │
-        └─────┴─────┘
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i16 ┆ f32 ┆ i8  │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2.0 ┆ 1   │
+        │ 1   ┆ 4.0 ┆ 3   │
+        └─────┴─────┴─────┘
         >>> agnostic_from_numpy(pa.table(data))
         pyarrow.Table
         c: int16
         d: float
+        e: int8
         ----
-        c: [[5,2,1]]
-        d: [[1,4,3]]
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
     """
     from narwhals import dtypes
 
@@ -606,7 +608,7 @@ def _from_numpy_impl(
             }
             native_frame = native_namespace.from_numpy(data, schema=schema_pl)
         else:
-            native_frame = native_namespace.from_numpy(data, orient="col")
+            native_frame = native_namespace.from_numpy(data)
 
     elif implementation in {
         Implementation.PANDAS,
@@ -625,16 +627,16 @@ def _from_numpy_impl(
                 )
                 for name, native_type in schema.items()
             }
-            native_frame = native_namespace.DataFrame(
-                data.T, columns=schema.keys()
-            ).astype(schema)
+            native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
+                schema
+            )
         else:
             native_frame = native_namespace.DataFrame(
-                data.T, columns=["column_" + str(x) for x in range(data.shape[0])]
+                data, columns=["column_" + str(x) for x in range(data.shape[1])]
             )
 
     elif implementation is Implementation.PYARROW:
-        pa_arrays = [native_namespace.array(val) for val in data]
+        pa_arrays = [native_namespace.array(val) for val in data.T]
         if schema:
             from narwhals._arrow.utils import (
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
@@ -649,7 +651,7 @@ def _from_numpy_impl(
             native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema)
         else:
             native_frame = native_namespace.Table.from_arrays(
-                pa_arrays, names=["column_" + str(x) for x in range(data.shape[0])]
+                pa_arrays, names=["column_" + str(x) for x in range(data.shape[1])]
             )
     else:  # pragma: no cover
         try:

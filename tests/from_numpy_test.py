@@ -10,6 +10,12 @@ from tests.utils import assert_equal_data
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 arr = np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]])
+expected = {
+    "column_0": [5, 1, 1],
+    "column_1": [2, 4, 2],
+    "column_2": [0, 7, 3],
+    "column_3": [1, 8, 9],
+}
 
 
 def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -18,11 +24,6 @@ def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) ->
     df = nw.from_native(constructor(data))
     native_namespace = nw.get_native_namespace(df)
     result = nw.from_numpy(arr, native_namespace=native_namespace)
-    expected = {
-        "column_0": [5, 2, 0, 1],
-        "column_1": [1, 4, 7, 8],
-        "column_2": [1, 2, 3, 9],
-    }
     assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
@@ -32,7 +33,12 @@ def test_from_numpy_schema(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32(), "e": nw_v1.Int16()}
+    schema = {
+        "c": nw_v1.Int16(),
+        "d": nw_v1.Float32(),
+        "e": nw_v1.Int16(),
+        "f": nw_v1.Float64(),
+    }
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     result = nw_v1.from_numpy(
@@ -49,11 +55,6 @@ def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest)
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     result = nw_v1.from_numpy(arr, native_namespace=native_namespace)
-    expected = {
-        "column_0": [5, 2, 0, 1],
-        "column_1": [1, 4, 7, 8],
-        "column_2": [1, 2, 3, 9],
-    }
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
 
