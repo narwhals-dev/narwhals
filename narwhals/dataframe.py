@@ -4159,11 +4159,11 @@ class LazyFrame(BaseFrame[FrameT]):
 
             >>> def agnostic_join_on_ham(
             ...     df_native: IntoFrameT,
-            ...     other_any_native: IntoFrameT,
+            ...     other_native: IntoFrameT,
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     other_any = nw.from_native(other_any_native)
-            ...     return df.join(other_any, left_on="ham", right_on="ham").to_native()
+            ...     other = nw.from_native(other_native)
+            ...     return df.join(other, left_on="ham", right_on="ham").to_native()
 
             We can now pass either pandas or Polars to the function:
 
@@ -4264,14 +4264,12 @@ class LazyFrame(BaseFrame[FrameT]):
 
             >>> def agnostic_join_asof_datetime(
             ...     df_native: IntoFrameT,
-            ...     other_any_native: IntoFrameT,
+            ...     other_native: IntoFrameT,
             ...     strategy: Literal["backward", "forward", "nearest"],
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     other_any = nw.from_native(other_any_native)
-            ...     return df.join_asof(
-            ...         other_any, on="datetime", strategy=strategy
-            ...     ).to_native()
+            ...     other = nw.from_native(other_native)
+            ...     return df.join_asof(other, on="datetime", strategy=strategy).to_native()
 
             We can now pass either pandas or Polars to the function:
 
@@ -4348,11 +4346,11 @@ class LazyFrame(BaseFrame[FrameT]):
 
             >>> def agnostic_join_asof_datetime_by_ticker(
             ...     df_native: IntoFrameT,
-            ...     other_any_native: IntoFrameT,
+            ...     other_native: IntoFrameT,
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     other_any = nw.from_native(other_any_native)
-            ...     return df.join_asof(other_any, on="datetime", by="ticker").to_native()
+            ...     other = nw.from_native(other_native)
+            ...     return df.join_asof(other, on="datetime", by="ticker").to_native()
 
             We can now pass either pandas or Polars to the function:
 
