@@ -99,7 +99,7 @@ class Series(Generic[IntoSeriesT]):
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def to_native(self) -> Any:
+    def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
 
         Returns:
@@ -136,7 +136,7 @@ class Series(Generic[IntoSeriesT]):
                 3
             ]
         """
-        return self._compliant_series._native_series
+        return self._compliant_series._native_series  # type: ignore[no-any-return]
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """Set value(s) at given position(s).
