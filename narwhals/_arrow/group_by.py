@@ -13,6 +13,7 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
@@ -42,7 +43,7 @@ def get_function_name_option(function_name: str) -> Any | None:
 
 class ArrowGroupBy:
     def __init__(
-        self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
+        self: Self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
         import pyarrow as pa  # ignore-banned-import()
 
@@ -54,7 +55,7 @@ class ArrowGroupBy:
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoArrowExpr,
         **named_aggs: IntoArrowExpr,
     ) -> ArrowDataFrame:
@@ -82,7 +83,7 @@ class ArrowGroupBy:
             self._df._from_native_frame,
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+    def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
@@ -108,7 +109,7 @@ class ArrowGroupBy:
                     )
                     .select(*self._keys)
                     .head(1)
-                    .iter_rows()
+                    .iter_rows(named=False, buffer_size=512)
                 ),
                 t,
             )

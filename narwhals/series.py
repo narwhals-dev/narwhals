@@ -3804,7 +3804,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(0, n)
+            self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
 
     def tail(self: Self, n: int = 5) -> SeriesT:
@@ -3852,7 +3852,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(-n)
+            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
         )
 
     def to_uppercase(self) -> SeriesT:
