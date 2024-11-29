@@ -13,6 +13,7 @@ from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import TypeVar
 
     import numpy as np
     import polars as pl
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
+
+    T = TypeVar("T")
 
 
 class PolarsSeries:
@@ -62,11 +65,11 @@ class PolarsSeries:
     def _from_native_object(self: Self, series: pl.DataFrame) -> PolarsDataFrame: ...
 
     @overload
-    def _from_native_object(self: Self, series: Any) -> Any: ...
+    def _from_native_object(self: Self, series: T) -> T: ...
 
     def _from_native_object(
-        self: Self, series: pl.Series | pl.DataFrame | Any
-    ) -> Self | PolarsDataFrame | Any:
+        self: Self, series: pl.Series | pl.DataFrame | T
+    ) -> Self | PolarsDataFrame | T:
         import polars as pl  # ignore-banned-import()
 
         if isinstance(series, pl.Series):

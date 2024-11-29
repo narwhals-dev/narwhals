@@ -18,6 +18,7 @@ from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import TypeVar
 
     import numpy as np
     import polars as pl
@@ -28,6 +29,9 @@ if TYPE_CHECKING:
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
+
+    T = TypeVar("T")
+    R = TypeVar("R")
 
 
 class PolarsDataFrame:
@@ -72,11 +76,11 @@ class PolarsDataFrame:
     def _from_native_object(self: Self, obj: pl.DataFrame) -> Self: ...
 
     @overload
-    def _from_native_object(self: Self, obj: Any) -> Any: ...
+    def _from_native_object(self: Self, obj: T) -> T: ...
 
     def _from_native_object(
-        self: Self, obj: pl.Series | pl.DataFrame | Any
-    ) -> Self | PolarsSeries | Any:
+        self: Self, obj: pl.Series | pl.DataFrame | T
+    ) -> Self | PolarsSeries | T:
         import polars as pl  # ignore-banned-import()
 
         if isinstance(obj, pl.Series):
@@ -91,15 +95,6 @@ class PolarsDataFrame:
         return obj
 
     def __getattr__(self: Self, attr: str) -> Any:
-        if attr == "collect":  # pragma: no cover
-            raise AttributeError
-        if attr == "schema":
-            schema = self._native_frame.schema
-            return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
-                for name, dtype in schema.items()
-            }
-
         def func(*args: Any, **kwargs: Any) -> Any:
             import polars as pl  # ignore-banned-import()
 
@@ -224,6 +219,14 @@ class PolarsDataFrame:
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
 
+    @property
+    def schema(self: Self) -> dict[str, DType]:
+        schema = self._native_frame.schema
+        return {
+            name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
+            for name, dtype in schema.items()
+        }
+
     def lazy(self: Self) -> PolarsLazyFrame:
         return PolarsLazyFrame(
             self._native_frame.lazy(),
@@ -237,7 +240,9 @@ class PolarsDataFrame:
     @overload
     def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
 
-    def to_dict(self: Self, *, as_series: bool) -> Any:
+    def to_dict(
+        self: Self, *, as_series: bool
+    ) -> dict[str, PolarsSeries] | dict[str, list[Any]]:
         df = self._native_frame
 
         if as_series:

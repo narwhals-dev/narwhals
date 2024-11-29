@@ -78,7 +78,7 @@ class PolarsExpr:
 
     def map_batches(
         self,
-        function: Callable[[Any], Self],
+        function: Callable[..., Self],
         return_dtype: DType | None,
     ) -> Self:
         if return_dtype is not None:
@@ -184,8 +184,8 @@ class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.dt, attr)(*args, **kwargs)
@@ -198,8 +198,8 @@ class PolarsExprStringNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.str, attr)(*args, **kwargs)
@@ -212,8 +212,8 @@ class PolarsExprCatNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.cat, attr)(*args, **kwargs)
@@ -226,8 +226,8 @@ class PolarsExprNameNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.name, attr)(*args, **kwargs)
