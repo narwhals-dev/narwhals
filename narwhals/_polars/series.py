@@ -7,6 +7,8 @@ from typing import overload
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
+from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -20,23 +22,20 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
-from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import native_to_narwhals_dtype
-
 
 class PolarsSeries:
     def __init__(
-        self, series: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self: Self, series: pl.Series, *, backend_version: tuple[int, ...], dtypes: DTypes
     ) -> None:
         self._native_series: pl.Series = series
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._dtypes = dtypes
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsSeries"
 
-    def __narwhals_series__(self) -> Self:
+    def __narwhals_series__(self: Self) -> Self:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
@@ -46,17 +45,28 @@ class PolarsSeries:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _change_dtypes(self, dtypes: DTypes) -> Self:
+    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
         return self.__class__(
             self._native_series, backend_version=self._backend_version, dtypes=dtypes
         )
 
-    def _from_native_series(self, series: Any) -> Self:
+    def _from_native_series(self: Self, series: pl.Series) -> Self:
         return self.__class__(
             series, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
-    def _from_native_object(self, series: Any) -> Any:
+    @overload
+    def _from_native_object(self: Self, series: pl.Series) -> Self: ...
+
+    @overload
+    def _from_native_object(self: Self, series: pl.DataFrame) -> PolarsDataFrame: ...
+
+    @overload
+    def _from_native_object(self: Self, series: Any) -> Any: ...
+
+    def _from_native_object(
+        self: Self, series: pl.Series | pl.DataFrame | Any
+    ) -> Self | PolarsDataFrame | Any:
         import polars as pl  # ignore-banned-import()
 
         if isinstance(series, pl.Series):
@@ -70,7 +80,7 @@ class PolarsSeries:
         # scalar
         return series
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self: Self, attr: str) -> Any:
         if attr == "as_py":  # pragma: no cover
             raise AttributeError
 
@@ -82,15 +92,15 @@ class PolarsSeries:
 
         return func
 
-    def __len__(self) -> int:
+    def __len__(self: Self) -> int:
         return len(self._native_series)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self: Self) -> tuple[int]:
         return (len(self),)
 
     @property
-    def name(self) -> str:
+    def name(self: Self) -> str:
         return self._native_series.name
 
     @property
@@ -100,21 +110,21 @@ class PolarsSeries:
         )
 
     @overload
-    def __getitem__(self, item: int) -> Any: ...
+    def __getitem__(self: Self, item: int) -> Any: ...
 
     @overload
-    def __getitem__(self, item: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
 
-    def __getitem__(self, item: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
-    def cast(self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
         dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         ser = self._native_series
         dtype = (
@@ -125,81 +135,81 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
-    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_series(self._native_series.__eq__(extract_native(other)))
 
-    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_series(self._native_series.__ne__(extract_native(other)))
 
-    def __ge__(self, other: Any) -> Self:
+    def __ge__(self: Self, other: Any) -> Self:
         return self._from_native_series(self._native_series.__ge__(extract_native(other)))
 
-    def __gt__(self, other: Any) -> Self:
+    def __gt__(self: Self, other: Any) -> Self:
         return self._from_native_series(self._native_series.__gt__(extract_native(other)))
 
-    def __le__(self, other: Any) -> Self:
+    def __le__(self: Self, other: Any) -> Self:
         return self._from_native_series(self._native_series.__le__(extract_native(other)))
 
-    def __lt__(self, other: Any) -> Self:
+    def __lt__(self: Self, other: Any) -> Self:
         return self._from_native_series(self._native_series.__lt__(extract_native(other)))
 
-    def __and__(self, other: PolarsSeries | bool | Any) -> Self:
+    def __and__(self: Self, other: PolarsSeries | bool | Any) -> Self:
         return self._from_native_series(
             self._native_series.__and__(extract_native(other))
         )
 
-    def __or__(self, other: PolarsSeries | bool | Any) -> Self:
+    def __or__(self: Self, other: PolarsSeries | bool | Any) -> Self:
         return self._from_native_series(self._native_series.__or__(extract_native(other)))
 
-    def __add__(self, other: PolarsSeries | Any) -> Self:
+    def __add__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__add__(extract_native(other))
         )
 
-    def __radd__(self, other: PolarsSeries | Any) -> Self:
+    def __radd__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__radd__(extract_native(other))
         )
 
-    def __sub__(self, other: PolarsSeries | Any) -> Self:
+    def __sub__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__sub__(extract_native(other))
         )
 
-    def __rsub__(self, other: PolarsSeries | Any) -> Self:
+    def __rsub__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__rsub__(extract_native(other))
         )
 
-    def __mul__(self, other: PolarsSeries | Any) -> Self:
+    def __mul__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__mul__(extract_native(other))
         )
 
-    def __rmul__(self, other: PolarsSeries | Any) -> Self:
+    def __rmul__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__rmul__(extract_native(other))
         )
 
-    def __pow__(self, other: PolarsSeries | Any) -> Self:
+    def __pow__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__pow__(extract_native(other))
         )
 
-    def __rpow__(self, other: PolarsSeries | Any) -> Self:
+    def __rpow__(self: Self, other: PolarsSeries | Any) -> Self:
         return self._from_native_series(
             self._native_series.__rpow__(extract_native(other))
         )
 
-    def __invert__(self) -> Self:
+    def __invert__(self: Self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
-    def median(self) -> Any:
+    def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
@@ -208,9 +218,7 @@ class PolarsSeries:
 
         return self._native_series.median()
 
-    def to_dummies(
-        self: Self, *, separator: str = "_", drop_first: bool = False
-    ) -> PolarsDataFrame:
+    def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
         import polars as pl  # ignore-banned-import
 
         from narwhals._polars.dataframe import PolarsDataFrame
@@ -235,13 +243,13 @@ class PolarsSeries:
     def ewm_mean(
         self: Self,
         *,
-        com: float | None = None,
-        span: float | None = None,
-        half_life: float | None = None,
-        alpha: float | None = None,
-        adjust: bool = True,
-        min_periods: int = 1,
-        ignore_nulls: bool = False,
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+        adjust: bool,
+        min_periods: int,
+        ignore_nulls: bool,
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`ewm_mean` not implemented for polars older than 1.0"
@@ -259,7 +267,7 @@ class PolarsSeries:
             )
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         if self._backend_version < (0, 20, 6):
             result = self._native_series.sort(descending=descending)
 
@@ -275,7 +283,7 @@ class PolarsSeries:
 
         return self._from_native_series(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+    def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         values = extract_native(values)
         s = self._native_series.clone()
         s.scatter(indices, values)
@@ -284,10 +292,10 @@ class PolarsSeries:
     def value_counts(
         self: Self,
         *,
-        sort: bool = False,
-        parallel: bool = False,
-        name: str | None = None,
-        normalize: bool = False,
+        sort: bool,
+        parallel: bool,
+        name: str | None,
+        normalize: bool,
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
@@ -325,23 +333,23 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     @property
-    def dt(self) -> PolarsSeriesDateTimeNamespace:
+    def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
 
     @property
-    def str(self) -> PolarsSeriesStringNamespace:
+    def str(self: Self) -> PolarsSeriesStringNamespace:
         return PolarsSeriesStringNamespace(self)
 
     @property
-    def cat(self) -> PolarsSeriesCatNamespace:
+    def cat(self: Self) -> PolarsSeriesCatNamespace:
         return PolarsSeriesCatNamespace(self)
 
 
 class PolarsSeriesDateTimeNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
+    def __init__(self: Self, series: PolarsSeries) -> None:
         self._series = series
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
@@ -352,10 +360,10 @@ class PolarsSeriesDateTimeNamespace:
 
 
 class PolarsSeriesStringNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
+    def __init__(self: Self, series: PolarsSeries) -> None:
         self._series = series
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
@@ -366,10 +374,10 @@ class PolarsSeriesStringNamespace:
 
 
 class PolarsSeriesCatNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
+    def __init__(self: Self, series: PolarsSeries) -> None:
         self._series = series
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
