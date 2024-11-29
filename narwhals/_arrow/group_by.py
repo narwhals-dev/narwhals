@@ -13,6 +13,7 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import pyarrow as pa
+    import pyarrow.compute as pc
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -28,7 +29,9 @@ POLARS_TO_ARROW_AGGREGATIONS = {
 }
 
 
-def get_function_name_option(function_name: str) -> Any | None:
+def get_function_name_option(
+    function_name: str,
+) -> pc.CountOptions | pc.VarianceOptions | None:
     """Map specific pyarrow compute function to respective option to match polars behaviour."""
     import pyarrow.compute as pc  # ignore-banned-import
 

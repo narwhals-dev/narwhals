@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -434,15 +435,23 @@ class ArrowDataFrame:
 
         return self._from_native_frame(df.sort_by(sorting, null_placement=null_placement))
 
-    def to_pandas(self: Self) -> Any:
+    def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
 
-    def to_numpy(self: Self) -> Any:
+    def to_numpy(self: Self) -> np.ndarray:
         import numpy as np  # ignore-banned-import
 
         return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
 
-    def to_dict(self: Self, *, as_series: bool) -> Any:
+    @overload
+    def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, ArrowSeries]: ...
+
+    @overload
+    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+
+    def to_dict(
+        self: Self, *, as_series: bool
+    ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
         df = self._native_frame
 
         names_and_values = zip(df.column_names, df.columns)
@@ -554,7 +563,7 @@ class ArrowDataFrame:
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
-    def write_parquet(self: Self, file: Any) -> Any:
+    def write_parquet(self: Self, file: Any) -> None:
         import pyarrow.parquet as pp  # ignore-banned-import
 
         pp.write_table(self._native_frame, file)
