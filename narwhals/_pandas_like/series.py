@@ -392,7 +392,7 @@ class PandasLikeSeries:
         ser = self._native_series
         ser, other = validate_column_comparand(self, other)
         return self._from_native_series(
-            ser.__rtruediv__(other).rename("literal", copy=False)
+            ser.__rtruediv__(other).rename(ser.name, copy=False)
         )
 
     def __floordiv__(self, other: Any) -> PandasLikeSeries:
