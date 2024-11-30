@@ -128,7 +128,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
     raise AssertionError(msg)
 
 
-def validate_column_comparand(lhs: Any, rhs: Any) -> Any:
+def validate_column_comparand(
+    lhs: Any, rhs: Any, backend_version: tuple[int, ...]
+) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -167,8 +169,16 @@ def validate_column_comparand(lhs: Any, rhs: Any) -> Any:
             import numpy as np  # ignore-banned-import
             import pyarrow as pa  # ignore-banned-import
 
+            fill_value = lhs[0]
+            if backend_version < (13,) and hasattr(fill_value, "as_py"):
+                fill_value = fill_value.as_py()
             return pa.chunked_array(
-                [pa.array(np.full(shape=rhs.len(), fill_value=lhs[0]))]
+                [
+                    pa.array(
+                        np.full(shape=rhs.len(), fill_value=fill_value),
+                        type=lhs._native_series.type,
+                    )
+                ]
             ), rhs._native_series
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
