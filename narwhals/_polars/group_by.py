@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Generator
+from typing import Iterator
 
 from narwhals._polars.utils import extract_args_kwargs
 
@@ -30,7 +30,7 @@ class PolarsGroupBy:
             self._grouped.agg(*aggs, **named_aggs),
         )
 
-    def __iter__(self: Self) -> Generator[tuple[tuple[str, ...], PolarsDataFrame]]:
+    def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
             yield tuple(key), self._compliant_frame._from_native_frame(df)
 

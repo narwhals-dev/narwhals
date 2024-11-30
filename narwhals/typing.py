@@ -201,14 +201,14 @@ class DTypes:
 
 
 __all__ = [
-    "IntoExpr",
-    "IntoDataFrame",
-    "IntoDataFrameT",
-    "IntoFrame",
-    "IntoFrameT",
+    "DataFrameT",
     "Frame",
     "FrameT",
-    "DataFrameT",
+    "IntoDataFrame",
+    "IntoDataFrameT",
+    "IntoExpr",
+    "IntoFrame",
+    "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
 ]

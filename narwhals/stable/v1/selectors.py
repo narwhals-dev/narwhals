@@ -8,10 +8,10 @@ from narwhals.selectors import numeric
 from narwhals.selectors import string
 
 __all__ = [
-    "by_dtype",
-    "numeric",
-    "boolean",
-    "string",
-    "categorical",
     "all",
+    "boolean",
+    "by_dtype",
+    "categorical",
+    "numeric",
+    "string",
 ]

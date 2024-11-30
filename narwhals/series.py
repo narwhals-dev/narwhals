@@ -656,7 +656,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             5.0
             >>> my_library_agnostic_function(s_pa)
-            <pyarrow.DoubleScalar: 5.0>
+            5.0
         """
         return self._compliant_series.median()
 
@@ -2037,9 +2037,19 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.__and__(self._extract_native(other))
         )
 
+    def __rand__(self, other: Any) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__rand__(self._extract_native(other))
+        )
+
     def __or__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__or__(self._extract_native(other))
+        )
+
+    def __ror__(self, other: Any) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__ror__(self._extract_native(other))
         )
 
     # unary

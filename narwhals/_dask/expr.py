@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 
 class DaskExpr:
+    _implementation: Implementation = Implementation.DASK
+
     def __init__(
         self,
         call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
@@ -199,7 +201,7 @@ class DaskExpr:
             "__radd__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __sub__(self, other: Any) -> Self:
         return self._from_call(
@@ -215,7 +217,7 @@ class DaskExpr:
             "__rsub__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __mul__(self, other: Any) -> Self:
         return self._from_call(
@@ -231,7 +233,7 @@ class DaskExpr:
             "__rmul__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __truediv__(self, other: Any) -> Self:
         return self._from_call(
@@ -247,7 +249,7 @@ class DaskExpr:
             "__rtruediv__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
         return self._from_call(
@@ -263,7 +265,7 @@ class DaskExpr:
             "__rfloordiv__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __pow__(self, other: Any) -> Self:
         return self._from_call(
@@ -279,7 +281,7 @@ class DaskExpr:
             "__rpow__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __mod__(self, other: Any) -> Self:
         return self._from_call(
@@ -295,7 +297,7 @@ class DaskExpr:
             "__rmod__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
@@ -353,13 +355,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def __rand__(self, other: DaskExpr) -> Self:  # pragma: no cover
+    def __rand__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__rand__(other),
             "__rand__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __or__(self, other: DaskExpr) -> Self:
         return self._from_call(
@@ -369,13 +371,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def __ror__(self, other: DaskExpr) -> Self:  # pragma: no cover
+    def __ror__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ror__(other),
             "__ror__",
             other,
             returns_scalar=False,
-        )
+        ).alias("literal")
 
     def __invert__(self: Self) -> Self:
         return self._from_call(

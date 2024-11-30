@@ -218,9 +218,9 @@ class PandasLikeSeries:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
-            values = validate_column_comparand(self._native_series.index, values).copy()
+            _, values = validate_column_comparand(self, values)
             values = set_axis(
-                values,
+                values.copy(),
                 self._native_series.index[indices],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
@@ -298,135 +298,135 @@ class PandasLikeSeries:
     def filter(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            other = validate_column_comparand(self._native_series.index, other)
+            ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.loc[other].rename(ser.name, copy=False))
 
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__eq__(other).rename(ser.name, copy=False))
 
     def __ne__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__ne__(other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__ge__(other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__gt__(other).rename(ser.name, copy=False))
 
     def __le__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__le__(other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__lt__(other).rename(ser.name, copy=False))
 
     def __and__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__and__(other).rename(ser.name, copy=False))
 
     def __rand__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__rand__(other).rename(ser.name, copy=False))
+        ser, other = validate_column_comparand(self, other)
+        return self._from_native_series(ser.__and__(other).rename(ser.name, copy=False))
 
     def __or__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__or__(other).rename(ser.name, copy=False))
 
     def __ror__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
-        return self._from_native_series(ser.__ror__(other).rename(ser.name, copy=False))
+        ser, other = validate_column_comparand(self, other)
+        return self._from_native_series(ser.__or__(other).rename(ser.name, copy=False))
 
     def __add__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__add__(other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__radd__(other).rename(ser.name, copy=False))
 
     def __sub__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__sub__(other).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__rsub__(other).rename(ser.name, copy=False))
 
     def __mul__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__mul__(other).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__rmul__(other).rename(ser.name, copy=False))
 
     def __truediv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(
             ser.__truediv__(other).rename(ser.name, copy=False)
         )
 
     def __rtruediv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(
             ser.__rtruediv__(other).rename(ser.name, copy=False)
         )
 
     def __floordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(
             ser.__floordiv__(other).rename(ser.name, copy=False)
         )
 
     def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(
             ser.__rfloordiv__(other).rename(ser.name, copy=False)
         )
 
     def __pow__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__pow__(other).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__rpow__(other).rename(ser.name, copy=False))
 
     def __mod__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__mod__(other).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(ser.__rmod__(other).rename(ser.name, copy=False))
 
     # Unary
@@ -738,9 +738,8 @@ class PandasLikeSeries:
         return self._native_series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
-        mask = validate_column_comparand(ser.index, mask)
-        other = validate_column_comparand(ser.index, other)
+        ser, mask = validate_column_comparand(self, mask)
+        _, other = validate_column_comparand(self, other)
         res = ser.where(mask, other)
         return self._from_native_series(res)
 

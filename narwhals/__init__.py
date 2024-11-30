@@ -71,7 +71,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.14.3"
+__version__ = "1.15.0"
 
 __all__ = [
     "Array",
@@ -86,10 +86,10 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "Int8",
     "Int16",
     "Int32",
     "Int64",
-    "Int8",
     "LazyFrame",
     "List",
     "Object",
@@ -97,10 +97,10 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "UInt8",
     "UInt16",
     "UInt32",
     "UInt64",
-    "UInt8",
     "Unknown",
     "all",
     "all_horizontal",
@@ -113,8 +113,8 @@ __all__ = [
     "exceptions",
     "from_arrow",
     "from_dict",
-    "from_numpy",
     "from_native",
+    "from_numpy",
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",

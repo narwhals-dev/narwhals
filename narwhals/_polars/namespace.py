@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -14,7 +13,6 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -24,8 +22,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
-    PS = ParamSpec("PS")
-
 
 class PolarsNamespace:
     def __init__(self: Self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
@@ -33,12 +29,12 @@ class PolarsNamespace:
         self._implementation = Implementation.POLARS
         self._dtypes = dtypes
 
-    def __getattr__(self: Self, attr: str) -> Callable[..., PolarsExpr]:
+    def __getattr__(self: Self, attr: str) -> Any:
         import polars as pl  # ignore-banned-import
 
         from narwhals._polars.expr import PolarsExpr
 
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+        def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return PolarsExpr(
                 getattr(pl, attr)(*args, **kwargs),
