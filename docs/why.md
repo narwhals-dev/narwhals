@@ -12,7 +12,9 @@ print(3 in pd.Series([1, 2, 3]))
 print(3 in pl.Series([1, 2, 3]))
 ```
 
-Try it out and see ;) Spoiler alert: they don't. pandas checks if `3` is in the index,
+Try it out and see 😉
+
+Spoiler alert: they don't. pandas checks if `3` is in the index,
 Polars checks if it's in the values.
 
 For another example, try running the code below - note how the outputs have different column names after the join!
@@ -30,10 +32,11 @@ print(pd_left_merge.columns)
 print(pl_left_merge.columns)
 ```
 
-There are several such subtle difference between the libraries. Writing dataframe-agnostic code is hard!
+There are several such subtle difference between the libraries. **Writing dataframe-agnostic code is hard!**
+
 But by having a unified, simple, and predictable API, you can focus on behaviour rather than on subtle
 implementation differences.
 
 Furthermore, both pandas and Polars frequently deprecate behaviour. Narwhals handles this for you by
-testing against nightly builds of both libraries and handling backwards compatibility internally 
+testing against nightly builds of both libraries and handling backwards compatibility internally
 (so you don't have to!).
