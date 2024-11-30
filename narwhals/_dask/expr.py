@@ -118,12 +118,8 @@ class DaskExpr:
         expr_name: str,
         *args: Any,
         returns_scalar: bool,
-        alias: str | None = None,
         **kwargs: Any,
     ) -> Self:
-        if alias is not None and self._output_names is not None:
-            self._output_names = [alias]
-
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             results = []
             inputs = self._call(df)
@@ -133,7 +129,7 @@ class DaskExpr:
                 result = call(_input, *_args, **_kwargs)
                 if returns_scalar:
                     result = result.to_series()
-                result = result.rename(alias or _input.name)
+                result = result.rename(_input.name)
                 results.append(result)
             return results
 
@@ -203,7 +199,6 @@ class DaskExpr:
             "__radd__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __sub__(self, other: Any) -> Self:
@@ -220,7 +215,6 @@ class DaskExpr:
             "__rsub__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __mul__(self, other: Any) -> Self:
@@ -237,7 +231,6 @@ class DaskExpr:
             "__rmul__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __truediv__(self, other: Any) -> Self:
@@ -254,7 +247,6 @@ class DaskExpr:
             "__rtruediv__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __floordiv__(self, other: Any) -> Self:
@@ -271,7 +263,6 @@ class DaskExpr:
             "__rfloordiv__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __pow__(self, other: Any) -> Self:
@@ -288,7 +279,6 @@ class DaskExpr:
             "__rpow__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __mod__(self, other: Any) -> Self:
@@ -305,7 +295,6 @@ class DaskExpr:
             "__rmod__",
             other,
             returns_scalar=False,
-            alias="literal",
         )
 
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]

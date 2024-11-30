@@ -163,15 +163,6 @@ def validate_column_comparand(other: Any) -> Any:
     return other
 
 
-def maybe_broadcast_scalar_into_series(series: Any, other: Any) -> Any:
-    """Broadcast a single-element `series` into a series that matches the length of `other`."""
-    import pyarrow as pa  # ignore-banned-import
-
-    if isinstance(other, pa.ChunkedArray) and len(series) == 1 and len(other) > 1:
-        return pa.chunked_array([series.to_pylist() * len(other)])
-    return series
-
-
 def validate_dataframe_comparand(
     length: int, other: Any, backend_version: tuple[int, ...]
 ) -> Any:

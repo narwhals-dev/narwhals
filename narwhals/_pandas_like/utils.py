@@ -79,7 +79,7 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def validate_column_comparand(index: Any, other: Any) -> Any:
+def validate_column_comparand(lhs: Any, rhs: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -91,48 +91,56 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    if isinstance(other, list):
-        if len(other) > 1:
-            if hasattr(other[0], "__narwhals_expr__") or hasattr(
-                other[0], "__narwhals_series__"
+    # If `rhs` is the output of an expression evaluation, then it is
+    # a list of Series. So, we verify that that list is of length-1,
+    # and take the first (and only) element.
+    if isinstance(rhs, list):
+        if len(rhs) > 1:
+            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
+                rhs[0], "__narwhals_series__"
             ):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
-            msg = (
-                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
-            )
+            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
             raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, PandasLikeDataFrame):
+        rhs = rhs[0]
+
+    lhs_index = lhs._native_series.index
+
+    if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasLikeSeries):
-        if other.len() == 1:
+
+    if isinstance(rhs, PandasLikeSeries):
+        rhs_index = rhs._native_series.index
+        if rhs.len() == 1:
             # broadcast
-            s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
-        if other._native_series.index is not index and len(index) > 1:
-            return set_axis(
-                other._native_series,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
+            s = rhs._native_series
+            return (
+                lhs._native_series,
+                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype),
             )
-        return other._native_series
-    return other
+        if lhs.len() == 1:
+            # broadcast
+            s = lhs._native_series
+            return (
+                s.__class__(s.iloc[0], index=rhs_index, dtype=s.dtype, name=s.name),
+                rhs._native_series,
+            )
+        if rhs._native_series.index is not lhs_index:
+            return (
+                lhs._native_series,
+                set_axis(
+                    rhs._native_series,
+                    lhs_index,
+                    implementation=rhs._implementation,
+                    backend_version=rhs._backend_version,
+                ),
+            )
+        return (lhs._native_series, rhs._native_series)
 
-
-def maybe_broadcast_scalar_into_series(series: Any, other: Any) -> Any:
-    """Broadcast a single-element `series` into a series that matches the length of `other`."""
-    import pandas as pd  # ignore-banned-import
-
-    if isinstance(other, pd.Series) and len(series) == 1 and len(other) > 1:
-        return series.__class__(
-            [series.iloc[0]] * len(other),
-            other.index,
-            series.dtype,
-        ).rename(series.name, copy=False)
-    return series
+    # `rhs` must be scalar, so just leave it as-is
+    return lhs._native_series, rhs
 
 
 def validate_dataframe_comparand(index: Any, other: Any) -> Any:

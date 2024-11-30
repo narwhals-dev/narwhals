@@ -501,8 +501,9 @@ class PandasWhen:
             )
         value_series = cast(PandasLikeSeries, value_series)
 
-        value_series_native = value_series._native_series
-        condition_native = validate_column_comparand(value_series_native.index, condition)
+        value_series_native, condition_native = validate_column_comparand(
+            value_series, condition
+        )
 
         if self._otherwise_value is None:
             return [
