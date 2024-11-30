@@ -135,10 +135,11 @@ def test_right_arithmetic_series(
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.select(a=getattr(df["a"], attr)(rhs))
+    result_series = getattr(df["a"], attr)(rhs)
+    assert result_series.name == "a"
     # rarithmetic ops on series in Polars do return an unnamed series: expected?
     # can't assert on col name being "literal"
-    assert_equal_data(result, {"a": expected})
+    assert_equal_data({"a": result_series}, {"a": expected})
 
 
 def test_truediv_same_dims(
