@@ -541,7 +541,7 @@ class ArrowDataFrame:
         return self.shape[0] == 0
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
-        from narwhals._arrow.series import to_py_scalar  # type: ignore[attr-defined]
+        from narwhals._arrow.series import maybe_extract_py_scalar
 
         if row is None and column is None:
             if self.shape != (1, 1):
@@ -551,14 +551,18 @@ class ArrowDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return to_py_scalar(self._native_frame[0][0])
+            return maybe_extract_py_scalar(
+                self._native_frame[0][0], return_py_scalar=True
+            )
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return to_py_scalar(self._native_frame[_col][row])
+        return maybe_extract_py_scalar(
+            self._native_frame[_col][row], return_py_scalar=True
+        )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         df = self._native_frame

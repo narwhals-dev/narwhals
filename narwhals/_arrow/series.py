@@ -14,7 +14,6 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals.translate import to_py_scalar
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
 
 def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
     if return_py_scalar:
-        return to_py_scalar(value)
+        return getattr(value, "as_py", lambda: value)()
     return value
 
 
@@ -541,8 +540,8 @@ class ArrowSeries:
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
                 raise ValueError(msg)
-            return to_py_scalar(self._native_series[0])
-        return to_py_scalar(self._native_series[index])
+            return maybe_extract_py_scalar(self._native_series[0], return_py_scalar=True)
+        return maybe_extract_py_scalar(self._native_series[index], return_py_scalar=True)
 
     def value_counts(
         self: Self,
@@ -732,7 +731,7 @@ class ArrowSeries:
             result = pc.all(pc.greater_equal(ser[:-1], ser[1:]))
         else:
             result = pc.all(pc.less_equal(ser[:-1], ser[1:]))
-        return to_py_scalar(result)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(result, return_py_scalar=True)  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool) -> ArrowSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
@@ -1011,7 +1010,10 @@ class ArrowSeries:
         return result
 
     def __iter__(self: Self) -> Iterator[Any]:
-        yield from (to_py_scalar(x) for x in self._native_series.__iter__())
+        yield from (
+            maybe_extract_py_scalar(x, return_py_scalar=True)
+            for x in self._native_series.__iter__()
+        )
 
     @property
     def shape(self: Self) -> tuple[int]:
