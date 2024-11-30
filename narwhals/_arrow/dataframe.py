@@ -541,7 +541,7 @@ class ArrowDataFrame:
         return self.shape[0] == 0
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
-        from narwhals._arrow.series import to_py_scalar  # type: ignore[attr-defined]
+        from narwhals.translate import to_py_scalar
 
         if row is None and column is None:
             if self.shape != (1, 1):
