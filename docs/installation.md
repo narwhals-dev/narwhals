@@ -9,7 +9,7 @@
     If you haven't, you can follow our [_setting up your environment_](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#option-1-use-uv-recommended) guide.
     Then, run:
 
-    ```console
+    ```terminal
     uv pip install narwhals
     ```
 
@@ -19,18 +19,20 @@
 
     Then, run:
 
-    ```console
+    ```terminal
     python -m pip install narwhals
     ```
 
 ### Verifying the Installation
 
 To verify the installation, start the Python REPL and execute:
+
 ```python
 >>> import narwhals
 >>> narwhals.__version__
 '1.14.3'
 ```
+
 If you see the version number, then the installation was successful!
 
 ## Quick start
@@ -60,7 +62,7 @@ import narwhals as nw
 from narwhals.typing import IntoFrame
 
 
-def my_function(df_native: IntoFrame) -> list[str]:
+def agnostic_get_columns(df_native: IntoFrame) -> list[str]:
     df = nw.from_native(df_native)
     column_names = df.columns
     return column_names
@@ -72,17 +74,22 @@ df_polars = pl.DataFrame(data)
 table_pa = pa.table(data)
 
 print("pandas output")
-print(my_function(df_pandas))
+print(agnostic_get_columns(df_pandas))
 
 print("Polars output")
-print(my_function(df_polars))
+print(agnostic_get_columns(df_polars))
 
 print("PyArrow output")
-print(my_function(table_pa))
+print(agnostic_get_columns(table_pa))
 ```
 
-If you run `python t.py` then your output should look like the above. This is the simplest possible example of a dataframe-agnostic
-function - as we'll soon see, we can do much more advanced things.
+If you run `python t.py` then your output should look like the above.
+This is the simplest possible example of a dataframe-agnostic function - as we'll soon
+see, we can do much more advanced things.
+
 Let's learn about what you just did, and what Narwhals can do for you!
 
-Note: these examples are only using pandas, Polars and PyArrow. Please see the following to find the [supported libraries](extending.md).
+!!! info
+
+    These examples are using pandas, Polars and PyArrow, however Narwhals supports
+    other dataframe libraries (See [supported libraries](extending.md)).

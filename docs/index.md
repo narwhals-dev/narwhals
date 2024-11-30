@@ -28,3 +28,8 @@ Anyone wishing to write a library/application/service which consumes dataframes,
 completely dataframe-agnostic.
 
 Let's get started!
+
+## Roadmap
+
+See [roadmap discussion on GitHub](https://github.com/narwhals-dev/narwhals/discussions/1370)
+for an up-to-date plan of future work.

@@ -1,4 +1,4 @@
-# Extending Narwhals, levels of support
+# Supported libraries and extending Narwhals
 
 ## List of supported libraries (and how to add yours!)
 
@@ -15,7 +15,7 @@ Currently, Narwhals has full API support for the following libraries:
 It also has lazy-only support for [Dask](https://github.com/dask/dask), and interchange-only support
 for [DuckDB](https://github.com/duckdb/duckdb) and [Ibis](https://github.com/ibis-project/ibis).
 
-### Levels
+### Levels of support
 
 Narwhals comes with two levels of support ("full" and "interchange"), and we are working on defining
 a "lazy-only" level too.
@@ -93,7 +93,7 @@ converting to Narwhals DataFrame:
 - `.select(names)` (Ibis and DuckDB), where `names` is a list of (string) column names. This is useful for
   selecting columns before converting to another library.
 
-### Extending Narwhals
+## Extending Narwhals
 
 If you want your own library to be recognised too, you're welcome open a PR (with tests)!.
 Alternatively, if you can't do that (for example, if you library is closed-source), see

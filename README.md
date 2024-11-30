@@ -37,28 +37,21 @@ Get started!
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com)
 - [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
-## Used by
+<details>
+<summary>Table of contents</summary>
 
-Join the party!
+- [Narwhals](#narwhals)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Example](#example)
+  - [Scope](#scope)
+  - [Roadmap](#roadmap)
+  - [Used by](#used-by)
+  - [Sponsors and institutional partners](#sponsors-and-institutional-partners)
+  - [Appears on](#appears-on)
+  - [Why "Narwhals"?](#why-narwhals)
 
-- [altair](https://github.com/vega/altair/)
-- [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
-- [marimo](https://github.com/marimo-team/marimo)
-- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
-- [plotly](https://plotly.com)
-- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
-- [py-shiny](https://github.com/posit-dev/py-shiny)
-- [rio](https://github.com/rio-labs/rio)
-- [scikit-lego](https://github.com/koaning/scikit-lego)
-- [scikit-playtime](https://github.com/koaning/scikit-playtime)
-- [tabmat](https://github.com/Quantco/tabmat)
-- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
-- [tubular](https://github.com/lvgig/tubular)
-- [vegafusion](https://github.com/vega/vegafusion)
-- [wimsey](https://github.com/benrutter/wimsey)
-
-Feel free to add your project to the list if it's missing, and/or
-[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
+</details>
 
 ## Installation
 
@@ -105,6 +98,34 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 - Do you have a specific Polars function in mind that you would like Narwhals to have in order to make your work easier?
 
 If you said yes to both, we'd love to hear from you!
+
+## Roadmap
+
+See [roadmap discussion on GitHub](https://github.com/narwhals-dev/narwhals/discussions/1370)
+for an up-to-date plan of future work.
+
+## Used by
+
+Join the party!
+
+- [altair](https://github.com/vega/altair/)
+- [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
+- [marimo](https://github.com/marimo-team/marimo)
+- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
+- [plotly](https://plotly.com)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [py-shiny](https://github.com/posit-dev/py-shiny)
+- [rio](https://github.com/rio-labs/rio)
+- [scikit-lego](https://github.com/koaning/scikit-lego)
+- [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [tabmat](https://github.com/Quantco/tabmat)
+- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [tubular](https://github.com/lvgig/tubular)
+- [vegafusion](https://github.com/vega/vegafusion)
+- [wimsey](https://github.com/benrutter/wimsey)
+
+Feel free to add your project to the list if it's missing, and/or
+[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
 
 ## Sponsors and institutional partners
 
