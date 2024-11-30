@@ -11,7 +11,6 @@ from typing import TypeVar
 from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
-from narwhals.dependencies import get_polars
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
@@ -219,16 +218,46 @@ def vertical_concat(
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
-    cols = set(dfs[0].columns)
-    for df in dfs:
-        cols_current = set(df.columns)
-        if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+    cols_0 = dfs[0].columns
+    for i, df in enumerate(dfs[1:], start=1):
+        cols_current = df.columns
+        if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()):
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {cols_0.to_list()}\n"
+                f"   - dataframe {i}: {cols_current.to_list()}\n"
+            )
             raise TypeError(msg)
 
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
         extra_kwargs = (
             {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
+
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
+
+
+def diagonal_concat(
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
+) -> Any:
+    """Concatenate (native) DataFrames diagonally.
+
+    Should be in namespace.
+    """
+    if not dfs:
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
+
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False, "sort": False}
+            if implementation is Implementation.PANDAS and backend_version < (1,)
+            else {"copy": False}
             if implementation is Implementation.PANDAS and backend_version < (3,)
             else {}
         )
@@ -397,17 +426,6 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     backend_version: tuple[int, ...],
     dtypes: DTypes,
 ) -> Any:
-    if (pl := get_polars()) is not None and isinstance(
-        dtype, (pl.DataType, pl.DataType.__class__)
-    ):
-        msg = (
-            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
-            "Perhaps you:\n"
-            "- Forgot a `nw.from_native` somewhere?\n"
-            "- Used `pl.Int64` instead of `nw.Int64`?"
-        )
-        raise TypeError(msg)
-
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":

@@ -26,10 +26,13 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
+
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import DTypes
+    from narwhals.typing import IntoSeriesT
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -40,17 +43,19 @@ if TYPE_CHECKING:
 def concat(
     items: Iterable[FrameT],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-        how: {'vertical', 'horizontal'}
-            - vertical: Stacks Series from DataFrames vertically and fills with `null`
-                if the lengths don't match.
-            - horizontal: Stacks Series from DataFrames horizontally and fills with `null`
-                if the lengths don't match.
+        how: concatenating strategy:
+
+            - vertical: Concatenate vertically. Column names must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -75,17 +80,17 @@ def concat(
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_vertical_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="vertical")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_vertical_concat(df_pd_1, df_pd_2)
            a  b
         0  1  4
         1  2  5
         2  3  6
         0  5  1
         1  2  4
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_vertical_concat(df_pl_1, df_pl_2)
         shape: (5, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -115,16 +120,16 @@ def concat(
         Defining a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_horizontal_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="horizontal")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_horizontal_concat(df_pd_1, df_pd_2)
            a  b    c    d
         0  1  4  5.0  1.0
         1  2  5  2.0  4.0
         2  3  6  NaN  NaN
 
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_horizontal_concat(df_pl_1, df_pl_2)
         shape: (3, 4)
         ┌─────┬─────┬──────┬──────┐
         │ a   ┆ b   ┆ c    ┆ d    │
@@ -136,9 +141,47 @@ def concat(
         │ 3   ┆ 6   ┆ null ┆ null │
         └─────┴─────┴──────┴──────┘
 
+        Let's look at case a for diagonal concatenation:
+
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data_1 = {"a": [1, 2], "b": [3.5, 4.5]}
+        >>> data_2 = {"a": [3, 4], "z": ["x", "y"]}
+
+        >>> df_pd_1 = pd.DataFrame(data_1)
+        >>> df_pd_2 = pd.DataFrame(data_2)
+        >>> df_pl_1 = pl.DataFrame(data_1)
+        >>> df_pl_2 = pl.DataFrame(data_2)
+
+        Defining a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def agnostic_diagonal_concat(df1, df2):
+        ...     return nw.concat([df1, df2], how="diagonal")
+
+        >>> agnostic_diagonal_concat(df_pd_1, df_pd_2)
+           a    b    z
+        0  1  3.5  NaN
+        1  2  4.5  NaN
+        0  3  NaN    x
+        1  4  NaN    y
+
+        >>> agnostic_diagonal_concat(df_pl_1, df_pl_2)
+        shape: (4, 3)
+        ┌─────┬──────┬──────┐
+        │ a   ┆ b    ┆ z    │
+        │ --- ┆ ---  ┆ ---  │
+        │ i64 ┆ f64  ┆ str  │
+        ╞═════╪══════╪══════╡
+        │ 1   ┆ 3.5  ┆ null │
+        │ 2   ┆ 4.5  ┆ null │
+        │ 3   ┆ null ┆ x    │
+        │ 4   ┆ null ┆ y    │
+        └─────┴──────┴──────┘
     """
-    if how not in ("horizontal", "vertical"):  # pragma: no cover
-        msg = "Only horizontal and vertical concatenations are supported"
+    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
+        msg = "Only vertical, horizontal and diagonal concatenations are supported."
         raise NotImplementedError(msg)
     if not items:
         msg = "No items to concatenate"
@@ -158,7 +201,7 @@ def new_series(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-) -> Series:
+) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Arguments:
@@ -224,7 +267,7 @@ def _new_series_impl(
     *,
     native_namespace: ModuleType,
     dtypes: DTypes,
-) -> Series:
+) -> Series[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -296,7 +339,7 @@ def from_dict(
             necessary if inputs are not Narwhals Series.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -313,7 +356,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing Pandas, Polars or PyArrow input:
+        Let's see what happens when passing pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -423,9 +466,265 @@ def _from_dict_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame = native_namespace.from_dict(data)
+            native_frame = native_namespace.from_dict(data, schema=schema)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
+    return from_native(native_frame, eager_only=True)
+
+
+def from_numpy(
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """Construct a DataFrame from a NumPy ndarray.
+
+    Notes:
+        Only row orientation is currently supported.
+
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Two-dimensional data represented as a NumPy ndarray.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import numpy as np
+        >>> from narwhals.typing import IntoFrameT
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+
+        Let's create a new dataframe of the same class as the dataframe we started with, from a NumPy ndarray of new data:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+
+        Let's see what happens when passing pandas, Polars or PyArrow input:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           column_0  column_1  column_2
+        0         5         2         1
+        1         1         4         3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌──────────┬──────────┬──────────┐
+        │ column_0 ┆ column_1 ┆ column_2 │
+        │ ---      ┆ ---      ┆ ---      │
+        │ i64      ┆ i64      ┆ i64      │
+        ╞══════════╪══════════╪══════════╡
+        │ 5        ┆ 2        ┆ 1        │
+        │ 1        ┆ 4        ┆ 3        │
+        └──────────┴──────────┴──────────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        column_0: int64
+        column_1: int64
+        column_2: int64
+        ----
+        column_0: [[5,1]]
+        column_1: [[2,4]]
+        column_2: [[1,3]]
+
+        Let's specify the column names:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = ["c", "d", "e"]
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the modified outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c  d  e
+        0  5  2  1
+        1  1  4  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2   ┆ 1   │
+        │ 1   ┆ 4   ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        e: int64
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+
+        Let's modify the function so that it specifies the schema:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c    d  e
+        0  5  2.0  1
+        1  1  4.0  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i16 ┆ f32 ┆ i8  │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2.0 ┆ 1   │
+        │ 1   ┆ 4.0 ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int16
+        d: float
+        e: int8
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+    """
+    from narwhals import dtypes
+
+    return _from_numpy_impl(
+        data,
+        schema,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_numpy_impl(
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
+    *,
+    native_namespace: ModuleType,
+    dtypes: DTypes,
+) -> DataFrame[Any]:
+    from narwhals.schema import Schema
+
+    if data.ndim != 2:
+        msg = "`from_numpy` only accepts 2D numpy arrays"
+        raise ValueError(msg)
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS:
+        if isinstance(schema, (dict, Schema)):
+            from narwhals._polars.utils import (
+                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
+            )
+
+            schema = {
+                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)  # type: ignore[misc]
+                for name, dtype in schema.items()
+            }
+        elif schema is None:
+            native_frame = native_namespace.from_numpy(data)
+        elif not isinstance(schema, list):
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "dict[str, DType] | Schema | list[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+        native_frame = native_namespace.from_numpy(data, schema=schema)
+
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        if isinstance(schema, (dict, Schema)):
+            from narwhals._pandas_like.utils import (
+                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
+            )
+
+            backend_version = parse_version(native_namespace.__version__)
+            schema = {
+                name: pandas_like_narwhals_to_native_dtype(
+                    schema[name], native_type, implementation, backend_version, dtypes
+                )
+                for name, native_type in schema.items()
+            }
+            native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
+                schema
+            )
+        elif isinstance(schema, list):
+            native_frame = native_namespace.DataFrame(data, columns=schema)
+        elif schema is None:
+            native_frame = native_namespace.DataFrame(
+                data, columns=["column_" + str(x) for x in range(data.shape[1])]
+            )
+        else:
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "dict[str, DType] | Schema | list[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+
+    elif implementation is Implementation.PYARROW:
+        pa_arrays = [native_namespace.array(val) for val in data.T]
+        if isinstance(schema, (dict, Schema)):
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
+
+            schema = native_namespace.schema(
+                [
+                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    for name, dtype in schema.items()
+                ]
+            )
+            native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema)
+        elif isinstance(schema, list):
+            native_frame = native_namespace.Table.from_arrays(pa_arrays, names=schema)
+        elif schema is None:
+            native_frame = native_namespace.Table.from_arrays(
+                pa_arrays, names=["column_" + str(x) for x in range(data.shape[1])]
+            )
+        else:
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "dict[str, DType] | Schema | list[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement `from_numpy` function in the top-level namespace.
+            native_frame = native_namespace.from_numpy(data, schema=schema)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 
@@ -440,7 +739,7 @@ def from_arrow(
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -606,7 +905,7 @@ def show_versions() -> None:
 
 
 def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "interchange"]:
     """Level of support Narwhals has for current object.
 

@@ -25,18 +25,37 @@ Libraries for which we have full support can benefit from the whole
 
 For example:
 
-```python exec="1" source="above"
-import narwhals as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python exec="1" source="above"
+    import narwhals as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.group_by("a").agg(
-        b_mean=nw.col("b").mean(),
-        b_std=nw.col("b").std(),
-    )
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return (
+            nw.from_native(df)
+            .group_by("a")
+            .agg(
+                b_mean=nw.col("b").mean(),
+                b_std=nw.col("b").std(),
+            )
+            .to_native()
+        )
+    ```
+
+=== "@narwhalify"
+    ```python exec="1" source="above"
+    import narwhals as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.group_by("a").agg(
+            b_mean=nw.col("b").mean(),
+            b_std=nw.col("b").std(),
+        )
+    ```
 
 will work for any of pandas, Polars, cuDF, Modin, and PyArrow.
 

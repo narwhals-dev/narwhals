@@ -28,6 +28,7 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -40,9 +41,10 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import IntoSeriesT
 
     FrameOrSeriesT = TypeVar(
-        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
 
 
@@ -161,7 +163,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
-    return isinstance(obj, cls) or issubclass(obj, cls)
+    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -177,7 +179,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 
 def maybe_align_index(
-    lhs: FrameOrSeriesT, rhs: Series | DataFrame[Any] | LazyFrame[Any]
+    lhs: FrameOrSeriesT, rhs: Series[Any] | DataFrame[Any] | LazyFrame[Any]
 ) -> FrameOrSeriesT:
     """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
@@ -273,7 +275,7 @@ def maybe_align_index(
     return lhs
 
 
-def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None:
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -313,7 +315,7 @@ def maybe_set_index(
     obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
-    index: Series | list[Series] | None = None,
+    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
 ) -> FrameOrSeriesT:
     """Set the index of a DataFrame or a Series, if it's pandas-like.
 
@@ -515,7 +517,7 @@ def maybe_convert_dtypes(
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
@@ -732,3 +734,39 @@ def validate_strict_and_pass_though(
         msg = "Cannot pass both `strict` and `pass_through`"
         raise ValueError(msg)
     return pass_through
+
+
+def _validate_rolling_arguments(
+    window_size: int, min_periods: int | None
+) -> tuple[int, int]:
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
+
+    if not isinstance(window_size, int):
+        _type = window_size.__class__.__name__
+        msg = (
+            f"argument 'window_size': '{_type}' object cannot be "
+            "interpreted as an integer"
+        )
+        raise TypeError(msg)
+
+    if min_periods is not None:
+        if min_periods < 1:
+            msg = "min_periods must be greater or equal than 1"
+            raise ValueError(msg)
+
+        if not isinstance(min_periods, int):
+            _type = min_periods.__class__.__name__
+            msg = (
+                f"argument 'min_periods': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+        if min_periods > window_size:
+            msg = "`min_periods` must be less or equal than `window_size`"
+            raise InvalidOperationError(msg)
+    else:
+        min_periods = window_size
+
+    return window_size, min_periods

@@ -89,6 +89,8 @@ jobs:
             . .venv/bin/activate
             uv pip uninstall narwhals
             uv pip install -e ./..
+            # temporary pin
+            uv pip install "altair<5.5"
       - name: show-deps
         run: |
             cd marimo
@@ -182,10 +184,10 @@ jobs:
             make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
+            # temporary pin to get CI green
+            uv pip install "ollama < 0.4.2" --system
             uv pip uninstall narwhals --system
             uv pip install -e . --system
-            # temporarily pin websockets to get CI green
-            uv pip install "websockets<14.0" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run `make narwhals-test-integration`
@@ -272,3 +274,43 @@ jobs:
         run: |
             cd plotly.py
             pytest packages/python/plotly/plotly/tests/test_optional/test_px
+
+  hierarchicalforecast:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
+      - name: clone-hierarchicalforecast
+        run: |
+            git clone https://github.com/Nixtla/hierarchicalforecast --depth=1
+            cd hierarchicalforecast
+            git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools --system
+      - name: install-deps
+        run: |
+            cd hierarchicalforecast
+            uv pip install --system ".[dev]"
+      - name: install-narwhals-dev
+        run: |
+            uv pip uninstall narwhals --system
+            uv pip install -e . --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run tests
+        run: |
+            cd hierarchicalforecast
+            nbdev_test --do_print --timing --n_workers 0

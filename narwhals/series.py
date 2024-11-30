@@ -11,7 +11,9 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals.exceptions import InvalidOperationError
+from narwhals.dtypes import _validate_dtype
+from narwhals.typing import IntoSeriesT
+from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -26,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-class Series:
+class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
@@ -97,7 +99,7 @@ class Series:
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def to_native(self) -> Any:
+    def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
 
         Returns:
@@ -134,7 +136,7 @@ class Series:
                 3
             ]
         """
-        return self._compliant_series._native_series
+        return self._compliant_series._native_series  # type: ignore[no-any-return]
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """Set value(s) at given position(s).
@@ -516,6 +518,7 @@ class Series:
                1
             ]
         """
+        _validate_dtype(dtype)
         return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
@@ -656,6 +659,41 @@ class Series:
             <pyarrow.DoubleScalar: 5.0>
         """
         return self._compliant_series.median()
+
+    def skew(self: Self) -> Any:
+        """Calculate the sample skewness of the Series.
+
+        Returns:
+            The sample skewness of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [1, 1, 2, 10, 100]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.array(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.skew()
+
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            np.float64(1.4724267269058975)
+            >>> func(s_pl)
+            1.4724267269058975
+
+        Notes:
+            The skewness is a measure of the asymmetry of the probability distribution.
+            A perfectly symmetric distribution has a skewness of 0.
+        """
+        return self._compliant_series.skew()
 
     def count(self) -> Any:
         """Returns the number of non-null elements in the Series.
@@ -1042,6 +1080,7 @@ class Series:
           >>> import polars as pl
           >>> import numpy as np
           >>> import narwhals as nw
+          >>> from narwhals.typing import IntoSeriesT
           >>> s_pd = pd.Series([2, 4, None, 3, 5])
           >>> s_pl = pl.Series("a", [2, 4, None, 3, 5])
 
@@ -1839,6 +1878,7 @@ class Series:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> import numpy as np
             >>> from narwhals.typing import IntoSeries
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="a")
@@ -2472,7 +2512,7 @@ class Series:
 
         Examples:
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
+            >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
 
@@ -2743,6 +2783,7 @@ class Series:
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+            >>> import pyarrow as pa
             >>> import pandas as pd
             >>> import polars as pl
             >>> data = [1, 2, 3, 4]
@@ -3128,20 +3169,20 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_rolling_sum(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_sum(window_size=2).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_rolling_sum(s_pd)
             0    NaN
             1    3.0
             2    5.0
             3    7.0
             dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_rolling_sum(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [f64]
             [
@@ -3151,7 +3192,7 @@ class Series:
                7.0
             ]
 
-            >>> my_library_agnostic_function(s_pa)  # doctest:+ELLIPSIS
+            >>> agnostic_rolling_sum(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -3162,41 +3203,108 @@ class Series:
               ]
             ]
         """
-        if window_size < 1:
-            msg = "window_size must be greater or equal than 1"
-            raise ValueError(msg)
-
-        if not isinstance(window_size, int):
-            _type = window_size.__class__.__name__
-            msg = (
-                f"argument 'window_size': '{_type}' object cannot be "
-                "interpreted as an integer"
-            )
-            raise TypeError(msg)
-
-        if min_periods is not None:
-            if min_periods < 1:
-                msg = "min_periods must be greater or equal than 1"
-                raise ValueError(msg)
-
-            if not isinstance(min_periods, int):
-                _type = min_periods.__class__.__name__
-                msg = (
-                    f"argument 'min_periods': '{_type}' object cannot be "
-                    "interpreted as an integer"
-                )
-                raise TypeError(msg)
-            if min_periods > window_size:
-                msg = "`min_periods` must be less or equal than `window_size`"
-                raise InvalidOperationError(msg)
-        else:
-            min_periods = window_size
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
 
         if len(self) == 0:  # pragma: no cover
             return self
 
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 3.0, 4.0]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_mean(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rolling_mean(window_size=2).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(s_pd)
+            0    NaN
+            1    1.5
+            2    2.5
+            3    3.5
+            dtype: float64
+
+            >>> agnostic_rolling_mean(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               null
+               1.5
+               2.5
+               3.5
+            ]
+
+            >>> agnostic_rolling_mean(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                1.5,
+                2.5,
+                3.5
+              ]
+            ]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        if len(self) == 0:  # pragma: no cover
+            return self
+
+        return self._from_compliant_series(
+            self._compliant_series.rolling_mean(
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
@@ -3219,7 +3327,7 @@ class Series:
         return SeriesCatNamespace(self)
 
 
-SeriesT = TypeVar("SeriesT", bound=Series)
+SeriesT = TypeVar("SeriesT", bound=Series[Any])
 
 
 class SeriesCatNamespace(Generic[SeriesT]):
@@ -3697,7 +3805,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(0, n)
+            self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
 
     def tail(self: Self, n: int = 5) -> SeriesT:
@@ -3745,7 +3853,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(-n)
+            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
         )
 
     def to_uppercase(self) -> SeriesT:

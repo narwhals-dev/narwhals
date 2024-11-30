@@ -73,10 +73,23 @@ def map_interchange_dtype_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
+class WrapInterchangeFrame:
+    def __init__(self, interchange_frame: InterchangeFrame) -> None:
+        self._interchange_frame = interchange_frame
+
+    def __dataframe__(self) -> InterchangeFrame:
+        return self._interchange_frame
+
+
 class InterchangeFrame:
     def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._interchange_frame = df.__dataframe__()
         self._dtypes = dtypes
+
+    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            WrapInterchangeFrame(self._interchange_frame), dtypes=dtypes
+        )
 
     def __narwhals_dataframe__(self) -> Any:
         return self

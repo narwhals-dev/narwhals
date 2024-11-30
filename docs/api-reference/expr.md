@@ -45,11 +45,13 @@
         - pipe
         - quantile
         - replace_strict
+        - rolling_mean
         - rolling_sum
         - round
         - sample
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail

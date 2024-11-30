@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -39,7 +41,7 @@ if TYPE_CHECKING:
 class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(
-        self,
+        self: Self,
         native_dataframe: pa.Table,
         *,
         backend_version: tuple[int, ...],
@@ -50,7 +52,7 @@ class ArrowDataFrame:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
@@ -62,59 +64,62 @@ class ArrowDataFrame:
         msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_dataframe__(self) -> Self:
+    def __narwhals_dataframe__(self: Self) -> Self:
         return self
 
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _from_native_frame(self, df: pa.Table) -> Self:
+    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_frame, backend_version=self._backend_version, dtypes=dtypes
+        )
+
+    def _from_native_frame(self: Self, df: pa.Table) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
     @property
-    def shape(self) -> tuple[int, int]:
+    def shape(self: Self) -> tuple[int, int]:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
-    def __len__(self) -> int:
+    def __len__(self: Self) -> int:
         return len(self._native_frame)
 
-    def row(self, index: int) -> tuple[Any, ...]:
+    def row(self: Self, index: int) -> tuple[Any, ...]:
         return tuple(col[index] for col in self._native_frame)
 
     @overload
     def rows(
-        self,
+        self: Self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
 
     @overload
     def rows(
-        self,
+        self: Self,
         *,
-        named: Literal[False] = False,
+        named: Literal[False],
     ) -> list[tuple[Any, ...]]: ...
     @overload
     def rows(
-        self,
+        self: Self,
         *,
         named: bool,
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
-    def rows(
-        self, *, named: bool = False
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            return list(self.iter_rows(named=False))  # type: ignore[return-value]
+            return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
         return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
-        self,
+        self: Self,
         *,
-        named: bool = False,
-        buffer_size: int = 512,
+        named: bool,
+        buffer_size: int,
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         df = self._native_frame
         num_rows = df.num_rows
@@ -127,7 +132,7 @@ class ArrowDataFrame:
             for i in range(0, num_rows, buffer_size):
                 yield from df[i : i + buffer_size].to_pylist()
 
-    def get_column(self, name: str) -> ArrowSeries:
+    def get_column(self: Self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
         if not isinstance(name, str):
@@ -141,26 +146,26 @@ class ArrowDataFrame:
             dtypes=self._dtypes,
         )
 
-    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> ArrowDataFrame: ...
+    def __getitem__(self: Self, item: Sequence[int]) -> ArrowDataFrame: ...
 
     @overload
-    def __getitem__(self, item: str) -> ArrowSeries: ...
+    def __getitem__(self: Self, item: str) -> ArrowSeries: ...
 
     @overload
-    def __getitem__(self, item: slice) -> ArrowDataFrame: ...
+    def __getitem__(self: Self, item: slice) -> ArrowDataFrame: ...
 
     @overload
-    def __getitem__(self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
+    def __getitem__(self: Self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
 
     def __getitem__(
-        self,
+        self: Self,
         item: (
             str
             | slice
@@ -268,22 +273,22 @@ class ArrowDataFrame:
             raise TypeError(msg)
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         schema = self._native_frame.schema
         return {
             name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in zip(schema.names, schema.types)
         }
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
     def select(
-        self,
+        self: Self,
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
@@ -301,7 +306,7 @@ class ArrowDataFrame:
         return self._from_native_frame(df)
 
     def with_columns(
-        self,
+        self: Self,
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
@@ -330,16 +335,16 @@ class ArrowDataFrame:
 
         return self._from_native_frame(native_frame)
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
         return ArrowGroupBy(self, list(keys), drop_null_keys=drop_null_keys)
 
     def join(
-        self,
+        self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -380,18 +385,18 @@ class ArrowDataFrame:
         )
 
     def join_asof(
-        self,
+        self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        left_on: str | None,
+        right_on: str | None,
+        on: str | None,
+        by_left: str | list[str] | None,
+        by_right: str | list[str] | None,
+        by: str | list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
     ) -> Self:
-        msg = "join_asof is not yet supported on PyArrow tables"
+        msg = "join_asof is not yet supported on PyArrow tables"  # pragma: no cover
         raise NotImplementedError(msg)
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -408,7 +413,7 @@ class ArrowDataFrame:
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def sort(
-        self,
+        self: Self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool],
@@ -430,15 +435,23 @@ class ArrowDataFrame:
 
         return self._from_native_frame(df.sort_by(sorting, null_placement=null_placement))
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self: Self) -> np.ndarray:
         import numpy as np  # ignore-banned-import
 
         return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
 
-    def to_dict(self, *, as_series: bool) -> Any:
+    @overload
+    def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, ArrowSeries]: ...
+
+    @overload
+    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+
+    def to_dict(
+        self: Self, *, as_series: bool
+    ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
         df = self._native_frame
 
         names_and_values = zip(df.column_names, df.columns)
@@ -457,7 +470,7 @@ class ArrowDataFrame:
         else:
             return {name: col.to_pylist() for name, col in names_and_values}
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self: Self, name: str) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
         df = self._native_frame
@@ -465,24 +478,26 @@ class ArrowDataFrame:
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_frame(df.append_column(name, row_indices))
 
-    def filter(
-        self,
-        *predicates: IntoArrowExpr,
-    ) -> Self:
+    def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             mask = predicates[0]
         else:
             plx = self.__narwhals_namespace__()
-            expr = plx.all_horizontal(*predicates)
+            expr = plx.all_horizontal(
+                *chain(
+                    predicates, (plx.col(name) == v for name, v in constraints.items())
+                )
+            )
             # Safety: all_horizontal's expression only returns a single column.
             mask = expr._call(self)[0]._native_series
         return self._from_native_frame(self._native_frame.filter(mask))
 
-    def null_count(self) -> Self:
+    def null_count(self: Self) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
         df = self._native_frame
@@ -492,7 +507,7 @@ class ArrowDataFrame:
             pa.table({name: [col.null_count] for name, col in names_and_values})
         )
 
-    def head(self, n: int) -> Self:
+    def head(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
             return self._from_native_frame(df.slice(0, n))
@@ -500,7 +515,7 @@ class ArrowDataFrame:
             num_rows = df.num_rows
             return self._from_native_frame(df.slice(0, max(0, num_rows + n)))
 
-    def tail(self, n: int) -> Self:
+    def tail(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
             num_rows = df.num_rows
@@ -508,24 +523,24 @@ class ArrowDataFrame:
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self) -> Self:
+    def lazy(self: Self) -> Self:
         return self
 
-    def collect(self) -> ArrowDataFrame:
+    def collect(self: Self) -> ArrowDataFrame:
         return ArrowDataFrame(
             self._native_frame,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 
-    def clone(self) -> Self:
+    def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
         raise NotImplementedError(msg)
 
     def is_empty(self: Self) -> bool:
         return self.shape[0] == 0
 
-    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+    def item(self: Self, row: int | None, column: int | str | None) -> Any:
         if row is None and column is None:
             if self.shape != (1, 1):
                 msg = (
@@ -543,17 +558,17 @@ class ArrowDataFrame:
         _col = self.columns.index(column) if isinstance(column, str) else column
         return self._native_frame[_col][row]
 
-    def rename(self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
         df = self._native_frame
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
-    def write_parquet(self, file: Any) -> Any:
+    def write_parquet(self: Self, file: Any) -> None:
         import pyarrow.parquet as pp  # ignore-banned-import
 
         pp.write_table(self._native_frame, file)
 
-    def write_csv(self, file: Any) -> Any:
+    def write_csv(self: Self, file: Any) -> Any:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.csv as pa_csv  # ignore-banned-import
 
@@ -611,8 +626,8 @@ class ArrowDataFrame:
         self: Self,
         subset: str | list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "first", "last", "none"],
+        maintain_order: bool,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -646,16 +661,16 @@ class ArrowDataFrame:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_frame(self._native_frame[offset::n])
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Table:
         return self._native_frame
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import()

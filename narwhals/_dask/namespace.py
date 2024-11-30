@@ -198,28 +198,35 @@ class DaskNamespace:
         self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: Literal["horizontal", "vertical"],
+        how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
         import dask.dataframe as dd  # ignore-banned-import
 
         if len(list(items)) == 0:
             msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
-        native_frames = [i._native_frame for i in items]
+        dfs = [i._native_frame for i in items]
+        cols_0 = dfs[0].columns
         if how == "vertical":
-            if not all(
-                tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
-            ):  # pragma: no cover
-                msg = "unable to vstack with non-matching columns"
-                raise AssertionError(msg)
+            for i, df in enumerate(dfs[1:], start=1):
+                cols_current = df.columns
+                if not (
+                    (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+                ):
+                    msg = (
+                        "unable to vstack, column names don't match:\n"
+                        f"   - dataframe 0: {cols_0.to_list()}\n"
+                        f"   - dataframe {i}: {cols_current.to_list()}\n"
+                    )
+                    raise TypeError(msg)
             return DaskLazyFrame(
-                dd.concat(native_frames, axis=0, join="inner"),
+                dd.concat(dfs, axis=0, join="inner"),
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
         if how == "horizontal":
             all_column_names: list[str] = [
-                column for frame in native_frames for column in frame.columns
+                column for frame in dfs for column in frame.columns
             ]
             if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
                 duplicates = [
@@ -231,10 +238,17 @@ class DaskNamespace:
                 )
                 raise AssertionError(msg)
             return DaskLazyFrame(
-                dd.concat(native_frames, axis=1, join="outer"),
+                dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
             )
+        if how == "diagonal":
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="outer"),
+                backend_version=self._backend_version,
+                dtypes=self._dtypes,
+            )
+
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:

@@ -51,6 +51,11 @@ class PolarsDataFrame:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_frame, backend_version=self._backend_version, dtypes=dtypes
+        )
+
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, dtypes=self._dtypes
@@ -76,7 +81,7 @@ class PolarsDataFrame:
         if attr == "schema":
             schema = self._native_frame.schema
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in schema.items()
             }
 
@@ -113,12 +118,12 @@ class PolarsDataFrame:
     def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
@@ -321,6 +326,11 @@ class PolarsLazyFrame:
             df, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
+    def _change_dtypes(self, dtypes: DTypes) -> Self:
+        return self.__class__(
+            self._native_frame, backend_version=self._backend_version, dtypes=dtypes
+        )
+
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             import polars as pl  # ignore-banned-import
@@ -351,19 +361,19 @@ class PolarsLazyFrame:
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
+            name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
             for name, dtype in schema.items()
         }
 
     def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                name: native_to_narwhals_dtype(dtype, self._dtypes, self._backend_version)
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
