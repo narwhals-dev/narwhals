@@ -738,7 +738,12 @@ class PandasLikeSeries:
         return self._native_series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
-        # TODO(marco): check that mask and other are same length?
+        if self.len() != mask.len():
+            msg = (
+                "`mask` must have same length as original column.\n"
+                f"Got: original column length {self.len()}, mask length {mask.len()}."
+            )
+            raise ValueError(msg)
         ser, mask = validate_column_comparand(self, mask)
         _, other = validate_column_comparand(self, other)
         res = ser.where(mask, other)
