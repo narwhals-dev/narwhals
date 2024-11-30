@@ -96,78 +96,68 @@ class ArrowSeries:
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         import pyarrow.compute as pc
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.equal(ser, other))
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.not_equal(ser, other))
 
     def __ge__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.greater_equal(ser, other))
 
     def __gt__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.greater(ser, other))
 
     def __le__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.less_equal(ser, other))
 
     def __lt__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.less(ser, other))
 
     def __and__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.and_kleene(ser, other))
 
     def __rand__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.and_kleene(other, ser))
 
     def __or__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.or_kleene(ser, other))
 
     def __ror__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        other = validate_column_comparand(other)
-        return self._from_native_series(pc.add(self._native_series, other))
+        ser, other = validate_column_comparand(self, other)
+        return self._from_native_series(pc.add(ser, other))
 
     def __radd__(self: Self, other: Any) -> Self:
         return self + other  # type: ignore[no-any-return]
@@ -175,7 +165,7 @@ class ArrowSeries:
     def __sub__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.subtract(self._native_series, other))
 
     def __rsub__(self: Self, other: Any) -> Self:
@@ -184,8 +174,8 @@ class ArrowSeries:
     def __mul__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        other = validate_column_comparand(other)
-        return self._from_native_series(pc.multiply(self._native_series, other))
+        ser, other = validate_column_comparand(self, other)
+        return self._from_native_series(pc.multiply(ser, other))
 
     def __rmul__(self: Self, other: Any) -> Self:
         return self * other  # type: ignore[no-any-return]
@@ -193,33 +183,28 @@ class ArrowSeries:
     def __pow__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.power(ser, other))
 
     def __rpow__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(pc.power(other, ser))
 
     def __floordiv__(self: Self, other: Any) -> Self:
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(floordiv_compat(ser, other))
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         return self._from_native_series(floordiv_compat(other, ser))
 
     def __truediv__(self: Self, other: Any) -> Self:
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = pa.scalar(other)
@@ -229,8 +214,7 @@ class ArrowSeries:
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = pa.scalar(other)
@@ -239,8 +223,7 @@ class ArrowSeries:
     def __mod__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         floor_div = (self // other)._native_series
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
@@ -248,8 +231,7 @@ class ArrowSeries:
     def __rmod__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser = self._native_series
-        other = validate_column_comparand(other)
+        ser, other = validate_column_comparand(self, other)
         floor_div = (other // self)._native_series
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
@@ -264,8 +246,10 @@ class ArrowSeries:
 
     def filter(self: Self, other: Any) -> Self:
         if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            other = validate_column_comparand(other)
-        return self._from_native_series(self._native_series.filter(other))
+            ser, other = validate_column_comparand(self, other)
+        else:
+            ser = self._native_series
+        return self._from_native_series(ser.filter(other))
 
     def mean(self: Self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -382,16 +366,17 @@ class ArrowSeries:
         import pyarrow as pa  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
-        ca = self._native_series
-        mask = np.zeros(len(ca), dtype=bool)
+        mask = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
         if isinstance(values, self.__class__):
-            values = validate_column_comparand(values)
+            ser, values = validate_column_comparand(self, values)
+        else:
+            ser = self._native_series
         if isinstance(values, pa.ChunkedArray):
             values = values.combine_chunks()
         if not isinstance(values, pa.Array):
             values = pa.array(values)
-        result = pc.replace_with_mask(ca, mask, values.take(indices))
+        result = pc.replace_with_mask(ser, mask, values.take(indices))
         return self._from_native_series(result)
 
     def to_list(self: Self) -> list[Any]:

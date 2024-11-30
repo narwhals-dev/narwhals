@@ -128,7 +128,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
     raise AssertionError(msg)
 
 
-def validate_column_comparand(other: Any) -> Any:
+def validate_column_comparand(lhs: Any, rhs: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -140,27 +140,38 @@ def validate_column_comparand(other: Any) -> Any:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if isinstance(other, list):
-        if len(other) > 1:
-            if hasattr(other[0], "__narwhals_expr__") or hasattr(
-                other[0], "__narwhals_series__"
+    # If `rhs` is the output of an expression evaluation, then it is
+    # a list of Series. So, we verify that that list is of length-1,
+    # and take the first (and only) element.
+    if isinstance(rhs, list):
+        if len(rhs) > 1:
+            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
+                rhs[0], "__narwhals_series__"
             ):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
-            msg = (
-                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
-            )
+            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
             raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, ArrowDataFrame):
+        rhs = rhs[0]
+
+    if isinstance(rhs, ArrowDataFrame):
         return NotImplemented
-    if isinstance(other, ArrowSeries):
-        if len(other) == 1:
+
+    if isinstance(rhs, ArrowSeries):
+        if len(rhs) == 1:
             # broadcast
-            return other[0]
-        return other._native_series
-    return other
+            return lhs._native_series, rhs[0]
+        if len(lhs) == 1:
+            # broadcast
+            import numpy as np  # ignore-banned-import
+            import pyarrow as pa  # ignore-banned-import
+
+            return pa.chunked_array(
+                [pa.array(np.full(shape=rhs.len(), fill_value=lhs[0]))]
+            ), rhs._native_series
+        return lhs._native_series, rhs._native_series
+    return lhs._native_series, rhs
 
 
 def validate_dataframe_comparand(
