@@ -172,14 +172,15 @@ def validate_column_comparand(
             fill_value = lhs[0]
             if backend_version < (13,) and hasattr(fill_value, "as_py"):
                 fill_value = fill_value.as_py()
-            return pa.chunked_array(
+            left_result = pa.chunked_array(
                 [
                     pa.array(
                         np.full(shape=rhs.len(), fill_value=fill_value),
                         type=lhs._native_series.type,
                     )
                 ]
-            ), rhs._native_series
+            )
+            return left_result, rhs._native_series
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
 
@@ -200,7 +201,7 @@ def validate_dataframe_comparand(
             import pyarrow as pa  # ignore-banned-import
 
             value = other._native_series[0]
-            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
         return other._native_series
@@ -342,7 +343,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
         s_native = s._native_series
         if is_max_length_gt_1 and length == 1:
             value = s_native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             reshaped.append(pa.array([value] * max_length, type=s_native.type))
         else:
