@@ -4175,7 +4175,9 @@ class ExprStringNamespace(Generic[ExprT]):
             │ zukkyun   ┆ kkyun       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.slice(offset=-n, length=None)
+        )
 
     def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
         """Convert to Datetime dtype.

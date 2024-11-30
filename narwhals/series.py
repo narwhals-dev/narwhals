@@ -12,6 +12,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dtypes import _validate_dtype
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import parse_version
 
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-class Series:
+class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
@@ -98,7 +99,7 @@ class Series:
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def to_native(self) -> Any:
+    def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
 
         Returns:
@@ -135,7 +136,7 @@ class Series:
                 3
             ]
         """
-        return self._compliant_series._native_series
+        return self._compliant_series._native_series  # type: ignore[no-any-return]
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """Set value(s) at given position(s).
@@ -3512,7 +3513,7 @@ class Series:
         return SeriesCatNamespace(self)
 
 
-SeriesT = TypeVar("SeriesT", bound=Series)
+SeriesT = TypeVar("SeriesT", bound=Series[Any])
 
 
 class SeriesCatNamespace(Generic[SeriesT]):
@@ -3990,7 +3991,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(0, n)
+            self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
 
     def tail(self: Self, n: int = 5) -> SeriesT:
@@ -4038,7 +4039,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.str.slice(-n)
+            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
         )
 
     def to_uppercase(self) -> SeriesT:

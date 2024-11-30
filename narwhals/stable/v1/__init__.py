@@ -22,6 +22,7 @@ from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
+from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
@@ -70,6 +71,7 @@ from narwhals.utils import validate_strict_and_pass_though
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -411,7 +413,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return self.select(all()._l1_norm())
 
 
-class Series(NwSeries):
+class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
 
     The native series might be pandas.Series, polars.Series, ...
@@ -1532,7 +1534,7 @@ def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 @overload
-def _stableify(obj: NwSeries) -> Series: ...
+def _stableify(obj: NwSeries[Any]) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
@@ -1540,7 +1542,7 @@ def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries | NwExpr | Any,
+    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries[Any] | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     from narwhals.stable.v1 import dtypes
 
@@ -3107,7 +3109,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def concat(
     items: Iterable[DataFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> DataFrame[Any]: ...
 
 
@@ -3115,24 +3117,26 @@ def concat(
 def concat(
     items: Iterable[LazyFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> LazyFrame[Any]: ...
 
 
 def concat(
     items: Iterable[DataFrame[Any] | LazyFrame[Any]],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
-        how: {'vertical', 'horizontal'}:
+        how: concatenating strategy:
 
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
                 missing rows are filled with null values.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
 
     Returns:
         A new DataFrame, Lazyframe resulting from the concatenation.
@@ -3157,17 +3161,17 @@ def concat(
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_vertical_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="vertical")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_vertical_concat(df_pd_1, df_pd_2)
            a  b
         0  1  4
         1  2  5
         2  3  6
         0  5  1
         1  2  4
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_vertical_concat(df_pl_1, df_pl_2)
         shape: (5, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -3197,16 +3201,16 @@ def concat(
         Defining a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df1, df2):
+        ... def agnostic_horizontal_concat(df1, df2):
         ...     return nw.concat([df1, df2], how="horizontal")
 
-        >>> func(df_pd_1, df_pd_2)
+        >>> agnostic_horizontal_concat(df_pd_1, df_pd_2)
            a  b    c    d
         0  1  4  5.0  1.0
         1  2  5  2.0  4.0
         2  3  6  NaN  NaN
 
-        >>> func(df_pl_1, df_pl_2)
+        >>> agnostic_horizontal_concat(df_pl_1, df_pl_2)
         shape: (3, 4)
         ┌─────┬─────┬──────┬──────┐
         │ a   ┆ b   ┆ c    ┆ d    │
@@ -3218,6 +3222,44 @@ def concat(
         │ 3   ┆ 6   ┆ null ┆ null │
         └─────┴─────┴──────┴──────┘
 
+        Let's look at case a for diagonal concatenation:
+
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data_1 = {"a": [1, 2], "b": [3.5, 4.5]}
+        >>> data_2 = {"a": [3, 4], "z": ["x", "y"]}
+
+        >>> df_pd_1 = pd.DataFrame(data_1)
+        >>> df_pd_2 = pd.DataFrame(data_2)
+        >>> df_pl_1 = pl.DataFrame(data_1)
+        >>> df_pl_2 = pl.DataFrame(data_2)
+
+        Defining a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def agnostic_diagonal_concat(df1, df2):
+        ...     return nw.concat([df1, df2], how="diagonal")
+
+        >>> agnostic_diagonal_concat(df_pd_1, df_pd_2)
+           a    b    z
+        0  1  3.5  NaN
+        1  2  4.5  NaN
+        0  3  NaN    x
+        1  4  NaN    y
+
+        >>> agnostic_diagonal_concat(df_pl_1, df_pl_2)
+        shape: (4, 3)
+        ┌─────┬──────┬──────┐
+        │ a   ┆ b    ┆ z    │
+        │ --- ┆ ---  ┆ ---  │
+        │ i64 ┆ f64  ┆ str  │
+        ╞═════╪══════╪══════╡
+        │ 1   ┆ 3.5  ┆ null │
+        │ 2   ┆ 4.5  ┆ null │
+        │ 3   ┆ null ┆ x    │
+        │ 4   ┆ null ┆ y    │
+        └─────┴──────┴──────┘
     """
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
@@ -3468,7 +3510,7 @@ def from_arrow(
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -3525,7 +3567,7 @@ def from_dict(
             necessary if inputs are not Narwhals Series.
 
     Returns:
-        A new DataFrame
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -3542,7 +3584,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing Pandas, Polars or PyArrow input:
+        Let's see what happens when passing pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -3570,6 +3612,157 @@ def from_dict(
 
     return _stableify(
         _from_dict_impl(
+            data,
+            schema,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
+    )
+
+
+def from_numpy(
+    data: np.ndarray,
+    schema: dict[str, DType] | Schema | list[str] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """Construct a DataFrame from a NumPy ndarray.
+
+    Notes:
+        Only row orientation is currently supported.
+
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Two-dimensional data represented as a NumPy ndarray.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        A new DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import numpy as np
+        >>> from narwhals.typing import IntoFrameT
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+
+        Let's create a new dataframe of the same class as the dataframe we started with, from a NumPy ndarray of new data:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+
+        Let's see what happens when passing pandas, Polars or PyArrow input:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           column_0  column_1  column_2
+        0         5         2         1
+        1         1         4         3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌──────────┬──────────┬──────────┐
+        │ column_0 ┆ column_1 ┆ column_2 │
+        │ ---      ┆ ---      ┆ ---      │
+        │ i64      ┆ i64      ┆ i64      │
+        ╞══════════╪══════════╪══════════╡
+        │ 5        ┆ 2        ┆ 1        │
+        │ 1        ┆ 4        ┆ 3        │
+        └──────────┴──────────┴──────────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        column_0: int64
+        column_1: int64
+        column_2: int64
+        ----
+        column_0: [[5,1]]
+        column_1: [[2,4]]
+        column_2: [[1,3]]
+
+        Let's specify the column names:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = ["c", "d", "e"]
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the modified outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c  d  e
+        0  5  2  1
+        1  1  4  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2   ┆ 1   │
+        │ 1   ┆ 4   ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        e: int64
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+
+        Let's modify the function so that it specifies the schema:
+
+        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
+        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
+        ...     schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+        ...     df = nw.from_native(df_native)
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace, schema=schema
+        ...     ).to_native()
+
+        Let's see the outputs:
+
+        >>> agnostic_from_numpy(pd.DataFrame(data))
+           c    d  e
+        0  5  2.0  1
+        1  1  4.0  3
+        >>> agnostic_from_numpy(pl.DataFrame(data))
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ c   ┆ d   ┆ e   │
+        │ --- ┆ --- ┆ --- │
+        │ i16 ┆ f32 ┆ i8  │
+        ╞═════╪═════╪═════╡
+        │ 5   ┆ 2.0 ┆ 1   │
+        │ 1   ┆ 4.0 ┆ 3   │
+        └─────┴─────┴─────┘
+        >>> agnostic_from_numpy(pa.table(data))
+        pyarrow.Table
+        c: int16
+        d: float
+        e: int8
+        ----
+        c: [[5,1]]
+        d: [[2,4]]
+        e: [[1,3]]
+    """
+    from narwhals.stable.v1 import dtypes
+
+    return _stableify(
+        _from_numpy_impl(
             data,
             schema,
             native_namespace=native_namespace,
@@ -3619,6 +3812,7 @@ __all__ = [
     "from_arrow",
     "from_dict",
     "from_native",
+    "from_numpy",
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",

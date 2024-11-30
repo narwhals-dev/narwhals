@@ -246,9 +246,9 @@ class PolarsSeries:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`ewm_mean` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
-        expr = self._native_series
+        series = self._native_series
         return self._from_native_series(
-            expr.ewm_mean(
+            series.ewm_mean(
                 com=com,
                 span=span,
                 half_life=half_life,
@@ -256,6 +256,48 @@ class PolarsSeries:
                 adjust=adjust,
                 min_periods=min_periods,
                 ignore_nulls=ignore_nulls,
+            )
+        )
+
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`rolling_var` not implemented for polars older than 1.0"
+            raise NotImplementedError(msg)
+
+        return self._from_native_series(
+            self._native_series.rolling_var(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`rolling_std` not implemented for polars older than 1.0"
+            raise NotImplementedError(msg)
+
+        return self._from_native_series(
+            self._native_series.rolling_std(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+                ddof=ddof,
             )
         )
 

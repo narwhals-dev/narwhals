@@ -12,6 +12,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -65,7 +66,9 @@ def test_rolling_var_expr(
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
+    ):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
@@ -82,8 +85,13 @@ def test_rolling_var_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_series(
-    constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    kwargs_and_expected: dict[str, Any],
 ) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
+
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
@@ -99,6 +107,7 @@ def test_rolling_var_series(
     values=st.lists(st.floats(-10, 10), min_size=5, max_size=10),
 )
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
+@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
     s = pd.Series(values)
