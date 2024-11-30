@@ -656,7 +656,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             5.0
             >>> my_library_agnostic_function(s_pa)
-            <pyarrow.DoubleScalar: 5.0>
+            5.0
         """
         return self._compliant_series.median()
 
