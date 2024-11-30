@@ -129,7 +129,9 @@ def test_comparand_operators_series(
     ("operator", "expected"),
     [
         ("__and__", [True, False, False, False]),
+        ("__rand__", [True, False, False, False]),
         ("__or__", [True, True, True, False]),
+        ("__ror__", [True, True, True, False]),
     ],
 )
 def test_logic_operators_series(
