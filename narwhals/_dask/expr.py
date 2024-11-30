@@ -353,7 +353,7 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def __rand__(self, other: DaskExpr) -> Self:  # pragma: no cover
+    def __rand__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__rand__(other),
             "__rand__",
@@ -369,7 +369,7 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def __ror__(self, other: DaskExpr) -> Self:  # pragma: no cover
+    def __ror__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ror__(other),
             "__ror__",

@@ -339,7 +339,7 @@ class PandasLikeSeries:
     def __rand__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         ser, other = validate_column_comparand(self, other)
-        return self._from_native_series(ser.__rand__(other).rename(ser.name, copy=False))
+        return self._from_native_series(ser.__and__(other).rename(ser.name, copy=False))
 
     def __or__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
@@ -349,7 +349,7 @@ class PandasLikeSeries:
     def __ror__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         ser, other = validate_column_comparand(self, other)
-        return self._from_native_series(ser.__ror__(other).rename(ser.name, copy=False))
+        return self._from_native_series(ser.__or__(other).rename(ser.name, copy=False))
 
     def __add__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
