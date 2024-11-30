@@ -441,7 +441,9 @@ def _from_dict_impl(
         left_most_series = None
         for key, native_series in data.items():
             if isinstance(native_series, native_namespace.Series):
-                compliant_series = from_native(native_series, series_only=True)._compliant_series
+                compliant_series = from_native(
+                    native_series, series_only=True
+                )._compliant_series
                 if left_most_series is None:
                     left_most_series = compliant_series
                     aligned_data[key] = native_series
