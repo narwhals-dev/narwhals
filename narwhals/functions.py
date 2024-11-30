@@ -10,6 +10,7 @@ from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
+from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
@@ -328,6 +329,9 @@ def from_dict(
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
+    Indexes (if present, for pandas-like backends) are aligned following
+    the [left-hand-rule](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/pandas_index/).
+
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
@@ -433,7 +437,23 @@ def _from_dict_impl(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
-        native_frame = native_namespace.DataFrame.from_dict(data)
+        aligned_data = {}
+        left_most_key = None
+        for key, value in data.items():
+            if isinstance(value, native_namespace.Series):
+                value_compliant = from_native(value, series_only=True)._compliant_series
+                if left_most_key is None:
+                    left_most_key = key
+                    left_most_series = value_compliant
+                    aligned_data[key] = value
+                else:
+                    aligned_data[key] = validate_column_comparand(
+                        left_most_series, value_compliant
+                    )[1]
+            else:
+                aligned_data[key] = value
+
+        native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
         if schema:
             from narwhals._pandas_like.utils import (
