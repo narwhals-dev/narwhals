@@ -166,7 +166,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser, other = validate_column_comparand(self, other)
-        return self._from_native_series(pc.subtract(self._native_series, other))
+        return self._from_native_series(pc.subtract(ser, other))
 
     def __rsub__(self: Self, other: Any) -> Self:
         return (self - other) * (-1)  # type: ignore[no-any-return]
@@ -223,16 +223,16 @@ class ArrowSeries:
     def __mod__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser, other = validate_column_comparand(self, other)
         floor_div = (self // other)._native_series
+        ser, other = validate_column_comparand(self, other)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
 
     def __rmod__(self: Self, other: Any) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        ser, other = validate_column_comparand(self, other)
         floor_div = (other // self)._native_series
+        ser, other = validate_column_comparand(self, other)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
 
