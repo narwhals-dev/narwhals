@@ -14,7 +14,6 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals.translate import to_py_scalar
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
@@ -30,6 +29,12 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
+
+
+def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
+    if return_py_scalar:
+        return getattr(value, "as_py", lambda: value)()
+    return value
 
 
 class ArrowSeries:
@@ -241,8 +246,8 @@ class ArrowSeries:
 
         return self._from_native_series(pc.invert(self._native_series))
 
-    def len(self: Self) -> int:
-        return len(self._native_series)
+    def len(self: Self, *, _return_py_scalar: bool = True) -> int:
+        return maybe_extract_py_scalar(len(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def filter(self: Self, other: Any) -> Self:
         if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
@@ -251,12 +256,12 @@ class ArrowSeries:
             ser = self._native_series
         return self._from_native_series(ser.filter(other))
 
-    def mean(self: Self) -> int:
+    def mean(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.mean(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.mean(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
-    def median(self: Self) -> int:
+    def median(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         from narwhals.exceptions import InvalidOperationError
@@ -265,22 +270,24 @@ class ArrowSeries:
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
 
-        return pc.approximate_median(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.approximate_median(self._native_series), _return_py_scalar
+        )
 
-    def min(self: Self) -> int:
+    def min(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.min(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
-    def max(self: Self) -> int:
+    def max(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.max(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
-    def sum(self: Self) -> int:
+    def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.sum(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.sum(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def drop_nulls(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -300,12 +307,14 @@ class ArrowSeries:
             result = ca
         return self._from_native_series(result)
 
-    def std(self: Self, ddof: int) -> float:
+    def std(self: Self, ddof: int, *, _return_py_scalar: bool = True) -> float:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.stddev(self._native_series, ddof=ddof), _return_py_scalar
+        )
 
-    def skew(self: Self) -> float | None:
+    def skew(self: Self, *, _return_py_scalar: bool = True) -> float | None:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
@@ -321,18 +330,22 @@ class ArrowSeries:
             m2 = pc.mean(pc.power(m, 2))
             m3 = pc.mean(pc.power(m, 3))
             # Biased population skewness
-            return pc.divide(m3, pc.power(m2, 1.5))  # type: ignore[no-any-return]
+            return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+                pc.divide(m3, pc.power(m2, 1.5)), _return_py_scalar
+            )
 
-    def count(self: Self) -> int:
+    def count(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.count(self._native_series)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.count(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
-    def n_unique(self: Self) -> int:
+    def n_unique(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         unique_values = pc.unique(self._native_series)
-        return pc.count(unique_values, mode="all")  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.count(unique_values, mode="all"), _return_py_scalar
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.PYARROW:
@@ -430,15 +443,15 @@ class ArrowSeries:
             pc.pairwise_diff(self._native_series.combine_chunks())
         )
 
-    def any(self: Self) -> bool:
+    def any(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return to_py_scalar(pc.any(self._native_series))  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.any(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
-    def all(self: Self) -> bool:
+    def all(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return to_py_scalar(pc.all(self._native_series))  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(pc.all(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -480,8 +493,8 @@ class ArrowSeries:
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(pc.cast(ser, dtype))
 
-    def null_count(self: Self) -> int:
-        return self._native_series.null_count  # type: ignore[no-any-return]
+    def null_count(self: Self, *, _return_py_scalar: bool = True) -> int:
+        return maybe_extract_py_scalar(self._native_series.null_count, _return_py_scalar)  # type: ignore[no-any-return]
 
     def head(self: Self, n: int) -> Self:
         ser = self._native_series
@@ -527,8 +540,8 @@ class ArrowSeries:
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
                 raise ValueError(msg)
-            return self._native_series[0]
-        return self._native_series[index]
+            return maybe_extract_py_scalar(self._native_series[0], return_py_scalar=True)
+        return maybe_extract_py_scalar(self._native_series[index], return_py_scalar=True)
 
     def value_counts(
         self: Self,
@@ -718,7 +731,7 @@ class ArrowSeries:
             result = pc.all(pc.greater_equal(ser[:-1], ser[1:]))
         else:
             result = pc.all(pc.less_equal(ser[:-1], ser[1:]))
-        return to_py_scalar(result)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(result, return_py_scalar=True)  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool) -> ArrowSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
@@ -798,12 +811,15 @@ class ArrowSeries:
         self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        *,
+        _return_py_scalar: bool = True,
     ) -> Any:
         import pyarrow.compute as pc  # ignore-banned-import()
 
-        return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
-            0
-        ]
+        return maybe_extract_py_scalar(
+            pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[0],
+            _return_py_scalar,
+        )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series[offset::n])
@@ -994,7 +1010,10 @@ class ArrowSeries:
         return result
 
     def __iter__(self: Self) -> Iterator[Any]:
-        yield from self._native_series.__iter__()
+        yield from (
+            maybe_extract_py_scalar(x, return_py_scalar=True)
+            for x in self._native_series.__iter__()
+        )
 
     @property
     def shape(self: Self) -> tuple[int]:

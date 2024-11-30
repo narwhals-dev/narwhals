@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -223,9 +224,17 @@ def reuse_series_implementation(
             for arg_name, arg_value in kwargs.items()
         }
 
+        # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
+        # However, when working with expressions, we keep everything PyArrow-native.
+        extra_kwargs = (
+            {"_return_py_scalar": False}
+            if returns_scalar and expr._implementation is Implementation.PYARROW
+            else {}
+        )
+
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(series, attr)(*_args, **_kwargs),
+                getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
                 reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar

@@ -10,7 +10,6 @@ from typing import Sequence
 
 import pandas as pd
 
-import narwhals as nw
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -54,7 +53,7 @@ def _to_comparable_list(column_values: Any) -> Any:
         column_values = column_values.to_pandas()
     if hasattr(column_values, "to_list"):
         return column_values.to_list()
-    return [nw.to_py_scalar(v) for v in column_values]
+    return list(column_values)
 
 
 def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:

@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 
 class ArrowExpr:
+    _implementation: Implementation = Implementation.PYARROW
+
     def __init__(
         self: Self,
         call: Callable[[ArrowDataFrame], list[ArrowSeries]],
