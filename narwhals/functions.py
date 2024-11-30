@@ -438,20 +438,19 @@ def _from_dict_impl(
         Implementation.CUDF,
     }:
         aligned_data = {}
-        left_most_key = None
-        for key, value in data.items():
-            if isinstance(value, native_namespace.Series):
-                value_compliant = from_native(value, series_only=True)._compliant_series
-                if left_most_key is None:
-                    left_most_key = key
-                    left_most_series = value_compliant
-                    aligned_data[key] = value
+        left_most_series = None
+        for key, native_series in data.items():
+            if isinstance(native_series, native_namespace.Series):
+                compliant_series = from_native(native_series, series_only=True)._compliant_series
+                if left_most_series is None:
+                    left_most_series = compliant_series
+                    aligned_data[key] = native_series
                 else:
                     aligned_data[key] = validate_column_comparand(
-                        left_most_series, value_compliant
+                        left_most_series, compliant_series
                     )[1]
             else:
-                aligned_data[key] = value
+                aligned_data[key] = native_series
 
         native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
