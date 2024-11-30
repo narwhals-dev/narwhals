@@ -129,8 +129,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
 
 
 def validate_column_comparand(
-    lhs: Any, rhs: Any, backend_version: tuple[int, ...]
-) -> Any:
+    lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
