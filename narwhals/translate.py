@@ -964,7 +964,7 @@ def to_py_scalar(scalar_like: Any) -> Any:
 
 __all__ = [
     "get_native_namespace",
-    "to_native",
     "narwhalify",
+    "to_native",
     "to_py_scalar",
 ]
