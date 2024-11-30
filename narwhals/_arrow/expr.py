@@ -151,55 +151,64 @@ class ArrowExpr:
         return reuse_series_implementation(self, "__and__", other=other)
 
     def __rand__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        return reuse_series_implementation(self, "__rand__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__and__(self)  # type: ignore[return-value]
 
     def __or__(self: Self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
 
     def __ror__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        return reuse_series_implementation(self, "__ror__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__or__(self)  # type: ignore[return-value]
 
     def __add__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)
 
     def __radd__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__radd__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__add__(self)  # type: ignore[return-value]
 
     def __sub__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other)
 
     def __rsub__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rsub__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__sub__(self)  # type: ignore[return-value]
 
     def __mul__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
     def __rmul__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rmul__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__mul__(self)  # type: ignore[return-value]
 
     def __pow__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
 
     def __rpow__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rpow__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__pow__(self)  # type: ignore[return-value]
 
     def __floordiv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other)
 
     def __rfloordiv__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rfloordiv__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__floordiv__(self)  # type: ignore[return-value]
 
     def __truediv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other)
 
     def __rtruediv__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rtruediv__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__truediv__(self)  # type: ignore[return-value]
 
     def __mod__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other)
 
     def __rmod__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__rmod__", other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__mod__(self)  # type: ignore[return-value]
 
     def __invert__(self: Self) -> Self:
         return reuse_series_implementation(self, "__invert__")

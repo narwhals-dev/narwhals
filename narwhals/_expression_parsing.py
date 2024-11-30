@@ -235,7 +235,11 @@ def reuse_series_implementation(
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            msg = (
+                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
+                f"Expression output names: {expr._output_names}\n"
+                f"Series names: {[s.name for s in out]}"
+            )
             raise AssertionError(msg)
         return out
 

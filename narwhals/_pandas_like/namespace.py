@@ -155,7 +155,7 @@ class PandasLikeNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=[_lit_pandas_series.__name__],
+            output_names=["literal"],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -501,8 +501,9 @@ class PandasWhen:
             )
         value_series = cast(PandasLikeSeries, value_series)
 
-        value_series_native = value_series._native_series
-        condition_native = validate_column_comparand(value_series_native.index, condition)
+        value_series_native, condition_native = validate_column_comparand(
+            value_series, condition
+        )
 
         if self._otherwise_value is None:
             return [

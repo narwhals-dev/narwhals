@@ -192,9 +192,11 @@ class PolarsSeries:
         )
 
     def __rpow__(self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(
-            self._native_series.__rpow__(extract_native(other))
-        )
+        result = self._native_series.__rpow__(extract_native(other))
+        if self._backend_version < (16, 1):
+            # Explicitly set alias to work around https://github.com/pola-rs/polars/issues/20071
+            result = result.alias(self.name)
+        return self._from_native_series(result)
 
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
