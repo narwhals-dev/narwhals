@@ -3175,6 +3175,9 @@ def from_dict(
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
+    Indexes (if present, for pandas-like backends) are aligned following
+    the [left-hand-rule](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/pandas_index/).
+
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
