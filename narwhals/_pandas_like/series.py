@@ -218,9 +218,9 @@ class PandasLikeSeries:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
-            _, values = validate_column_comparand(self, values).copy()
+            _, values = validate_column_comparand(self, values)
             values = set_axis(
-                values,
+                values.copy(),
                 self._native_series.index[indices],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
