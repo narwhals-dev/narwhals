@@ -1018,10 +1018,13 @@ class ArrowSeries:
         )
 
     def __contains__(self: Self, other: Any) -> bool:
+        import pyarrow as pa  # ignore-banned-imports
         import pyarrow.compute as pc  # ignore-banned-imports
 
+        native_series = self._native_series
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
-            pc.is_in(other, self._native_series), return_py_scalar=True
+            pc.is_in(pa.scalar(other, type=native_series.type), native_series),
+            return_py_scalar=True,
         )
 
     @property
