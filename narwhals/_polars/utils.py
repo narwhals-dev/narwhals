@@ -3,15 +3,45 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
+from typing import TypeVar
+from typing import overload
 
 if TYPE_CHECKING:
     import polars as pl
 
+    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
+    T = TypeVar("T")
 
-def extract_native(obj: Any) -> Any:
+
+@overload
+def extract_native(obj: PolarsDataFrame) -> pl.DataFrame: ...
+
+
+@overload
+def extract_native(obj: PolarsLazyFrame) -> pl.LazyFrame: ...
+
+
+@overload
+def extract_native(obj: PolarsSeries) -> pl.Series: ...
+
+
+@overload
+def extract_native(obj: PolarsExpr) -> pl.Expr: ...
+
+
+@overload
+def extract_native(obj: T) -> T: ...
+
+
+def extract_native(
+    obj: PolarsDataFrame | PolarsLazyFrame | PolarsSeries | PolarsExpr | T,
+) -> pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr | T:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
@@ -27,9 +57,9 @@ def extract_native(obj: Any) -> Any:
 
 
 def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, Any]]:
-    args = [extract_native(arg) for arg in args]
-    kwargs = {k: extract_native(v) for k, v in kwargs.items()}
-    return args, kwargs
+    return [extract_native(arg) for arg in args], {
+        k: extract_native(v) for k, v in kwargs.items()
+    }
 
 
 def native_to_narwhals_dtype(
