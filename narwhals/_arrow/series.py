@@ -1017,6 +1017,13 @@ class ArrowSeries:
             for x in self._native_series.__iter__()
         )
 
+    def __contains__(self: Self, other: Any) -> bool:
+        import pyarrow.compute as pc  # ignore-banned-imports
+
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.is_in(other, self._native_series), return_py_scalar=True
+        )
+
     @property
     def shape(self: Self) -> tuple[int]:
         return (len(self._native_series),)

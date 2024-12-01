@@ -32,6 +32,7 @@ SERIES_ONLY_METHODS = {
     "value_counts",
     "zip_with",
     "__iter__",
+    "__contains__",
 }
 BASE_DTYPES = {
     "NumericType",
