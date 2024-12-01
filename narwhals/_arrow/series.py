@@ -1022,9 +1022,8 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-imports
 
         native_series = self._native_series
-        other_ = pa.null() if other is None else pa.scalar(other, type=native_series.type)
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
-            pc.is_in(other_, native_series),
+            pc.is_in(pa.scalar(other, type=native_series.type), native_series),
             return_py_scalar=True,
         )
 
