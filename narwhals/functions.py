@@ -937,6 +937,8 @@ def get_level(
         This can be one of:
 
             - 'full': full Narwhals API support
-            - 'metadata': only metadata operations are supported (`df.schema`)
+            - 'lazy': only lazy operations are supported. This excludes anything
+              which involves iterating over rows in Python.
+            - 'interchange': only metadata operations are supported (`df.schema`)
     """
     return obj._level
