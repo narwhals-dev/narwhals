@@ -927,7 +927,7 @@ def show_versions() -> None:
 
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
-) -> Literal["full", "interchange"]:
+) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
 
     Arguments:

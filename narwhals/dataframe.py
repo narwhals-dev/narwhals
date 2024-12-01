@@ -43,7 +43,7 @@ DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 
 class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
-    _level: Literal["full", "interchange"]
+    _level: Literal["full", "lazy", "interchange"]
 
     def __native_namespace__(self: Self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
@@ -335,9 +335,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         self,
         df: Any,
         *,
-        level: Literal["full", "interchange"],
+        level: Literal["full", "lazy", "interchange"],
     ) -> None:
-        self._level: Literal["full", "interchange"] = level
+        self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -434,7 +434,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             bar: [[6,7,8]]
             ham: [["a","b","c"]]
         """
-        return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
+        return self._lazyframe(self._compliant_frame.lazy(), level="lazy")
 
     def to_native(self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
@@ -2893,7 +2893,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        level: Literal["full", "interchange"],
+        level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
@@ -2957,7 +2957,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return self._dataframe(
             self._compliant_frame.collect(),
-            level=self._level,
+            level="full",
         )
 
     def to_native(self) -> FrameT:
