@@ -478,7 +478,7 @@ class PandasWhen:
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
-        from narwhals._pandas_like.utils import validate_column_comparand
+        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
         plx = PandasLikeNamespace(
             implementation=self._implementation,
@@ -501,7 +501,7 @@ class PandasWhen:
             )
         value_series = cast(PandasLikeSeries, value_series)
 
-        value_series_native, condition_native = validate_column_comparand(
+        value_series_native, condition_native = broadcast_align_and_extract_native(
             value_series, condition
         )
 

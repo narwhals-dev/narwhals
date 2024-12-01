@@ -128,7 +128,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
     raise AssertionError(msg)
 
 
-def validate_column_comparand(
+def broadcast_and_extract_native(
     lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
 ) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.

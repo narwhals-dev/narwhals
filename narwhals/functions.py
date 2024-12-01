@@ -10,7 +10,7 @@ from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
-from narwhals._pandas_like.utils import validate_column_comparand
+from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
@@ -448,7 +448,7 @@ def _from_dict_impl(
                     left_most_series = compliant_series
                     aligned_data[key] = native_series
                 else:
-                    aligned_data[key] = validate_column_comparand(
+                    aligned_data[key] = broadcast_align_and_extract_native(
                         left_most_series, compliant_series
                     )[1]
             else:
