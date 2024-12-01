@@ -36,8 +36,7 @@ class Datetime(NwDatetime):
             `import zoneinfo; zoneinfo.available_timezones()` for a full list).
 
     Notes:
-        Adapted from Polars implementation at:
-        https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457
+        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
     """
 
     def __hash__(self) -> int:
@@ -51,8 +50,7 @@ class Duration(NwDuration):
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
 
     Notes:
-        Adapted from Polars implementation at:
-        https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502
+        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
     """
 
     def __hash__(self) -> int:
