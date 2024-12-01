@@ -296,136 +296,113 @@ class PandasLikeSeries:
     # Binary comparisons
 
     def filter(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
             ser, other = broadcast_align_and_extract_native(self, other)
+        else:
+            ser = self._native_series
         return self._from_native_series(ser.loc[other].rename(ser.name, copy=False))
 
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__eq__(other).rename(ser.name, copy=False))
 
     def __ne__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__ne__(other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__ge__(other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__gt__(other).rename(ser.name, copy=False))
 
     def __le__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__le__(other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__lt__(other).rename(ser.name, copy=False))
 
     def __and__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__and__(other).rename(ser.name, copy=False))
 
     def __rand__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__and__(other).rename(ser.name, copy=False))
 
     def __or__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__or__(other).rename(ser.name, copy=False))
 
     def __ror__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__or__(other).rename(ser.name, copy=False))
 
     def __add__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__add__(other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__radd__(other).rename(ser.name, copy=False))
 
     def __sub__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__sub__(other).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__rsub__(other).rename(ser.name, copy=False))
 
     def __mul__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__mul__(other).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__rmul__(other).rename(ser.name, copy=False))
 
     def __truediv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__truediv__(other).rename(ser.name, copy=False)
         )
 
     def __rtruediv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rtruediv__(other).rename(ser.name, copy=False)
         )
 
     def __floordiv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__floordiv__(other).rename(ser.name, copy=False)
         )
 
     def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rfloordiv__(other).rename(ser.name, copy=False)
         )
 
     def __pow__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__pow__(other).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__rpow__(other).rename(ser.name, copy=False))
 
     def __mod__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__mod__(other).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Any) -> PandasLikeSeries:
-        ser = self._native_series
         ser, other = broadcast_align_and_extract_native(self, other)
         return self._from_native_series(ser.__rmod__(other).rename(ser.name, copy=False))
 
