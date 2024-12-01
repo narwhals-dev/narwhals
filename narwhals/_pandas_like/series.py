@@ -854,7 +854,7 @@ class PandasLikeSeries:
     def __contains__(self: Self, other: Any) -> bool:
         if other is None:
             return self._native_series.isna().any()  # type: ignore[no-any-return]
-        return other in self._native_series
+        return self._native_series.isin({other}).any()  # type: ignore[no-any-return]
 
     def is_finite(self: Self) -> Self:
         s = self._native_series
