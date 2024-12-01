@@ -501,7 +501,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(pl.__version__),
                 dtypes=dtypes,
             ),
-            level="full",
+            level="lazy",
         )
     elif is_polars_series(native_object):
         pl = get_polars()
@@ -675,7 +675,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(get_dask().__version__),
                 dtypes=dtypes,
             ),
-            level="full",
+            level="lazy",
         )
 
     # DuckDB

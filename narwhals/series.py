@@ -48,7 +48,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         series: Any,
         *,
-        level: Literal["full", "interchange"],
+        level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
         if hasattr(series, "__narwhals_series__"):
