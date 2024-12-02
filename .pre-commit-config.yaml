@@ -79,10 +79,6 @@ repos:
             narwhals/.*__init__.py|
             narwhals/.*typing\.py
           )
-- repo: https://github.com/kynan/nbstripout
-  rev: 0.8.1
-  hooks:
-    - id: nbstripout
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:
