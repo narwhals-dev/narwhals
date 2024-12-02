@@ -33,6 +33,7 @@ from narwhals.dependencies import is_polars_lazyframe
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
+from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -42,7 +43,6 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
-    from narwhals.utils import Version
 
 T = TypeVar("T")
 
@@ -383,7 +383,7 @@ def from_native(
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
-        version="main",  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 

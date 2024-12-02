@@ -15,6 +15,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import IntoSeriesT
-    from narwhals.utils import Version
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -255,7 +255,7 @@ def new_series(
         values,
         dtype,
         native_namespace=native_namespace,
-        version="main",  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
@@ -386,7 +386,7 @@ def from_dict(
         data,
         schema,
         native_namespace=native_namespace,
-        version="main",  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
@@ -633,7 +633,7 @@ def from_numpy(
         data,
         schema,
         native_namespace=native_namespace,
-        version="main",  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
