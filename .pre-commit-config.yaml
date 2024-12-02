@@ -60,7 +60,7 @@ repos:
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
     - id: dtypes-import
-      name: don't import from narwhals.dtypes (use `import_dtypes_modules` instead)
+      name: don't import from narwhals.dtypes (use `import_dtypes_module` instead)
       entry: |
           (?x)
             import\ narwhals.dtypes|
