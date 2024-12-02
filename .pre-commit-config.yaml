@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.7.2'
+  rev: 'v0.8.1'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -60,7 +60,7 @@ repos:
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.8.0
+  rev: 0.8.1
   hooks:
     - id: nbstripout
 - repo: https://github.com/adamchainz/blacken-docs
