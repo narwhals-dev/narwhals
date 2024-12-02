@@ -62,17 +62,23 @@ repos:
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `import_dtypes_modules` instead)
       entry: |
-          (?x)(
-            import narwhals.dtypes|
-            from narwhals import dtypes|
-            from narwhals.dtypes import|
-            import narwhals.stable.v1.dtypes|
-            from narwhals.stable.v1 import dtypes|
-            from narwhals.stable.v1.dtypes import
-          )
+          (?x)
+            import\ narwhals.dtypes|
+            from\ narwhals\ import\ dtypes|
+            from\ narwhals.dtypes\ import\ [^D_]+|
+            import\ narwhals.stable.v1.dtypes|
+            from\ narwhals.stable.v1\ import\ dtypes|
+            from\ narwhals.stable.v1.dtypes\ import
       language: pygrep
       files: ^narwhals/
-      exclude: ^narwhals/utils\.py
+      exclude: |
+        (?x)
+          ^(
+            narwhals/utils\.py|
+            narwhals/stable/v1/_dtypes.py|
+            narwhals/.*__init__.py|
+            narwhals/.*typing\.py
+          )
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.0
   hooks:
