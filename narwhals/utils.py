@@ -29,7 +29,6 @@ from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,11 +40,17 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+
+
+class Version(Enum):
+    V1 = auto()
+    MAIN = auto()
 
 
 class Implementation(Enum):
@@ -95,6 +100,21 @@ class Implementation(Enum):
             Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
+
+
+def import_dtypes_module(version: Version) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes
+    elif version is Version.MAIN:
+        from narwhals import dtypes  # type: ignore[no-redef]
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
+    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -305,7 +325,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
     return None
@@ -358,8 +378,10 @@ def maybe_set_index(
         4  1
         5  2
     """
+    from narwhals.translate import to_native
+
     df_any = cast(Any, obj)
-    native_obj = to_native(df_any)
+    native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
         msg = "Only one of `column_names` or `index` should be provided"
@@ -434,7 +456,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
@@ -501,7 +523,7 @@ def maybe_convert_dtypes(
         dtype: object
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             obj_any._compliant_frame._from_native_frame(
@@ -561,7 +583,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = series._compliant_series._dtypes
+    dtypes = import_dtypes_module(series._compliant_series._version)
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
@@ -574,7 +596,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         return True
     if series.dtype != dtypes.Categorical:
         return False
-    native_series = to_native(series)
+    native_series = series.to_native()
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):

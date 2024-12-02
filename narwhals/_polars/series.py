@@ -21,19 +21,23 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     T = TypeVar("T")
 
 
 class PolarsSeries:
     def __init__(
-        self: Self, series: pl.Series, *, backend_version: tuple[int, ...], dtypes: DTypes
+        self: Self,
+        series: pl.Series,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
     ) -> None:
         self._native_series: pl.Series = series
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
-        self._dtypes = dtypes
+        self._version = version
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsSeries"
@@ -48,14 +52,14 @@ class PolarsSeries:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+    def _change_dtypes(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series, backend_version=self._backend_version, dtypes=dtypes
+            self._native_series, backend_version=self._backend_version, version=version
         )
 
     def _from_native_series(self: Self, series: pl.Series) -> Self:
         return self.__class__(
-            series, backend_version=self._backend_version, dtypes=self._dtypes
+            series, backend_version=self._backend_version, version=self._version
         )
 
     @overload
@@ -78,7 +82,7 @@ class PolarsSeries:
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                series, backend_version=self._backend_version, dtypes=self._dtypes
+                series, backend_version=self._backend_version, version=self._version
             )
         # scalar
         return series
@@ -109,7 +113,7 @@ class PolarsSeries:
     @property
     def dtype(self: Self) -> DType:
         return native_to_narwhals_dtype(
-            self._native_series.dtype, self._dtypes, self._backend_version
+            self._native_series.dtype, self._version, self._backend_version
         )
 
     @overload
@@ -123,7 +127,7 @@ class PolarsSeries:
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
@@ -131,7 +135,9 @@ class PolarsSeries:
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+            narwhals_to_native_dtype(return_dtype, self._version)
+            if return_dtype
+            else None
         )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
@@ -242,7 +248,7 @@ class PolarsSeries:
             )
         result = result.with_columns(pl.all().cast(pl.Int8))
         return PolarsDataFrame(
-            result, backend_version=self._backend_version, dtypes=self._dtypes
+            result, backend_version=self._backend_version, version=self._version
         )
 
     def ewm_mean(
@@ -325,7 +331,7 @@ class PolarsSeries:
             )
 
         return PolarsDataFrame(
-            result, backend_version=self._backend_version, dtypes=self._dtypes
+            result, backend_version=self._backend_version, version=self._version
         )
 
     def cum_count(self: Self, *, reverse: bool) -> Self:

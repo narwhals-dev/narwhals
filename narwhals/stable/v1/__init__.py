@@ -59,6 +59,7 @@ from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
+from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -1163,21 +1164,19 @@ def _stableify(obj: Any) -> Any: ...
 def _stableify(
     obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries[Any] | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
-    from narwhals.stable.v1 import dtypes
-
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame._change_dtypes(dtypes),
+            obj._compliant_frame._change_dtypes(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame._change_dtypes(dtypes),
+            obj._compliant_frame._change_dtypes(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._compliant_series._change_dtypes(dtypes),
+            obj._compliant_series._change_dtypes(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
@@ -1617,8 +1616,6 @@ def from_native(
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    from narwhals.stable.v1 import dtypes
-
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
         return native_object
@@ -1636,7 +1633,7 @@ def from_native(
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version=Version.V1,
     )
     return _stableify(result)  # type: ignore[no-any-return]
 
@@ -3106,15 +3103,13 @@ def new_series(
            2
         ]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _new_series_impl(
             name,
             values,
             dtype,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 
@@ -3230,14 +3225,12 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
             data,
             schema,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 
@@ -3381,14 +3374,12 @@ def from_numpy(
         d: [[2,4]]
         e: [[1,3]]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _from_numpy_impl(
             data,
             schema,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 

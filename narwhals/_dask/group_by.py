@@ -86,7 +86,7 @@ class DaskLazyGroupBy:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
-            df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
+            df, backend_version=self._df._backend_version, version=self._df._version
         )
 
 

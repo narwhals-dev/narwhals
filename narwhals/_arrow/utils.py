@@ -5,6 +5,7 @@ from typing import Any
 from typing import Sequence
 from typing import overload
 
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -13,12 +14,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
-def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
+    dtypes = import_dtypes_module(version)
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -62,24 +64,25 @@ def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
             [
                 dtypes.Field(
                     dtype.field(i).name,
-                    native_to_narwhals_dtype(dtype.field(i).type, dtypes),
+                    native_to_narwhals_dtype(dtype.field(i).type, version),
                 )
                 for i in range(dtype.num_fields)
             ]
         )
 
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
-        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if pa.types.is_fixed_size_list(dtype):
         return dtypes.Array(
-            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+            native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
     import pyarrow as pa  # ignore-banned-import
 
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
