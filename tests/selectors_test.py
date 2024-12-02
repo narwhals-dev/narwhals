@@ -5,7 +5,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.stable.v1.selectors import all
+from narwhals.stable.v1.selectors import all  # noqa: A004
 from narwhals.stable.v1.selectors import boolean
 from narwhals.stable.v1.selectors import by_dtype
 from narwhals.stable.v1.selectors import categorical
