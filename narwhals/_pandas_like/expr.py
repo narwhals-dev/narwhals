@@ -34,7 +34,7 @@ class PandasLikeExpr:
         output_names: list[str] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -44,7 +44,7 @@ class PandasLikeExpr:
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -59,7 +59,7 @@ class PandasLikeExpr:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
-            self._implementation, self._backend_version, dtypes=self._dtypes
+            self._implementation, self._backend_version, version=self._version
         )
 
     def __narwhals_expr__(self) -> None: ...
@@ -70,7 +70,7 @@ class PandasLikeExpr:
         *column_names: str,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
@@ -79,7 +79,7 @@ class PandasLikeExpr:
                         df._native_frame[column_name],
                         implementation=df._implementation,
                         backend_version=df._backend_version,
-                        dtypes=df._dtypes,
+                        version=df._version,
                     )
                     for column_name in column_names
                 ]
@@ -98,7 +98,7 @@ class PandasLikeExpr:
             output_names=list(column_names),
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     @classmethod
@@ -107,7 +107,7 @@ class PandasLikeExpr:
         *column_indices: int,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [
@@ -115,7 +115,7 @@ class PandasLikeExpr:
                     df._native_frame.iloc[:, column_index],
                     implementation=df._implementation,
                     backend_version=df._backend_version,
-                    dtypes=df._dtypes,
+                    version=df._version,
                 )
                 for column_index in column_indices
             ]
@@ -128,7 +128,7 @@ class PandasLikeExpr:
             output_names=None,
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def cast(
@@ -383,7 +383,7 @@ class PandasLikeExpr:
             output_names=[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def over(self, keys: list[str]) -> Self:
@@ -409,7 +409,7 @@ class PandasLikeExpr:
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_duplicated(self) -> Self:
@@ -481,7 +481,7 @@ class PandasLikeExpr:
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_finite(self: Self) -> Self:
@@ -756,7 +756,7 @@ class PandasLikeExprNameNamespace:
             output_names=root_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
@@ -783,7 +783,7 @@ class PandasLikeExprNameNamespace:
             output_names=output_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
@@ -808,7 +808,7 @@ class PandasLikeExprNameNamespace:
             output_names=output_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
@@ -834,7 +834,7 @@ class PandasLikeExprNameNamespace:
             output_names=output_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
@@ -860,7 +860,7 @@ class PandasLikeExprNameNamespace:
             output_names=output_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
@@ -886,5 +886,5 @@ class PandasLikeExprNameNamespace:
             output_names=output_names,
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )

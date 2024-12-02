@@ -179,7 +179,7 @@ def create_compliant_series(
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-    dtypes: DTypes,
+    version: Version,
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -191,7 +191,7 @@ def create_compliant_series(
             series,
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
@@ -324,9 +324,14 @@ def set_axis(
 
 
 def native_to_narwhals_dtype(
-    native_column: Any, dtypes: DTypes, implementation: Implementation
+    native_column: Any, version: Version, implementation: Implementation
 ) -> DType:
     dtype = str(native_column.dtype)
+
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
 
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -434,9 +439,13 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     starting_dtype: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-    dtypes: DTypes,
+    version: Version,
 ) -> Any:
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":
             return "Float64[pyarrow]"

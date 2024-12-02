@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 
 class DuckDBInterchangeSeries:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_series = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_series__(self) -> Any:
         return self
@@ -26,7 +26,7 @@ class DuckDBInterchangeSeries:
     def __getattr__(self, attr: str) -> Any:
         if attr == "dtype":
             return map_duckdb_dtype_to_narwhals_dtype(
-                self._native_series.types[0], self._dtypes
+                self._native_series.types[0], self._version
             )
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"

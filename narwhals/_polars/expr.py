@@ -20,11 +20,11 @@ if TYPE_CHECKING:
 
 class PolarsExpr:
     def __init__(
-        self: Self, expr: pl.Expr, dtypes: DTypes, backend_version: tuple[int, ...]
+        self: Self, expr: pl.Expr, version: Version, backend_version: tuple[int, ...]
     ) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
-        self._dtypes = dtypes
+        self._version = version
         self._backend_version = backend_version
 
     def __repr__(self: Self) -> str:  # pragma: no cover
@@ -32,7 +32,7 @@ class PolarsExpr:
 
     def _from_native_expr(self: Self, expr: pl.Expr) -> Self:
         return self.__class__(
-            expr, dtypes=self._dtypes, backend_version=self._backend_version
+            expr, version=self._version, backend_version=self._backend_version
         )
 
     def __getattr__(self: Self, attr: str) -> Any:
@@ -46,7 +46,7 @@ class PolarsExpr:
 
     def cast(self: Self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype_pl = narwhals_to_native_dtype(dtype, self._dtypes)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_expr(expr.cast(dtype_pl))
 
     def ewm_mean(
@@ -82,7 +82,7 @@ class PolarsExpr:
         return_dtype: DType | None,
     ) -> Self:
         if return_dtype is not None:
-            return_dtype_pl = narwhals_to_native_dtype(return_dtype, self._dtypes)
+            return_dtype_pl = narwhals_to_native_dtype(return_dtype, self._version)
             return self._from_native_expr(
                 self._native_expr.map_batches(function, return_dtype_pl)
             )
@@ -94,7 +94,7 @@ class PolarsExpr:
     ) -> Self:
         expr = self._native_expr
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._dtypes) if return_dtype else None
+            narwhals_to_native_dtype(return_dtype, self._version) if return_dtype else None
         )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"

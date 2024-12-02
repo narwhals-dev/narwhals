@@ -16,9 +16,13 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
 
-def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -77,9 +81,13 @@ def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
     import pyarrow as pa  # ignore-banned-import
 
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):

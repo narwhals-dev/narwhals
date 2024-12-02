@@ -19,8 +19,12 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
 
-def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DType:
+def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, version: Version) -> DType:
     duckdb_dtype = str(duckdb_dtype)
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -73,9 +77,9 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -87,7 +91,7 @@ class DuckDBInterchangeFrame:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
         return DuckDBInterchangeSeries(
-            self._native_frame.select(item), dtypes=self._dtypes
+            self._native_frame.select(item), version=self._version
         )
 
     def select(
@@ -110,7 +114,7 @@ class DuckDBInterchangeFrame:
         if attr == "schema":
             return {
                 column_name: map_duckdb_dtype_to_narwhals_dtype(
-                    duckdb_dtype, self._dtypes
+                    duckdb_dtype, self._version
                 )
                 for column_name, duckdb_dtype in zip(
                     self._native_frame.columns, self._native_frame.types
@@ -139,8 +143,8 @@ class DuckDBInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.arrow()
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
-        return self.__class__(self._native_frame, dtypes=dtypes)
+    def _change_dtypes(self: Self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
 
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, dtypes=self._dtypes)
+        return self.__class__(df, version=self._version)

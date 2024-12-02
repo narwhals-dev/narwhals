@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 
 
 class DaskSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
+    def __init__(self: Self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
@@ -34,33 +34,49 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def numeric(self: Self) -> DaskSelector:
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
         return self.by_dtype(
             [
-                self._dtypes.Int64,
-                self._dtypes.Int32,
-                self._dtypes.Int16,
-                self._dtypes.Int8,
-                self._dtypes.UInt64,
-                self._dtypes.UInt32,
-                self._dtypes.UInt16,
-                self._dtypes.UInt8,
-                self._dtypes.Float64,
-                self._dtypes.Float32,
+                dtypes.Int64,
+                dtypes.Int32,
+                dtypes.Int16,
+                dtypes.Int8,
+                dtypes.UInt64,
+                dtypes.UInt32,
+                dtypes.UInt16,
+                dtypes.UInt8,
+                dtypes.Float64,
+                dtypes.Float32,
             ],
         )
 
     def categorical(self: Self) -> DaskSelector:
-        return self.by_dtype([self._dtypes.Categorical])
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        return self.by_dtype([dtypes.Categorical])
 
     def string(self: Self) -> DaskSelector:
-        return self.by_dtype([self._dtypes.String])
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        return self.by_dtype([dtypes.String])
 
     def boolean(self: Self) -> DaskSelector:
-        return self.by_dtype([self._dtypes.Boolean])
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
@@ -74,7 +90,7 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
 
@@ -97,7 +113,7 @@ class DaskSelector(DaskExpr):
             output_names=self._output_names,
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def __sub__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
@@ -116,7 +132,7 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() - other
@@ -137,7 +153,7 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() | other
@@ -158,7 +174,7 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() & other
@@ -166,7 +182,7 @@ class DaskSelector(DaskExpr):
     def __invert__(self: Self) -> DaskSelector:
         return (
             DaskSelectorNamespace(
-                backend_version=self._backend_version, dtypes=self._dtypes
+                backend_version=self._backend_version, version=self._version
             ).all()
             - self
         )

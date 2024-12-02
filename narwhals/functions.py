@@ -257,7 +257,7 @@ def new_series(
         values,
         dtype,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version='main',  # type: ignore[arg-type]
     )
 
 
@@ -267,7 +267,7 @@ def _new_series_impl(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-    dtypes: DTypes,
+    version: Version,
 ) -> Series[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
 
@@ -277,7 +277,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, version=version)
         else:
             dtype_pl = None
 
@@ -294,7 +294,7 @@ def _new_series_impl(
 
             backend_version = parse_version(native_namespace.__version__)
             dtype = pandas_like_narwhals_to_native_dtype(
-                dtype, None, implementation, backend_version, dtypes
+                dtype, None, implementation, backend_version, version
             )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
@@ -304,7 +304,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
@@ -384,13 +384,11 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    from narwhals import dtypes
-
     return _from_dict_impl(
         data,
         schema,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version='main',  # type: ignore[arg-type]
     )
 
 
@@ -399,7 +397,7 @@ def _from_dict_impl(
     schema: dict[str, DType] | Schema | None = None,
     *,
     native_namespace: ModuleType | None = None,
-    dtypes: DTypes,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
@@ -425,7 +423,7 @@ def _from_dict_impl(
             )
 
             schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+                name: polars_narwhals_to_native_dtype(dtype, version=version)
                 for name, dtype in schema.items()
             }
         else:
@@ -464,7 +462,7 @@ def _from_dict_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, dtypes
+                    schema[name], native_type, implementation, backend_version, version
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -478,7 +476,7 @@ def _from_dict_impl(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    (name, arrow_narwhals_to_native_dtype(dtype, version))
                     for name, dtype in schema.items()
                 ]
             )
@@ -639,7 +637,7 @@ def from_numpy(
         data,
         schema,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version='main',  # type: ignore[arg-type]
     )
 
 
@@ -648,7 +646,7 @@ def _from_numpy_impl(
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
-    dtypes: DTypes,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
@@ -664,7 +662,7 @@ def _from_numpy_impl(
             )
 
             schema = {
-                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)  # type: ignore[misc]
+                name: polars_narwhals_to_native_dtype(dtype, version=version)  # type: ignore[misc]
                 for name, dtype in schema.items()
             }
         elif schema is None:
@@ -691,7 +689,7 @@ def _from_numpy_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, dtypes
+                    schema[name], native_type, implementation, backend_version, version
                 )
                 for name, native_type in schema.items()
             }
@@ -721,7 +719,7 @@ def _from_numpy_impl(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    (name, arrow_narwhals_to_native_dtype(dtype, version))
                     for name, dtype in schema.items()
                 ]
             )

@@ -82,13 +82,13 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
@@ -127,12 +127,12 @@ class PandasLikeSeries:
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
 
-    def _change_dtypes(self, dtypes: DTypes) -> Self:
+    def _change_dtypes(self, version: Version) -> Self:
         return self.__class__(
             self._native_series,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def _from_native_series(self, series: Any) -> Self:
@@ -140,7 +140,7 @@ class PandasLikeSeries:
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     @classmethod
@@ -152,7 +152,7 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -163,7 +163,7 @@ class PandasLikeSeries:
             ),
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def __len__(self) -> int:
@@ -180,7 +180,7 @@ class PandasLikeSeries:
     @property
     def dtype(self: Self) -> DType:
         return native_to_narwhals_dtype(
-            self._native_series, self._dtypes, self._implementation
+            self._native_series, self._version, self._implementation
         )
 
     def ewm_mean(
@@ -236,7 +236,7 @@ class PandasLikeSeries:
     ) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(
-            dtype, ser.dtype, self._implementation, self._backend_version, self._dtypes
+            dtype, ser.dtype, self._implementation, self._backend_version, self._version
         )
         return self._from_native_series(ser.astype(dtype))
 
@@ -259,7 +259,7 @@ class PandasLikeSeries:
             self._native_series.to_frame(),
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def to_list(self) -> Any:
@@ -555,7 +555,7 @@ class PandasLikeSeries:
                 self._native_series.dtype,
                 self._implementation,
                 self._backend_version,
-                self._dtypes,
+                self._version,
             )
             if return_dtype
             else None
@@ -606,7 +606,11 @@ class PandasLikeSeries:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF
-        if self.dtype == self._dtypes.Datetime and self.dtype.time_zone is not None:  # type: ignore[attr-defined]
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        if self.dtype == dtypes.Datetime and self.dtype.time_zone is not None:  # type: ignore[attr-defined]
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None)._native_series
         else:
             s = self._native_series
@@ -704,7 +708,7 @@ class PandasLikeSeries:
             val_count,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def quantile(
@@ -761,7 +765,7 @@ class PandasLikeSeries:
             result,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1136,11 +1140,15 @@ class PandasLikeSeriesDateTimeNamespace:
         dtype = self._pandas_series.dtype
         is_pyarrow_dtype = "pyarrow" in str(self._pandas_series._native_series.dtype)
         mask_na = s.isna()
-        if dtype == self._pandas_series._dtypes.Date:
+        if self._pandas_series._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        if dtype == dtypes.Date:
             # Date is only supported in pandas dtypes if pyarrow-backed
             s_cast = s.astype("Int32[pyarrow]")
             result = calculate_timestamp_date(s_cast, time_unit)
-        elif dtype == self._pandas_series._dtypes.Datetime:
+        elif dtype == dtypes.Datetime:
             original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
             if (
                 self._pandas_series._implementation is Implementation.PANDAS

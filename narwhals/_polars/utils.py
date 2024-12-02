@@ -64,11 +64,15 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
 
 def native_to_narwhals_dtype(
     dtype: pl.DataType,
-    dtypes: DTypes,
+    version: Version,
     backend_version: tuple[int, ...],
 ) -> DType:
     import polars as pl  # ignore-banned-import()
 
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -134,8 +138,13 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pl.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
     import polars as pl  # ignore-banned-import()
+
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
 
     if dtype == dtypes.Float64:
         return pl.Float64()

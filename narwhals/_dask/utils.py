@@ -84,7 +84,11 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
+    if version == 'v1':
+        from narwhals.stable.v1 import dtypes
+    else:
+        from narwhals import dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):

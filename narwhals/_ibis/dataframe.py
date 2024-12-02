@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
 
 
-def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
+def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -64,9 +64,9 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
 
 
 class IbisInterchangeFrame:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -77,7 +77,7 @@ class IbisInterchangeFrame:
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item], dtypes=self._dtypes)
+        return IbisInterchangeSeries(self._native_frame[item], version=self._version)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
@@ -106,7 +106,7 @@ class IbisInterchangeFrame:
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
-                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._dtypes)
+                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._version)
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         elif attr == "columns":
@@ -119,8 +119,8 @@ class IbisInterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
-        return self.__class__(self._native_frame, dtypes=dtypes)
+    def _change_dtypes(self: Self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
 
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, dtypes=self._dtypes)
+        return self.__class__(df, version=self._version)

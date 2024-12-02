@@ -44,20 +44,20 @@ class ArrowSeries:
         *,
         name: str,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._name = name
         self._native_series = native_series
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+    def _change_dtypes(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_series,
             name=self._name,
             backend_version=self._backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def _from_native_series(self: Self, series: pa.ChunkedArray | pa.Array) -> Self:
@@ -69,7 +69,7 @@ class ArrowSeries:
             series,
             name=self._name,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     @classmethod
@@ -79,7 +79,7 @@ class ArrowSeries:
         name: str,
         *,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
@@ -87,13 +87,13 @@ class ArrowSeries:
             pa.chunked_array([data]),
             name=name,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return ArrowNamespace(backend_version=self._backend_version, version=self._version)
 
     def __len__(self: Self) -> int:
         return len(self._native_series)
@@ -408,12 +408,12 @@ class ArrowSeries:
             self._native_series,
             name=name,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type, self._dtypes)
+        return native_to_narwhals_dtype(self._native_series.type, self._version)
 
     def abs(self: Self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -492,7 +492,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
+        dtype = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self, *, _return_py_scalar: bool = True) -> int:
@@ -531,7 +531,7 @@ class ArrowSeries:
             res,
             name=self.name,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -577,7 +577,7 @@ class ArrowSeries:
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count, backend_version=self._backend_version, dtypes=self._dtypes
+            val_count, backend_version=self._backend_version, version=self._version
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
@@ -674,7 +674,7 @@ class ArrowSeries:
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
         return ArrowDataFrame(
-            df, backend_version=self._backend_version, dtypes=self._dtypes
+            df, backend_version=self._backend_version, version=self._version
         )
 
     def to_pandas(self: Self) -> pd.Series:
@@ -752,7 +752,7 @@ class ArrowSeries:
         idxs = pc.index_in(self._native_series, pa.array(old))
         result_native = pc.take(pa.array(new), idxs)
         if return_dtype is not None:
-            result_native.cast(narwhals_to_native_dtype(return_dtype, self._dtypes))
+            result_native.cast(narwhals_to_native_dtype(return_dtype, self._version))
         result = self._from_native_series(result_native)
         if result.is_null().sum() != self.is_null().sum():
             msg = (
@@ -806,7 +806,7 @@ class ArrowSeries:
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).select(*output_order)
 
     def quantile(
@@ -852,7 +852,11 @@ class ArrowSeries:
         return self._from_native_series(pc.is_finite(self._native_series))
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        return (~self.is_null()).cast(self._dtypes.UInt32()).cum_sum(reverse=reverse)
+        if self._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (13, 0, 0):
@@ -1080,7 +1084,11 @@ class ArrowSeriesDateTimeNamespace:
 
         s = self._arrow_series._native_series
         dtype = self._arrow_series.dtype
-        if dtype == self._arrow_series._dtypes.Datetime:
+        if self._arrow_series._version == 'v1':
+            from narwhals.stable.v1 import dtypes
+        else:
+            from narwhals import dtypes
+        if dtype == dtypes.Datetime:
             unit = dtype.time_unit  # type: ignore[attr-defined]
             s_cast = s.cast(pa.int64())
             if unit == "ns":
@@ -1114,7 +1122,7 @@ class ArrowSeriesDateTimeNamespace:
             else:  # pragma: no cover
                 msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
-        elif dtype == self._arrow_series._dtypes.Date:
+        elif dtype == dtypes.Date:
             time_s = pc.multiply(s.cast(pa.int32()), 86400)
             if time_unit == "ns":
                 result = pc.multiply(time_s, 1_000_000_000)
