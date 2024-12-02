@@ -230,6 +230,7 @@ class ArrowNamespace:
     def mean_horizontal(self: Self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
         dtypes = import_dtypes_module(self._version)
+        from narwhals import dtypes
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (
