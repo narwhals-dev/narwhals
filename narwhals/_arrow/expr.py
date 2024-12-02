@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class ArrowExpr:
@@ -36,7 +36,7 @@ class ArrowExpr:
         root_names: list[str] | None,
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -46,7 +46,7 @@ class ArrowExpr:
         self._output_names = output_names
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return (
@@ -62,7 +62,7 @@ class ArrowExpr:
         cls: type[Self],
         *column_names: str,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
@@ -73,7 +73,7 @@ class ArrowExpr:
                         df._native_frame[column_name],
                         name=column_name,
                         backend_version=df._backend_version,
-                        dtypes=df._dtypes,
+                        version=df._version,
                     )
                     for column_name in column_names
                 ]
@@ -91,7 +91,7 @@ class ArrowExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     @classmethod
@@ -99,7 +99,7 @@ class ArrowExpr:
         cls: type[Self],
         *column_indices: int,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
@@ -109,7 +109,7 @@ class ArrowExpr:
                     df._native_frame[column_index],
                     name=df._native_frame.column_names[column_index],
                     backend_version=df._backend_version,
-                    dtypes=df._dtypes,
+                    version=df._version,
                 )
                 for column_index in column_indices
             ]
@@ -121,13 +121,15 @@ class ArrowExpr:
             root_names=None,
             output_names=None,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return ArrowNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __narwhals_expr__(self: Self) -> None: ...
 
@@ -287,7 +289,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=[name],
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def null_count(self: Self) -> Self:
@@ -406,7 +408,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def mode(self: Self) -> Self:
@@ -447,7 +449,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_finite(self: Self) -> Self:
@@ -726,7 +728,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=root_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
@@ -752,7 +754,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
@@ -776,7 +778,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
@@ -801,7 +803,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
@@ -826,7 +828,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -851,5 +853,5 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            version=self._expr._version,
         )
