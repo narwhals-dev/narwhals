@@ -16,6 +16,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
@@ -93,7 +94,9 @@ class ArrowSeries:
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version, version=self._version)
+        return ArrowNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __len__(self: Self) -> int:
         return len(self._native_series)
@@ -852,10 +855,7 @@ class ArrowSeries:
         return self._from_native_series(pc.is_finite(self._native_series))
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
@@ -1084,10 +1084,7 @@ class ArrowSeriesDateTimeNamespace:
 
         s = self._arrow_series._native_series
         dtype = self._arrow_series.dtype
-        if self._arrow_series._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._arrow_series._version)
         if dtype == dtypes.Datetime:
             unit = dtype.time_unit  # type: ignore[attr-defined]
             s_cast = s.cast(pa.int64())

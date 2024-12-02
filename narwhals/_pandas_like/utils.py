@@ -13,6 +13,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
@@ -328,10 +329,7 @@ def native_to_narwhals_dtype(
 ) -> DType:
     dtype = str(native_column.dtype)
 
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
 
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -385,7 +383,7 @@ def native_to_narwhals_dtype(
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
-        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
+        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
     if dtype == "object":
         if implementation is Implementation.DASK:
             # Dask columns are lazy, so we can't inspect values.
@@ -409,7 +407,7 @@ def native_to_narwhals_dtype(
 
                 try:
                     return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype, dtypes
+                        df.__dataframe__().get_column(0).dtype, version
                     )
                 except Exception:  # noqa: BLE001, S110
                     pass
@@ -442,10 +440,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     version: Version,
 ) -> Any:
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":
             return "Float64[pyarrow]"

@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
-    from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.utils import Version
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -250,14 +250,12 @@ def new_series(
            2
         ]
     """
-    from narwhals import dtypes
-
     return _new_series_impl(
         name,
         values,
         dtype,
         native_namespace=native_namespace,
-        version='main',  # type: ignore[arg-type]
+        version="main",  # type: ignore[arg-type]
     )
 
 
@@ -388,7 +386,7 @@ def from_dict(
         data,
         schema,
         native_namespace=native_namespace,
-        version='main',  # type: ignore[arg-type]
+        version="main",  # type: ignore[arg-type]
     )
 
 
@@ -631,13 +629,11 @@ def from_numpy(
         d: [[2,4]]
         e: [[1,3]]
     """
-    from narwhals import dtypes
-
     return _from_numpy_impl(
         data,
         schema,
         native_namespace=native_namespace,
-        version='main',  # type: ignore[arg-type]
+        version="main",  # type: ignore[arg-type]
     )
 
 

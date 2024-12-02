@@ -9,7 +9,7 @@ from narwhals.dependencies import get_duckdb
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DuckDBInterchangeSeries:

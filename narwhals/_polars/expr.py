@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class PolarsExpr:
@@ -94,7 +94,9 @@ class PolarsExpr:
     ) -> Self:
         expr = self._native_expr
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version) if return_dtype else None
+            narwhals_to_native_dtype(return_dtype, self._version)
+            if return_dtype
+            else None
         )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"

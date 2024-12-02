@@ -5,6 +5,7 @@ from typing import Any
 from typing import NoReturn
 
 from narwhals._dask.expr import DaskExpr
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import dask_expr
@@ -12,11 +13,13 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DaskSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._version = version
 
@@ -38,10 +41,7 @@ class DaskSelectorNamespace:
         )
 
     def numeric(self: Self) -> DaskSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
                 dtypes.Int64,
@@ -58,24 +58,15 @@ class DaskSelectorNamespace:
         )
 
     def categorical(self: Self) -> DaskSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
     def string(self: Self) -> DaskSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
 
     def boolean(self: Self) -> DaskSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> DaskSelector:

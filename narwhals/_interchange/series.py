@@ -7,7 +7,7 @@ from typing import NoReturn
 from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
 
 if TYPE_CHECKING:
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class InterchangeSeries:

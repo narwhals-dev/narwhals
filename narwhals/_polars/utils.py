@@ -6,6 +6,8 @@ from typing import Literal
 from typing import TypeVar
 from typing import overload
 
+from narwhals.utils import import_dtypes_module
+
 if TYPE_CHECKING:
     import polars as pl
 
@@ -14,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     T = TypeVar("T")
 
@@ -69,10 +71,7 @@ def native_to_narwhals_dtype(
 ) -> DType:
     import polars as pl  # ignore-banned-import()
 
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -117,22 +116,24 @@ def native_to_narwhals_dtype(
             [
                 dtypes.Field(
                     field_name,
-                    native_to_narwhals_dtype(field_type, dtypes, backend_version),
+                    native_to_narwhals_dtype(field_type, version, backend_version),
                 )
                 for field_name, field_type in dtype  # type: ignore[attr-defined]
             ]
         )
     if dtype == pl.List:
-        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes, backend_version))  # type: ignore[attr-defined]
+        return dtypes.List(
+            native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
+        )
     if dtype == pl.Array:
         if backend_version < (0, 20, 30):  # pragma: no cover
             return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, dtypes, backend_version),  # type: ignore[attr-defined]
+                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
                 dtype.width,  # type: ignore[attr-defined]
             )
         else:
             return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, dtypes, backend_version),  # type: ignore[attr-defined]
+                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
                 dtype.size,  # type: ignore[attr-defined]
             )
     return dtypes.Unknown()
@@ -141,10 +142,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
     import polars as pl  # ignore-banned-import()
 
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
 
     if dtype == dtypes.Float64:
         return pl.Float64()

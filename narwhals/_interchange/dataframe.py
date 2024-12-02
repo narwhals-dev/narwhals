@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DtypeKind(enum.IntEnum):
@@ -31,10 +32,7 @@ class DtypeKind(enum.IntEnum):
 def map_interchange_dtype_to_narwhals_dtype(
     interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
 ) -> DType:
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
     if interchange_dtype[0] == DtypeKind.INT:
         if interchange_dtype[1] == 64:
             return dtypes.Int64()

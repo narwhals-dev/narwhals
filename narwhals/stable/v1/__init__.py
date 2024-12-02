@@ -1165,17 +1165,17 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame._change_dtypes('v1'),
+            obj._compliant_frame._change_dtypes("v1"),
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame._change_dtypes('v1'),
+            obj._compliant_frame._change_dtypes("v1"),
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._compliant_series._change_dtypes('v1'),
+            obj._compliant_series._change_dtypes("v1"),
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
@@ -1615,8 +1615,6 @@ def from_native(
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    from narwhals.stable.v1 import dtypes
-
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
         return native_object
@@ -1634,7 +1632,7 @@ def from_native(
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
-        version='v1',  # type: ignore[arg-type]
+        version="v1",  # type: ignore[arg-type]
     )
     return _stableify(result)  # type: ignore[no-any-return]
 
@@ -3104,15 +3102,13 @@ def new_series(
            2
         ]
     """
-    from narwhals.stable.v1 import dtypes
-
     return _stableify(
         _new_series_impl(
             name,
             values,
             dtype,
             native_namespace=native_namespace,
-            version='v1',  # type: ignore[arg-type]
+            version="v1",  # type: ignore[arg-type]
         )
     )
 
@@ -3228,14 +3224,12 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    from narwhals.stable.v1 import dtypes
-
     return _stableify(
         _from_dict_impl(
             data,
             schema,
             native_namespace=native_namespace,
-            version='v1',  # type: ignore[arg-type]
+            version="v1",  # type: ignore[arg-type]
         )
     )
 
@@ -3384,7 +3378,7 @@ def from_numpy(
             data,
             schema,
             native_namespace=native_namespace,
-            version='v1',  # type: ignore[arg-type]
+            version="v1",  # type: ignore[arg-type]
         )
     )
 

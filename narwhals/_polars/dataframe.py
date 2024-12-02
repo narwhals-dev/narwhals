@@ -28,14 +28,18 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     T = TypeVar("T")
 
 
 class PolarsDataFrame:
     def __init__(
-        self: Self, df: pl.DataFrame, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        df: pl.DataFrame,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -49,7 +53,9 @@ class PolarsDataFrame:
         return self
 
     def __narwhals_namespace__(self: Self) -> PolarsNamespace:
-        return PolarsNamespace(backend_version=self._backend_version, version=self._version)
+        return PolarsNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
@@ -129,12 +135,16 @@ class PolarsDataFrame:
     def collect_schema(self: Self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+                name: native_to_narwhals_dtype(
+                    dtype, self._version, self._backend_version
+                )
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+                name: native_to_narwhals_dtype(
+                    dtype, self._version, self._backend_version
+                )
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
@@ -325,7 +335,11 @@ class PolarsDataFrame:
 
 class PolarsLazyFrame:
     def __init__(
-        self: Self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        df: pl.LazyFrame,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -339,7 +353,9 @@ class PolarsLazyFrame:
         return self
 
     def __narwhals_namespace__(self: Self) -> PolarsNamespace:
-        return PolarsNamespace(backend_version=self._backend_version, version=self._version)
+        return PolarsNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
@@ -395,12 +411,16 @@ class PolarsLazyFrame:
     def collect_schema(self: Self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+                name: native_to_narwhals_dtype(
+                    dtype, self._version, self._backend_version
+                )
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
             return {
-                name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+                name: native_to_narwhals_dtype(
+                    dtype, self._version, self._backend_version
+                )
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 

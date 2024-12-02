@@ -21,14 +21,18 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     T = TypeVar("T")
 
 
 class PolarsSeries:
     def __init__(
-        self: Self, series: pl.Series, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        series: pl.Series,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
     ) -> None:
         self._native_series: pl.Series = series
         self._backend_version = backend_version
@@ -131,7 +135,9 @@ class PolarsSeries:
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version) if return_dtype else None
+            narwhals_to_native_dtype(return_dtype, self._version)
+            if return_dtype
+            else None
         )
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"

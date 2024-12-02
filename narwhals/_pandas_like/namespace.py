@@ -19,12 +19,13 @@ from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
 
 class PandasLikeNamespace:
@@ -412,16 +413,11 @@ class PandasLikeNamespace:
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
         ]
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
-                s
-                for _expr in parsed_exprs
-                for s in _expr.cast(dtypes.String())._call(df)
+                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())._call(df)
             )
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
 

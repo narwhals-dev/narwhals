@@ -15,7 +15,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 data = {"a": [1, 2, 3]}
 

@@ -6,6 +6,7 @@ from typing import NoReturn
 
 from narwhals._arrow.expr import ArrowExpr
 from narwhals.utils import Implementation
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -13,11 +14,13 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class ArrowSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
         self._version = version
@@ -37,10 +40,7 @@ class ArrowSelectorNamespace:
         )
 
     def numeric(self: Self) -> ArrowSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
                 dtypes.Int64,
@@ -57,24 +57,15 @@ class ArrowSelectorNamespace:
         )
 
     def categorical(self: Self) -> ArrowSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
     def string(self: Self) -> ArrowSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
 
     def boolean(self: Self) -> ArrowSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> ArrowSelector:

@@ -20,11 +20,13 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class PolarsNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
@@ -102,7 +104,9 @@ class PolarsNamespace:
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
             return PolarsDataFrame(
-                result, backend_version=items[0]._backend_version, version=items[0]._version
+                result,
+                backend_version=items[0]._backend_version,
+                version=items[0]._version,
             )
         return PolarsLazyFrame(
             result, backend_version=items[0]._backend_version, version=items[0]._version
@@ -304,5 +308,7 @@ class PolarsSelectors:
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
-            pl.selectors.all(), version=self._version, backend_version=self._backend_version
+            pl.selectors.all(),
+            version=self._version,
+            backend_version=self._backend_version,
         )

@@ -19,6 +19,7 @@ from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals.utils import Implementation
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class ArrowNamespace:
@@ -92,7 +93,9 @@ class ArrowNamespace:
         )
 
     # --- not in spec ---
-    def __init__(self: Self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
         self._version = version
@@ -226,10 +229,7 @@ class ArrowNamespace:
 
     def mean_horizontal(self: Self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (
@@ -392,10 +392,7 @@ class ArrowNamespace:
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
         ]
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (

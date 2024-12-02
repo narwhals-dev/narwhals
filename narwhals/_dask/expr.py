@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import dask_expr
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DaskExpr:
@@ -1154,10 +1155,7 @@ class DaskExprDateTimeNamespace:
             dtype = native_to_narwhals_dtype(s, self._expr._version, Implementation.DASK)
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()
-            if self._expr._version == 'v1':
-                from narwhals.stable.v1 import dtypes
-            else:
-                from narwhals import dtypes
+            dtypes = import_dtypes_module(self._expr._version)
             if dtype == dtypes.Date:
                 # Date is only supported in pandas dtypes if pyarrow-backed
                 s_cast = s.astype("Int32[pyarrow]")

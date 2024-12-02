@@ -38,11 +38,11 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import DTypes
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeries
-    from narwhals.typing import IntoSeriesT, Version
+    from narwhals.typing import IntoSeriesT
+    from narwhals.utils import Version
 
 T = TypeVar("T")
 
@@ -370,7 +370,6 @@ def from_native(
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    from narwhals import dtypes
     from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
@@ -384,7 +383,7 @@ def from_native(
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
-        version='main',  # type: ignore[arg-type]
+        version="main",  # type: ignore[arg-type]
     )
 
 

@@ -5,13 +5,14 @@ from typing import Any
 from typing import NoReturn
 
 from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
 
 class PandasSelectorNamespace:
@@ -42,10 +43,7 @@ class PandasSelectorNamespace:
         )
 
     def numeric(self) -> PandasSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
                 dtypes.Int64,
@@ -62,24 +60,15 @@ class PandasSelectorNamespace:
         )
 
     def categorical(self) -> PandasSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
     def string(self) -> PandasSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
 
     def boolean(self) -> PandasSelector:
-        if self._version == 'v1':
-            from narwhals.stable.v1 import dtypes
-        else:
-            from narwhals import dtypes
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Boolean])
 
     def all(self) -> PandasSelector:

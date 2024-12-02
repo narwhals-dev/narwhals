@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_duckdb
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -16,15 +17,12 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, version: Version) -> DType:
     duckdb_dtype = str(duckdb_dtype)
-    if version == 'v1':
-        from narwhals.stable.v1 import dtypes
-    else:
-        from narwhals import dtypes
+    dtypes = import_dtypes_module(version)
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -61,16 +59,16 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, version: Version) -> D
             [
                 dtypes.Field(
                     matchstruc_[i][0],
-                    map_duckdb_dtype_to_narwhals_dtype(matchstruc_[i][1], dtypes),
+                    map_duckdb_dtype_to_narwhals_dtype(matchstruc_[i][1], version),
                 )
                 for i in range(len(matchstruc_))
             ]
         )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
-        return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
+        return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), version))
     if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
         return dtypes.Array(
-            map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes),
+            map_duckdb_dtype_to_narwhals_dtype(match_.group(1), version),
             int(match_.group(2)),
         )
     return dtypes.Unknown()

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class ArrowExpr:
@@ -127,7 +127,9 @@ class ArrowExpr:
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version, version=self._version)
+        return ArrowNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __narwhals_expr__(self: Self) -> None: ...
 

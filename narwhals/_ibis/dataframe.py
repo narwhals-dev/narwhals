@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_ibis
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -14,10 +15,11 @@ if TYPE_CHECKING:
 
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
+    dtypes = import_dtypes_module(version)
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -48,14 +50,14 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType
         return dtypes.Datetime()
     if ibis_dtype.is_array():
         return dtypes.List(
-            map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
+            map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, version)
         )
     if ibis_dtype.is_struct():
         return dtypes.Struct(
             [
                 dtypes.Field(
                     ibis_dtype_name,
-                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, version),
                 )
                 for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
             ]
