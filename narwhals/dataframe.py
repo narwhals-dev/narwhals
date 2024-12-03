@@ -311,6 +311,28 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
+    def __neq__(self, other: Any) -> NoReturn:
+        msg = (
+            "DataFrame.__neq__ and LazyFrame.__neq__ are not implemented, please "
+            "use expressions instead.\n\n"
+            "Hint: instead of\n"
+            "    df != 0\n"
+            "you may want to use\n"
+            "    df.select(nw.all() != 0)"
+        )
+        raise NotImplementedError(msg)
+
+    def __eq__(self, other: object) -> NoReturn:
+        msg = (
+            "DataFrame.__eq__ and LazyFrame.__eq__ are not implemented, please "
+            "use expressions instead.\n\n"
+            "Hint: instead of\n"
+            "    df == 0\n"
+            "you may want to use\n"
+            "    df.select(nw.all() == 0)"
+        )
+        raise NotImplementedError(msg)
+
 
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native dataframe.
