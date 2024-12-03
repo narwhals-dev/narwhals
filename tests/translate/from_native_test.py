@@ -32,7 +32,7 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
-    def _change_dtypes(self, _version: Version) -> MockDataFrame:
+    def _change_version(self, _version: Version) -> MockDataFrame:
         return self
 
     def __narwhals_dataframe__(self) -> Any:
@@ -40,7 +40,7 @@ class MockDataFrame:
 
 
 class MockLazyFrame:
-    def _change_dtypes(self, _version: Version) -> MockLazyFrame:
+    def _change_version(self, _version: Version) -> MockLazyFrame:
         return self
 
     def __narwhals_lazyframe__(self) -> Any:
@@ -48,7 +48,7 @@ class MockLazyFrame:
 
 
 class MockSeries:
-    def _change_dtypes(self, _version: Version) -> MockSeries:
+    def _change_version(self, _version: Version) -> MockSeries:
         return self
 
     def __narwhals_series__(self) -> Any:
