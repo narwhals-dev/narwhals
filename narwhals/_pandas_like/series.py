@@ -91,18 +91,6 @@ class PandasLikeSeries:
         self._backend_version = backend_version
         self._version = version
 
-        # In pandas, copy-on-write becomes the default in version 3.
-        # So, before that, we need to explicitly avoid unnecessary
-        # copies by using `copy=False` sometimes.
-        if self._implementation is Implementation.PANDAS and self._backend_version < (
-            3,
-            0,
-            0,
-        ):
-            self._use_copy_false = True
-        else:
-            self._use_copy_false = False
-
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
