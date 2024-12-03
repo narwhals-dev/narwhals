@@ -11,6 +11,6 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals._spark_like.expr import SparkExpr
+    from narwhals._spark_like.expr import SparkLikeExpr
 
-    IntoSparkExpr: TypeAlias = Union[SparkExpr, str]
+    IntoSparkLikeExpr: TypeAlias = Union[SparkLikeExpr, str]

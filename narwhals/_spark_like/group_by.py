@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import GroupedData
 
-    from narwhals._spark_like.dataframe import SparkLazyFrame
-    from narwhals._spark_like.expr import SparkExpr
-    from narwhals._spark_like.typing import IntoSparkExpr
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._spark_like.typing import IntoSparkLikeExpr
 
 POLARS_TO_PYSPARK_AGGREGATIONS = {
     "len": "count",
@@ -23,10 +23,10 @@ POLARS_TO_PYSPARK_AGGREGATIONS = {
 }
 
 
-class SparkLazyGroupBy:
+class SparkLikeLazyGroupBy:
     def __init__(
         self,
-        df: SparkLazyFrame,
+        df: SparkLikeLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
@@ -41,9 +41,9 @@ class SparkLazyGroupBy:
 
     def agg(
         self,
-        *aggs: IntoSparkExpr,
-        **named_aggs: IntoSparkExpr,
-    ) -> SparkLazyFrame:
+        *aggs: IntoSparkLikeExpr,
+        **named_aggs: IntoSparkLikeExpr,
+    ) -> SparkLikeLazyFrame:
         exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
@@ -68,10 +68,10 @@ class SparkLazyGroupBy:
             self._from_native_frame,
         )
 
-    def _from_native_frame(self, df: SparkLazyFrame) -> SparkLazyFrame:
-        from narwhals._spark_like.dataframe import SparkLazyFrame
+    def _from_native_frame(self, df: SparkLikeLazyFrame) -> SparkLikeLazyFrame:
+        from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
-        return SparkLazyFrame(
+        return SparkLikeLazyFrame(
             df, backend_version=self._df._backend_version, version=self._df._version
         )
 
@@ -84,10 +84,10 @@ def get_spark_function(function_name: str) -> Column:
 
 def agg_pyspark(
     grouped: GroupedData,
-    exprs: list[SparkExpr],
+    exprs: list[SparkLikeExpr],
     keys: list[str],
-    from_dataframe: Callable[[Any], SparkLazyFrame],
-) -> SparkLazyFrame:
+    from_dataframe: Callable[[Any], SparkLikeLazyFrame],
+) -> SparkLikeLazyFrame:
     for expr in exprs:
         if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (

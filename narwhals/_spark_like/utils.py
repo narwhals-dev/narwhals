@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import types as pyspark_types
 
-    from narwhals._spark_like.dataframe import SparkLazyFrame
-    from narwhals._spark_like.typing import IntoSparkExpr
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -57,14 +57,14 @@ def translate_sql_api_dtype(
     return dtypes.Unknown()
 
 
-def get_column_name(df: SparkLazyFrame, column: Column) -> str:
+def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
     return str(df._native_frame.select(column).columns[0])
 
 
 def parse_exprs_and_named_exprs(
-    df: SparkLazyFrame, *exprs: IntoSparkExpr, **named_exprs: IntoSparkExpr
+    df: SparkLikeLazyFrame, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
 ) -> dict[str, Column]:
-    def _columns_from_expr(expr: IntoSparkExpr) -> list[Column]:
+    def _columns_from_expr(expr: IntoSparkLikeExpr) -> list[Column]:
         if isinstance(expr, str):  # pragma: no cover
             from pyspark.sql import functions as F  # noqa: N812
 
@@ -99,10 +99,10 @@ def parse_exprs_and_named_exprs(
     return result_columns
 
 
-def maybe_evaluate(df: SparkLazyFrame, obj: Any) -> Any:
-    from narwhals._spark_like.expr import SparkExpr
+def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
+    from narwhals._spark_like.expr import SparkLikeExpr
 
-    if isinstance(obj, SparkExpr):
+    if isinstance(obj, SparkLikeExpr):
         column_results = obj._call(df)
         if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions not supported in this context"

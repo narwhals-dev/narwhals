@@ -16,15 +16,15 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
-    from narwhals._spark_like.expr import SparkExpr
-    from narwhals._spark_like.group_by import SparkLazyGroupBy
-    from narwhals._spark_like.namespace import SparkNamespace
-    from narwhals._spark_like.typing import IntoSparkExpr
+    from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
+    from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class SparkLazyFrame:
+class SparkLikeLazyFrame:
     def __init__(
         self,
         native_dataframe: DataFrame,
@@ -44,10 +44,10 @@ class SparkLazyFrame:
         msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_namespace__(self) -> SparkNamespace:
-        from narwhals._spark_like.namespace import SparkNamespace
+    def __narwhals_namespace__(self) -> SparkLikeNamespace:
+        from narwhals._spark_like.namespace import SparkLikeNamespace
 
-        return SparkNamespace(
+        return SparkLikeNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
@@ -77,8 +77,8 @@ class SparkLazyFrame:
 
     def select(
         self: Self,
-        *exprs: IntoSparkExpr,
-        **named_exprs: IntoSparkExpr,
+        *exprs: IntoSparkLikeExpr,
+        **named_exprs: IntoSparkLikeExpr,
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple select
@@ -98,8 +98,8 @@ class SparkLazyFrame:
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
-    def filter(self, *predicates: SparkExpr) -> Self:
-        from narwhals._spark_like.namespace import SparkNamespace
+    def filter(self, *predicates: SparkLikeExpr) -> Self:
+        from narwhals._spark_like.namespace import SparkLikeNamespace
 
         if (
             len(predicates) == 1
@@ -108,7 +108,9 @@ class SparkLazyFrame:
         ):
             msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
             raise NotImplementedError(msg)
-        plx = SparkNamespace(backend_version=self._backend_version, version=self._version)
+        plx = SparkLikeNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         condition = expr._call(self)[0]
@@ -129,8 +131,8 @@ class SparkLazyFrame:
 
     def with_columns(
         self: Self,
-        *exprs: IntoSparkExpr,
-        **named_exprs: IntoSparkExpr,
+        *exprs: IntoSparkLikeExpr,
+        **named_exprs: IntoSparkLikeExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
@@ -148,10 +150,12 @@ class SparkLazyFrame:
             spark_session.createDataFrame(self._native_frame.take(num=n))
         )
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLazyGroupBy:
-        from narwhals._spark_like.group_by import SparkLazyGroupBy
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
+        from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
-        return SparkLazyGroupBy(df=self, keys=list(keys), drop_null_keys=drop_null_keys)
+        return SparkLikeLazyGroupBy(
+            df=self, keys=list(keys), drop_null_keys=drop_null_keys
+        )
 
     def sort(
         self: Self,
