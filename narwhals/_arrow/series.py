@@ -1021,6 +1021,31 @@ class ArrowSeries:
             for x in self._native_series.__iter__()
         )
 
+    def __contains__(self: Self, other: Any) -> bool:
+        from pyarrow import ArrowInvalid  # ignore-banned-imports
+        from pyarrow import ArrowNotImplementedError  # ignore-banned-imports
+        from pyarrow import ArrowTypeError  # ignore-banned-imports
+
+        try:
+            import pyarrow as pa  # ignore-banned-imports
+            import pyarrow.compute as pc  # ignore-banned-imports
+
+            native_series = self._native_series
+            other_ = (
+                pa.scalar(other)
+                if other is not None
+                else pa.scalar(None, type=native_series.type)
+            )
+            return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+                pc.is_in(other_, native_series),
+                return_py_scalar=True,
+            )
+        except (ArrowInvalid, ArrowNotImplementedError, ArrowTypeError) as exc:
+            from narwhals.exceptions import InvalidOperationError
+
+            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
+            raise InvalidOperationError(msg) from exc
+
     @property
     def shape(self: Self) -> tuple[int]:
         return (len(self._native_series),)

@@ -841,6 +841,13 @@ class PandasLikeSeries:
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
+    def __contains__(self: Self, other: Any) -> bool:
+        return (  # type: ignore[no-any-return]
+            self._native_series.isna().any()
+            if other is None
+            else (self._native_series == other).any()
+        )
+
     def is_finite(self: Self) -> Self:
         s = self._native_series
         return self._from_native_series((s > float("-inf")) & (s < float("inf")))

@@ -3324,6 +3324,9 @@ class Series(Generic[IntoSeriesT]):
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 
+    def __contains__(self: Self, other: Any) -> bool:
+        return self._compliant_series.__contains__(other)  # type: ignore[no-any-return]
+
     @property
     def str(self: Self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)

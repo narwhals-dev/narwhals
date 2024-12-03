@@ -343,6 +343,17 @@ class PolarsSeries:
 
         return self._from_native_series(result)
 
+    def __contains__(self: Self, other: Any) -> bool:
+        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
+
+        try:
+            return self._native_series.__contains__(other)
+        except PlInvalidOperationError as exc:
+            from narwhals.exceptions import InvalidOperationError
+
+            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
+            raise InvalidOperationError(msg) from exc
+
     @property
     def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
