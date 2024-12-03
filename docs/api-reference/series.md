@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_min
+        - arg_max
         - arg_true
         - cast
         - clip
@@ -43,8 +45,6 @@
         - max
         - mean
         - median
-        - arg_min
-        - arg_max
         - min
         - mode
         - name

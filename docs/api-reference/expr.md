@@ -8,6 +8,8 @@
         - alias
         - all
         - any
+        - arg_min
+        - arg_max
         - arg_true
         - cast
         - count
@@ -19,8 +21,6 @@
         - diff
         - drop_nulls
         - ewm_mean
-        - arg_min
-        - arg_max
         - fill_null
         - filter
         - gather_every
