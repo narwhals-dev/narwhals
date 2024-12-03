@@ -685,7 +685,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             0
         """
-        return self._compliant_series.idxmax()
+        return self._compliant_series.argmin()
 
     def argmax(self) -> Any:
         """Get the index of the maximum value in this Series.
@@ -712,7 +712,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             2
         """
-        return self._compliant_series.idxmax()
+        return self._compliant_series.argmax()
 
     def skew(self: Self) -> Any:
         """Calculate the sample skewness of the Series.
