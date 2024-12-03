@@ -36,7 +36,7 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, pyspark_types.ByteType):
         return dtypes.Int8()
     if isinstance(dtype, pyspark_types.DecimalType):
-        return dtypes.Int32()
+        return dtypes.Unknown()
     string_types = [
         pyspark_types.StringType,
         pyspark_types.VarcharType,
