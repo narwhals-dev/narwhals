@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkNamespace
     from narwhals._spark_like.typing import IntoSparkExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class SparkLazyFrame:
@@ -30,12 +30,12 @@ class SparkLazyFrame:
         native_dataframe: DataFrame,
         *,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.PYSPARK
-        self._dtypes = dtypes
+        self._version = version
 
     def __native_namespace__(self) -> Any:  # pragma: no cover
         if self._implementation is Implementation.PYSPARK:
@@ -47,14 +47,16 @@ class SparkLazyFrame:
     def __narwhals_namespace__(self) -> SparkNamespace:
         from narwhals._spark_like.namespace import SparkNamespace
 
-        return SparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return SparkNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _from_native_frame(self, df: DataFrame) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, dtypes=self._dtypes
+            df, backend_version=self._backend_version, version=self._version
         )
 
     @property
@@ -70,7 +72,7 @@ class SparkLazyFrame:
             native_dataframe=self._native_frame.toPandas(),
             implementation=Implementation.PANDAS,
             backend_version=parse_version(pd.__version__),
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def select(
@@ -106,7 +108,7 @@ class SparkLazyFrame:
         ):
             msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
             raise NotImplementedError(msg)
-        plx = SparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        plx = SparkNamespace(backend_version=self._backend_version, version=self._version)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         condition = expr._call(self)[0]
@@ -116,7 +118,9 @@ class SparkLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            field.name: translate_sql_api_dtype(field.dataType)
+            field.name: translate_sql_api_dtype(
+                dtype=field.dataType, version=self._version
+            )
             for field in self._native_frame.schema
         }
 

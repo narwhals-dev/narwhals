@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -12,11 +12,15 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLazyFrame
     from narwhals._spark_like.typing import IntoSparkExpr
+    from narwhals.dtypes import DType
+    from narwhals.utils import Version
 
 
 def translate_sql_api_dtype(
     dtype: pyspark_types.DataType,
-) -> dtypes.DType:  # pragma: no cover
+    version: Version,
+) -> DType:  # pragma: no cover
+    dtypes = import_dtypes_module(version=version)
     from pyspark.sql import types as pyspark_types
 
     if isinstance(dtype, pyspark_types.DoubleType):

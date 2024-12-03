@@ -72,7 +72,7 @@ class SparkLazyGroupBy:
         from narwhals._spark_like.dataframe import SparkLazyFrame
 
         return SparkLazyFrame(
-            df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
+            df, backend_version=self._df._backend_version, version=self._df._version
         )
 
 

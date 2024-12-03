@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLazyFrame
     from narwhals._spark_like.namespace import SparkNamespace
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class SparkExpr:
@@ -31,7 +31,7 @@ class SparkExpr:
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -40,7 +40,7 @@ class SparkExpr:
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -48,14 +48,16 @@ class SparkExpr:
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._spark_like.namespace import SparkNamespace
 
-        return SparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return SparkNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     @classmethod
     def from_column_names(
         cls: type[Self],
         *column_names: str,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         def func(_: SparkLazyFrame) -> list[Column]:
             from pyspark.sql import functions as F  # noqa: N812
@@ -70,7 +72,7 @@ class SparkExpr:
             output_names=list(column_names),
             returns_scalar=False,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def _from_call(
@@ -127,7 +129,7 @@ class SparkExpr:
             output_names=output_names,
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def __add__(self, other: SparkExpr) -> Self:
@@ -159,7 +161,7 @@ class SparkExpr:
             output_names=[name],
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def count(self) -> Self:

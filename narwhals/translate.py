@@ -723,7 +723,7 @@ def _from_native_impl(  # noqa: PLR0915
             SparkLazyFrame(
                 native_object,
                 backend_version=parse_version(get_pyspark().__version__),
-                dtypes=dtypes,
+                version=version,
             ),
             level="full",
         )

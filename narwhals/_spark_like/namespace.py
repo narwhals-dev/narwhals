@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLazyFrame
     from narwhals._spark_like.typing import IntoSparkExpr
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class SparkNamespace:
-    def __init__(self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for PySparkNamespace exists only for compatibility"
@@ -66,7 +66,7 @@ class SparkNamespace:
             output_names=None,
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def all_horizontal(self, *exprs: IntoSparkExpr) -> SparkExpr:
@@ -85,10 +85,10 @@ class SparkNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def col(self, *column_names: str) -> SparkExpr:
         return SparkExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         )
