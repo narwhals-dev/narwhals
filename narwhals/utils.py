@@ -194,8 +194,8 @@ def validate_laziness(items: Iterable[Any]) -> None:
         all(isinstance(item, LazyFrame) for item in items)
     ):
         return
-    msg = "The items to concatenate should either all be eager, or all lazy"
-    raise NotImplementedError(msg)
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"
+    raise TypeError(msg)
 
 
 def maybe_align_index(
