@@ -660,6 +660,60 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.median()
 
+    def arg_min(self) -> Any:
+        """Get the index of the minimum value in this Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_min()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(s_pd)
+            0
+            >>> my_library_agnostic_function(s_pl)
+            0
+        """
+        return self._compliant_series.argmin()
+
+    def arg_max(self) -> Any:
+        """Get the index of the maximum value in this Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_max()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(s_pd)
+            2
+            >>> my_library_agnostic_function(s_pl)
+            2
+        """
+        return self._compliant_series.argmax()
+
     def skew(self: Self) -> Any:
         """Calculate the sample skewness of the Series.
 

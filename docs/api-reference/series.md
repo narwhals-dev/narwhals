@@ -43,6 +43,8 @@
         - max
         - mean
         - median
+        - arg_min
+        - arg_max
         - min
         - mode
         - name

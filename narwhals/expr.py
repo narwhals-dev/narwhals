@@ -621,6 +621,98 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).median())
 
+    def arg_min(self) -> Self:
+        """Get the index of the minimum value.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(nw.col("a", "b").argmin()).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> my_library_agnostic_function(df_pd)
+            a    b
+            0  0    0
+            >>> my_library_agnostic_function(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 0   ┆ 0   │
+            └─────┴─────┘
+            >>> my_library_agnostic_function(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[0]]
+            b: [[0]]
+        """
+        return self.__class__(lambda plx: self._call(plx).argmin())
+
+    def arg_max(self) -> Self:
+        """Get the index of the maximum value.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(nw.col("a", "b").argmax()).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> my_library_agnostic_function(df_pd)
+            a    b
+            2  2    2
+            >>> my_library_agnostic_function(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 2   │
+            └─────┴─────┘
+            >>> my_library_agnostic_function(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[2]]
+            b: [[2]]
+        """
+        return self.__class__(lambda plx: self._call(plx).argmax())
+
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 

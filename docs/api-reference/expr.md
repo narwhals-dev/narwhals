@@ -19,6 +19,8 @@
         - diff
         - drop_nulls
         - ewm_mean
+        - arg_min
+        - arg_max
         - fill_null
         - filter
         - gather_every
