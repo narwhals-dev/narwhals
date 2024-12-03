@@ -185,7 +185,7 @@ def test_pandas_like_validate() -> None:
 def test_init_already_narwhals() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.from_native(df)
-    assert result is df  # type: ignore[comparison-overlap]
+    assert result is df
     s = df["a"]
     result_s = nw.from_native(s, allow_series=True)
     assert result_s is s
@@ -194,7 +194,7 @@ def test_init_already_narwhals() -> None:
 def test_init_already_narwhals_unstable() -> None:
     df = unstable_nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = unstable_nw.from_native(df)
-    assert result is df  # type: ignore[comparison-overlap]
+    assert result is df
     s = df["a"]
     result_s = unstable_nw.from_native(s, allow_series=True)
     assert result_s is s
@@ -257,4 +257,4 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
 
     mockdf = MockDf()
     result = nw.from_native(mockdf, eager_only=True, strict=False)
-    assert result is mockdf  # type: ignore[comparison-overlap]
+    assert result is mockdf
