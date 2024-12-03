@@ -7,6 +7,7 @@ from typing import Callable
 
 from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
+from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class SparkExpr:
+    _implementation = Implementation.PYSPARK
+
     def __init__(
         self,
         call: Callable[[SparkLazyFrame], list[Column]],
