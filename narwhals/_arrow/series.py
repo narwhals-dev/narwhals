@@ -1022,6 +1022,7 @@ class ArrowSeries:
         )
 
     def __contains__(self: Self, other: Any) -> bool:
+        from pyarrow import ArrowInvalid  # ignore-banned-imports
         from pyarrow import ArrowNotImplementedError  # ignore-banned-imports
         from pyarrow import ArrowTypeError  # ignore-banned-imports
 
@@ -1039,7 +1040,7 @@ class ArrowSeries:
                 pc.is_in(other_, native_series),
                 return_py_scalar=True,
             )
-        except (ArrowNotImplementedError, ArrowTypeError) as exc:
+        except (ArrowInvalid, ArrowNotImplementedError, ArrowTypeError) as exc:
             from narwhals.exceptions import InvalidOperationError
 
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
