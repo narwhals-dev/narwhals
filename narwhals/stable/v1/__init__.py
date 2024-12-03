@@ -1166,17 +1166,17 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame._change_dtypes(Version.V1),
+            obj._compliant_frame._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame._change_dtypes(Version.V1),
+            obj._compliant_frame._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._compliant_series._change_dtypes(Version.V1),
+            obj._compliant_series._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwExpr):

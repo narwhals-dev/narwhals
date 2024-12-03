@@ -64,7 +64,7 @@ class PolarsDataFrame:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _change_dtypes(self: Self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, backend_version=self._backend_version, version=version
         )
@@ -369,7 +369,7 @@ class PolarsLazyFrame:
             df, backend_version=self._backend_version, version=self._version
         )
 
-    def _change_dtypes(self: Self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, backend_version=self._backend_version, version=version
         )

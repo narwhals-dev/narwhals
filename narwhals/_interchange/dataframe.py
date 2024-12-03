@@ -88,7 +88,7 @@ class InterchangeFrame:
         self._interchange_frame = df.__dataframe__()
         self._version = version
 
-    def _change_dtypes(self: Self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             WrapInterchangeFrame(self._interchange_frame), version=version
         )

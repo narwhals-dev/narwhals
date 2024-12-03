@@ -101,7 +101,7 @@ class PandasLikeDataFrame:
             msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
-    def _change_dtypes(self, version: Version) -> Self:
+    def _change_version(self, version: Version) -> Self:
         return self.__class__(
             self._native_frame,
             implementation=self._implementation,
