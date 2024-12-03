@@ -62,7 +62,7 @@ def concat(
         A new DataFrame, Lazyframe resulting from the concatenation.
 
     Raises:
-        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+        TypeError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
         Let's take an example of vertical concatenation:
