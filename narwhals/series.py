@@ -660,7 +660,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.median()
 
-    def arg_min(self) -> Any:
+    def argmin(self) -> Any:
         """Get the index of the minimum value in this Series.
 
         Examples:
@@ -676,7 +676,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.arg_min()
+            ...     return s.argmin()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -687,7 +687,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.argmin()
 
-    def arg_max(self) -> Any:
+    def argmax(self) -> Any:
         """Get the index of the maximum value in this Series.
 
         Examples:

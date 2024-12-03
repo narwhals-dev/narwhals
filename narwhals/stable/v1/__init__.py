@@ -2144,6 +2144,57 @@ def min(*columns: str) -> Expr:
     return _stableify(nw.min(*columns))
 
 
+def argmin(*columns: str) -> Expr:
+    """Return the index of the minimum value.
+
+    Note:
+       Syntactic sugar for ``nw.col(columns).arg_min()``.
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function.
+
+    Returns:
+        A new expression that gives the index of the minimum value.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.arg_min("b")).to_native()
+
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+        >>> my_library_agnostic_function(df_pd)
+           b
+        0  0
+        >>> my_library_agnostic_function(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ u32 │
+        ╞═════╡
+        │ 0   │
+        └─────┘
+        >>> my_library_agnostic_function(df_pa)
+        pyarrow.Table
+        b: int32
+        ----
+        b: [[0]]
+    """
+    return _stableify(nw.argmin(*columns))
+
+
 def max(*columns: str) -> Expr:
     """Return the maximum value.
 
@@ -2193,6 +2244,57 @@ def max(*columns: str) -> Expr:
         a: [[2]]
     """
     return _stableify(nw.max(*columns))
+
+
+def argmax(*columns: str) -> Expr:
+    """Return the index of the maximum value.
+
+    Note:
+       Syntactic sugar for ``nw.col(columns).argmax()``.
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function.
+
+    Returns:
+        A new expression.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
+        >>> df_pd = pd.DataFrame({"a": [1, 3, 2], "b": [5, 10, 1]})
+        >>> df_pl = pl.DataFrame({"a": [1, 3, 2], "b": [5, 10, 1]})
+        >>> df_pa = pa.table({"a": [1, 3, 2], "b": [5, 10, 1]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df = nw.from_native(df_native)
+        ...     return df.select(nw.argmax("a")).to_native()
+
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+        >>> my_library_agnostic_function(df_pd)
+           a
+        0  1
+        >>> my_library_agnostic_function(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        └─────┘
+        >>> my_library_agnostic_function(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[1]]
+    """
+    return _stableify(nw.argmax(*columns))
 
 
 def mean(*columns: str) -> Expr:

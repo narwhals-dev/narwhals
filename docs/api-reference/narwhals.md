@@ -9,6 +9,8 @@ Here are the top-level functions available in Narwhals.
         - all
         - all_horizontal
         - any_horizontal
+        - argmax
+        - argmin
         - col
         - concat
         - concat_str

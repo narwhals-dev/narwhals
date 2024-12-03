@@ -8,8 +8,8 @@
         - alias
         - all
         - any
-        - arg_min
-        - arg_max
+        - argmin
+        - argmax
         - arg_true
         - cast
         - count
