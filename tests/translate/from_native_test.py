@@ -15,7 +15,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 data = {"a": [1, 2, 3]}
 
@@ -32,7 +32,7 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
-    def _change_dtypes(self, _dtypes: DTypes) -> MockDataFrame:
+    def _change_version(self, _version: Version) -> MockDataFrame:
         return self
 
     def __narwhals_dataframe__(self) -> Any:
@@ -40,7 +40,7 @@ class MockDataFrame:
 
 
 class MockLazyFrame:
-    def _change_dtypes(self, _dtypes: DTypes) -> MockLazyFrame:
+    def _change_version(self, _version: Version) -> MockLazyFrame:
         return self
 
     def __narwhals_lazyframe__(self) -> Any:
@@ -48,7 +48,7 @@ class MockLazyFrame:
 
 
 class MockSeries:
-    def _change_dtypes(self, _dtypes: DTypes) -> MockSeries:
+    def _change_version(self, _version: Version) -> MockSeries:
         return self
 
     def __narwhals_series__(self) -> Any:

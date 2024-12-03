@@ -107,7 +107,7 @@ class PandasLikeGroupBy:
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
-            dtypes=self._df._dtypes,
+            version=self._df._version,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:

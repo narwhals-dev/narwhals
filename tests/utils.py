@@ -63,10 +63,9 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         for key in result.columns:
             assert key in expected, (key, expected)
     result = {key: _to_comparable_list(result[key]) for key in expected}
-    for key in expected:
-        result_key = result[key]
-        expected_key = expected[key]
-        for i, (lhs, rhs) in enumerate(zip_strict(result_key, expected_key)):
+    for key, expected_value in expected.items():
+        result_value = result[key]
+        for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
             elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:

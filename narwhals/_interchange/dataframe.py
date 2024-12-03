@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DtypeKind(enum.IntEnum):
@@ -29,8 +30,9 @@ class DtypeKind(enum.IntEnum):
 
 
 def map_interchange_dtype_to_narwhals_dtype(
-    interchange_dtype: tuple[DtypeKind, int, Any, Any], dtypes: DTypes
+    interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
 ) -> DType:
+    dtypes = import_dtypes_module(version)
     if interchange_dtype[0] == DtypeKind.INT:
         if interchange_dtype[1] == 64:
             return dtypes.Int64()
@@ -82,13 +84,13 @@ class WrapInterchangeFrame:
 
 
 class InterchangeFrame:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._interchange_frame = df.__dataframe__()
-        self._dtypes = dtypes
+        self._version = version
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            WrapInterchangeFrame(self._interchange_frame), dtypes=dtypes
+            WrapInterchangeFrame(self._interchange_frame), version=version
         )
 
     def __narwhals_dataframe__(self) -> Any:
@@ -106,7 +108,7 @@ class InterchangeFrame:
         from narwhals._interchange.series import InterchangeSeries
 
         return InterchangeSeries(
-            self._interchange_frame.get_column_by_name(item), dtypes=self._dtypes
+            self._interchange_frame.get_column_by_name(item), version=self._version
         )
 
     def to_pandas(self: Self) -> pd.DataFrame:
@@ -131,7 +133,7 @@ class InterchangeFrame:
             return {
                 column_name: map_interchange_dtype_to_narwhals_dtype(
                     self._interchange_frame.get_column_by_name(column_name).dtype,
-                    self._dtypes,
+                    self._version,
                 )
                 for column_name in self._interchange_frame.column_names()
             }
@@ -167,4 +169,4 @@ class InterchangeFrame:
                 "See https://github.com/data-apis/dataframe-api/issues/360."
             )
             raise NotImplementedError(frame)
-        return self.__class__(frame._df, dtypes=self._dtypes)
+        return self.__class__(frame._df, version=self._version)

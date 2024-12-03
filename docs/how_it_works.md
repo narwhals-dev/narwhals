@@ -70,12 +70,12 @@ import pandas as pd
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
-from narwhals.utils import parse_version
+from narwhals.utils import parse_version, Version
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
-    dtypes=nw.dtypes,
+    version=Version.MAIN,
 )
 print(nw.col("a")._call(pn))
 ```
@@ -96,13 +96,13 @@ import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals.utils import parse_version
+from narwhals.utils import parse_version, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
-    dtypes=nw.dtypes,
+    version=Version.MAIN,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -110,7 +110,7 @@ df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
-    dtypes=nw.dtypes,
+    version=Version.MAIN,
 )
 expression = pn.col("a") + 1
 result = expression._call(df)
@@ -193,13 +193,13 @@ import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals.utils import parse_version
+from narwhals.utils import parse_version, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
-    dtypes=nw.dtypes,
+    version=Version.MAIN,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -214,7 +214,7 @@ backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._c
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
-    dtypes=nw.dtypes,
+    version=Version.MAIN,
 )
 expr = (nw.col("a") + 1)._call(pn)
 print(expr)

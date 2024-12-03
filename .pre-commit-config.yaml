@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.7.2'
+  rev: 'v0.8.1'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -59,10 +59,26 @@ repos:
       language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
-- repo: https://github.com/kynan/nbstripout
-  rev: 0.8.0
-  hooks:
-    - id: nbstripout
+    - id: dtypes-import
+      name: don't import from narwhals.dtypes (use `import_dtypes_module` instead)
+      entry: |
+          (?x)
+            import\ narwhals.dtypes|
+            from\ narwhals\ import\ dtypes|
+            from\ narwhals.dtypes\ import\ [^D_]+|
+            import\ narwhals.stable.v1.dtypes|
+            from\ narwhals.stable.v1\ import\ dtypes|
+            from\ narwhals.stable.v1.dtypes\ import
+      language: pygrep
+      files: ^narwhals/
+      exclude: |
+        (?x)
+          ^(
+            narwhals/utils\.py|
+            narwhals/stable/v1/_dtypes.py|
+            narwhals/.*__init__.py|
+            narwhals/.*typing\.py
+          )
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:
