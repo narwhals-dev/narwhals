@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def translate_sql_api_dtype(
+def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
 ) -> DType:  # pragma: no cover

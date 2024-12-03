@@ -5,8 +5,8 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
+from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
-from narwhals._spark_like.utils import translate_sql_api_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
@@ -120,7 +120,7 @@ class SparkLikeLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            field.name: translate_sql_api_dtype(
+            field.name: native_to_narwhals_dtype(
                 dtype=field.dataType, version=self._version
             )
             for field in self._native_frame.schema
