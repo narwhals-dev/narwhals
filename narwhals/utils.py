@@ -29,7 +29,7 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.translate import to_native
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,10 +41,17 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
+    from narwhals.typing import IntoSeriesT
 
     FrameOrSeriesT = TypeVar(
-        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series]
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+
+
+class Version(Enum):
+    V1 = auto()
+    MAIN = auto()
 
 
 class Implementation(Enum):
@@ -97,6 +104,21 @@ class Implementation(Enum):
             Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
+
+
+def import_dtypes_module(version: Version) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes
+    elif version is Version.MAIN:
+        from narwhals import dtypes  # type: ignore[no-redef]
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
+    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -165,7 +187,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
-    return isinstance(obj, cls) or issubclass(obj, cls)
+    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -181,7 +203,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 
 def maybe_align_index(
-    lhs: FrameOrSeriesT, rhs: Series | DataFrame[Any] | LazyFrame[Any]
+    lhs: FrameOrSeriesT, rhs: Series[Any] | DataFrame[Any] | LazyFrame[Any]
 ) -> FrameOrSeriesT:
     """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
@@ -277,7 +299,7 @@ def maybe_align_index(
     return lhs
 
 
-def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None:
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
@@ -307,7 +329,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series) -> Any | None
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
     return None
@@ -317,7 +339,7 @@ def maybe_set_index(
     obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
-    index: Series | list[Series] | None = None,
+    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
 ) -> FrameOrSeriesT:
     """Set the index of a DataFrame or a Series, if it's pandas-like.
 
@@ -360,8 +382,10 @@ def maybe_set_index(
         4  1
         5  2
     """
+    from narwhals.translate import to_native
+
     df_any = cast(Any, obj)
-    native_obj = to_native(df_any)
+    native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
         msg = "Only one of `column_names` or `index` should be provided"
@@ -436,7 +460,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
@@ -503,7 +527,7 @@ def maybe_convert_dtypes(
         dtype: object
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             obj_any._compliant_frame._from_native_frame(
@@ -519,7 +543,7 @@ def maybe_convert_dtypes(
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
@@ -563,7 +587,7 @@ def is_ordered_categorical(series: Series) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = series._compliant_series._dtypes
+    dtypes = import_dtypes_module(series._compliant_series._version)
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
@@ -576,7 +600,7 @@ def is_ordered_categorical(series: Series) -> bool:
         return True
     if series.dtype != dtypes.Categorical:
         return False
-    native_series = to_native(series)
+    native_series = series.to_native()
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):
@@ -736,3 +760,39 @@ def validate_strict_and_pass_though(
         msg = "Cannot pass both `strict` and `pass_through`"
         raise ValueError(msg)
     return pass_through
+
+
+def _validate_rolling_arguments(
+    window_size: int, min_periods: int | None
+) -> tuple[int, int]:
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
+
+    if not isinstance(window_size, int):
+        _type = window_size.__class__.__name__
+        msg = (
+            f"argument 'window_size': '{_type}' object cannot be "
+            "interpreted as an integer"
+        )
+        raise TypeError(msg)
+
+    if min_periods is not None:
+        if min_periods < 1:
+            msg = "min_periods must be greater or equal than 1"
+            raise ValueError(msg)
+
+        if not isinstance(min_periods, int):
+            _type = min_periods.__class__.__name__
+            msg = (
+                f"argument 'min_periods': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+        if min_periods > window_size:
+            msg = "`min_periods` must be less or equal than `window_size`"
+            raise InvalidOperationError(msg)
+    else:
+        min_periods = window_size
+
+    return window_size, min_periods

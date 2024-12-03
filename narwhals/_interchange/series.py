@@ -7,13 +7,13 @@ from typing import NoReturn
 from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
 
 if TYPE_CHECKING:
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class InterchangeSeries:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_series = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_series__(self) -> Any:
         return self
@@ -29,7 +29,7 @@ class InterchangeSeries:
     def __getattr__(self, attr: str) -> Any:
         if attr == "dtype":
             return map_interchange_dtype_to_narwhals_dtype(
-                self._native_series.dtype, dtypes=self._dtypes
+                self._native_series.dtype, version=self._version
             )
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"

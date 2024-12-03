@@ -13,6 +13,15 @@ if out.returncode != 0:
     sys.exit(1)
 subprocess.run(["git", "reset", "--hard", "upstream/main"])
 
+if (
+    subprocess.run(
+        ["git", "branch", "--show-current"], text=True, capture_output=True
+    ).stdout.strip()
+    != "bump-version"
+):
+    msg = "`bump_version.py` should be run from `bump-version` branch"
+    raise RuntimeError(msg)
+
 # Delete local tags, if present
 try:
     # Get the list of all tags

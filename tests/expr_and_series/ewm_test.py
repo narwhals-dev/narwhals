@@ -17,7 +17,7 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 )
 def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -37,7 +37,7 @@ def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")) or (
-        "polars" in str(constructor_eager) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor_eager) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -76,7 +76,7 @@ def test_ewm_mean_expr_adjust(
     expected: dict[str, list[float]],
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
+        "polars" in str(constructor) and POLARS_VERSION < (1,)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -137,9 +137,9 @@ def test_ewm_mean_nulls(
     expected: dict[str, list[float]],
     constructor: Constructor,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
-    ):
+    if any(
+        x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "cudf")
+    ) or ("polars" in str(constructor) and POLARS_VERSION < (1,)):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
@@ -154,9 +154,9 @@ def test_ewm_mean_params(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")) or (
-        "polars" in str(constructor) and POLARS_VERSION <= (0, 20, 31)
-    ):
+    if any(
+        x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "cudf")
+    ) or ("polars" in str(constructor) and POLARS_VERSION < (1,)):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2, 5, 3]}))
@@ -187,3 +187,18 @@ def test_ewm_mean_params(
 
     with pytest.raises(ValueError, match="mutually exclusive"):
         df.select(nw.col("a").ewm_mean(span=1.5, half_life=0.75, ignore_nulls=False))
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
+)
+def test_ewm_mean_cudf_raise() -> None:  # pragma: no cover
+    pytest.importorskip("cudf")
+    import cudf
+
+    df = nw.from_native(cudf.DataFrame({"a": [2.0, 4.0, None, 3.0]}))
+    with pytest.raises(
+        NotImplementedError,
+        match="cuDF only supports `ewm_mean` when there are no missing values",
+    ):
+        df.select(nw.col("a").ewm_mean(com=1))

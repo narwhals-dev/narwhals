@@ -3,21 +3,24 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import overload
 
-from narwhals.dependencies import get_polars
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    import numpy as np
     import pyarrow as pa
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
-def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
+    dtypes = import_dtypes_module(version)
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -61,35 +64,25 @@ def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
             [
                 dtypes.Field(
                     dtype.field(i).name,
-                    native_to_narwhals_dtype(dtype.field(i).type, dtypes),
+                    native_to_narwhals_dtype(dtype.field(i).type, version),
                 )
                 for i in range(dtype.num_fields)
             ]
         )
 
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
-        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if pa.types.is_fixed_size_list(dtype):
         return dtypes.Array(
-            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+            native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
-    if (pl := get_polars()) is not None and isinstance(
-        dtype, (pl.DataType, pl.DataType.__class__)
-    ):
-        msg = (
-            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
-            "Perhaps you:\n"
-            "- Forgot a `nw.from_native` somewhere?\n"
-            "- Used `pl.Int64` instead of `nw.Int64`?"
-        )
-        raise TypeError(msg)
-
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
     import pyarrow as pa  # ignore-banned-import
 
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
@@ -138,7 +131,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     raise AssertionError(msg)
 
 
-def validate_column_comparand(other: Any) -> Any:
+def broadcast_and_extract_native(
+    lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -150,27 +145,47 @@ def validate_column_comparand(other: Any) -> Any:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if isinstance(other, list):
-        if len(other) > 1:
-            if hasattr(other[0], "__narwhals_expr__") or hasattr(
-                other[0], "__narwhals_series__"
+    # If `rhs` is the output of an expression evaluation, then it is
+    # a list of Series. So, we verify that that list is of length-1,
+    # and take the first (and only) element.
+    if isinstance(rhs, list):
+        if len(rhs) > 1:
+            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
+                rhs[0], "__narwhals_series__"
             ):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
-            msg = (
-                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
-            )
+            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
             raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, ArrowDataFrame):
+        rhs = rhs[0]
+
+    if isinstance(rhs, ArrowDataFrame):
         return NotImplemented
-    if isinstance(other, ArrowSeries):
-        if len(other) == 1:
+
+    if isinstance(rhs, ArrowSeries):
+        if len(rhs) == 1:
             # broadcast
-            return other[0]
-        return other._native_series
-    return other
+            return lhs._native_series, rhs[0]
+        if len(lhs) == 1:
+            # broadcast
+            import numpy as np  # ignore-banned-import
+            import pyarrow as pa  # ignore-banned-import
+
+            fill_value = lhs[0]
+            if backend_version < (13,) and hasattr(fill_value, "as_py"):
+                fill_value = fill_value.as_py()
+            left_result = pa.chunked_array(
+                [
+                    pa.array(
+                        np.full(shape=rhs.len(), fill_value=fill_value),
+                        type=lhs._native_series.type,
+                    )
+                ]
+            )
+            return left_result, rhs._native_series
+        return lhs._native_series, rhs._native_series
+    return lhs._native_series, rhs
 
 
 def validate_dataframe_comparand(
@@ -189,7 +204,7 @@ def validate_dataframe_comparand(
             import pyarrow as pa  # ignore-banned-import
 
             value = other._native_series[0]
-            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
         return other._native_series
@@ -203,16 +218,12 @@ def validate_dataframe_comparand(
     raise AssertionError(msg)
 
 
-def horizontal_concat(dfs: list[Any]) -> Any:
+def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
     """Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
     import pyarrow as pa  # ignore-banned-import
-
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
 
     names = [name for df in dfs for name in df.column_names]
 
@@ -224,25 +235,40 @@ def horizontal_concat(dfs: list[Any]) -> Any:
     return pa.Table.from_arrays(arrays, names=names)
 
 
-def vertical_concat(dfs: list[Any]) -> Any:
+def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
     """Concatenate (native) DataFrames vertically.
 
     Should be in namespace.
     """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-
-    cols = set(dfs[0].column_names)
-    for df in dfs:
-        cols_current = set(df.column_names)
-        if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
+    cols_0 = dfs[0].column_names
+    for i, df in enumerate(dfs[1:], start=1):
+        cols_current = df.column_names
+        if cols_current != cols_0:
+            msg = (
+                "unable to vstack, column names don't match:\n"
+                f"   - dataframe 0: {cols_0}\n"
+                f"   - dataframe {i}: {cols_current}\n"
+            )
             raise TypeError(msg)
 
     import pyarrow as pa  # ignore-banned-import
 
     return pa.concat_tables(dfs).combine_chunks()
+
+
+def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
+    """Concatenate (native) DataFrames diagonally.
+
+    Should be in namespace.
+    """
+    import pyarrow as pa  # ignore-banned-import
+
+    kwargs = (
+        {"promote": True}
+        if backend_version < (14, 0, 0)
+        else {"promote_options": "default"}  # type: ignore[dict-item]
+    )
+    return pa.concat_tables(dfs, **kwargs).combine_chunks()
 
 
 def floordiv_compat(left: Any, right: Any) -> Any:
@@ -320,7 +346,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
         s_native = s._native_series
         if is_max_length_gt_1 and length == 1:
             value = s_native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             reshaped.append(pa.array([value] * max_length, type=s_native.type))
         else:
@@ -329,12 +355,26 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     return reshaped
 
 
+@overload
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> np.ndarray: ...
+
+
+@overload
+def convert_slice_to_nparray(num_rows: int, rows_slice: int) -> int: ...
+
+
+@overload
+def convert_slice_to_nparray(
+    num_rows: int, rows_slice: Sequence[int]
+) -> Sequence[int]: ...
+
+
 def convert_slice_to_nparray(
     num_rows: int, rows_slice: slice | int | Sequence[int]
-) -> Any:
-    import numpy as np  # ignore-banned-import
-
+) -> np.ndarray | int | Sequence[int]:
     if isinstance(rows_slice, slice):
+        import numpy as np  # ignore-banned-import
+
         return np.arange(num_rows)[rows_slice]
     else:
         return rows_slice

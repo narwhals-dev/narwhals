@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
@@ -12,6 +13,9 @@ import pytest
 import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import maybe_get_modin_df
+
+if TYPE_CHECKING:
+    from narwhals.utils import Version
 
 data = {"a": [1, 2, 3]}
 
@@ -28,16 +32,25 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
+    def _change_dtypes(self, _version: Version) -> MockDataFrame:
+        return self
+
     def __narwhals_dataframe__(self) -> Any:
         return self
 
 
 class MockLazyFrame:
+    def _change_dtypes(self, _version: Version) -> MockLazyFrame:
+        return self
+
     def __narwhals_lazyframe__(self) -> Any:
         return self
 
 
 class MockSeries:
+    def _change_dtypes(self, _version: Version) -> MockSeries:
+        return self
+
     def __narwhals_series__(self) -> Any:
         return self
 

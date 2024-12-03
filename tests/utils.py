@@ -10,7 +10,6 @@ from typing import Sequence
 
 import pandas as pd
 
-import narwhals as nw
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -55,7 +54,7 @@ def _to_comparable_list(column_values: Any) -> Any:
         column_values = column_values.to_pandas()
     if hasattr(column_values, "to_list"):
         return column_values.to_list()
-    return [nw.to_py_scalar(v) for v in column_values]
+    return list(column_values)
 
 
 def _sort_dict_by_key(
@@ -75,16 +74,15 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         result = result.collect()
     if hasattr(result, "columns"):
         for key in result.columns:
-            assert key in expected
+            assert key in expected, (key, expected)
     result = {key: _to_comparable_list(result[key]) for key in expected}
     if is_pyspark and expected:  # pragma: no cover
         sort_key = next(iter(expected.keys()))
         expected = _sort_dict_by_key(expected, sort_key)
         result = _sort_dict_by_key(result, sort_key)
-    for key in expected:
-        result_key = result[key]
-        expected_key = expected[key]
-        for i, (lhs, rhs) in enumerate(zip_strict(result_key, expected_key)):
+    for key, expected_value in expected.items():
+        result_value = result[key]
+        for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
             elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:

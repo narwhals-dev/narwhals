@@ -25,19 +25,19 @@ if TYPE_CHECKING:
 
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class DaskNamespace:
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
-            backend_version=self._backend_version, dtypes=self._dtypes
+            backend_version=self._backend_version, version=self._version
         )
 
-    def __init__(self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def all(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
@@ -51,17 +51,17 @@ class DaskNamespace:
             output_names=None,
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         )
 
     def nth(self, *column_indices: int) -> DaskExpr:
         return DaskExpr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_indices, backend_version=self._backend_version, version=self._version
         )
 
     def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
@@ -69,7 +69,7 @@ class DaskNamespace:
             series: dask_expr.Series, dtype: DType | type[DType]
         ) -> dask_expr.Series:
             return (
-                series.astype(narwhals_to_native_dtype(dtype, self._dtypes))
+                series.astype(narwhals_to_native_dtype(dtype, self._version))
                 if dtype
                 else series
             )
@@ -86,32 +86,32 @@ class DaskNamespace:
             output_names=["literal"],
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def min(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         ).min()
 
     def max(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         ).max()
 
     def mean(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         ).mean()
 
     def median(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         ).median()
 
     def sum(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+            *column_names, backend_version=self._backend_version, version=self._version
         ).sum()
 
     def len(self) -> DaskExpr:
@@ -137,7 +137,7 @@ class DaskNamespace:
             output_names=["len"],
             returns_scalar=True,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -155,7 +155,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -173,7 +173,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -191,35 +191,42 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def concat(
         self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: Literal["horizontal", "vertical"],
+        how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
         import dask.dataframe as dd  # ignore-banned-import
 
         if len(list(items)) == 0:
             msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
-        native_frames = [i._native_frame for i in items]
+        dfs = [i._native_frame for i in items]
+        cols_0 = dfs[0].columns
         if how == "vertical":
-            if not all(
-                tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
-            ):  # pragma: no cover
-                msg = "unable to vstack with non-matching columns"
-                raise AssertionError(msg)
+            for i, df in enumerate(dfs[1:], start=1):
+                cols_current = df.columns
+                if not (
+                    (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+                ):
+                    msg = (
+                        "unable to vstack, column names don't match:\n"
+                        f"   - dataframe 0: {cols_0.to_list()}\n"
+                        f"   - dataframe {i}: {cols_current.to_list()}\n"
+                    )
+                    raise TypeError(msg)
             return DaskLazyFrame(
-                dd.concat(native_frames, axis=0, join="inner"),
+                dd.concat(dfs, axis=0, join="inner"),
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         if how == "horizontal":
             all_column_names: list[str] = [
-                column for frame in native_frames for column in frame.columns
+                column for frame in dfs for column in frame.columns
             ]
             if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
                 duplicates = [
@@ -231,10 +238,17 @@ class DaskNamespace:
                 )
                 raise AssertionError(msg)
             return DaskLazyFrame(
-                dd.concat(native_frames, axis=1, join="outer"),
+                dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
+        if how == "diagonal":
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="outer"),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -258,7 +272,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -279,7 +293,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -300,7 +314,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
@@ -337,7 +351,7 @@ class DaskNamespace:
         self,
         *predicates: IntoDaskExpr,
     ) -> DaskWhen:
-        plx = self.__class__(backend_version=self._backend_version, dtypes=self._dtypes)
+        plx = self.__class__(backend_version=self._backend_version, version=self._version)
         if predicates:
             condition = plx.all_horizontal(*predicates)
         else:
@@ -345,7 +359,7 @@ class DaskNamespace:
             raise TypeError(msg)
 
         return DaskWhen(
-            condition, self._backend_version, returns_scalar=False, dtypes=self._dtypes
+            condition, self._backend_version, returns_scalar=False, version=self._version
         )
 
     def concat_str(
@@ -394,7 +408,7 @@ class DaskNamespace:
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
 
@@ -407,20 +421,20 @@ class DaskWhen:
         otherwise_value: Any = None,
         *,
         returns_scalar: bool,
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherwise_value
         self._returns_scalar = returns_scalar
-        self._dtypes = dtypes
+        self._version = version
 
     def __call__(self, df: DaskLazyFrame) -> list[dask_expr.Series]:
         from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
 
-        plx = DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
 
         condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
         condition = cast("dask_expr.Series", condition)
@@ -457,7 +471,7 @@ class DaskWhen:
             output_names=None,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
 
@@ -472,10 +486,10 @@ class DaskThen(DaskExpr):
         output_names: list[str] | None,
         returns_scalar: bool,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
         self._call = call
         self._depth = depth
         self._function_name = function_name

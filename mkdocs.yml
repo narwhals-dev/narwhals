@@ -16,11 +16,12 @@ nav:
     - pandas_like_concepts/user_warning.md
     - pandas_like_concepts/column_names.md
     - pandas_like_concepts/boolean.md
-  - overhead.md
-  - backcompat.md
-  - extending.md
-  - how_it_works.md
-  - Roadmap and related projects: roadmap_and_related.md
+  - Overhead: overhead.md
+  - Perfect backwards compatibility policy: backcompat.md
+  - Supported libraries and extending Narwhals: extending.md
+  - How it works: how_it_works.md
+  - Ecosystem: ecosystem.md
+  - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
     - Supported DataFrame methods: api-completeness/dataframe.md
@@ -37,6 +38,7 @@ nav:
     - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
+    - api-reference/lazy_group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
     - api-reference/series.md
@@ -95,9 +97,6 @@ plugins:
           members_order: alphabetical
     enable_inventory: true
 
-extra_javascript:
-  - javascripts/extra.js
-
 hooks:
 - utils/generate_backend_completeness.py
 - utils/generate_zen_content.py
@@ -122,8 +121,11 @@ markdown_extensions:
       generic: true
 extra_javascript:
   - javascripts/katex.js
+  - javascripts/extra.js
   - https://unpkg.com/katex@0/dist/katex.min.js
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
+
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/extra.css

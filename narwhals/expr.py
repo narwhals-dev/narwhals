@@ -11,7 +11,8 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidOperationError
+from narwhals.dtypes import _validate_dtype
+from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -202,6 +203,7 @@ class Expr:
             foo: [[1,2,3]]
             bar: [[6,7,8]]
         """
+        _validate_dtype(dtype)
         return self.__class__(
             lambda plx: self._call(plx).cast(dtype),
         )
@@ -623,7 +625,7 @@ class Expr:
         """Get standard deviation.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
 
         Returns:
@@ -742,6 +744,51 @@ class Expr:
                 function=function, return_dtype=return_dtype
             )
         )
+
+    def skew(self: Self) -> Self:
+        """Calculate the sample skewness of a column.
+
+        Returns:
+            An expression representing the sample skewness of the column.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pa = pa.Table.from_pandas(df_pd)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").skew())
+
+            We can then pass pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a         b
+            0  0.0  1.472427
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬──────────┐
+            │ a   ┆ b        │
+            │ --- ┆ ---      │
+            │ f64 ┆ f64      │
+            ╞═════╪══════════╡
+            │ 0.0 ┆ 1.472427 │
+            └─────┴──────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[1.4724267269058975]]
+        """
+        return self.__class__(lambda plx: self._call(plx).skew())
 
     def sum(self) -> Expr:
         """Return the sum value.
@@ -1611,7 +1658,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._call(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
+                *[extract_compliant(plx, pred) for pred in flatten(predicates)],
             )
         )
 
@@ -3190,7 +3237,7 @@ class Expr:
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_rolling_sum(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
@@ -3198,14 +3245,14 @@ class Expr:
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_rolling_sum(df_pd)
                  a    b
             0  1.0  1.0
             1  2.0  3.0
             2  NaN  3.0
             3  4.0  6.0
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_rolling_sum(df_pl)
             shape: (4, 2)
             ┌──────┬─────┐
             │ a    ┆ b   │
@@ -3218,7 +3265,7 @@ class Expr:
             │ 4.0  ┆ 6.0 │
             └──────┴─────┘
 
-            >>> my_library_agnostic_function(df_pa)  #  doctest:+ELLIPSIS
+            >>> agnostic_rolling_sum(df_pa)  #  doctest:+ELLIPSIS
             pyarrow.Table
             a: double
             b: double
@@ -3226,38 +3273,104 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[1,3,3,6]]
         """
-        if window_size < 1:
-            msg = "window_size must be greater or equal than 1"
-            raise ValueError(msg)
-
-        if not isinstance(window_size, int):
-            _type = window_size.__class__.__name__
-            msg = (
-                f"argument 'window_size': '{_type}' object cannot be "
-                "interpreted as an integer"
-            )
-            raise TypeError(msg)
-
-        if min_periods is not None:
-            if min_periods < 1:
-                msg = "min_periods must be greater or equal than 1"
-                raise ValueError(msg)
-
-            if not isinstance(min_periods, int):
-                _type = min_periods.__class__.__name__
-                msg = (
-                    f"argument 'min_periods': '{_type}' object cannot be "
-                    "interpreted as an integer"
-                )
-                raise TypeError(msg)
-            if min_periods > window_size:
-                msg = "`min_periods` must be less or equal than `window_size`"
-                raise InvalidOperationError(msg)
-        else:
-            min_periods = window_size
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
 
         return self.__class__(
             lambda plx: self._call(plx).rolling_sum(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """Apply a rolling mean (moving mean) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`
+            center: Set the labels at the center of the window.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_mean(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_mean(df_pd)
+                 a    b
+            0  1.0  1.0
+            1  2.0  1.5
+            2  NaN  1.5
+            3  4.0  3.0
+
+            >>> agnostic_rolling_mean(df_pl)
+            shape: (4, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ f64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 1.0  ┆ 1.0 │
+            │ 2.0  ┆ 1.5 │
+            │ null ┆ 1.5 │
+            │ 4.0  ┆ 3.0 │
+            └──────┴─────┘
+
+            >>> agnostic_rolling_mean(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[1,1.5,1.5,3]]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        return self.__class__(
+            lambda plx: self._call(plx).rolling_mean(
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
@@ -3875,7 +3988,9 @@ class ExprStringNamespace(Generic[ExprT]):
             │ zukkyun   ┆ kkyun       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.slice(offset=-n, length=None)
+        )
 
     def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
         """Convert to Datetime dtype.
@@ -5396,6 +5511,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [3, 4]})
@@ -5452,6 +5568,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
@@ -5504,6 +5621,7 @@ def all_() -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pa = pa.table({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -5555,6 +5673,7 @@ def len_() -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -5609,6 +5728,7 @@ def sum(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
         >>> df_pa = pa.table({"a": [1, 2]})
@@ -5659,6 +5779,7 @@ def mean(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
         >>> df_pa = pa.table({"a": [1, 8, 3]})
@@ -5710,6 +5831,7 @@ def median(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
         >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
         >>> df_pa = pa.table({"a": [4, 5, 2]})
@@ -5760,6 +5882,7 @@ def min(*columns: str) -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -5810,6 +5933,7 @@ def max(*columns: str) -> Expr:
         >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
@@ -5861,6 +5985,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
@@ -5921,6 +6046,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
@@ -5986,6 +6112,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
@@ -6085,6 +6212,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pa = pa.table({"a": [1, 2, 3], "b": [5, 10, 15]})
@@ -6142,6 +6270,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
@@ -6217,6 +6346,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
         >>> df_pa = pa.table({"a": [1, 2]})
@@ -6279,6 +6409,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
@@ -6354,6 +6485,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> data = {
         ...     "a": [1, 8, 3],
         ...     "b": [4, 5, None],
@@ -6430,6 +6562,7 @@ def concat_str(
 
     Examples:
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa

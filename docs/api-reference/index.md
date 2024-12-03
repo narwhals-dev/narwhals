@@ -8,6 +8,7 @@
 - [narwhals.Expr.name](expr_name.md)
 - [narwhals.Expr.str](expr_str.md)
 - [narwhals.GroupBy](group_by.md)
+- [narwhals.LazyGroupBy](lazy_group_by.md)
 - [narwhals.LazyFrame](lazyframe.md)
 - [narwhals.Schema](schema.md)
 - [narwhals.Series](series.md)

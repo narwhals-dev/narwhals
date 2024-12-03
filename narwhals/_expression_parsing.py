@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -245,9 +246,17 @@ def reuse_series_implementation(
             for arg_name, arg_value in kwargs.items()
         }
 
+        # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
+        # However, when working with expressions, we keep everything PyArrow-native.
+        extra_kwargs = (
+            {"_return_py_scalar": False}
+            if returns_scalar and expr._implementation is Implementation.PYARROW
+            else {}
+        )
+
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(series, attr)(*_args, **_kwargs),
+                getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
                 reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
@@ -257,7 +266,11 @@ def reuse_series_implementation(
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            msg = (
+                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
+                f"Expression output names: {expr._output_names}\n"
+                f"Series names: {[s.name for s in out]}"
+            )
             raise AssertionError(msg)
         return out
 

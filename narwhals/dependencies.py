@@ -26,6 +26,11 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoSeries
 
+# We silently allow these but - given that they claim
+# to be drop-in replacements for pandas - testing is
+# their responsibility.
+IMPORT_HOOKS = frozenset(["fireducks"])
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -101,17 +106,29 @@ def get_pyspark_sql() -> Any:
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)
+    return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(df, mod.pandas.DataFrame)
+        for module_name in IMPORT_HOOKS
+    )
 
 
 def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(ser, pd.Series)
+    return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(ser, mod.pandas.Series)
+        for module_name in IMPORT_HOOKS
+    )
 
 
 def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
     """Check whether `index` is a pandas Index without importing pandas."""
-    return (pd := get_pandas()) is not None and isinstance(index, pd.Index)
+    return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(index, mod.pandas.Index)
+        for module_name in IMPORT_HOOKS
+    )
 
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
@@ -304,29 +321,30 @@ def is_into_dataframe(native_dataframe: Any) -> bool:
 
 
 __all__ = [
-    "get_polars",
-    "get_pandas",
-    "get_modin",
     "get_cudf",
-    "get_pyarrow",
-    "get_numpy",
     "get_ibis",
+    "get_modin",
+    "get_numpy",
+    "get_pandas",
+    "get_polars",
+    "get_pyarrow",
+    "is_cudf_dataframe",
+    "is_cudf_series",
+    "is_dask_dataframe",
     "is_ibis_table",
+    "is_into_dataframe",
+    "is_into_series",
+    "is_modin_dataframe",
+    "is_modin_series",
+    "is_numpy_array",
     "is_pandas_dataframe",
+    "is_pandas_index",
+    "is_pandas_like_dataframe",
+    "is_pandas_like_series",
     "is_pandas_series",
     "is_polars_dataframe",
     "is_polars_lazyframe",
     "is_polars_series",
-    "is_modin_dataframe",
-    "is_modin_series",
-    "is_cudf_dataframe",
-    "is_cudf_series",
-    "is_pyarrow_table",
     "is_pyarrow_chunked_array",
-    "is_numpy_array",
-    "is_dask_dataframe",
-    "is_pandas_like_dataframe",
-    "is_pandas_like_series",
-    "is_into_dataframe",
-    "is_into_series",
+    "is_pyarrow_table",
 ]

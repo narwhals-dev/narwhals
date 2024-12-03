@@ -3,17 +3,47 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
+from typing import TypeVar
+from typing import overload
+
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import polars as pl
 
+    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
-from narwhals.utils import parse_version
+    T = TypeVar("T")
 
 
-def extract_native(obj: Any) -> Any:
+@overload
+def extract_native(obj: PolarsDataFrame) -> pl.DataFrame: ...
+
+
+@overload
+def extract_native(obj: PolarsLazyFrame) -> pl.LazyFrame: ...
+
+
+@overload
+def extract_native(obj: PolarsSeries) -> pl.Series: ...
+
+
+@overload
+def extract_native(obj: PolarsExpr) -> pl.Expr: ...
+
+
+@overload
+def extract_native(obj: T) -> T: ...
+
+
+def extract_native(
+    obj: PolarsDataFrame | PolarsLazyFrame | PolarsSeries | PolarsExpr | T,
+) -> pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr | T:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
@@ -29,14 +59,19 @@ def extract_native(obj: Any) -> Any:
 
 
 def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, Any]]:
-    args = [extract_native(arg) for arg in args]
-    kwargs = {k: extract_native(v) for k, v in kwargs.items()}
-    return args, kwargs
+    return [extract_native(arg) for arg in args], {
+        k: extract_native(v) for k, v in kwargs.items()
+    }
 
 
-def native_to_narwhals_dtype(dtype: pl.DataType, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(
+    dtype: pl.DataType,
+    version: Version,
+    backend_version: tuple[int, ...],
+) -> DType:
     import polars as pl  # ignore-banned-import()
 
+    dtypes = import_dtypes_module(version)
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -79,34 +114,35 @@ def native_to_narwhals_dtype(dtype: pl.DataType, dtypes: DTypes) -> DType:
     if dtype == pl.Struct:
         return dtypes.Struct(
             [
-                dtypes.Field(field_name, native_to_narwhals_dtype(field_type, dtypes))
+                dtypes.Field(
+                    field_name,
+                    native_to_narwhals_dtype(field_type, version, backend_version),
+                )
                 for field_name, field_type in dtype  # type: ignore[attr-defined]
             ]
         )
     if dtype == pl.List:
-        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))  # type: ignore[attr-defined]
+        return dtypes.List(
+            native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
+        )
     if dtype == pl.Array:
-        if parse_version(pl.__version__) < (0, 20, 30):  # pragma: no cover
+        if backend_version < (0, 20, 30):  # pragma: no cover
             return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, dtypes),  # type: ignore[attr-defined]
+                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
                 dtype.width,  # type: ignore[attr-defined]
             )
         else:
-            return dtypes.Array(native_to_narwhals_dtype(dtype.inner, dtypes), dtype.size)  # type: ignore[attr-defined]
+            return dtypes.Array(
+                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
+                dtype.size,  # type: ignore[attr-defined]
+            )
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pl.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
     import polars as pl  # ignore-banned-import()
 
-    if isinstance(dtype, (pl.DataType, pl.DataType.__class__)):  # type: ignore[arg-type]
-        msg = (
-            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
-            "Perhaps you:\n"
-            "- Forgot a `nw.from_native` somewhere?\n"
-            "- Used `pl.Int64` instead of `nw.Int64`?"
-        )
-        raise TypeError(msg)
+    dtypes = import_dtypes_module(version)
 
     if dtype == dtypes.Float64:
         return pl.Float64()
