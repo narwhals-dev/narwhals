@@ -16,6 +16,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pyarrow")
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
+    monkeypatch.delitem(sys.modules, "pyspark")
     df = pl.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean()).filter(
         nw.col("a") > 1
@@ -26,6 +27,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "pyarrow" not in sys.modules
     assert "dask" not in sys.modules
     assert "ibis" not in sys.modules
+    assert "pyspark" not in sys.modules
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -33,6 +35,7 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pyarrow")
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
+    monkeypatch.delitem(sys.modules, "pyspark")
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean()).filter(
         nw.col("a") > 1
@@ -43,6 +46,7 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "pyarrow" not in sys.modules
     assert "dask" not in sys.modules
     assert "ibis" not in sys.modules
+    assert "pyspark" not in sys.modules
 
 
 def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,6 +56,7 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
+    monkeypatch.delitem(sys.modules, "pyspark")
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     nw.from_native(df).group_by("a").agg(nw.col("b").mean()).filter(nw.col("a") > 1)
     assert "polars" not in sys.modules
@@ -59,6 +64,7 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "numpy" in sys.modules
     assert "pyarrow" not in sys.modules
     assert "dask" in sys.modules
+    assert "pyspark" not in sys.modules
 
 
 def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,6 +72,7 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
+    monkeypatch.delitem(sys.modules, "pyspark")
     df = pa.table({"a": [1, 2, 3], "b": [4, 5, 6]})
     nw.from_native(df).group_by("a").agg(nw.col("b").mean()).filter(nw.col("a") > 1)
     assert "polars" not in sys.modules
@@ -74,3 +81,4 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "pyarrow" in sys.modules
     assert "dask" not in sys.modules
     assert "ibis" not in sys.modules
+    assert "pyspark" not in sys.modules
