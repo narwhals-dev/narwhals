@@ -54,7 +54,7 @@ class SparkLikeLazyFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _change_dtypes(self, version: Version) -> Self:
+    def _change_version(self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, backend_version=self._backend_version, version=version
         )
