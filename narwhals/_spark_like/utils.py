@@ -101,7 +101,7 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
     if isinstance(obj, SparkLikeExpr):
         column_results = obj._call(df)
         if len(column_results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions not supported in this context"
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
         if obj._returns_scalar:
