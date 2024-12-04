@@ -17,7 +17,7 @@ def run_common(session: Session, coverage_threshold: float) -> None:
     session.install("-e.", "-r", "requirements-dev.txt")
 
     if session.python != "3.8":
-        session.install("ibis-framework>=6.0.0 rich packaging pyarrow_hotfix")
+        session.install("ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix")
 
     session.run(
         "pytest",
