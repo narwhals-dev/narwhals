@@ -725,7 +725,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(get_pyspark().__version__),
                 version=version,
             ),
-            level="full",
+            level="lazy",
         )
 
     # Interchange protocol
