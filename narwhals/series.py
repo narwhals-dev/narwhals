@@ -660,7 +660,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.median()
 
-    def argmin(self) -> Any:
+    def arg_min(self) -> Any:
         """Get the index of the minimum value in this Series.
 
         Examples:
@@ -685,9 +685,9 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             0
         """
-        return self._compliant_series.argmin()
+        return self._from_compliant_series(self._compliant_series.arg_min())
 
-    def argmax(self) -> Any:
+    def arg_max(self) -> Any:
         """Get the index of the maximum value in this Series.
 
         Examples:
@@ -712,7 +712,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             2
         """
-        return self._compliant_series.argmax()
+        return self._from_compliant_series(self._compliant_series.arg_max())
 
     def skew(self: Self) -> Any:
         """Calculate the sample skewness of the Series.

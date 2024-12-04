@@ -34,8 +34,8 @@ from narwhals.expr import Expr
 from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
-from narwhals.expr import argmax
-from narwhals.expr import argmin
+from narwhals.expr import arg_max
+from narwhals.expr import arg_min
 from narwhals.expr import col
 from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
@@ -107,8 +107,8 @@ __all__ = [
     "all",
     "all_horizontal",
     "any_horizontal",
-    "argmax",
-    "argmin",
+    "arg_max",
+    "arg_min",
     "col",
     "concat",
     "concat_str",

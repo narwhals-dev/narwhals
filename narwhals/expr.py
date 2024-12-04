@@ -621,7 +621,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).median())
 
-    def argmin(self) -> Self:
+    def arg_min(self) -> Self:
         """Get the index of the minimum value.
 
         Returns:
@@ -665,9 +665,9 @@ class Expr:
             a: [[0]]
             b: [[0]]
         """
-        return self.__class__(lambda plx: self._call(plx).argmin())
+        return self.__class__(lambda plx: self._call(plx).arg_min())
 
-    def argmax(self) -> Self:
+    def arg_max(self) -> Self:
         """Get the index of the maximum value.
 
         Returns:
@@ -711,7 +711,7 @@ class Expr:
             a: [[2]]
             b: [[2]]
         """
-        return self.__class__(lambda plx: self._call(plx).argmax())
+        return self.__class__(lambda plx: self._call(plx).arg_max())
 
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
@@ -5957,7 +5957,7 @@ def median(*columns: str) -> Expr:
     return Expr(lambda plx: plx.median(*columns))
 
 
-def argmin(*columns: str) -> Expr:
+def arg_min(*columns: str) -> Expr:
     """Return the index of the minimum value.
 
     Note:
@@ -6005,7 +6005,7 @@ def argmin(*columns: str) -> Expr:
         ----
         b: [[0]]
     """
-    return Expr(lambda plx: plx.argmin(*columns))
+    return Expr(lambda plx: plx.arg_min(*columns))
 
 
 def min(*columns: str) -> Expr:
@@ -6059,7 +6059,7 @@ def min(*columns: str) -> Expr:
     return Expr(lambda plx: plx.min(*columns))
 
 
-def argmax(*columns: str) -> Expr:
+def arg_max(*columns: str) -> Expr:
     """Return the index of the maximum value.
 
     Note:
@@ -6107,7 +6107,7 @@ def argmax(*columns: str) -> Expr:
         ----
         a: [[1]]
     """
-    return Expr(lambda plx: plx.argmax(*columns))
+    return Expr(lambda plx: plx.arg_max(*columns))
 
 
 def max(*columns: str) -> Expr:

@@ -2144,7 +2144,7 @@ def min(*columns: str) -> Expr:
     return _stableify(nw.min(*columns))
 
 
-def argmin(*columns: str) -> Expr:
+def arg_min(*columns: str) -> Expr:
     """Return the index of the minimum value.
 
     Note:
@@ -2192,7 +2192,7 @@ def argmin(*columns: str) -> Expr:
         ----
         b: [[0]]
     """
-    return _stableify(nw.argmin(*columns))
+    return _stableify(nw.arg_min(*columns))
 
 
 def max(*columns: str) -> Expr:
@@ -2246,7 +2246,7 @@ def max(*columns: str) -> Expr:
     return _stableify(nw.max(*columns))
 
 
-def argmax(*columns: str) -> Expr:
+def arg_max(*columns: str) -> Expr:
     """Return the index of the maximum value.
 
     Note:
@@ -2294,7 +2294,7 @@ def argmax(*columns: str) -> Expr:
         ----
         a: [[1]]
     """
-    return _stableify(nw.argmax(*columns))
+    return _stableify(nw.arg_max(*columns))
 
 
 def mean(*columns: str) -> Expr:
