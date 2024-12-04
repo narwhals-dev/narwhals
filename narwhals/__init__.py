@@ -31,22 +31,22 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
-from narwhals.expr import all_ as all  # noqa: A004
+from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
 from narwhals.expr import col
 from narwhals.expr import concat_str
-from narwhals.expr import len_ as len  # noqa: A004
+from narwhals.expr import len_ as len
 from narwhals.expr import lit
-from narwhals.expr import max  # noqa: A004
+from narwhals.expr import max
 from narwhals.expr import max_horizontal
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
 from narwhals.expr import median
-from narwhals.expr import min  # noqa: A004
+from narwhals.expr import min
 from narwhals.expr import min_horizontal
 from narwhals.expr import nth
-from narwhals.expr import sum  # noqa: A004
+from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
 from narwhals.expr import when
 from narwhals.functions import concat
@@ -71,7 +71,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.15.1"
+__version__ = "1.15.2"
 
 __all__ = [
     "Array",

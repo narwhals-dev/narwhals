@@ -91,18 +91,6 @@ class PandasLikeSeries:
         self._backend_version = backend_version
         self._version = version
 
-        # In pandas, copy-on-write becomes the default in version 3.
-        # So, before that, we need to explicitly avoid unnecessary
-        # copies by using `copy=False` sometimes.
-        if self._implementation is Implementation.PANDAS and self._backend_version < (
-            3,
-            0,
-            0,
-        ):
-            self._use_copy_false = True
-        else:
-            self._use_copy_false = False
-
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
@@ -128,7 +116,7 @@ class PandasLikeSeries:
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
 
-    def _change_dtypes(self, version: Version) -> Self:
+    def _change_version(self, version: Version) -> Self:
         return self.__class__(
             self._native_series,
             implementation=self._implementation,
@@ -852,6 +840,13 @@ class PandasLikeSeries:
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
+
+    def __contains__(self: Self, other: Any) -> bool:
+        return (  # type: ignore[no-any-return]
+            self._native_series.isna().any()
+            if other is None
+            else (self._native_series == other).any()
+        )
 
     def is_finite(self: Self) -> Self:
         s = self._native_series

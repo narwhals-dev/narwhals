@@ -37,7 +37,7 @@ def test_native_vs_non_native() -> None:
 def test_validate_laziness() -> None:
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
-        NotImplementedError,
+        TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
         nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]

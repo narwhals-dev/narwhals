@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.15.1"
+version = "1.15.2"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -54,6 +54,7 @@ lint.select = [
 ]
 lint.ignore = [
   "A001",
+  "A004",
   "ARG002",
   "ANN401",
   "C901",
