@@ -344,7 +344,22 @@ class Boolean(DType):
 
 
 class Object(DType):
-    """Data type for wrapping arbitrary Python objects."""
+    """Data type for wrapping arbitrary Python objects.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> class Foo: ...
+       >>> ser_pd = pd.Series([Foo(), Foo()])
+       >>> ser_pl = pl.Series([Foo(), Foo()])
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Object
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Object
+    """
 
 
 class Unknown(DType):
