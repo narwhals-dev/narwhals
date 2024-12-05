@@ -359,9 +359,9 @@ class Object(DType):
        >>> nw.from_native(ser_pd, series_only=True).dtype
        Object
        >>> nw.from_native(ser_pl, series_only=True).dtype
-       Object
+       Struct({'name': String})
        >>> nw.from_native(ser_pa, series_only=True).dtype
-       Object
+       Struct({'name': String})
     """
 
 
