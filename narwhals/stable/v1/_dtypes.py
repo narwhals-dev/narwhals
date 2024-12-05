@@ -51,6 +51,24 @@ class Duration(NwDuration):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [1000, 2000, 3000]  # 1s, 2s, 3s
+        >>> ser_pd = pd.to_timedelta(pd.Series(data), unit="ms")
+        >>> ser_pl = pl.Series(data).cast(pl.Duration("ms"))
+        >>> ser_pa = pa.chunked_array([data], type=pa.duration("ms"))
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Duration(time_unit='ns')
+        >>> # returns time in 'ns'
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Duration(time_unit='ms')
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Duration(time_unit='ms')
     """
 
     def __hash__(self) -> int:
