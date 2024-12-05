@@ -575,6 +575,9 @@ class Series(Generic[IntoSeriesT]):
             your original dataframe, so we recommend only calling this
             when you absolutely need to.
 
+        Returns:
+            A list of Python objects.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
