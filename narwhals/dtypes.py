@@ -351,17 +351,14 @@ class Object(DType):
        >>> import polars as pl
        >>> import pyarrow as pa
        >>> import narwhals as nw
-       >>> data = [{"name": "narwhal"}, {"name": "beluga"}, {"name": "orca"}]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
+       >>> class Foo: ...
+       >>> ser_pd = pd.Series([Foo(), Foo()])
+       >>> ser_pl = pl.Series([Foo(), Foo()])
 
        >>> nw.from_native(ser_pd, series_only=True).dtype
        Object
        >>> nw.from_native(ser_pl, series_only=True).dtype
-       Struct({'name': String})
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       Struct({'name': String})
+       Object
     """
 
 
