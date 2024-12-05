@@ -147,7 +147,7 @@ omit = [
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
-  'tests/spark_test.py',
+  'tests/spark_like_test.py',
 ]
 exclude_also = [
   "> POLARS_VERSION",
