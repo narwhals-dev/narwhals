@@ -72,7 +72,7 @@ def parse_exprs_and_named_exprs(
             ):  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
-            return expr._call(df)
+            return col_output_list
         else:
             raise InvalidIntoExprError.from_invalid_type(type(expr))
 
