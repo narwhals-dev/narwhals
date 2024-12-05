@@ -470,7 +470,7 @@ class Enum(DType):
        >>> import polars as pl
        >>> import pyarrow as pa
        >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal"]
+       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
        >>> ser_pl = pl.Series(data, dtype=pl.Enum(data))
 
        >>> nw.from_native(ser_pl, series_only=True).dtype
