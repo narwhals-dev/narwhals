@@ -44,7 +44,7 @@ for example:
 git clone git@github.com:YOUR-USERNAME/narwhals.git
 ```
 
-### 3. Add the `upstream` remote
+### 4. Add the `upstream` remote
 
 ```bash
 git remote add upstream git@github.com:narwhals-dev/narwhals.git
@@ -67,7 +67,7 @@ upstream	https://github.com/narwhals-dev/narwhals.git (push)
 
 where `ghusername` will be your GitHub user name.
 
-### 4. Setting up your environment
+### 5. Setting up your environment
 
 Here's how you can set up your local development environment to contribute.
 
