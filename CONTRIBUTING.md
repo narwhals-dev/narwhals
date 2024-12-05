@@ -51,7 +51,7 @@ cd narwhals-dev
 ```
 
 
-### 4. Add and fetch from the `upstream` remote
+### 4. Add the `upstream` remote and fetch from it
 
 ```bash
 git remote add upstream git@github.com:narwhals-dev/narwhals.git
@@ -110,13 +110,13 @@ This will automatically format and lint your code before each commit, and it wil
    a virtual environment.
 2. Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
 
-### 7. Working on your issue
+### 6. Working on your issue
 
 Create a new git branch from the `main` branch in your local repository.
 Note that your work cannot be merged if the test below fail.
 If you add code that should be tested, please add tests.
 
-### 8. Running tests
+### 7. Running tests
 
 - To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
 - To run tests on the doctests, use `pytest narwhals --doctest-modules`
@@ -138,13 +138,13 @@ Notice that nox will also require to have all the python versions that are defin
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
-### 9. Building docs
+### 8. Building docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
 
-### 10. Pull requests
+### 9. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
 
