@@ -74,8 +74,8 @@ You should see something like this:
 git remote -v                                                          
 origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
 origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
-upstream	https://github.com/narwhals-dev/narwhals.git (fetch)
-upstream	https://github.com/narwhals-dev/narwhals.git (push)
+upstream	git@github.com:narwhals-dev/narwhals.git (fetch)
+upstream	git@github.com:narwhals-dev/narwhals.git (push)
 ```
 
 where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
