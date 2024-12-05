@@ -56,7 +56,7 @@ Check to see the remote has been added:
 git remote -v
 ```
 
-for example:  
+You should see something like this:  
 ```bash
 git remote -v                                                          
 origin	git@github.com:ghusername/narwhals.git (fetch)
