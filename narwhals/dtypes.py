@@ -476,7 +476,19 @@ class Categorical(DType):
 
 
 class Enum(DType):
-    """A fixed categorical encoding of a unique set of strings."""
+    """A fixed categorical encoding of a unique set of strings.
+
+    Polars has an Enum data type, while pandas and PyArrow do not.
+
+    Examples:
+       >>> import polars as pl
+       >>> import narwhals as nw
+       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
+       >>> ser_pl = pl.Series(data, dtype=pl.Enum(data))
+
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Enum
+    """
 
 
 class Field:
