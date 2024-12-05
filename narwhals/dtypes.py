@@ -466,9 +466,7 @@ class Enum(DType):
     Polars has an Enum data type, while pandas and PyArrow do not.
 
     Examples:
-       >>> import pandas as pd
        >>> import polars as pl
-       >>> import pyarrow as pa
        >>> import narwhals as nw
        >>> data = ["beluga", "narwhal", "orca", "vaquita"]
        >>> ser_pl = pl.Series(data, dtype=pl.Enum(data))
