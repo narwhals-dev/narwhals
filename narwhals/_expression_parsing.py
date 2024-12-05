@@ -35,13 +35,21 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import IntoPolarsExpr
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.typing import IntoSparkLikeExpr
 
     CompliantNamespace = Union[
-        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+        PandasLikeNamespace,
+        ArrowNamespace,
+        DaskNamespace,
+        PolarsNamespace,
+        SparkLikeNamespace,
     ]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr, SparkLikeExpr]
     IntoCompliantExpr = Union[
-        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr, IntoSparkLikeExpr
     ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
@@ -50,9 +58,15 @@ if TYPE_CHECKING:
         list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
     ListOfCompliantExpr = Union[
-        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+        list[PandasLikeExpr],
+        list[ArrowExpr],
+        list[DaskExpr],
+        list[PolarsExpr],
+        list[SparkLikeExpr],
     ]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
+    CompliantDataFrame = Union[
+        PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame, SparkLikeLazyFrame
+    ]
 
     T = TypeVar("T")
 
@@ -150,6 +164,14 @@ def parse_into_exprs(
     namespace: PolarsNamespace,
     **named_exprs: IntoPolarsExpr,
 ) -> list[PolarsExpr]: ...
+
+
+@overload
+def parse_into_exprs(
+    *exprs: IntoSparkLikeExpr,
+    namespace: SparkLikeNamespace,
+    **named_exprs: IntoSparkLikeExpr,
+) -> list[SparkLikeExpr]: ...
 
 
 def parse_into_exprs(

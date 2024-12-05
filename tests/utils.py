@@ -33,6 +33,7 @@ NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
 PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
 POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
+PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
 ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
@@ -56,13 +57,29 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
+def _sort_dict_by_key(
+    data_dict: dict[str, list[Any]], key: str
+) -> dict[str, list[Any]]:  # pragma: no cover
+    sort_list = data_dict[key]
+    sorted_indices = sorted(range(len(sort_list)), key=lambda i: sort_list[i])
+    return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
+
+
 def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
+    is_pyspark = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.PYSPARK
+    )
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected, (key, expected)
     result = {key: _to_comparable_list(result[key]) for key in expected}
+    if is_pyspark and expected:  # pragma: no cover
+        sort_key = next(iter(expected.keys()))
+        expected = _sort_dict_by_key(expected, sort_key)
+        result = _sort_dict_by_key(result, sort_key)
     for key, expected_value in expected.items():
         result_value = result[key]
         for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):

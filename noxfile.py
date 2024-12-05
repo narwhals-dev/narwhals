@@ -55,6 +55,8 @@ def min_and_old_versions(session: Session, pandas_version: str) -> None:
         "scikit-learn==1.1.0",
         "tzdata",
     )
+    if pandas_version == "1.1.5":
+        session.install("pyspark==3.3.0")
     run_common(session, coverage_threshold=50)
 
 

@@ -19,6 +19,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -58,6 +59,7 @@ class Implementation(Enum):
     MODIN = auto()
     CUDF = auto()
     PYARROW = auto()
+    PYSPARK = auto()
     POLARS = auto()
     DASK = auto()
 
@@ -80,6 +82,7 @@ class Implementation(Enum):
             get_modin(): Implementation.MODIN,
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
+            get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
         }
@@ -96,6 +99,7 @@ class Implementation(Enum):
             Implementation.MODIN: get_modin(),
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
+            Implementation.PYSPARK: get_pyspark_sql(),
             Implementation.POLARS: get_polars(),
             Implementation.DASK: get_dask_dataframe(),
         }

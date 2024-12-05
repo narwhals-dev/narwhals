@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    import pyspark.sql as pyspark_sql
 
     from narwhals.typing import IntoSeries
 
@@ -91,6 +92,16 @@ def get_dask_expr() -> Any:
 def get_ibis() -> Any:
     """Get ibis module (if already imported - else return None)."""
     return sys.modules.get("ibis", None)
+
+
+def get_pyspark() -> Any:  # pragma: no cover
+    """Get pyspark module (if already imported - else return None)."""
+    return sys.modules.get("pyspark", None)
+
+
+def get_pyspark_sql() -> Any:
+    """Get pyspark.sql module (if already imported - else return None)."""
+    return sys.modules.get("pyspark.sql", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -194,6 +205,14 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
 def is_pyarrow_table(df: Any) -> TypeGuard[pa.Table]:
     """Check whether `df` is a PyArrow Table without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
+
+
+def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
+    """Check whether `df` is a PySpark DataFrame without importing PySpark."""
+    return bool(
+        (pyspark_sql := get_pyspark_sql()) is not None
+        and isinstance(df, pyspark_sql.DataFrame)
+    )
 
 
 def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
