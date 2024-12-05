@@ -44,6 +44,28 @@ for example:
 git clone git@github.com:YOUR-USERNAME/narwhals.git
 ```
 
+### 3. Add the `upstream` remote
+
+```bash
+git remote add upstream git@github.com:narwhals-dev/narwhals.git
+``` 
+
+Check to see the remote has been added: 
+
+```bash
+git remote -v
+```
+
+for example:  
+```bash
+git remote -v                                                          
+origin	git@github.com:ghusername/narwhals.git (fetch)
+origin	git@github.com:ghusername/narwhals.git (push)
+upstream	https://github.com/narwhals-dev/narwhals.git (fetch)
+upstream	https://github.com/narwhals-dev/narwhals.git (push)
+```
+
+where `ghusername` will be your GitHub user name.
 
 ### 4. Setting up your environment
 
