@@ -41,7 +41,20 @@ git clone <url you just copied>
 for example:
 
 ```bash
-git clone git@github.com:YOUR-USERNAME/narwhals.git
+git clone git@github.com:YOUR-GITHUB-USERNAME/narwhals.git
+```
+
+Check to see the remote has been added: 
+
+```bash
+git remote -v
+```
+
+You should see something like this:  
+```bash
+git remote -v                                                          
+origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
+origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
 ```
 
 ### 4. Add the `upstream` remote
@@ -59,15 +72,22 @@ git remote -v
 You should see something like this:  
 ```bash
 git remote -v                                                          
-origin	git@github.com:ghusername/narwhals.git (fetch)
-origin	git@github.com:ghusername/narwhals.git (push)
+origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
+origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
 upstream	https://github.com/narwhals-dev/narwhals.git (fetch)
 upstream	https://github.com/narwhals-dev/narwhals.git (push)
 ```
 
-where `ghusername` will be your GitHub user name.
+where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
-### 5. Setting up your environment
+### 5. Sync the repo
+
+```bash
+git fetch upstream
+``` 
+
+
+### 6. Setting up your environment
 
 Here's how you can set up your local development environment to contribute.
 
