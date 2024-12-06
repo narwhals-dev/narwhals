@@ -706,7 +706,7 @@ class Date(TemporalType):
        >>> import pyarrow as pa
        >>> import narwhals as nw
        >>> from datetime import date, timedelta
-       >>> data = [date(2024, 12, 1) + timedelta(days=1) for d in range(1, 4)]
+       >>> data = [date(2024, 12, 1) + timedelta(days=d) for d in range(4)]
        >>> ser_pd = pd.Series(data, dtype="date32[pyarrow]")
        >>> ser_pl = pl.Series(data)
        >>> ser_pa = pa.chunked_array([data])
