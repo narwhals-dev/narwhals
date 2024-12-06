@@ -12,6 +12,8 @@
         - all
         - any
         - arg_true
+        - arg_min
+        - arg_max
         - cast
         - clip
         - count
