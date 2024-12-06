@@ -437,10 +437,10 @@ class DaskWhen:
 
         plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[call-overload]
         condition = cast("dask_expr.Series", condition)
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[call-overload]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             _df = condition.to_frame("a")
@@ -452,10 +452,9 @@ class DaskWhen:
         if self._otherwise_value is None:
             return [value_series.where(condition)]
         try:
-            otherwise_series = parse_into_expr(
-                self._otherwise_value,
-                namespace=plx,
-            )._call(df)[0]  # type: ignore[arg-type]
+            otherwise_series = parse_into_expr(  # type: ignore[call-overload]
+                self._otherwise_value, namespace=plx
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]

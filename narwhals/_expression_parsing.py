@@ -176,13 +176,29 @@ def parse_into_exprs(
 
     See `parse_into_expr` for more details.
     """
-    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
-        parse_into_expr(expr, namespace=namespace).alias(name)
+    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [  # type: ignore[call-overload]
+        parse_into_expr(expr, namespace=namespace).alias(name)  # type: ignore[call-overload]
         for name, expr in named_exprs.items()
     ]
 
 
+@overload
+def parse_into_expr(into_expr: IntoArrowExpr, namespace: ArrowNamespace) -> ArrowExpr: ...
+@overload
 def parse_into_expr(
+    into_expr: IntoPandasLikeExpr, namespace: PandasLikeNamespace
+) -> PandasLikeExpr: ...
+@overload
+def parse_into_expr(
+    into_expr: IntoPolarsExpr, namespace: PolarsNamespace
+) -> PolarsExpr: ...
+@overload
+def parse_into_expr(
+    into_expr: IntoSparkLikeExpr, namespace: SparkLikeNamespace
+) -> SparkLikeExpr: ...
+
+
+def parse_into_expr(  # type: ignore[misc]
     into_expr: IntoCompliantExpr,
     *,
     namespace: CompliantNamespace,

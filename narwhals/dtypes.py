@@ -363,7 +363,17 @@ class Object(DType):
 
 
 class Unknown(DType):
-    """Type representing DataType values that could not be determined statically."""
+    """Type representing DataType values that could not be determined statically.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import narwhals as nw
+       >>> data = pd.period_range("2000-01", periods=4, freq="M")
+       >>> ser_pd = pd.Series(data)
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Unknown
+    """
 
 
 class Datetime(TemporalType):

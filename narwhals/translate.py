@@ -38,6 +38,10 @@ from narwhals.dependencies import is_pyspark_dataframe
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -749,7 +753,18 @@ def _from_native_impl(  # noqa: PLR0915
     return native_object
 
 
-def get_native_namespace(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any:
+def get_native_namespace(
+    obj: DataFrame[Any]
+    | LazyFrame[Any]
+    | Series[Any]
+    | pd.DataFrame
+    | pd.Series
+    | pl.DataFrame
+    | pl.LazyFrame
+    | pl.Series
+    | pa.Table
+    | pa.ChunkedArray,
+) -> Any:
     """Get native namespace from object.
 
     Arguments:
@@ -769,7 +784,22 @@ def get_native_namespace(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> 
         >>> nw.get_native_namespace(df)
         <module 'polars'...>
     """
-    return obj.__native_namespace__()
+    if hasattr(obj, "__native_namespace__"):
+        return obj.__native_namespace__()
+    if is_pandas_dataframe(obj) or is_pandas_series(obj):
+        return get_pandas()
+    if is_modin_dataframe(obj) or is_modin_series(obj):  # pragma: no cover
+        return get_modin()
+    if is_pyarrow_table(obj) or is_pyarrow_chunked_array(obj):
+        return get_pyarrow()
+    if is_cudf_dataframe(obj) or is_cudf_series(obj):  # pragma: no cover
+        return get_cudf()
+    if is_dask_dataframe(obj):  # pragma: no cover
+        return get_dask()
+    if is_polars_dataframe(obj) or is_polars_lazyframe(obj) or is_polars_series(obj):
+        return get_polars()
+    msg = f"Could not get native namespace from object of type: {type(obj)}"
+    raise TypeError(msg)
 
 
 def narwhalify(
