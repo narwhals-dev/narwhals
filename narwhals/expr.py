@@ -26,21 +26,21 @@ def extract_compliant(expr: Expr, other: Any) -> Any:
     from narwhals.series import Series
 
     if isinstance(other, Expr):
-        return other._call(expr)
+        return other._to_compliant_expr(expr)
     if isinstance(other, Series):
         return other._compliant_series
     return other
 
 
 class Expr:
-    def __init__(self, call: Callable[[Any], Any]) -> None:
-        # callable from namespace to expr
-        self._call = call
+    def __init__(self, to_compliant_expr: Callable[[Any], Any]) -> None:
+        # callable from CompliantNamespace to CompliantExpr
+        self._to_compliant_expr = to_compliant_expr
 
     def _taxicab_norm(self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
-        return self.__class__(lambda plx: self._call(plx).abs().sum())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).abs().sum())
 
     # --- convert ---
     def alias(self, name: str) -> Self:
@@ -91,7 +91,7 @@ class Expr:
             c: [[14,15]]
 
         """
-        return self.__class__(lambda plx: self._call(plx).alias(name))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).alias(name))
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
@@ -205,133 +205,167 @@ class Expr:
         """
         _validate_dtype(dtype)
         return self.__class__(
-            lambda plx: self._call(plx).cast(dtype),
+            lambda plx: self._to_compliant_expr(plx).cast(dtype),
         )
 
     # --- binary ---
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._call(plx).__eq__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__eq__(extract_compliant(plx, other))
         )
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._call(plx).__ne__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__ne__(extract_compliant(plx, other))
         )
 
     def __and__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__and__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__and__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rand__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rand__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rand__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __or__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__or__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__or__(extract_compliant(plx, other))
         )
 
     def __ror__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__ror__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__ror__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __add__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__add__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__add__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __radd__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__radd__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__radd__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __sub__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__sub__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__sub__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rsub__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rsub__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rsub__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __truediv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__truediv__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__truediv__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rtruediv__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rtruediv__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __mul__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__mul__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__mul__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rmul__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rmul__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rmul__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __le__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__le__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__le__(extract_compliant(plx, other))
         )
 
     def __lt__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__lt__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__lt__(extract_compliant(plx, other))
         )
 
     def __gt__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__gt__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__gt__(extract_compliant(plx, other))
         )
 
     def __ge__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__ge__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__ge__(extract_compliant(plx, other))
         )
 
     def __pow__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__pow__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__pow__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rpow__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rpow__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rpow__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __floordiv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__floordiv__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__floordiv__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rfloordiv__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rfloordiv__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __mod__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__mod__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__mod__(
+                extract_compliant(plx, other)
+            )
         )
 
     def __rmod__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rmod__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__rmod__(
+                extract_compliant(plx, other)
+            )
         )
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self.__class__(lambda plx: self._call(plx).__invert__())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).__invert__())
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -377,7 +411,7 @@ class Expr:
             a: [[true]]
             b: [[true]]
         """
-        return self.__class__(lambda plx: self._call(plx).any())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).any())
 
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
@@ -423,7 +457,7 @@ class Expr:
             a: [[false]]
             b: [[true]]
         """
-        return self.__class__(lambda plx: self._call(plx).all())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).all())
 
     def ewm_mean(
         self: Self,
@@ -515,7 +549,7 @@ class Expr:
             └──────────┘
         """
         return self.__class__(
-            lambda plx: self._call(plx).ewm_mean(
+            lambda plx: self._to_compliant_expr(plx).ewm_mean(
                 com=com,
                 span=span,
                 half_life=half_life,
@@ -570,7 +604,7 @@ class Expr:
             a: [[0]]
             b: [[4]]
         """
-        return self.__class__(lambda plx: self._call(plx).mean())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).mean())
 
     def median(self) -> Self:
         """Get median value.
@@ -619,7 +653,7 @@ class Expr:
             a: [[3]]
             b: [[4]]
         """
-        return self.__class__(lambda plx: self._call(plx).median())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).median())
 
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
@@ -670,7 +704,7 @@ class Expr:
             b: [[1.2657891697365016]]
 
         """
-        return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).std(ddof=ddof))
 
     def map_batches(
         self,
@@ -740,7 +774,7 @@ class Expr:
             b: [[5,6,7]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).map_batches(
+            lambda plx: self._to_compliant_expr(plx).map_batches(
                 function=function, return_dtype=return_dtype
             )
         )
@@ -788,7 +822,7 @@ class Expr:
             a: [[0]]
             b: [[1.4724267269058975]]
         """
-        return self.__class__(lambda plx: self._call(plx).skew())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).skew())
 
     def sum(self) -> Expr:
         """Return the sum value.
@@ -834,7 +868,7 @@ class Expr:
             a: [[15]]
             b: [[150]]
         """
-        return self.__class__(lambda plx: self._call(plx).sum())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).sum())
 
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
@@ -880,7 +914,7 @@ class Expr:
             a: [[1]]
             b: [[3]]
         """
-        return self.__class__(lambda plx: self._call(plx).min())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).min())
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
@@ -926,7 +960,7 @@ class Expr:
             a: [[20]]
             b: [[100]]
         """
-        return self.__class__(lambda plx: self._call(plx).max())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).max())
 
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
@@ -972,7 +1006,7 @@ class Expr:
             a: [[3]]
             b: [[2]]
         """
-        return self.__class__(lambda plx: self._call(plx).count())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).count())
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
@@ -1018,7 +1052,7 @@ class Expr:
             a: [[5]]
             b: [[3]]
         """
-        return self.__class__(lambda plx: self._call(plx).n_unique())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).n_unique())
 
     def unique(self, *, maintain_order: bool = False) -> Self:
         """Return unique values of this expression.
@@ -1074,7 +1108,7 @@ class Expr:
             b: [[2,4,6]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).unique(maintain_order=maintain_order)
+            lambda plx: self._to_compliant_expr(plx).unique(maintain_order=maintain_order)
         )
 
     def abs(self) -> Self:
@@ -1124,7 +1158,7 @@ class Expr:
             a: [[1,2]]
             b: [[3,4]]
         """
-        return self.__class__(lambda plx: self._call(plx).abs())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -1181,7 +1215,9 @@ class Expr:
             a: [[1,2,5,10,15]]
             b: [[2,6,10,16,22]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_sum(reverse=reverse))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse)
+        )
 
     def diff(self) -> Self:
         """Returns the difference between each element and the previous one.
@@ -1242,7 +1278,7 @@ class Expr:
             ----
             a_diff: [[null,0,2,2,0]]
         """
-        return self.__class__(lambda plx: self._call(plx).diff())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).diff())
 
     def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
@@ -1306,7 +1342,7 @@ class Expr:
             ----
             a_shift: [[null,1,1,3,5]]
         """
-        return self.__class__(lambda plx: self._call(plx).shift(n))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).shift(n))
 
     def replace_strict(
         self,
@@ -1390,7 +1426,7 @@ class Expr:
             old = list(old.keys())
 
         return self.__class__(
-            lambda plx: self._call(plx).replace_strict(
+            lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             )
         )
@@ -1477,7 +1513,9 @@ class Expr:
             a: [[null,5,2,1]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).sort(descending=descending, nulls_last=nulls_last)
+            lambda plx: self._to_compliant_expr(plx).sort(
+                descending=descending, nulls_last=nulls_last
+            )
         )
 
     # --- transform ---
@@ -1539,7 +1577,9 @@ class Expr:
             a: [[false,false,true,true,false]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
+            lambda plx: self._to_compliant_expr(plx).is_between(
+                lower_bound, upper_bound, closed
+            )
         )
 
     def is_in(self, other: Any) -> Self:
@@ -1597,7 +1637,7 @@ class Expr:
             b: [[true,true,false,false]]
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self.__class__(lambda plx: self._call(plx).is_in(other))
+            return self.__class__(lambda plx: self._to_compliant_expr(plx).is_in(other))
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             raise NotImplementedError(msg)
@@ -1657,7 +1697,7 @@ class Expr:
             b: [[10,11,12]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).filter(
+            lambda plx: self._to_compliant_expr(plx).filter(
                 *[extract_compliant(plx, pred) for pred in flatten(predicates)],
             )
         )
@@ -1732,7 +1772,7 @@ class Expr:
             a_is_null: [[false,false,true,false,false]]
             b_is_null: [[false,false,false,false,false]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_null())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
@@ -1779,7 +1819,7 @@ class Expr:
             ----
             a: [[1,2]]
         """
-        return self.__class__(lambda plx: self._call(plx).arg_true())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_true())
 
     def fill_null(
         self,
@@ -1922,7 +1962,7 @@ class Expr:
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
         return self.__class__(
-            lambda plx: self._call(plx).fill_null(
+            lambda plx: self._to_compliant_expr(plx).fill_null(
                 value=value, strategy=strategy, limit=limit
             )
         )
@@ -1982,7 +2022,7 @@ class Expr:
             ----
             a: [[2,4,nan,3,5]]
         """
-        return self.__class__(lambda plx: self._call(plx).drop_nulls())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).drop_nulls())
 
     def sample(
         self: Self,
@@ -2047,7 +2087,7 @@ class Expr:
             a: [[1,3,3]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).sample(
+            lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
@@ -2110,7 +2150,9 @@ class Expr:
             b: [[1,1,2]]
             a_min_per_group: [[1,1,3]]
         """
-        return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).over(flatten(keys))
+        )
 
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
@@ -2163,7 +2205,7 @@ class Expr:
             a: [[true,false,false,true]]
             b: [[true,true,false,false]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_duplicated())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_duplicated())
 
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
@@ -2216,7 +2258,7 @@ class Expr:
             a: [[false,true,true,false]]
             b: [[false,false,true,true]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_unique())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_unique())
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -2267,7 +2309,7 @@ class Expr:
             a: [[1]]
             b: [[2]]
         """
-        return self.__class__(lambda plx: self._call(plx).null_count())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).null_count())
 
     def is_first_distinct(self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
@@ -2320,7 +2362,9 @@ class Expr:
             a: [[true,true,true,false]]
             b: [[true,false,true,true]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_first_distinct())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_first_distinct()
+        )
 
     def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
@@ -2373,7 +2417,7 @@ class Expr:
             a: [[false,true,true,true]]
             b: [[false,true,true,true]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_last_distinct())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_last_distinct())
 
     def quantile(
         self,
@@ -2439,7 +2483,7 @@ class Expr:
             b: [[74.5]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).quantile(quantile, interpolation)
+            lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation)
         )
 
     def head(self, n: int = 10) -> Self:
@@ -2492,7 +2536,7 @@ class Expr:
             ----
             a: [[0,1,2]]
         """
-        return self.__class__(lambda plx: self._call(plx).head(n))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
@@ -2544,7 +2588,7 @@ class Expr:
             ----
             a: [[7,8,9]]
         """
-        return self.__class__(lambda plx: self._call(plx).tail(n))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
@@ -2605,7 +2649,7 @@ class Expr:
             ----
             a: [[1.1,2.6,3.9]]
         """
-        return self.__class__(lambda plx: self._call(plx).round(decimals))
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).round(decimals))
 
     def len(self) -> Self:
         r"""Return the number of elements in the column.
@@ -2657,7 +2701,7 @@ class Expr:
             a1: [[2]]
             a2: [[1]]
         """
-        return self.__class__(lambda plx: self._call(plx).len())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).len())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -2710,7 +2754,7 @@ class Expr:
             a: [[2,4]]
         """
         return self.__class__(
-            lambda plx: self._call(plx).gather_every(n=n, offset=offset)
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
     # need to allow numeric typing
@@ -2844,7 +2888,9 @@ class Expr:
             ----
             s: [[-1,1,-1,3,-1,3]]
         """
-        return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).clip(lower_bound, upper_bound)
+        )
 
     def mode(self: Self) -> Self:
         r"""Compute the most occurring value(s).
@@ -2897,7 +2943,7 @@ class Expr:
             ----
             a: [[1]]
         """
-        return self.__class__(lambda plx: self._call(plx).mode())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).mode())
 
     def is_finite(self: Self) -> Self:
         """Returns boolean values indicating which original values are finite.
@@ -2951,7 +2997,7 @@ class Expr:
             ----
             a: [[false,false,true,null]]
         """
-        return self.__class__(lambda plx: self._call(plx).is_finite())
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_finite())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
@@ -3011,7 +3057,9 @@ class Expr:
             cum_count: [[1,2,2,3]]
             cum_count_reverse: [[3,2,1,1]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_count(reverse=reverse))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse)
+        )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the column.
@@ -3071,7 +3119,9 @@ class Expr:
             cum_min: [[3,1,null,1]]
             cum_min_reverse: [[1,1,null,2]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_min(reverse=reverse))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse)
+        )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the column.
@@ -3131,7 +3181,9 @@ class Expr:
             cum_max: [[1,3,null,3]]
             cum_max_reverse: [[3,3,null,2]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_max(reverse=reverse))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse)
+        )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the column.
@@ -3191,7 +3243,9 @@ class Expr:
             cum_prod: [[1,3,null,6]]
             cum_prod_reverse: [[6,6,null,2]]
         """
-        return self.__class__(lambda plx: self._call(plx).cum_prod(reverse=reverse))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse)
+        )
 
     def rolling_sum(
         self: Self,
@@ -3278,7 +3332,7 @@ class Expr:
         )
 
         return self.__class__(
-            lambda plx: self._call(plx).rolling_sum(
+            lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
@@ -3370,7 +3424,7 @@ class Expr:
         )
 
         return self.__class__(
-            lambda plx: self._call(plx).rolling_mean(
+            lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
@@ -3443,7 +3497,7 @@ class ExprCatNamespace(Generic[ExprT]):
             └────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).cat.get_categories()
+            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
         )
 
 
@@ -3498,7 +3552,9 @@ class ExprStringNamespace(Generic[ExprT]):
             │ null  ┆ null      │
             └───────┴───────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.len_chars())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -3549,7 +3605,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────┴──────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.replace(
+            lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
             )
         )
@@ -3602,7 +3658,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────┴──────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.replace_all(
+            lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
             )
         )
@@ -3642,7 +3698,7 @@ class ExprStringNamespace(Generic[ExprT]):
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.strip_chars(characters)
+            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
         )
 
     def starts_with(self: Self, prefix: str) -> ExprT:
@@ -3692,7 +3748,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────┴────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.starts_with(prefix)
+            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
         )
 
     def ends_with(self: Self, suffix: str) -> ExprT:
@@ -3742,7 +3798,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────┴────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.ends_with(suffix)
+            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
         )
 
     def contains(self: Self, pattern: str, *, literal: bool = False) -> ExprT:
@@ -3801,7 +3857,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
+            lambda plx: self._expr._to_compliant_expr(plx).str.contains(
+                pattern, literal=literal
+            )
         )
 
     def slice(self: Self, offset: int, length: int | None = None) -> ExprT:
@@ -3881,7 +3939,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └─────────────┴──────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.slice(offset=offset, length=length)
+            lambda plx: self._expr._to_compliant_expr(plx).str.slice(
+                offset=offset, length=length
+            )
         )
 
     def head(self: Self, n: int = 5) -> ExprT:
@@ -3935,7 +3995,9 @@ class ExprStringNamespace(Generic[ExprT]):
             │ zukkyun   ┆ zukky       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
+        )
 
     def tail(self: Self, n: int = 5) -> ExprT:
         r"""Take the last n elements of each string.
@@ -3989,7 +4051,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └───────────┴─────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.slice(offset=-n, length=None)
+            lambda plx: self._expr._to_compliant_expr(plx).str.slice(
+                offset=-n, length=None
+            )
         )
 
     def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
@@ -4054,7 +4118,7 @@ class ExprStringNamespace(Generic[ExprT]):
             a: [[2020-01-01 00:00:00.000000,2020-01-02 00:00:00.000000]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).str.to_datetime(format=format)
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
         )
 
     def to_uppercase(self: Self) -> ExprT:
@@ -4106,7 +4170,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────┴───────────┘
 
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
+        )
 
     def to_lowercase(self: Self) -> ExprT:
         r"""Transform string to lowercase variant.
@@ -4151,7 +4217,9 @@ class ExprStringNamespace(Generic[ExprT]):
             │ null   ┆ null      │
             └────────┴───────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
+        )
 
 
 class ExprDateTimeNamespace(Generic[ExprT]):
@@ -4201,7 +4269,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2023-03-10 │
             └────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.date()
+        )
 
     def year(self: Self) -> ExprT:
         """Extract year from underlying DateTime representation.
@@ -4254,7 +4324,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 00:00:00 ┆ 2065 │
             └─────────────────────┴──────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.year()
+        )
 
     def month(self: Self) -> ExprT:
         """Extract month from underlying DateTime representation.
@@ -4308,7 +4380,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     │
             └─────────────────────┴──────┴───────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.month()
+        )
 
     def day(self: Self) -> ExprT:
         """Extract day from underlying DateTime representation.
@@ -4363,7 +4437,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     ┆ 1   │
             └─────────────────────┴──────┴───────┴─────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.day()
+        )
 
     def hour(self: Self) -> ExprT:
         """Extract hour from underlying DateTime representation.
@@ -4416,7 +4492,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:00:00 ┆ 10   │
             └─────────────────────┴──────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.hour()
+        )
 
     def minute(self: Self) -> ExprT:
         """Extract minutes from underlying DateTime representation.
@@ -4470,7 +4548,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:20:00 ┆ 10   ┆ 20     │
             └─────────────────────┴──────┴────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.minute()
+        )
 
     def second(self: Self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
@@ -4523,7 +4603,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:20:30 ┆ 10   ┆ 20     ┆ 30     │
             └─────────────────────┴──────┴────────┴────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.second()
+        )
 
     def millisecond(self: Self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
@@ -4577,7 +4659,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67          │
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond()
+        )
 
     def microsecond(self: Self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
@@ -4631,7 +4715,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67000       │
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond()
+        )
 
     def nanosecond(self: Self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
@@ -4685,7 +4771,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2065-01-01 10:20:30.060 ┆ 10   ┆ 20     ┆ 30     ┆ 60000000   │
             └─────────────────────────┴──────┴────────┴────────┴────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond()
+        )
 
     def ordinal_day(self: Self) -> ExprT:
         """Get ordinal day.
@@ -4728,7 +4816,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2020-08-03 00:00:00 ┆ 216           │
             └─────────────────────┴───────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
+        )
 
     def total_minutes(self: Self) -> ExprT:
         """Get total minutes.
@@ -4776,7 +4866,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20m 40s      ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes()
+        )
 
     def total_seconds(self: Self) -> ExprT:
         """Get total seconds.
@@ -4824,7 +4916,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20s 40ms     ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds()
+        )
 
     def total_milliseconds(self: Self) -> ExprT:
         """Get total milliseconds.
@@ -4878,7 +4972,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └──────────────┴──────────────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.total_milliseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds()
         )
 
     def total_microseconds(self: Self) -> ExprT:
@@ -4933,7 +5027,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └──────────────┴──────────────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.total_microseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds()
         )
 
     def total_nanoseconds(self: Self) -> ExprT:
@@ -4985,7 +5079,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └───────────────────────────────┴──────────────────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.total_nanoseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds()
         )
 
     def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
@@ -5071,7 +5165,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └─────────────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.to_string(format)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format)
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
@@ -5131,7 +5225,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[2023-12-31 18:15:00.000000Z,2024-01-01 18:15:00.000000Z]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(time_zone)
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ExprT:
@@ -5197,7 +5291,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(time_zone)
         )
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
@@ -5266,7 +5360,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             )
             raise ValueError(msg)
         return self._expr.__class__(
-            lambda plx: self._expr._call(plx).dt.timestamp(time_unit)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit)
         )
 
 
@@ -5309,7 +5403,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> my_library_agnostic_function(df_pl).columns
             ['foo']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.keep()
+        )
 
     def map(self: Self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
@@ -5348,7 +5444,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> my_library_agnostic_function(df_pl).columns
             ['oof', 'RAB']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
+        )
 
     def prefix(self: Self, prefix: str) -> ExprT:
         r"""Add a prefix to the root column name of the expression.
@@ -5387,7 +5485,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> add_colname_prefix(df_pl, "with_prefix_").columns
             ['with_prefix_foo', 'with_prefix_BAR']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
+        )
 
     def suffix(self: Self, suffix: str) -> ExprT:
         r"""Add a suffix to the root column name of the expression.
@@ -5425,7 +5525,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> add_colname_suffix(df_pl, "_with_suffix").columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
+        )
 
     def to_lowercase(self: Self) -> ExprT:
         r"""Make the root column name lowercase.
@@ -5460,7 +5562,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> to_lower(df_pl).columns
             ['foo', 'bar']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
+        )
 
     def to_uppercase(self: Self) -> ExprT:
         r"""Make the root column name uppercase.
@@ -5494,7 +5598,9 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> to_upper(df_pl).columns
             ['FOO', 'BAR']
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_uppercase())
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
+        )
 
 
 def col(*names: str | Iterable[str]) -> Expr:
@@ -6179,11 +6285,12 @@ class When:
 
 
 class Then(Expr):
-    def __init__(self, call: Callable[[Any], Any]) -> None:
-        self._call = call
-
     def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
+        return Expr(
+            lambda plx: self._to_compliant_expr(plx).otherwise(
+                extract_compliant(plx, value)
+            )
+        )
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:

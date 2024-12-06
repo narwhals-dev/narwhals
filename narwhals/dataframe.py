@@ -73,7 +73,7 @@ class BaseFrame(Generic[FrameT]):
         if isinstance(arg, Series):
             return arg._compliant_series
         if isinstance(arg, Expr):
-            return arg._call(self.__narwhals_namespace__())
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"

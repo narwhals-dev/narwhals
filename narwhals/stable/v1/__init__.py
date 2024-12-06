@@ -1180,7 +1180,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._call)
+        return Expr(obj._to_compliant_expr)
     return obj
 
 
@@ -2973,7 +2973,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._call)
+        return cls(then._to_compliant_expr)
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))

@@ -77,13 +77,13 @@ pn = PandasLikeNamespace(
     backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
-print(nw.col("a")._call(pn))
+print(nw.col("a")._to_compliant_expr(pn))
 ```
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
 a `narwhals._pandas_like.expr.PandasLikeExpr` object, which we'll call `PandasLikeExpr` for
 short.
 
-`PandasLikeExpr` also has a `_call` method - but this one expects a `PandasLikeDataFrame` as input.
+`PandasLikeExpr` has a `_call` method which expects a `PandasLikeDataFrame` as input.
 Recall from above that an expression is a function from a dataframe to a sequence of series.
 The `_call` method gives us that function! Let's see it in action.
 
@@ -179,7 +179,7 @@ The way you access the Narwhals-compliant wrapper depends on the object:
 
 - `narwhals.DataFrame` and `narwhals.LazyFrame`: use the `._compliant_frame` attribute.
 - `narwhals.Series`: use the `._compliant_series` attribute.
-- `narwhals.Expr`: call the `._call` method, and pass to it the Narwhals-compliant namespace associated with
+- `narwhals.Expr`: call the `._to_compliant_expr` method, and pass to it the Narwhals-compliant namespace associated with
   the given backend.
 
 🛑 BUT WAIT! What's a Narwhals-compliant namespace?
@@ -208,7 +208,7 @@ df.select(nw.col("a") + 1)
 ```
 
 The first thing `narwhals.DataFrame.select` does is to parse each input expression to end up with a compliant expression for the given
-backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._call`:
+backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._to_compliant_expr`:
 
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
 pn = PandasLikeNamespace(
@@ -216,7 +216,7 @@ pn = PandasLikeNamespace(
     backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
-expr = (nw.col("a") + 1)._call(pn)
+expr = (nw.col("a") + 1)._to_compliant_expr(pn)
 print(expr)
 ```
 If we then extract a Narwhals-compliant dataframe from `df` by
