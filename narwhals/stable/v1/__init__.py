@@ -1180,7 +1180,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._call)
+        return Expr(obj._to_compliant_expr)
     return obj
 
 
