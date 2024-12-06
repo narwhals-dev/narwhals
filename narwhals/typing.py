@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
+    from typing_extensions import Self
+
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -34,6 +36,23 @@ if TYPE_CHECKING:
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
+class CompliantSeries(Protocol):
+    @property
+    def name(self) -> str: ...
+    def __narwhals_series__(self) -> CompliantSeries: ...
+    def alias(self, name: str) -> Self: ...
+
+
+class CompliantDataFrame(Protocol):
+    def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
+    def __narwhals_namespace__(self) -> Any: ...
+
+
+class CompliantLazyFrame(Protocol):
+    def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
+    def __narwhals_namespace__(self) -> Any: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -201,6 +220,9 @@ class DTypes:
 
 
 __all__ = [
+    "CompliantDataFrame",
+    "CompliantLazyFrame",
+    "CompliantSeries",
     "DataFrameT",
     "Frame",
     "FrameT",
