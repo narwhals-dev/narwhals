@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
-from typing import cast
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -486,12 +485,12 @@ class PandasWhen:
             version=self._version,
         )
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
+            value_series = condition.__class__._from_iterable(
                 [self._then_value] * len(condition),
                 name="literal",
                 index=condition._native_series.index,
@@ -499,8 +498,6 @@ class PandasWhen:
                 backend_version=self._backend_version,
                 version=self._version,
             )
-        value_series = cast(PandasLikeSeries, value_series)
-
         value_series_native, condition_native = broadcast_align_and_extract_native(
             value_series, condition
         )
@@ -514,7 +511,7 @@ class PandasWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]  # type: ignore[arg-type]
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
