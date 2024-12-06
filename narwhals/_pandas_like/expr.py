@@ -545,6 +545,10 @@ class PandasLikeExpr:
     def name(self: Self) -> PandasLikeExprNameNamespace:
         return PandasLikeExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> PandasLikeExprListNamespace:
+        return PandasLikeExprListNamespace(self)
+
 
 class PandasLikeExprCatNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
@@ -887,4 +891,16 @@ class PandasLikeExprNameNamespace:
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
             version=self._expr._version,
+        )
+
+
+class PandasLikeExprListNamespace:
+    def __init__(self, expr: PandasLikeExpr) -> None:
+        self._expr = expr
+
+    def len(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "list",
+            "len",
         )

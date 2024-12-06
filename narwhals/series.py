@@ -3342,6 +3342,10 @@ class Series(Generic[IntoSeriesT]):
     def cat(self: Self) -> SeriesCatNamespace[Self]:
         return SeriesCatNamespace(self)
 
+    @property
+    def list(self: Self) -> SeriesListNamespace[Self]:
+        return SeriesListNamespace(self)
+
 
 SeriesT = TypeVar("SeriesT", bound=Series[Any])
 
@@ -4933,4 +4937,24 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             raise ValueError(msg)
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
+
+
+class SeriesListNamespace(Generic[SeriesT]):
+    def __init__(self: Self, series: SeriesT) -> None:
+        self._narwhals_series = series
+
+    def len(self: Self) -> SeriesT:
+        """Return the number of elements in each list.
+
+        Null values count towards the total.
+
+        Returns:
+            A new series.
+
+        Examples:
+            TODO
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.list.len()
         )

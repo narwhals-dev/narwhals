@@ -3447,6 +3447,10 @@ class Expr:
     def name(self: Self) -> ExprNameNamespace[Self]:
         return ExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> ExprListNamespace[Self]:
+        return ExprListNamespace(self)
+
 
 ExprT = TypeVar("ExprT", bound=Expr)
 
@@ -5600,6 +5604,26 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
+        )
+
+
+class ExprListNamespace(Generic[ExprT]):
+    def __init__(self: Self, expr: ExprT) -> None:
+        self._expr = expr
+
+    def len(self: Self) -> ExprT:
+        """Return the number of elements in each list.
+
+        Null values count towards the total.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            TODO
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).list.len()
         )
 
 

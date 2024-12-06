@@ -181,6 +181,10 @@ class PolarsExpr:
     def name(self: Self) -> PolarsExprNameNamespace:
         return PolarsExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> PolarsExprListNamespace:
+        return PolarsExprListNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
@@ -233,6 +237,20 @@ class PolarsExprNameNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.name, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsExprListNamespace:
+    def __init__(self: Self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.list, attr)(*args, **kwargs)
             )
 
         return func

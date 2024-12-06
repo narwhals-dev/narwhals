@@ -864,6 +864,10 @@ class PandasLikeSeries:
     def cat(self) -> PandasLikeSeriesCatNamespace:
         return PandasLikeSeriesCatNamespace(self)
 
+    @property
+    def list(self) -> PandasLikeSeriesListNamespace:
+        return PandasLikeSeriesListNamespace(self)
+
 
 class PandasLikeSeriesCatNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
@@ -1156,3 +1160,12 @@ class PandasLikeSeriesDateTimeNamespace:
             raise TypeError(msg)
         result[mask_na] = None
         return self._compliant_series._from_native_series(result)
+
+
+class PandasLikeSeriesListNamespace:
+    def __init__(self, series: PandasLikeSeries) -> None:
+        self._compliant_series = series
+
+    def len(self: Self) -> PandasLikeSeries:
+        s = self._compliant_series._native_series
+        return self._compliant_series._from_native_series(s.__class__(s.str.len()))
