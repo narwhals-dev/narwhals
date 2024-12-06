@@ -55,6 +55,14 @@ class CompliantLazyFrame(Protocol):
     def __narwhals_namespace__(self) -> Any: ...
 
 
+class CompliantExpr(Protocol):
+    def __narwhals_expr__(self) -> None: ...
+
+
+class CompliantNamespace(Protocol):
+    def col(self, *column_names: str) -> CompliantExpr: ...
+
+
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
 

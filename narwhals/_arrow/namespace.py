@@ -18,6 +18,7 @@ from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
+from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowNamespace:
+class ArrowNamespace(CompliantNamespace):
     def _create_expr_from_callable(
         self: Self,
         func: Callable[[ArrowDataFrame], list[ArrowSeries]],

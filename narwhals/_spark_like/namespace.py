@@ -12,6 +12,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import get_column_name
+from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace:
+class SparkLikeNamespace(CompliantNamespace):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version

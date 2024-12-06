@@ -10,6 +10,7 @@ from typing import overload
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class PolarsNamespace:
+class PolarsNamespace(CompliantNamespace):
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
@@ -56,6 +57,17 @@ class PolarsNamespace:
             raise AttributeError(msg)
         return PolarsExpr(
             pl.nth(*indices), version=self._version, backend_version=self._backend_version
+        )
+
+    def col(self: Self, *column_names: str) -> PolarsExpr:
+        import polars as pl  # ignore-banned-import()
+
+        from narwhals._polars.expr import PolarsExpr
+
+        return PolarsExpr(
+            pl.col(*column_names),
+            version=self._version,
+            backend_version=self._backend_version,
         )
 
     def len(self: Self) -> PolarsExpr:

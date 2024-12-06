@@ -36,14 +36,9 @@ if TYPE_CHECKING:
     from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
 
-    CompliantNamespace = Union[
-        PandasLikeNamespace,
-        ArrowNamespace,
-        PolarsNamespace,
-        SparkLikeNamespace,
-    ]
     CompliantExpr = Union[PandasLikeExpr, ArrowExpr, PolarsExpr, SparkLikeExpr]
     IntoCompliantExpr = Union[
         IntoPandasLikeExpr, IntoArrowExpr, IntoPolarsExpr, IntoSparkLikeExpr
@@ -206,12 +201,12 @@ def parse_into_expr(
     if hasattr(into_expr, "__narwhals_expr__"):
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
-        return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
+        return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
     if isinstance(into_expr, str):
-        return namespace.col(into_expr)
+        return namespace.col(into_expr)  # type: ignore[return-value]
     if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
+        series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
+        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 

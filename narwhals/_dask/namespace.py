@@ -19,6 +19,7 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
+from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
     import dask_expr
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskNamespace:
+class DaskNamespace(CompliantNamespace):
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
@@ -453,7 +454,7 @@ class DaskWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value,
-                namespace=plx,  # type: ignore[arg-type]
+                namespace=plx,
             )._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
