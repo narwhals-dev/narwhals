@@ -6285,11 +6285,12 @@ class When:
 
 
 class Then(Expr):
-    def __init__(self, call: Callable[[Any], Any]) -> None:
-        self._call = call
-
     def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
+        return Expr(
+            lambda plx: self._to_compliant_expr(plx).otherwise(
+                extract_compliant(plx, value)
+            )
+        )
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
