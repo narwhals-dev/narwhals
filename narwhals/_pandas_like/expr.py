@@ -565,7 +565,9 @@ class PandasLikeExprStringNamespace:
     def len_chars(
         self,
     ) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "str", "len_chars")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "str", "len_chars"
+        )
 
     def replace(
         self,
@@ -677,22 +679,34 @@ class PandasLikeExprDateTimeNamespace:
         return reuse_series_namespace_implementation(self._compliant_expr, "dt", "second")
 
     def millisecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "millisecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "millisecond"
+        )
 
     def microsecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "microsecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "microsecond"
+        )
 
     def nanosecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "nanosecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "nanosecond"
+        )
 
     def ordinal_day(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "ordinal_day")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "ordinal_day"
+        )
 
     def total_minutes(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "total_minutes")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_minutes"
+        )
 
     def total_seconds(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "total_seconds")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_seconds"
+        )
 
     def total_milliseconds(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
