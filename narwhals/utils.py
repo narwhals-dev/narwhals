@@ -167,7 +167,7 @@ class Implementation(Enum):
             >>> df.implementation.is_cudf()
             False
         """
-        return self is Implementation.CUDF
+        return self is Implementation.CUDF  # pragma: no cover
 
     def is_modin(self) -> bool:
         """Return whether implementation is Modin.
@@ -183,7 +183,7 @@ class Implementation(Enum):
             >>> df.implementation.is_modin()
             False
         """
-        return self is Implementation.MODIN
+        return self is Implementation.MODIN  # pragma: no cover
 
     def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
@@ -199,7 +199,7 @@ class Implementation(Enum):
             >>> df.implementation.is_pyspark()
             False
         """
-        return self is Implementation.PYSPARK
+        return self is Implementation.PYSPARK  # pragma: no cover
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
@@ -215,7 +215,7 @@ class Implementation(Enum):
             >>> df.implementation.is_pyarrow()
             False
         """
-        return self is Implementation.PYARROW
+        return self is Implementation.PYARROW  # pragma: no cover
 
     def is_dask(self) -> bool:
         """Return whether implementation is Dask.
