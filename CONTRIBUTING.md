@@ -23,7 +23,7 @@ If the terminal output informs about `command not found` you need to [install gi
 
 If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
 ### 2. Make sure you have an SSH key on your machine
-[Checking for existing SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys)<br />
+You can find the official GitHub doc file here: [Checking for existing SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys)<br />
 Open your terminal and run the following command:
 ```bash
 $ ls -al ~/.ssh
