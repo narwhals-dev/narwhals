@@ -165,7 +165,6 @@ class PolarsExpr:
 
         return self._from_native_expr(result)
 
-
     @property
     def dt(self: Self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)
