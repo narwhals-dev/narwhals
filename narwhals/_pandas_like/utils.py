@@ -392,7 +392,7 @@ def native_to_narwhals_dtype(
         if implementation is Implementation.PANDAS:  # pragma: no cover
             # This is the most efficient implementation for pandas,
             # and doesn't require the interchange protocol
-            import pandas as pd  # ignore-banned-import
+            import pandas as pd
 
             dtype = pd.api.types.infer_dtype(native_column, skipna=True)
             if dtype == "string":
@@ -416,7 +416,7 @@ def native_to_narwhals_dtype(
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
     if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
+        import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"

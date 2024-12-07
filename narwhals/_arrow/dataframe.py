@@ -294,7 +294,7 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
@@ -473,7 +473,7 @@ class ArrowDataFrame:
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self: Self, name: str) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         df = self._native_frame
 
@@ -500,7 +500,7 @@ class ArrowDataFrame:
         return self._from_native_frame(self._native_frame.filter(mask))
 
     def null_count(self: Self) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
@@ -572,12 +572,12 @@ class ArrowDataFrame:
         return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self: Self, file: Any) -> None:
-        import pyarrow.parquet as pp  # ignore-banned-import
+        import pyarrow.parquet as pp
 
         pp.write_table(self._native_frame, file)
 
     def write_csv(self: Self, file: Any) -> Any:
-        import pyarrow as pa  # ignore-banned-import
+        import pyarrow as pa
         import pyarrow.csv as pa_csv  # ignore-banned-import
 
         pa_table = self._native_frame
@@ -589,8 +589,8 @@ class ArrowDataFrame:
 
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -617,7 +617,7 @@ class ArrowDataFrame:
         )
 
     def is_unique(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow.compute as pc
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -640,8 +640,8 @@ class ArrowDataFrame:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         df = self._native_frame
 
@@ -681,7 +681,7 @@ class ArrowDataFrame:
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow.compute as pc
 
         frame = self._native_frame
         num_rows = len(self)
@@ -701,7 +701,7 @@ class ArrowDataFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
+        import pyarrow as pa
 
         native_frame = self._native_frame
         variable_name = variable_name if variable_name is not None else "variable"

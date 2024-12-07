@@ -68,7 +68,7 @@ def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
 
 
 def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
-    import dask_expr  # ignore-banned-import
+    import dask_expr
 
     if not dask_expr._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions

@@ -69,7 +69,7 @@ def native_to_narwhals_dtype(
     version: Version,
     backend_version: tuple[int, ...],
 ) -> DType:
-    import polars as pl  # ignore-banned-import()
+    import polars as pl
 
     dtypes = import_dtypes_module(version)
     if dtype == pl.Float64:
@@ -140,7 +140,7 @@ def native_to_narwhals_dtype(
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
-    import polars as pl  # ignore-banned-import()
+    import polars as pl
 
     dtypes = import_dtypes_module(version)
 

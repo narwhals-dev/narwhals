@@ -15,6 +15,14 @@ BANNED_IMPORTS = {
     "pandas",
     "polars",
     "pyarrow",
+    "pyspark",
+}
+
+ALLOWED_IMPORTS = {
+    "_pandas_like": {"pandas", "numpy"},
+    "_arrow": {"pyarrow", "pyarrow.compute", "pyarrow.parquet"},
+    "_dask": {"dask.dataframe", "pandas", "dask_expr"},
+    "_polars": {"polars"},
 }
 
 
@@ -23,6 +31,12 @@ class ImportPandasChecker(ast.NodeVisitor):
         self.file_name = file_name
         self.lines = lines
         self.found_import = False
+        for key, val in ALLOWED_IMPORTS.items():
+            if key in self.file_name:
+                self.allowed_imports: set[str] = val
+                break
+        else:
+            self.allowed_imports = set()
 
     def visit_If(self, node: ast.If) -> None:  # noqa: N802
         # Check if the condition is `if TYPE_CHECKING`
@@ -35,12 +49,14 @@ class ImportPandasChecker(ast.NodeVisitor):
         for alias in node.names:
             if (
                 alias.name in BANNED_IMPORTS
+                and alias.name not in self.allowed_imports
                 and "# ignore-banned-import" not in self.lines[node.lineno - 1]
             ):
                 print(  # noqa: T201
                     f"{self.file_name}:{node.lineno}:{node.col_offset}: found {alias.name} import"
                 )
                 self.found_import = True
+
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
