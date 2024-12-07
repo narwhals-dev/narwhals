@@ -63,6 +63,7 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
 from narwhals.translate import to_py_scalar
+from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -86,6 +87,7 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "Implementation",
     "Int8",
     "Int16",
     "Int32",

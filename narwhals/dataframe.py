@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
@@ -44,6 +45,10 @@ DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
+
+    @property
+    def implementation(self) -> Implementation:
+        return self._compliant_frame._implementation  # type: ignore[no-any-return]
 
     def __native_namespace__(self: Self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
