@@ -59,6 +59,7 @@ from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
+from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
@@ -3397,6 +3398,7 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "Implementation",
     "Int8",
     "Int16",
     "Int32",

@@ -15,6 +15,7 @@ NAMESPACES = {"dt", "str", "cat", "name"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
+    "implementation",
     "is_empty",
     "is_sorted",
     "item",

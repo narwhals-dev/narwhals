@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.utils import Implementation
 
 
 class Series(Generic[IntoSeriesT]):
@@ -56,6 +57,33 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @property
+    def implementation(self) -> Implementation:
+        """Return implementation of native Series.
+
+        This can be useful when you need to some special-casing for
+        some libraries for features outside of Narwhals' scope - for
+        example, when dealing with pandas' Period Dtype.
+
+        Returns:
+            Implementation.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> s_native = pd.Series([1, 2, 3])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.implementation
+            <Implementation.PANDAS: 1>
+            >>> s.implementation.is_pandas()
+            True
+            >>> s.implementation.is_pandas_like()
+            True
+            >>> s.implementation.is_polars()
+            False
+        """
+        return self._compliant_series._implementation  # type: ignore[no-any-return]
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
