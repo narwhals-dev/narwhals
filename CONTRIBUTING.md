@@ -37,7 +37,7 @@ id_ecdsa.pub
 
 id_ed25519.pub
 ```
-If one does not already exist, you will need to [generate a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+If one does not already exist, you will need to [generate a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
 ### 3. Fork the repository
 
 Go to the [main project page](https://github.com/narwhals-dev/narwhals).
