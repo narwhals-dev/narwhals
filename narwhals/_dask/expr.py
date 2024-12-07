@@ -856,7 +856,7 @@ class DaskExpr:
         )
 
     def is_finite(self: Self) -> Self:
-        import dask.array as da  # ignore-banned-import
+        import dask.array as da
 
         return self._from_call(
             lambda _input: da.isfinite(_input),
@@ -1008,7 +1008,7 @@ class DaskExprStringNamespace:
         )
 
     def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
-        import dask.dataframe as dd  # ignore-banned-import()
+        import dask.dataframe as dd
 
         return self._expr._from_call(
             lambda _input, fmt: dd.to_datetime(_input, format=fmt),

@@ -14,6 +14,7 @@
         - gather_every
         - group_by
         - head
+        - implementation
         - join
         - join_asof
         - lazy

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     dtypes = import_dtypes_module(version)
     if pa.types.is_int64(dtype):
@@ -80,7 +80,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -170,7 +170,7 @@ def broadcast_and_extract_native(
         if len(lhs) == 1:
             # broadcast
             import numpy as np  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
+            import pyarrow as pa
 
             fill_value = lhs[0]
             if backend_version < (13,) and hasattr(fill_value, "as_py"):
@@ -201,7 +201,7 @@ def validate_dataframe_comparand(
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
             import numpy as np  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
+            import pyarrow as pa
 
             value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):
@@ -223,7 +223,7 @@ def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     names = [name for df in dfs for name in df.column_names]
 
@@ -251,7 +251,7 @@ def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
             )
             raise TypeError(msg)
 
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     return pa.concat_tables(dfs).combine_chunks()
 
@@ -261,7 +261,7 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     kwargs = (
         {"promote": True}
@@ -274,8 +274,8 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -315,8 +315,8 @@ def cast_for_truediv(
 ) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -338,7 +338,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     if fast_path:
         return [s._native_series for s in series]
 
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     is_max_length_gt_1 = max_length > 1
     reshaped = []
@@ -427,8 +427,8 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 def parse_datetime_format(arr: pa.StringArray) -> str:
     """Try to infer datetime format from StringArray."""
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
         pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
@@ -465,7 +465,7 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
 
 
 def _parse_date_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
@@ -487,7 +487,7 @@ def _parse_date_format(arr: pa.Array) -> str:
 
 
 def _parse_time_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)

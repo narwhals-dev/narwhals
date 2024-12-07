@@ -55,15 +55,25 @@ class Version(Enum):
 
 
 class Implementation(Enum):
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
     PANDAS = auto()
+    """Pandas implementation."""
     MODIN = auto()
+    """Modin implementation."""
     CUDF = auto()
+    """cuDF implementation."""
     PYARROW = auto()
+    """PyArrow implementation."""
     PYSPARK = auto()
+    """PySpark implementation."""
     POLARS = auto()
+    """Polars implementation."""
     DASK = auto()
+    """Dask implementation."""
 
     UNKNOWN = auto()
+    """Unknown implementation."""
 
     @classmethod
     def from_native_namespace(
@@ -104,6 +114,134 @@ class Implementation(Enum):
             Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
+
+    def is_pandas(self) -> bool:
+        """Return whether implementation is pandas.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas()
+            True
+        """
+        return self is Implementation.PANDAS
+
+    def is_pandas_like(self) -> bool:
+        """Return whether implementation is pandas, Modin, or cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas_like()
+            True
+        """
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+
+    def is_polars(self) -> bool:
+        """Return whether implementation is Polars.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_polars()
+            True
+        """
+        return self is Implementation.POLARS
+
+    def is_cudf(self) -> bool:
+        """Return whether implementation is cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_cudf()
+            False
+        """
+        return self is Implementation.CUDF  # pragma: no cover
+
+    def is_modin(self) -> bool:
+        """Return whether implementation is Modin.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_modin()
+            False
+        """
+        return self is Implementation.MODIN  # pragma: no cover
+
+    def is_pyspark(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark()
+            False
+        """
+        return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyarrow(self) -> bool:
+        """Return whether implementation is PyArrow.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyarrow()
+            False
+        """
+        return self is Implementation.PYARROW  # pragma: no cover
+
+    def is_dask(self) -> bool:
+        """Return whether implementation is Dask.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_dask()
+            False
+        """
+        return self is Implementation.DASK  # pragma: no cover
 
 
 def import_dtypes_module(version: Version) -> DTypes:

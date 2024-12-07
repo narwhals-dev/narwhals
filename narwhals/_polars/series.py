@@ -74,7 +74,7 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
@@ -230,7 +230,7 @@ class PolarsSeries:
         return self._native_series.median()
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
-        import polars as pl  # ignore-banned-import
+        import polars as pl
 
         from narwhals._polars.dataframe import PolarsDataFrame
 
@@ -283,7 +283,7 @@ class PolarsSeries:
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                import polars as pl  # ignore-banned-import()
+                import polars as pl
 
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
@@ -311,7 +311,7 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):
-            import polars as pl  # ignore-banned-import()
+            import polars as pl
 
             value_name_ = name or ("proportion" if normalize else "count")
 

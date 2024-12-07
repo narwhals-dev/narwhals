@@ -363,7 +363,17 @@ class Object(DType):
 
 
 class Unknown(DType):
-    """Type representing DataType values that could not be determined statically."""
+    """Type representing DataType values that could not be determined statically.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import narwhals as nw
+       >>> data = pd.period_range("2000-01", periods=4, freq="M")
+       >>> ser_pd = pd.Series(data)
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Unknown
+    """
 
 
 class Datetime(TemporalType):
@@ -688,4 +698,23 @@ class Array(DType):
 
 
 class Date(TemporalType):
-    """Data type representing a calendar date."""
+    """Data type representing a calendar date.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> from datetime import date, timedelta
+       >>> data = [date(2024, 12, 1) + timedelta(days=d) for d in range(4)]
+       >>> ser_pd = pd.Series(data, dtype="date32[pyarrow]")
+       >>> ser_pl = pl.Series(data)
+       >>> ser_pa = pa.chunked_array([data])
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Date
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Date
+       >>> nw.from_native(ser_pa, series_only=True).dtype
+       Date
+    """
