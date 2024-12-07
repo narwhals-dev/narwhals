@@ -1168,4 +1168,4 @@ class PandasLikeSeriesListNamespace:
 
     def len(self: Self) -> PandasLikeSeries:
         s = self._compliant_series._native_series
-        return self._compliant_series._from_native_series(s.__class__(s.str.len()))
+        return self._compliant_series._from_native_series(s.__class__(s.list.len()))
