@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.series import Series as NWSeries
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -122,8 +123,12 @@ class PolarsSeries:
     @overload
     def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
 
-    def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
-        return self._from_native_object(self._native_series.__getitem__(item))
+    def __getitem__(
+            self: Self, item: int | slice | Sequence[int] | NWSeries
+    ) -> Any | Self:
+        if isinstance(item, (int, slice, Sequence)):
+            return self._from_native_object(self._native_series.__getitem__(item))
+        return self._from_native_object(self._native_series.__getitem__(item.to_numpy()))
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
