@@ -118,9 +118,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
         return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        return pa.list_(
+            value_type=narwhals_to_native_dtype(
+                dtype.inner,  # type: ignore[union-attr]
+                version=version,
+            )
+        )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
         return NotImplementedError(msg)
