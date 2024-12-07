@@ -259,10 +259,10 @@ class PandasLikeExpr:
 
     def min(self) -> Self:
         return reuse_series_implementation(self, "min", returns_scalar=True)
-    
+
     def arg_min(self) -> Self:
         return reuse_series_implementation(self, "arg_min", returns_scalar=True)
-    
+
     def arg_max(self) -> Self:
         return reuse_series_implementation(self, "arg_max", returns_scalar=True)
 

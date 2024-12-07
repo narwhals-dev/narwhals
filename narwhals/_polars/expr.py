@@ -164,13 +164,12 @@ class PolarsExpr:
             result = self._native_expr.cum_count(reverse=reverse)
 
         return self._from_native_expr(result)
-    
+
     def arg_min(self: Self) -> Self:
         return self._from_native_expr(self._native_expr.arg_min())
-    
+
     def arg_max(self: Self) -> Self:
         return self._from_native_expr(self._native_expr.arg_max())
-    
 
     @property
     def dt(self: Self) -> PolarsExprDateTimeNamespace:
