@@ -55,14 +55,23 @@ class Version(Enum):
 
 
 class Implementation(Enum):
+    """Pandas implementation."""
+
     PANDAS = auto()
+    """Modin implementation."""
     MODIN = auto()
+    """cuDF implementation."""
     CUDF = auto()
+    """PyArrow implementation."""
     PYARROW = auto()
+    """PySpark implementation."""
     PYSPARK = auto()
+    """Polars implementation."""
     POLARS = auto()
+    """Dask implementation."""
     DASK = auto()
 
+    """Unknown implementation."""
     UNKNOWN = auto()
 
     @classmethod
@@ -231,7 +240,7 @@ class Implementation(Enum):
             >>> df.implementation.is_dask()
             False
         """
-        return self is Implementation.DASK
+        return self is Implementation.DASK  # pragma: no cover
 
 
 def import_dtypes_module(version: Version) -> DTypes:
