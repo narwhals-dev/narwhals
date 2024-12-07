@@ -55,24 +55,25 @@ class Version(Enum):
 
 
 class Implementation(Enum):
-    """Pandas implementation."""
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
     PANDAS = auto()
-    """Modin implementation."""
+    """Pandas implementation."""
     MODIN = auto()
-    """cuDF implementation."""
+    """Modin implementation."""
     CUDF = auto()
-    """PyArrow implementation."""
+    """cuDF implementation."""
     PYARROW = auto()
-    """PySpark implementation."""
+    """PyArrow implementation."""
     PYSPARK = auto()
-    """Polars implementation."""
+    """PySpark implementation."""
     POLARS = auto()
-    """Dask implementation."""
+    """Polars implementation."""
     DASK = auto()
+    """Dask implementation."""
 
-    """Unknown implementation."""
     UNKNOWN = auto()
+    """Unknown implementation."""
 
     @classmethod
     def from_native_namespace(
