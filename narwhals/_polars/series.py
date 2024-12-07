@@ -417,6 +417,16 @@ class PolarsSeriesListNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
         self._series = series
 
+    def len(self: Self) -> PolarsSeries:
+        native_series = self._series._native_series
+        if self._series._backend_version < (1, 16):  # pragma: no cover
+            native_result = native_series.list.len().zip_with(
+                ~native_series.is_null(), native_series.list.first()
+            )
+        else:
+            native_result = native_series.list.len()
+        return self._series._from_native_series(native_result)
+
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]

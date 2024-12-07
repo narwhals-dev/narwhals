@@ -246,6 +246,18 @@ class PolarsExprListNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
+    def len(self: Self) -> PolarsExpr:
+        native_expr = self._expr._native_expr
+        if self._expr._backend_version < (1, 16):  # pragma: no cover
+            import polars as pl
+
+            native_result: pl.Expr = pl.when(~native_expr.is_null()).then(
+                native_expr.list.len()
+            )
+        else:
+            native_result = native_expr.list.len()
+        return self._expr._from_native_expr(native_result)
+
     def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
