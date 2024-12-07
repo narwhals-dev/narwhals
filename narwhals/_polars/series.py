@@ -219,12 +219,6 @@ class PolarsSeries:
 
     def __invert__(self: Self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
-    
-    def arg_min(self: Self) -> int:
-        return self._native_series.arg_min()
-    
-    def arg_max(self: Self) -> int:
-        return self._native_series.arg_max()
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
