@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class PandasLikeExpr:
     def __init__(
-        self,
+        self: Self,
         call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
         *,
         depth: int,
@@ -909,10 +909,10 @@ class PandasLikeExprNameNamespace:
 
 
 class PandasLikeExprListNamespace:
-    def __init__(self, expr: PandasLikeExpr) -> None:
+    def __init__(self: Self, expr: PandasLikeExpr) -> None:
         self._expr = expr
 
-    def len(self) -> PandasLikeExpr:
+    def len(self: Self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._expr,
             "list",
