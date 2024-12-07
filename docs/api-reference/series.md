@@ -28,6 +28,7 @@
         - filter
         - gather_every
         - head
+        - implementation
         - is_between
         - is_duplicated
         - is_empty
