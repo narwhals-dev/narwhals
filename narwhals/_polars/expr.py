@@ -164,7 +164,7 @@ class PolarsExpr:
             result = self._native_expr.cum_count(reverse=reverse)
 
         return self._from_native_expr(result)
-    
+
 
     @property
     def dt(self: Self) -> PolarsExprDateTimeNamespace:
