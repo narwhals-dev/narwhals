@@ -165,12 +165,6 @@ class PolarsExpr:
 
         return self._from_native_expr(result)
 
-    def arg_min(self: Self) -> Self:
-        return self._from_native_expr(self._native_expr.arg_min())
-
-    def arg_max(self: Self) -> Self:
-        return self._from_native_expr(self._native_expr.arg_max())
-
     @property
     def dt(self: Self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)

@@ -853,15 +853,15 @@ class Series(Generic[IntoSeriesT]):
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            >>> def agnostic_arg_min(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.arg_min()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_arg_min(s_pd)
             np.int64(0)
-            >>> my_library_agnostic_function(s_pl)
+            >>> agnostic_arg_min(s_pl)
             0
         """
         return self._compliant_series.arg_min()
@@ -880,15 +880,15 @@ class Series(Generic[IntoSeriesT]):
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            >>> def agnostic_arg_max(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.arg_max()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_arg_max(s_pd)
             np.int64(2)
-            >>> my_library_agnostic_function(s_pl)
+            >>> agnostic_arg_max(s_pl)
             2
         """
         return self._compliant_series.arg_max()

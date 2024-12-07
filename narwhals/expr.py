@@ -980,17 +980,17 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_arg_min(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(arg_min=nw.col("a").arg_min()).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-           >>> my_library_agnostic_function(df_pd)
+           >>> agnostic_arg_min(df_pd)
                 a    b  arg_min
             0  10   50        0
             1  20  100        0
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_arg_min(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────────┐
             │ a   ┆ b   ┆ arg_min │
@@ -1000,7 +1000,7 @@ class Expr:
             │ 10  ┆ 50  ┆ 0       │
             │ 20  ┆ 100 ┆ 0       │
             └─────┴─────┴─────────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_arg_min(df_pa)
             pyarrow.Table
             a: int64
             b: int64
@@ -1030,17 +1030,17 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_arg_max(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(arg_max=nw.col("a").arg_max()).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-           >>> my_library_agnostic_function(df_pd)
+           >>> agnostic_arg_max(df_pd)
                 a    b  arg_max
             0  10   50        1
             1  20  100        1
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_arg_max(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────────┐
             │ a   ┆ b   ┆ arg_max │
@@ -1050,7 +1050,7 @@ class Expr:
             │ 10  ┆ 50  ┆ 1       │
             │ 20  ┆ 100 ┆ 1       │
             └─────┴─────┴─────────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_arg_max(df_pa)
             pyarrow.Table
             a: int64
             b: int64
