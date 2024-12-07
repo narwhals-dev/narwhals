@@ -740,7 +740,7 @@ class PandasLikeDataFrame:
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for col_dtype in df.dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np  # ignore-banned-import
+                import numpy as np
 
                 return np.hstack(
                     [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]

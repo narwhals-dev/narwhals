@@ -76,7 +76,7 @@ class DaskLazyFrame:
         return self._from_native_frame(df)
 
     def collect(self) -> Any:
-        import pandas as pd  # ignore-banned-import()
+        import pandas as pd
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
@@ -119,7 +119,7 @@ class DaskLazyFrame:
         *exprs: IntoDaskExpr,
         **named_exprs: IntoDaskExpr,
     ) -> Self:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
@@ -136,7 +136,7 @@ class DaskLazyFrame:
 
         if not new_series:
             # return empty dataframe, like Polars does
-            import pandas as pd  # ignore-banned-import
+            import pandas as pd
 
             return self._from_native_frame(
                 dd.from_pandas(pd.DataFrame(), npartitions=self._native_frame.npartitions)
