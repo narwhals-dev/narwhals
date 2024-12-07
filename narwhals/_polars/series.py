@@ -121,10 +121,10 @@ class PolarsSeries:
     def __getitem__(self: Self, item: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: slice | Sequence[int] | NWSeries[Any]) -> Self: ...
 
     def __getitem__(
-            self: Self, item: int | slice | Sequence[int] | NWSeries
+        self: Self, item: int | slice | Sequence[int] | NWSeries[Any]
     ) -> Any | Self:
         if isinstance(item, (int, slice, Sequence)):
             return self._from_native_object(self._native_series.__getitem__(item))

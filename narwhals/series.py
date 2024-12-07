@@ -64,9 +64,11 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | Series[Any]) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int] | Series) -> Any | Self:
+    def __getitem__(
+        self: Self, idx: int | slice | Sequence[int] | Series[Any]
+    ) -> Any | Self:
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])

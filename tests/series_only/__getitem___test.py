@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import pytest
 import polars as pl
+import pytest
 
 import narwhals.stable.v1 as nw
+
 
 def test_getitem() -> None:
     spl = pl.Series([1, 2, 3])
