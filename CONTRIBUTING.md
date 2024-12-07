@@ -22,13 +22,29 @@ If the output looks like `git version 2.34.1` and you have a personal account on
 If the terminal output informs about `command not found` you need to [install git](https://docs.github.com/en/get-started/quickstart/set-up-git).
 
 If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
+### 2. Make sure you have an SSH key on your machine
+[Checking for existing SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys)<br />
+Open your terminal and run the following command:
+```bash
+$ ls -al ~/.ssh
+```
+This will display a list of files in your .ssh directory, if they exist. Check the directory listing to see if a public SSH key exists on your machine.
+By default, the filenames of supported public keys for GitHub are one of the following.
+```bash
+id_rsa.pub
 
-### 2. Fork the repository
+id_ecdsa.pub
+
+id_ed25519.pub
+```
+If one does not already exist, you will need to generate a new SSH key for your machine. Please follow the link for more information:
+[Generate a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+### 3. Fork the repository
 
 Go to the [main project page](https://github.com/narwhals-dev/narwhals).
 Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
 
-### 3. Clone the repository
+### 4. Clone the repository
 
 Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories. 
 Click on the green `Code` button and then click the `Copy url to clipboard` icon.
@@ -51,7 +67,7 @@ cd narwhals-dev
 ```
 
 
-### 4. Add the `upstream` remote and fetch from it
+### 5. Add the `upstream` remote and fetch from it
 
 ```bash
 git remote add upstream git@github.com:narwhals-dev/narwhals.git
@@ -70,7 +86,7 @@ upstream	git@github.com:narwhals-dev/narwhals.git (push)
 
 where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
-### 5. Setting up your environment
+### 6. Setting up your environment
 
 Here's how you can set up your local development environment to contribute.
 
@@ -110,13 +126,13 @@ This will automatically format and lint your code before each commit, and it wil
    a virtual environment.
 2. Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
 
-### 6. Working on your issue
+### 7. Working on your issue
 
 Create a new git branch from the `main` branch in your local repository.
 Note that your work cannot be merged if the test below fail.
 If you add code that should be tested, please add tests.
 
-### 7. Running tests
+### 8. Running tests
 
 - To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
 - To run tests on the doctests, use `pytest narwhals --doctest-modules`
@@ -138,13 +154,13 @@ Notice that nox will also require to have all the python versions that are defin
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
-### 8. Building docs
+### 9. Building docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
 
-### 9. Pull requests
+### 10. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
 
