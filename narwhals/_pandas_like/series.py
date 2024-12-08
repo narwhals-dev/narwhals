@@ -1175,7 +1175,7 @@ class PandasLikeSeriesListNamespace:
         if (
             self._compliant_series._implementation is Implementation.PANDAS
             and self._compliant_series._backend_version < (3, 0)
-        ):
+        ):  # pragma: no cover
             native_result = set_axis(
                 native_result.rename(native_series.name, copy=False),
                 index=native_series.index,
