@@ -1170,11 +1170,18 @@ class PandasLikeSeriesListNamespace:
         from narwhals.utils import import_dtypes_module
 
         native_series = self._compliant_series._native_series
-        native_result = (
-            native_series.list.len()
-            .rename(native_series.name, copy=False)
-            .set_axis(native_series.index)
-        )
+        native_result = native_series.list.len()
+
+        if (
+            self._compliant_series._implementation is Implementation.PANDAS
+            and self._compliant_series._backend_version < (3, 0)
+        ):
+            native_result = set_axis(
+                native_result.rename(native_series.name, copy=False),
+                index=native_series.index,
+                implementation=self._compliant_series._implementation,
+                backend_version=self._compliant_series._backend_version,
+            )
         dtype = narwhals_to_native_dtype(
             dtype=import_dtypes_module(self._compliant_series._version).UInt32(),
             starting_dtype=native_result.dtype,
