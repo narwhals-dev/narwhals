@@ -572,8 +572,12 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.List):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
-            import pandas as pd  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
 
             return pd.ArrowDtype(
                 pa.list_(
