@@ -282,6 +282,14 @@ class PandasLikeSeries:
         result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
         return self._from_native_series(result)
 
+    def arg_min(self) -> int:
+        ser = self._native_series
+        return ser.argmin()
+
+    def arg_max(self) -> int:
+        ser = self._native_series
+        return ser.argmax()
+
     # Binary comparisons
 
     def filter(self, other: Any) -> PandasLikeSeries:

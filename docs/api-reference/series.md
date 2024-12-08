@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - clip

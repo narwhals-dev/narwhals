@@ -962,6 +962,106 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).max())
 
+    def arg_min(self) -> Self:
+        """Returns the index of the maximum value in every sub-array.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pa = pa.table({"a": [10, 20], "b": [50, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_arg_min(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(arg_min=nw.col("a").arg_min()).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+           >>> agnostic_arg_min(df_pd)
+                a    b  arg_min
+            0  10   50        0
+            1  20  100        0
+            >>> agnostic_arg_min(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────────┐
+            │ a   ┆ b   ┆ arg_min │
+            │ --- ┆ --- ┆ ---     │
+            │ i64 ┆ i64 ┆ u32     │
+            ╞═════╪═════╪═════════╡
+            │ 10  ┆ 50  ┆ 0       │
+            │ 20  ┆ 100 ┆ 0       │
+            └─────┴─────┴─────────┘
+            >>> agnostic_arg_min(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            arg_min: int64
+            ----
+            a: [[10,20]]
+            b: [[50,100]]
+            arg_min: [[0,0]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_min())
+
+    def arg_max(self) -> Self:
+        """Returns the index of the maximum value in every sub-array.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pa = pa.table({"a": [10, 20], "b": [50, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_arg_max(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(arg_max=nw.col("a").arg_max()).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+           >>> agnostic_arg_max(df_pd)
+                a    b  arg_max
+            0  10   50        1
+            1  20  100        1
+            >>> agnostic_arg_max(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────────┐
+            │ a   ┆ b   ┆ arg_max │
+            │ --- ┆ --- ┆ ---     │
+            │ i64 ┆ i64 ┆ u32     │
+            ╞═════╪═════╪═════════╡
+            │ 10  ┆ 50  ┆ 1       │
+            │ 20  ┆ 100 ┆ 1       │
+            └─────┴─────┴─────────┘
+            >>> agnostic_arg_max(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            arg_max: int64
+            ----
+            a: [[10,20]]
+            b: [[50,100]]
+            arg_max: [[1,1]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_max())
+
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
