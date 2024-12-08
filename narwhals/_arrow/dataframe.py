@@ -285,6 +285,9 @@ class ArrowDataFrame:
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
+    def estimated_size(self: Self) -> int | float:
+        return self._native_frame.nbytes
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names  # type: ignore[no-any-return]

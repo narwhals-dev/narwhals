@@ -370,6 +370,9 @@ class PandasLikeDataFrame:
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
+    def estimated_size(self) -> int | float:
+        return self._native_frame.memory_usage(index=False, deep=True).sum()
+
     def with_row_index(self, name: str) -> Self:
         row_index = create_compliant_series(
             range(len(self._native_frame)),
