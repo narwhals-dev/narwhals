@@ -5,13 +5,14 @@ from typing import Any
 from typing import NoReturn
 
 from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
 
 class PandasSelectorNamespace:
@@ -20,11 +21,11 @@ class PandasSelectorNamespace:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -38,33 +39,37 @@ class PandasSelectorNamespace:
             output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def numeric(self) -> PandasSelector:
+        dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
-                self._dtypes.Int64,
-                self._dtypes.Int32,
-                self._dtypes.Int16,
-                self._dtypes.Int8,
-                self._dtypes.UInt64,
-                self._dtypes.UInt32,
-                self._dtypes.UInt16,
-                self._dtypes.UInt8,
-                self._dtypes.Float64,
-                self._dtypes.Float32,
+                dtypes.Int64,
+                dtypes.Int32,
+                dtypes.Int16,
+                dtypes.Int8,
+                dtypes.UInt64,
+                dtypes.UInt32,
+                dtypes.UInt16,
+                dtypes.UInt8,
+                dtypes.Float64,
+                dtypes.Float32,
             ],
         )
 
     def categorical(self) -> PandasSelector:
-        return self.by_dtype([self._dtypes.Categorical])
+        dtypes = import_dtypes_module(self._version)
+        return self.by_dtype([dtypes.Categorical])
 
     def string(self) -> PandasSelector:
-        return self.by_dtype([self._dtypes.String])
+        dtypes = import_dtypes_module(self._version)
+        return self.by_dtype([dtypes.String])
 
     def boolean(self) -> PandasSelector:
-        return self.by_dtype([self._dtypes.Boolean])
+        dtypes = import_dtypes_module(self._version)
+        return self.by_dtype([dtypes.Boolean])
 
     def all(self) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -78,7 +83,7 @@ class PandasSelectorNamespace:
             output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
 
@@ -101,7 +106,7 @@ class PandasSelector(PandasLikeExpr):
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def __sub__(self, other: PandasSelector | Any) -> PandasSelector | Any:
@@ -120,7 +125,7 @@ class PandasSelector(PandasLikeExpr):
                 output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() - other
@@ -141,7 +146,7 @@ class PandasSelector(PandasLikeExpr):
                 output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() | other
@@ -162,7 +167,7 @@ class PandasSelector(PandasLikeExpr):
                 output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         else:
             return self._to_expr() & other
@@ -172,7 +177,7 @@ class PandasSelector(PandasLikeExpr):
             PandasSelectorNamespace(
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             ).all()
             - self
         )

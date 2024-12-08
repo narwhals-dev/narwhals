@@ -4,17 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.14.3"
+version = "1.16.0"
 authors = [
-  { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
+  { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
 [tool.hatch.build]
@@ -38,6 +38,7 @@ pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
+pyspark = ["pyspark>=3.3.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -53,8 +54,8 @@ lint.select = [
 ]
 lint.ignore = [
   "A001",
+  "A004",
   "ARG002",
-  "ANN101",
   "ANN401",
   "C901",
   "COM812",
@@ -124,11 +125,14 @@ filterwarnings = [
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
   'ignore:.*The default coalesce behavior',
+  'ignore:is_datetime64tz_dtype is deprecated',
+  'ignore: unclosed <socket.socket',
+  'ignore:The distutils package is deprecated and slated for removal',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
-    "MODIN_ENGINE=python",
+  "MODIN_ENGINE=python",
 ]
 
 [tool.coverage.run]
@@ -141,6 +145,9 @@ omit = [
   'narwhals/this.py',
   # we can run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
+  # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
+  'narwhals/_spark_like/*',
+  'tests/spark_like_test.py',
 ]
 exclude_also = [
   "> POLARS_VERSION",
@@ -148,8 +155,9 @@ exclude_also = [
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)',
-  'if self._backend_version < ',
-  'if "cudf" in str\(constructor',
+  'if \w+._backend_version < ',
+  'if backend_version <',
+  'if "cudf" in str\(constructor'
 ]
 
 [tool.mypy]
@@ -158,8 +166,8 @@ strict = true
 [[tool.mypy.overrides]]
 # the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-    "pandas.*",
-    "cudf.*",
-    "modin.*",
+  "pandas.*",
+  "cudf.*",
+  "modin.*",
 ]
 ignore_missing_imports = true

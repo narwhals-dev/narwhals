@@ -7,12 +7,8 @@ on:
 
 
 jobs:
-  slow-downstream-tests:
-    uses: ./.github/workflows/downstream_tests_slow.yml
-
   build:
     name: Build distribution 📦
-    needs: slow-downstream-tests
     runs-on: ubuntu-latest
 
     steps:

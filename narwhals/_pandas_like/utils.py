@@ -9,10 +9,14 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals._arrow.utils import (
+    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+)
+from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
@@ -79,7 +83,9 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def validate_column_comparand(index: Any, other: Any) -> Any:
+def broadcast_align_and_extract_native(
+    lhs: PandasLikeSeries, rhs: Any
+) -> tuple[pd.Series, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -91,35 +97,56 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    if isinstance(other, list):
-        if len(other) > 1:
-            if hasattr(other[0], "__narwhals_expr__") or hasattr(
-                other[0], "__narwhals_series__"
+    # If `rhs` is the output of an expression evaluation, then it is
+    # a list of Series. So, we verify that that list is of length-1,
+    # and take the first (and only) element.
+    if isinstance(rhs, list):
+        if len(rhs) > 1:
+            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
+                rhs[0], "__narwhals_series__"
             ):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
-            msg = (
-                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
-            )
+            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
             raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, PandasLikeDataFrame):
+        rhs = rhs[0]
+
+    lhs_index = lhs._native_series.index
+
+    if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasLikeSeries):
-        if other.len() == 1:
+
+    if isinstance(rhs, PandasLikeSeries):
+        rhs_index = rhs._native_series.index
+        if rhs.len() == 1:
             # broadcast
-            s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
-        if other._native_series.index is not index:
-            return set_axis(
-                other._native_series,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
+            s = rhs._native_series
+            return (
+                lhs._native_series,
+                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype),
             )
-        return other._native_series
-    return other
+        if lhs.len() == 1:
+            # broadcast
+            s = lhs._native_series
+            return (
+                s.__class__(s.iloc[0], index=rhs_index, dtype=s.dtype, name=s.name),
+                rhs._native_series,
+            )
+        if rhs._native_series.index is not lhs_index:
+            return (
+                lhs._native_series,
+                set_axis(
+                    rhs._native_series,
+                    lhs_index,
+                    implementation=rhs._implementation,
+                    backend_version=rhs._backend_version,
+                ),
+            )
+        return (lhs._native_series, rhs._native_series)
+
+    # `rhs` must be scalar, so just leave it as-is
+    return lhs._native_series, rhs
 
 
 def validate_dataframe_comparand(index: Any, other: Any) -> Any:
@@ -156,7 +183,7 @@ def create_compliant_series(
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-    dtypes: DTypes,
+    version: Version,
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -168,7 +195,7 @@ def create_compliant_series(
             series,
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
@@ -301,9 +328,11 @@ def set_axis(
 
 
 def native_to_narwhals_dtype(
-    native_column: Any, dtypes: DTypes, implementation: Implementation
+    native_column: Any, version: Version, implementation: Implementation
 ) -> DType:
     dtype = str(native_column.dtype)
+
+    dtypes = import_dtypes_module(version)
 
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -357,7 +386,7 @@ def native_to_narwhals_dtype(
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
-        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
+        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
     if dtype == "object":
         if implementation is Implementation.DASK:
             # Dask columns are lazy, so we can't inspect values.
@@ -366,7 +395,7 @@ def native_to_narwhals_dtype(
         if implementation is Implementation.PANDAS:  # pragma: no cover
             # This is the most efficient implementation for pandas,
             # and doesn't require the interchange protocol
-            import pandas as pd  # ignore-banned-import
+            import pandas as pd
 
             dtype = pd.api.types.infer_dtype(native_column, skipna=True)
             if dtype == "string":
@@ -381,7 +410,7 @@ def native_to_narwhals_dtype(
 
                 try:
                     return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype, dtypes
+                        df.__dataframe__().get_column(0).dtype, version
                     )
                 except Exception:  # noqa: BLE001, S110
                     pass
@@ -390,7 +419,7 @@ def native_to_narwhals_dtype(
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
     if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
+        import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
@@ -411,9 +440,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     starting_dtype: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-    dtypes: DTypes,
+    version: Version,
 ) -> Any:
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":
             return "Float64[pyarrow]"
@@ -540,9 +570,29 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
+
+            return pd.ArrowDtype(
+                pa.list_(
+                    value_type=arrow_narwhals_to_native_dtype(
+                        dtype.inner,  # type: ignore[union-attr]
+                        version=version,
+                    )
+                )
+            )
+        else:
+            msg = (
+                "Converting to List dtype is not supported for implementation "
+                f"{implementation} and version {version}."
+            )
+            return NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
         return NotImplementedError(msg)

@@ -271,10 +271,10 @@ def all() -> Expr:
 
 
 __all__ = [
-    "by_dtype",
-    "numeric",
-    "boolean",
-    "string",
-    "categorical",
     "all",
+    "boolean",
+    "by_dtype",
+    "categorical",
+    "numeric",
+    "string",
 ]

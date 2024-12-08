@@ -59,6 +59,8 @@ from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
+from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -1366,18 +1368,18 @@ class Expr(NwExpr):
             2  NaN  0.5
             3  4.0  2.0
 
-            >>> agnostic_rolling_var(df_pl)
+            >>> agnostic_rolling_var(df_pl)  #  doctest:+SKIP
             shape: (4, 2)
-            ┌──────┬─────┐
-            │ a    ┆ b   │
-            │ ---  ┆ --- │
-            │ f64  ┆ f64 │
-            ╞══════╪═════╡
-            │ 1.0  ┆ 0.0 │
-            │ 2.0  ┆ 0.5 │
-            │ null ┆ 0.5 │
-            │ 4.0  ┆ 2.0 │
-            └──────┴─────┘
+            ┌──────┬──────┐
+            │ a    ┆ b    │
+            │ ---  ┆ ---  │
+            │ f64  ┆ f64  │
+            ╞══════╪══════╡
+            │ 1.0  ┆ null │
+            │ 2.0  ┆ 0.5  │
+            │ null ┆ 0.5  │
+            │ 4.0  ┆ 2.0  │
+            └──────┴──────┘
 
             >>> agnostic_rolling_var(df_pa)  #  doctest:+ELLIPSIS
             pyarrow.Table
@@ -1460,14 +1462,14 @@ class Expr(NwExpr):
             2  NaN  0.707107
             3  4.0  1.414214
 
-            >>> agnostic_rolling_std(df_pl)
+            >>> agnostic_rolling_std(df_pl)  #  doctest:+SKIP
             shape: (4, 2)
             ┌──────┬──────────┐
             │ a    ┆ b        │
             │ ---  ┆ ---      │
             │ f64  ┆ f64      │
             ╞══════╪══════════╡
-            │ 1.0  ┆ 0.0      │
+            │ 1.0  ┆ null     │
             │ 2.0  ┆ 0.707107 │
             │ null ┆ 0.707107 │
             │ 4.0  ┆ 1.414214 │
@@ -1544,25 +1546,23 @@ def _stableify(obj: Any) -> Any: ...
 def _stableify(
     obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries[Any] | NwExpr | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
-    from narwhals.stable.v1 import dtypes
-
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame._change_dtypes(dtypes),
+            obj._compliant_frame._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame._change_dtypes(dtypes),
+            obj._compliant_frame._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._compliant_series._change_dtypes(dtypes),
+            obj._compliant_series._change_version(Version.V1),
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._call)
+        return Expr(obj._to_compliant_expr)
     return obj
 
 
@@ -1998,8 +1998,6 @@ def from_native(
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    from narwhals.stable.v1 import dtypes
-
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
         return native_object
@@ -2017,7 +2015,7 @@ def from_native(
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version=Version.V1,
     )
     return _stableify(result)  # type: ignore[no-any-return]
 
@@ -3142,7 +3140,7 @@ def concat(
         A new DataFrame, Lazyframe resulting from the concatenation.
 
     Raises:
-        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+        TypeError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
         Let's take an example of vertical concatenation:
@@ -3357,7 +3355,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._call)
+        return cls(then._to_compliant_expr)
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
@@ -3487,15 +3485,13 @@ def new_series(
            2
         ]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _new_series_impl(
             name,
             values,
             dtype,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 
@@ -3556,6 +3552,9 @@ def from_dict(
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
+    Indexes (if present, for pandas-like backends) are aligned following
+    the [left-hand-rule](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/pandas_index/).
+
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
@@ -3608,14 +3607,12 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
             data,
             schema,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 
@@ -3759,14 +3756,12 @@ def from_numpy(
         d: [[2,4]]
         e: [[1,3]]
     """
-    from narwhals.stable.v1 import dtypes
-
-    return _stableify(
+    return _stableify(  # type: ignore[no-any-return]
         _from_numpy_impl(
             data,
             schema,
             native_namespace=native_namespace,
-            dtypes=dtypes,  # type: ignore[arg-type]
+            version=Version.V1,
         )
     )
 
@@ -3784,10 +3779,11 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "Implementation",
+    "Int8",
     "Int16",
     "Int32",
     "Int64",
-    "Int8",
     "LazyFrame",
     "List",
     "Object",
@@ -3795,10 +3791,10 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "UInt8",
     "UInt16",
     "UInt32",
     "UInt64",
-    "UInt8",
     "Unknown",
     "all",
     "all_horizontal",

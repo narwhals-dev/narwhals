@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -17,6 +18,7 @@ from tests.utils import PANDAS_VERSION
     ("input_value", "expected"),
     [
         (1, 1),
+        (pa.scalar(1), 1),
         (np.int64(1), 1),
         (1.0, 1.0),
         (None, None),

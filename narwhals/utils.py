@@ -19,6 +19,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -29,7 +30,6 @@ from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
 
     FrameOrSeriesT = TypeVar(
@@ -48,15 +49,31 @@ if TYPE_CHECKING:
     )
 
 
+class Version(Enum):
+    V1 = auto()
+    MAIN = auto()
+
+
 class Implementation(Enum):
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
     PANDAS = auto()
+    """Pandas implementation."""
     MODIN = auto()
+    """Modin implementation."""
     CUDF = auto()
+    """cuDF implementation."""
     PYARROW = auto()
+    """PyArrow implementation."""
+    PYSPARK = auto()
+    """PySpark implementation."""
     POLARS = auto()
+    """Polars implementation."""
     DASK = auto()
+    """Dask implementation."""
 
     UNKNOWN = auto()
+    """Unknown implementation."""
 
     @classmethod
     def from_native_namespace(
@@ -75,6 +92,7 @@ class Implementation(Enum):
             get_modin(): Implementation.MODIN,
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
+            get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
         }
@@ -91,10 +109,154 @@ class Implementation(Enum):
             Implementation.MODIN: get_modin(),
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
+            Implementation.PYSPARK: get_pyspark_sql(),
             Implementation.POLARS: get_polars(),
             Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
+
+    def is_pandas(self) -> bool:
+        """Return whether implementation is pandas.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas()
+            True
+        """
+        return self is Implementation.PANDAS
+
+    def is_pandas_like(self) -> bool:
+        """Return whether implementation is pandas, Modin, or cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas_like()
+            True
+        """
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+
+    def is_polars(self) -> bool:
+        """Return whether implementation is Polars.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_polars()
+            True
+        """
+        return self is Implementation.POLARS
+
+    def is_cudf(self) -> bool:
+        """Return whether implementation is cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_cudf()
+            False
+        """
+        return self is Implementation.CUDF  # pragma: no cover
+
+    def is_modin(self) -> bool:
+        """Return whether implementation is Modin.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_modin()
+            False
+        """
+        return self is Implementation.MODIN  # pragma: no cover
+
+    def is_pyspark(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark()
+            False
+        """
+        return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyarrow(self) -> bool:
+        """Return whether implementation is PyArrow.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyarrow()
+            False
+        """
+        return self is Implementation.PYARROW  # pragma: no cover
+
+    def is_dask(self) -> bool:
+        """Return whether implementation is Dask.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_dask()
+            False
+        """
+        return self is Implementation.DASK  # pragma: no cover
+
+
+def import_dtypes_module(version: Version) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes
+    elif version is Version.MAIN:
+        from narwhals import dtypes  # type: ignore[no-redef]
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
+    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -174,8 +336,8 @@ def validate_laziness(items: Iterable[Any]) -> None:
         all(isinstance(item, LazyFrame) for item in items)
     ):
         return
-    msg = "The items to concatenate should either all be eager, or all lazy"
-    raise NotImplementedError(msg)
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"
+    raise TypeError(msg)
 
 
 def maybe_align_index(
@@ -305,7 +467,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
     return None
@@ -358,8 +520,10 @@ def maybe_set_index(
         4  1
         5  2
     """
+    from narwhals.translate import to_native
+
     df_any = cast(Any, obj)
-    native_obj = to_native(df_any)
+    native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
         msg = "Only one of `column_names` or `index` should be provided"
@@ -434,7 +598,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
@@ -501,7 +665,7 @@ def maybe_convert_dtypes(
         dtype: object
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             obj_any._compliant_frame._from_native_frame(
@@ -561,7 +725,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = series._compliant_series._dtypes
+    dtypes = import_dtypes_module(series._compliant_series._version)
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
@@ -574,7 +738,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         return True
     if series.dtype != dtypes.Categorical:
         return False
-    native_series = to_native(series)
+    native_series = series.to_native()
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):

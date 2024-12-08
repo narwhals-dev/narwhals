@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.utils import Implementation
 
 
 class Series(Generic[IntoSeriesT]):
@@ -48,7 +49,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         series: Any,
         *,
-        level: Literal["full", "interchange"],
+        level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
         if hasattr(series, "__narwhals_series__"):
@@ -56,6 +57,33 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @property
+    def implementation(self) -> Implementation:
+        """Return implementation of native Series.
+
+        This can be useful when you need to some special-casing for
+        some libraries for features outside of Narwhals' scope - for
+        example, when dealing with pandas' Period Dtype.
+
+        Returns:
+            Implementation.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> s_native = pd.Series([1, 2, 3])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.implementation
+            <Implementation.PANDAS: 1>
+            >>> s.implementation.is_pandas()
+            True
+            >>> s.implementation.is_pandas_like()
+            True
+            >>> s.implementation.is_polars()
+            False
+        """
+        return self._compliant_series._implementation  # type: ignore[no-any-return]
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
@@ -575,6 +603,9 @@ class Series(Generic[IntoSeriesT]):
             your original dataframe, so we recommend only calling this
             when you absolutely need to.
 
+        Returns:
+            A list of Python objects.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -656,7 +687,7 @@ class Series(Generic[IntoSeriesT]):
             >>> my_library_agnostic_function(s_pl)
             5.0
             >>> my_library_agnostic_function(s_pa)
-            <pyarrow.DoubleScalar: 5.0>
+            5.0
         """
         return self._compliant_series.median()
 
@@ -2037,9 +2068,19 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.__and__(self._extract_native(other))
         )
 
+    def __rand__(self, other: Any) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__rand__(self._extract_native(other))
+        )
+
     def __or__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__or__(self._extract_native(other))
+        )
+
+    def __ror__(self, other: Any) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__ror__(self._extract_native(other))
         )
 
     # unary
@@ -3500,6 +3541,9 @@ class Series(Generic[IntoSeriesT]):
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 
+    def __contains__(self: Self, other: Any) -> bool:
+        return self._compliant_series.__contains__(other)  # type: ignore[no-any-return]
+
     @property
     def str(self: Self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
@@ -3511,6 +3555,10 @@ class Series(Generic[IntoSeriesT]):
     @property
     def cat(self: Self) -> SeriesCatNamespace[Self]:
         return SeriesCatNamespace(self)
+
+    @property
+    def list(self: Self) -> SeriesListNamespace[Self]:
+        return SeriesListNamespace(self)
 
 
 SeriesT = TypeVar("SeriesT", bound=Series[Any])
@@ -5103,4 +5151,67 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             raise ValueError(msg)
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
+
+
+class SeriesListNamespace(Generic[SeriesT]):
+    def __init__(self: Self, series: SeriesT) -> None:
+        self._narwhals_series = series
+
+    def len(self: Self) -> SeriesT:
+        """Return the number of elements in each list.
+
+        Null values count towards the total.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [[1, 2], [3, 4, None], None, []]
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_list_len(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.list.len().to_native()
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> agnostic_list_len(
+            ...     pd.Series(data, dtype=pd.ArrowDtype(pa.list_(pa.int64())))
+            ... )  # doctest: +SKIP
+            0       2
+            1       3
+            2    <NA>
+            3       0
+            dtype: int32[pyarrow]
+
+            >>> agnostic_list_len(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [u32]
+            [
+               2
+               3
+               null
+               0
+            ]
+
+            >>> agnostic_list_len(pa.chunked_array([data]))  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                3,
+                null,
+                0
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.list.len()
         )

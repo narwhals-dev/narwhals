@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 class ArrowDataFrame:
@@ -45,17 +45,19 @@ class ArrowDataFrame:
         native_dataframe: pa.Table,
         *,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return ArrowNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.PYARROW:
@@ -70,14 +72,14 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame, backend_version=self._backend_version, dtypes=dtypes
+            self._native_frame, backend_version=self._backend_version, version=version
         )
 
     def _from_native_frame(self: Self, df: pa.Table) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, dtypes=self._dtypes
+            df, backend_version=self._backend_version, version=self._version
         )
 
     @property
@@ -143,7 +145,7 @@ class ArrowDataFrame:
             self._native_frame[name],
             name=name,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
@@ -186,7 +188,7 @@ class ArrowDataFrame:
                 self._native_frame[item],
                 name=item,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         elif (
             isinstance(item, tuple)
@@ -231,14 +233,14 @@ class ArrowDataFrame:
                     self._native_frame[col_name],
                     name=col_name,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
             selected_rows = select_rows(self._native_frame, item[0])
             return ArrowSeries(
                 selected_rows[col_name],
                 name=col_name,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
 
         elif isinstance(item, slice):
@@ -276,7 +278,7 @@ class ArrowDataFrame:
     def schema(self: Self) -> dict[str, DType]:
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
+            name: native_to_narwhals_dtype(dtype, self._version)
             for name, dtype in zip(schema.names, schema.types)
         }
 
@@ -292,7 +294,7 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
@@ -463,7 +465,7 @@ class ArrowDataFrame:
                     col,
                     name=name,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
                 for name, col in names_and_values
             }
@@ -471,7 +473,7 @@ class ArrowDataFrame:
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self: Self, name: str) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         df = self._native_frame
 
@@ -498,7 +500,7 @@ class ArrowDataFrame:
         return self._from_native_frame(self._native_frame.filter(mask))
 
     def null_count(self: Self) -> Self:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
@@ -530,7 +532,7 @@ class ArrowDataFrame:
         return ArrowDataFrame(
             self._native_frame,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def clone(self: Self) -> Self:
@@ -541,6 +543,8 @@ class ArrowDataFrame:
         return self.shape[0] == 0
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
+        from narwhals._arrow.series import maybe_extract_py_scalar
+
         if row is None and column is None:
             if self.shape != (1, 1):
                 msg = (
@@ -549,14 +553,18 @@ class ArrowDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._native_frame[0][0]
+            return maybe_extract_py_scalar(
+                self._native_frame[0][0], return_py_scalar=True
+            )
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._native_frame[_col][row]
+        return maybe_extract_py_scalar(
+            self._native_frame[_col][row], return_py_scalar=True
+        )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         df = self._native_frame
@@ -564,12 +572,12 @@ class ArrowDataFrame:
         return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self: Self, file: Any) -> None:
-        import pyarrow.parquet as pp  # ignore-banned-import
+        import pyarrow.parquet as pp
 
         pp.write_table(self._native_frame, file)
 
     def write_csv(self: Self, file: Any) -> Any:
-        import pyarrow as pa  # ignore-banned-import
+        import pyarrow as pa
         import pyarrow.csv as pa_csv  # ignore-banned-import
 
         pa_table = self._native_frame
@@ -581,8 +589,8 @@ class ArrowDataFrame:
 
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -605,11 +613,11 @@ class ArrowDataFrame:
             is_duplicated,
             name="",
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_unique(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow.compute as pc
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -619,7 +627,7 @@ class ArrowDataFrame:
             pc.invert(is_duplicated),
             name="",
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def unique(
@@ -632,8 +640,8 @@ class ArrowDataFrame:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         df = self._native_frame
 
@@ -673,7 +681,7 @@ class ArrowDataFrame:
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow.compute as pc
 
         frame = self._native_frame
         num_rows = len(self)
@@ -693,7 +701,7 @@ class ArrowDataFrame:
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        import pyarrow as pa  # ignore-banned-import
+        import pyarrow as pa
 
         native_frame = self._native_frame
         variable_name = variable_name if variable_name is not None else "variable"

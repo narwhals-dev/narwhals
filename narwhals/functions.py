@@ -10,10 +10,12 @@ from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
+from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
@@ -31,7 +33,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
-    from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
 
     class ArrowStreamExportable(Protocol):
@@ -61,7 +62,7 @@ def concat(
         A new DataFrame, Lazyframe resulting from the concatenation.
 
     Raises:
-        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+        TypeError: The items to concatenate should either all be eager, or all lazy
 
     Examples:
         Let's take an example of vertical concatenation:
@@ -249,14 +250,12 @@ def new_series(
            2
         ]
     """
-    from narwhals import dtypes
-
     return _new_series_impl(
         name,
         values,
         dtype,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
@@ -266,7 +265,7 @@ def _new_series_impl(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-    dtypes: DTypes,
+    version: Version,
 ) -> Series[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
 
@@ -276,7 +275,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype_pl = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype_pl = polars_narwhals_to_native_dtype(dtype, version=version)
         else:
             dtype_pl = None
 
@@ -293,7 +292,7 @@ def _new_series_impl(
 
             backend_version = parse_version(native_namespace.__version__)
             dtype = pandas_like_narwhals_to_native_dtype(
-                dtype, None, implementation, backend_version, dtypes
+                dtype, None, implementation, backend_version, version
             )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
@@ -303,7 +302,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+            dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
@@ -327,6 +326,9 @@ def from_dict(
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
+
+    Indexes (if present, for pandas-like backends) are aligned following
+    the [left-hand-rule](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/pandas_index/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -380,13 +382,11 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    from narwhals import dtypes
-
     return _from_dict_impl(
         data,
         schema,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
@@ -395,7 +395,7 @@ def _from_dict_impl(
     schema: dict[str, DType] | Schema | None = None,
     *,
     native_namespace: ModuleType | None = None,
-    dtypes: DTypes,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
@@ -421,7 +421,7 @@ def _from_dict_impl(
             )
 
             schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
+                name: polars_narwhals_to_native_dtype(dtype, version=version)
                 for name, dtype in schema.items()
             }
         else:
@@ -433,7 +433,24 @@ def _from_dict_impl(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
-        native_frame = native_namespace.DataFrame.from_dict(data)
+        aligned_data = {}
+        left_most_series = None
+        for key, native_series in data.items():
+            if isinstance(native_series, native_namespace.Series):
+                compliant_series = from_native(
+                    native_series, series_only=True
+                )._compliant_series
+                if left_most_series is None:
+                    left_most_series = compliant_series
+                    aligned_data[key] = native_series
+                else:
+                    aligned_data[key] = broadcast_align_and_extract_native(
+                        left_most_series, compliant_series
+                    )[1]
+            else:
+                aligned_data[key] = native_series
+
+        native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
         if schema:
             from narwhals._pandas_like.utils import (
@@ -443,7 +460,7 @@ def _from_dict_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, dtypes
+                    schema[name], native_type, implementation, backend_version, version
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -457,7 +474,7 @@ def _from_dict_impl(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    (name, arrow_narwhals_to_native_dtype(dtype, version))
                     for name, dtype in schema.items()
                 ]
             )
@@ -612,13 +629,11 @@ def from_numpy(
         d: [[2,4]]
         e: [[1,3]]
     """
-    from narwhals import dtypes
-
     return _from_numpy_impl(
         data,
         schema,
         native_namespace=native_namespace,
-        dtypes=dtypes,  # type: ignore[arg-type]
+        version=Version.MAIN,
     )
 
 
@@ -627,7 +642,7 @@ def _from_numpy_impl(
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
-    dtypes: DTypes,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
@@ -643,7 +658,7 @@ def _from_numpy_impl(
             )
 
             schema = {
-                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)  # type: ignore[misc]
+                name: polars_narwhals_to_native_dtype(dtype, version=version)  # type: ignore[misc]
                 for name, dtype in schema.items()
             }
         elif schema is None:
@@ -670,7 +685,7 @@ def _from_numpy_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, dtypes
+                    schema[name], native_type, implementation, backend_version, version
                 )
                 for name, native_type in schema.items()
             }
@@ -700,7 +715,7 @@ def _from_numpy_impl(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
+                    (name, arrow_narwhals_to_native_dtype(dtype, version))
                     for name, dtype in schema.items()
                 ]
             )
@@ -906,7 +921,7 @@ def show_versions() -> None:
 
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
-) -> Literal["full", "interchange"]:
+) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
 
     Arguments:
@@ -916,6 +931,8 @@ def get_level(
         This can be one of:
 
             - 'full': full Narwhals API support
-            - 'metadata': only metadata operations are supported (`df.schema`)
+            - 'lazy': only lazy operations are supported. This excludes anything
+              which involves iterating over rows in Python.
+            - 'interchange': only metadata operations are supported (`df.schema`)
     """
     return obj._level

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -78,3 +79,13 @@ def test_from_dict_v1(constructor: Constructor, request: pytest.FixtureRequest) 
 def test_from_dict_empty() -> None:
     with pytest.raises(ValueError, match="empty"):
         nw.from_dict({})
+
+
+def test_alignment() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/1474
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = nw.from_dict(
+        {"a": df["a"], "b": df["a"].sort_values(ascending=False)}, native_namespace=pd
+    ).to_native()
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]})
+    pd.testing.assert_frame_equal(result, expected)

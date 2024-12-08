@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def n_unique() -> dd.Aggregation:
-    import dask.dataframe as dd  # ignore-banned-import
+    import dask.dataframe as dd
 
     def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
         return s.nunique(dropna=False)  # type: ignore[no-any-return]
@@ -86,7 +86,7 @@ class DaskLazyGroupBy:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
-            df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
+            df, backend_version=self._df._backend_version, version=self._df._version
         )
 
 

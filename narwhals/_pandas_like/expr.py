@@ -19,13 +19,13 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
 
 class PandasLikeExpr:
     def __init__(
-        self,
+        self: Self,
         call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
         *,
         depth: int,
@@ -34,7 +34,7 @@ class PandasLikeExpr:
         output_names: list[str] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -44,7 +44,7 @@ class PandasLikeExpr:
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -59,7 +59,7 @@ class PandasLikeExpr:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
-            self._implementation, self._backend_version, dtypes=self._dtypes
+            self._implementation, self._backend_version, version=self._version
         )
 
     def __narwhals_expr__(self) -> None: ...
@@ -70,7 +70,7 @@ class PandasLikeExpr:
         *column_names: str,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
@@ -79,7 +79,7 @@ class PandasLikeExpr:
                         df._native_frame[column_name],
                         implementation=df._implementation,
                         backend_version=df._backend_version,
-                        dtypes=df._dtypes,
+                        version=df._version,
                     )
                     for column_name in column_names
                 ]
@@ -98,7 +98,7 @@ class PandasLikeExpr:
             output_names=list(column_names),
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     @classmethod
@@ -107,7 +107,7 @@ class PandasLikeExpr:
         *column_indices: int,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [
@@ -115,7 +115,7 @@ class PandasLikeExpr:
                     df._native_frame.iloc[:, column_index],
                     implementation=df._implementation,
                     backend_version=df._backend_version,
-                    dtypes=df._dtypes,
+                    version=df._version,
                 )
                 for column_index in column_indices
             ]
@@ -128,7 +128,7 @@ class PandasLikeExpr:
             output_names=None,
             implementation=implementation,
             backend_version=backend_version,
-            dtypes=dtypes,
+            version=version,
         )
 
     def cast(
@@ -159,55 +159,64 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "__and__", other=other)
 
     def __rand__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rand__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__and__(self)  # type: ignore[no-any-return]
 
     def __or__(self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
 
     def __ror__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__ror__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__or__(self)  # type: ignore[no-any-return]
 
     def __add__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
     def __radd__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__radd__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__add__(self)  # type: ignore[no-any-return]
 
     def __sub__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
     def __rsub__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rsub__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__sub__(self)  # type: ignore[no-any-return]
 
     def __mul__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
     def __rmul__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rmul__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__mul__(self)  # type: ignore[no-any-return]
 
     def __truediv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rtruediv__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__truediv__(self)  # type: ignore[no-any-return]
 
     def __floordiv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rfloordiv__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__floordiv__(self)  # type: ignore[no-any-return]
 
     def __pow__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
 
     def __rpow__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rpow__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__pow__(self)  # type: ignore[no-any-return]
 
     def __mod__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
 
     def __rmod__(self, other: Any) -> Self:
-        return reuse_series_implementation(self, "__rmod__", other=other)
+        other = self.__narwhals_namespace__().lit(other, dtype=None)
+        return other.__mod__(self)  # type: ignore[no-any-return]
 
     # Unary
 
@@ -374,7 +383,7 @@ class PandasLikeExpr:
             output_names=[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def over(self, keys: list[str]) -> Self:
@@ -400,7 +409,7 @@ class PandasLikeExpr:
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_duplicated(self) -> Self:
@@ -472,7 +481,7 @@ class PandasLikeExpr:
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def is_finite(self: Self) -> Self:
@@ -570,14 +579,18 @@ class PandasLikeExpr:
     def name(self: Self) -> PandasLikeExprNameNamespace:
         return PandasLikeExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> PandasLikeExprListNamespace:
+        return PandasLikeExprListNamespace(self)
+
 
 class PandasLikeExprCatNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def get_categories(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "cat",
             "get_categories",
         )
@@ -585,12 +598,14 @@ class PandasLikeExprCatNamespace:
 
 class PandasLikeExprStringNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def len_chars(
         self,
     ) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "str", "len_chars")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "str", "len_chars"
+        )
 
     def replace(
         self,
@@ -601,7 +616,7 @@ class PandasLikeExprStringNamespace:
         n: int = 1,
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "str", "replace", pattern, value, literal=literal, n=n
+            self._compliant_expr, "str", "replace", pattern, value, literal=literal, n=n
         )
 
     def replace_all(
@@ -612,12 +627,12 @@ class PandasLikeExprStringNamespace:
         literal: bool = False,
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "str", "replace_all", pattern, value, literal=literal
+            self._compliant_expr, "str", "replace_all", pattern, value, literal=literal
         )
 
     def strip_chars(self, characters: str | None = None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "strip_chars",
             characters,
@@ -625,7 +640,7 @@ class PandasLikeExprStringNamespace:
 
     def starts_with(self, prefix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "starts_with",
             prefix,
@@ -633,7 +648,7 @@ class PandasLikeExprStringNamespace:
 
     def ends_with(self, suffix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "ends_with",
             suffix,
@@ -641,7 +656,7 @@ class PandasLikeExprStringNamespace:
 
     def contains(self, pattern: str, *, literal: bool) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "contains",
             pattern,
@@ -650,12 +665,12 @@ class PandasLikeExprStringNamespace:
 
     def slice(self, offset: int, length: int | None = None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "str", "slice", offset, length
+            self._compliant_expr, "str", "slice", offset, length
         )
 
     def to_datetime(self: Self, format: str | None) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_datetime",
             format,
@@ -663,14 +678,14 @@ class PandasLikeExprStringNamespace:
 
     def to_uppercase(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_uppercase",
         )
 
     def to_lowercase(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_lowercase",
         )
@@ -678,89 +693,101 @@ class PandasLikeExprStringNamespace:
 
 class PandasLikeExprDateTimeNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def date(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "date")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "date")
 
     def year(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "year")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "year")
 
     def month(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "month")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "month")
 
     def day(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "day")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "day")
 
     def hour(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "hour")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "hour")
 
     def minute(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "minute")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "minute")
 
     def second(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "second")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "second")
 
     def millisecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "millisecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "millisecond"
+        )
 
     def microsecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "microsecond"
+        )
 
     def nanosecond(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "nanosecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "nanosecond"
+        )
 
     def ordinal_day(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "ordinal_day"
+        )
 
     def total_minutes(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "total_minutes")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_minutes"
+        )
 
     def total_seconds(self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "total_seconds")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_seconds"
+        )
 
     def total_milliseconds(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_milliseconds"
+            self._compliant_expr, "dt", "total_milliseconds"
         )
 
     def total_microseconds(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_microseconds"
+            self._compliant_expr, "dt", "total_microseconds"
         )
 
     def total_nanoseconds(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_nanoseconds"
+            self._compliant_expr, "dt", "total_nanoseconds"
         )
 
     def to_string(self, format: str) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "to_string", format
+            self._compliant_expr, "dt", "to_string", format
         )
 
     def replace_time_zone(self, time_zone: str | None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "replace_time_zone", time_zone
+            self._compliant_expr, "dt", "replace_time_zone", time_zone
         )
 
     def convert_time_zone(self, time_zone: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "convert_time_zone", time_zone
+            self._compliant_expr, "dt", "convert_time_zone", time_zone
         )
 
     def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "timestamp", time_unit
+            self._compliant_expr, "dt", "timestamp", time_unit
         )
 
 
 class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def keep(self: Self) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -770,22 +797,22 @@ class PandasLikeExprNameNamespace:
             )
             raise ValueError(msg)
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), root_names)
+                for series, name in zip(self._compliant_expr._call(df), root_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=root_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -797,22 +824,22 @@ class PandasLikeExprNameNamespace:
 
         output_names = [function(str(name)) for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = (
                 "Anonymous expressions are not supported in `.name.prefix`.\n"
@@ -822,22 +849,22 @@ class PandasLikeExprNameNamespace:
             raise ValueError(msg)
 
         output_names = [prefix + str(name) for name in root_names]
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = (
                 "Anonymous expressions are not supported in `.name.suffix`.\n"
@@ -848,22 +875,22 @@ class PandasLikeExprNameNamespace:
 
         output_names = [str(name) + suffix for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -874,22 +901,22 @@ class PandasLikeExprNameNamespace:
             raise ValueError(msg)
         output_names = [str(name).lower() for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -900,16 +927,28 @@ class PandasLikeExprNameNamespace:
             raise ValueError(msg)
         output_names = [str(name).upper() for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            implementation=self._expr._implementation,
-            backend_version=self._expr._backend_version,
-            dtypes=self._expr._dtypes,
+            implementation=self._compliant_expr._implementation,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
+        )
+
+
+class PandasLikeExprListNamespace:
+    def __init__(self: Self, expr: PandasLikeExpr) -> None:
+        self._expr = expr
+
+    def len(self: Self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "list",
+            "len",
         )

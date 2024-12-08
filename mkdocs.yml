@@ -16,11 +16,12 @@ nav:
     - pandas_like_concepts/user_warning.md
     - pandas_like_concepts/column_names.md
     - pandas_like_concepts/boolean.md
-  - overhead.md
-  - backcompat.md
-  - extending.md
-  - how_it_works.md
-  - Roadmap and related projects: roadmap_and_related.md
+  - Overhead: overhead.md
+  - Perfect backwards compatibility policy: backcompat.md
+  - Supported libraries and extending Narwhals: extending.md
+  - How it works: how_it_works.md
+  - Ecosystem: ecosystem.md
+  - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
     - Supported DataFrame methods: api-completeness/dataframe.md
@@ -127,3 +128,4 @@ extra_javascript:
 
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/extra.css

@@ -6,6 +6,7 @@ from typing import Any
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
@@ -67,7 +68,7 @@ def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
 
 
 def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
-    import dask_expr  # ignore-banned-import
+    import dask_expr
 
     if not dask_expr._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions
@@ -84,7 +85,8 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):

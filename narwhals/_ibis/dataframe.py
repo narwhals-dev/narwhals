@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_ibis
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -14,10 +15,11 @@ if TYPE_CHECKING:
 
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
-def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
+def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
+    dtypes = import_dtypes_module(version)
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -48,14 +50,14 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
         return dtypes.Datetime()
     if ibis_dtype.is_array():
         return dtypes.List(
-            map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
+            map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, version)
         )
     if ibis_dtype.is_struct():
         return dtypes.Struct(
             [
                 dtypes.Field(
                     ibis_dtype_name,
-                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, version),
                 )
                 for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
             ]
@@ -64,9 +66,9 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
 
 
 class IbisInterchangeFrame:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -77,7 +79,7 @@ class IbisInterchangeFrame:
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item], dtypes=self._dtypes)
+        return IbisInterchangeSeries(self._native_frame[item], version=self._version)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
@@ -106,7 +108,7 @@ class IbisInterchangeFrame:
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
-                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._dtypes)
+                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._version)
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         elif attr == "columns":
@@ -119,8 +121,8 @@ class IbisInterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def _change_dtypes(self: Self, dtypes: DTypes) -> Self:
-        return self.__class__(self._native_frame, dtypes=dtypes)
+    def _change_version(self: Self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
 
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, dtypes=self._dtypes)
+        return self.__class__(df, version=self._version)

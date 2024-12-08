@@ -5,6 +5,7 @@ from typing import Any
 from typing import Sequence
 from typing import overload
 
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -13,12 +14,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
-def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
-    import pyarrow as pa  # ignore-banned-import
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+    import pyarrow as pa
 
+    dtypes = import_dtypes_module(version)
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -62,24 +64,25 @@ def native_to_narwhals_dtype(dtype: pa.DataType, dtypes: DTypes) -> DType:
             [
                 dtypes.Field(
                     dtype.field(i).name,
-                    native_to_narwhals_dtype(dtype.field(i).type, dtypes),
+                    native_to_narwhals_dtype(dtype.field(i).type, version),
                 )
                 for i in range(dtype.num_fields)
             ]
         )
 
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
-        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if pa.types.is_fixed_size_list(dtype):
         return dtypes.Array(
-            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+            native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.DataType:
-    import pyarrow as pa  # ignore-banned-import
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
+    import pyarrow as pa
 
+    dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
@@ -115,9 +118,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
         return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        return pa.list_(
+            value_type=narwhals_to_native_dtype(
+                dtype.inner,  # type: ignore[union-attr]
+                version=version,
+            )
+        )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
         return NotImplementedError(msg)
@@ -128,7 +135,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> pa.D
     raise AssertionError(msg)
 
 
-def validate_column_comparand(other: Any) -> Any:
+def broadcast_and_extract_native(
+    lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -140,27 +149,47 @@ def validate_column_comparand(other: Any) -> Any:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if isinstance(other, list):
-        if len(other) > 1:
-            if hasattr(other[0], "__narwhals_expr__") or hasattr(
-                other[0], "__narwhals_series__"
+    # If `rhs` is the output of an expression evaluation, then it is
+    # a list of Series. So, we verify that that list is of length-1,
+    # and take the first (and only) element.
+    if isinstance(rhs, list):
+        if len(rhs) > 1:
+            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
+                rhs[0], "__narwhals_series__"
             ):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
-            msg = (
-                f"Expected scalar value, Series, or Expr, got list of : {type(other[0])}"
-            )
+            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
             raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, ArrowDataFrame):
+        rhs = rhs[0]
+
+    if isinstance(rhs, ArrowDataFrame):
         return NotImplemented
-    if isinstance(other, ArrowSeries):
-        if len(other) == 1:
+
+    if isinstance(rhs, ArrowSeries):
+        if len(rhs) == 1:
             # broadcast
-            return other[0]
-        return other._native_series
-    return other
+            return lhs._native_series, rhs[0]
+        if len(lhs) == 1:
+            # broadcast
+            import numpy as np  # ignore-banned-import
+            import pyarrow as pa
+
+            fill_value = lhs[0]
+            if backend_version < (13,) and hasattr(fill_value, "as_py"):
+                fill_value = fill_value.as_py()
+            left_result = pa.chunked_array(
+                [
+                    pa.array(
+                        np.full(shape=rhs.len(), fill_value=fill_value),
+                        type=lhs._native_series.type,
+                    )
+                ]
+            )
+            return left_result, rhs._native_series
+        return lhs._native_series, rhs._native_series
+    return lhs._native_series, rhs
 
 
 def validate_dataframe_comparand(
@@ -176,10 +205,10 @@ def validate_dataframe_comparand(
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
             import numpy as np  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
+            import pyarrow as pa
 
             value = other._native_series[0]
-            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
         return other._native_series
@@ -198,7 +227,7 @@ def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     names = [name for df in dfs for name in df.column_names]
 
@@ -226,7 +255,7 @@ def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
             )
             raise TypeError(msg)
 
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     return pa.concat_tables(dfs).combine_chunks()
 
@@ -236,7 +265,7 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     kwargs = (
         {"promote": True}
@@ -249,8 +278,8 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -290,8 +319,8 @@ def cast_for_truediv(
 ) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -313,7 +342,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     if fast_path:
         return [s._native_series for s in series]
 
-    import pyarrow as pa  # ignore-banned-import
+    import pyarrow as pa
 
     is_max_length_gt_1 = max_length > 1
     reshaped = []
@@ -321,7 +350,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
         s_native = s._native_series
         if is_max_length_gt_1 and length == 1:
             value = s_native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             reshaped.append(pa.array([value] * max_length, type=s_native.type))
         else:
@@ -402,8 +431,8 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 def parse_datetime_format(arr: pa.StringArray) -> str:
     """Try to infer datetime format from StringArray."""
-    import pyarrow as pa  # ignore-banned-import
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow as pa
+    import pyarrow.compute as pc
 
     matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
         pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
@@ -440,7 +469,7 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
 
 
 def _parse_date_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
@@ -462,7 +491,7 @@ def _parse_date_format(arr: pa.Array) -> str:
 
 
 def _parse_time_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)

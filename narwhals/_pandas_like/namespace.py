@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
-from typing import cast
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -19,12 +18,13 @@ from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
+from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
 
 class PandasLikeNamespace:
@@ -33,7 +33,7 @@ class PandasLikeNamespace:
         return PandasSelectorNamespace(
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     # --- not in spec ---
@@ -41,11 +41,11 @@ class PandasLikeNamespace:
         self,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
 
     def _create_expr_from_callable(
         self,
@@ -64,7 +64,7 @@ class PandasLikeNamespace:
             output_names=output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def _create_series_from_scalar(
@@ -76,7 +76,7 @@ class PandasLikeNamespace:
             index=reference_series._native_series.index[0:1],
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def _create_expr_from_series(self, series: PandasLikeSeries) -> PandasLikeExpr:
@@ -88,7 +88,7 @@ class PandasLikeNamespace:
             output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
@@ -96,7 +96,7 @@ class PandasLikeNamespace:
             value,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     # --- selection ---
@@ -105,7 +105,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def nth(self, *column_indices: int) -> PandasLikeExpr:
@@ -113,7 +113,7 @@ class PandasLikeNamespace:
             *column_indices,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def all(self) -> PandasLikeExpr:
@@ -123,7 +123,7 @@ class PandasLikeNamespace:
                     df._native_frame[column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
                 for column_name in df.columns
             ],
@@ -133,7 +133,7 @@ class PandasLikeNamespace:
             output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     def lit(self, value: Any, dtype: DType | None) -> PandasLikeExpr:
@@ -144,7 +144,7 @@ class PandasLikeNamespace:
                 index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
             if dtype:
                 return pandas_series.cast(dtype)
@@ -155,10 +155,10 @@ class PandasLikeNamespace:
             depth=0,
             function_name="lit",
             root_names=None,
-            output_names=[_lit_pandas_series.__name__],
+            output_names=["literal"],
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     # --- reduction ---
@@ -167,7 +167,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).sum()
 
     def mean(self, *column_names: str) -> PandasLikeExpr:
@@ -175,7 +175,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).mean()
 
     def median(self, *column_names: str) -> PandasLikeExpr:
@@ -183,7 +183,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).median()
 
     def max(self, *column_names: str) -> PandasLikeExpr:
@@ -191,7 +191,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).max()
 
     def min(self, *column_names: str) -> PandasLikeExpr:
@@ -199,7 +199,7 @@ class PandasLikeNamespace:
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         ).min()
 
     def len(self) -> PandasLikeExpr:
@@ -211,7 +211,7 @@ class PandasLikeNamespace:
                     index=[0],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
             ],
             depth=0,
@@ -220,7 +220,7 @@ class PandasLikeNamespace:
             output_names=["len"],
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     # --- horizontal ---
@@ -302,7 +302,7 @@ class PandasLikeNamespace:
                     .rename(series[0].name, copy=False),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
             ]
 
@@ -329,7 +329,7 @@ class PandasLikeNamespace:
                     .rename(series[0].name, copy=False),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
             ]
 
@@ -357,7 +357,7 @@ class PandasLikeNamespace:
                 ),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         if how == "vertical":
             return PandasLikeDataFrame(
@@ -368,7 +368,7 @@ class PandasLikeNamespace:
                 ),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
 
         if how == "diagonal":
@@ -380,7 +380,7 @@ class PandasLikeNamespace:
                 ),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
         raise NotImplementedError
 
@@ -389,7 +389,7 @@ class PandasLikeNamespace:
         *predicates: IntoPandasLikeExpr,
     ) -> PandasWhen:
         plx = self.__class__(
-            self._implementation, self._backend_version, dtypes=self._dtypes
+            self._implementation, self._backend_version, version=self._version
         )
         if predicates:
             condition = plx.all_horizontal(*predicates)
@@ -398,7 +398,7 @@ class PandasLikeNamespace:
             raise TypeError(msg)
 
         return PandasWhen(
-            condition, self._implementation, self._backend_version, dtypes=self._dtypes
+            condition, self._implementation, self._backend_version, version=self._version
         )
 
     def concat_str(
@@ -412,12 +412,11 @@ class PandasLikeNamespace:
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
         ]
+        dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
-                s
-                for _expr in parsed_exprs
-                for s in _expr.cast(self._dtypes.String())._call(df)
+                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())._call(df)
             )
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
 
@@ -437,7 +436,7 @@ class PandasLikeNamespace:
                     index=init_value._native_series.index,
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                    dtypes=self._dtypes,
+                    version=self._version,
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
@@ -466,43 +465,42 @@ class PandasWhen:
         then_value: Any = None,
         otherwise_value: Any = None,
         *,
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherwise_value
-        self._dtypes = dtypes
+        self._version = version
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
-        from narwhals._pandas_like.utils import validate_column_comparand
+        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
         plx = PandasLikeNamespace(
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
+            value_series = condition.__class__._from_iterable(
                 [self._then_value] * len(condition),
                 name="literal",
                 index=condition._native_series.index,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                dtypes=self._dtypes,
+                version=self._version,
             )
-        value_series = cast(PandasLikeSeries, value_series)
-
-        value_series_native = value_series._native_series
-        condition_native = validate_column_comparand(value_series_native.index, condition)
+        value_series_native, condition_native = broadcast_align_and_extract_native(
+            value_series, condition
+        )
 
         if self._otherwise_value is None:
             return [
@@ -513,7 +511,7 @@ class PandasWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]  # type: ignore[arg-type]
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
@@ -535,7 +533,7 @@ class PandasWhen:
             output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
 
@@ -550,11 +548,11 @@ class PandasThen(PandasLikeExpr):
         output_names: list[str] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
-        self._dtypes = dtypes
+        self._version = version
         self._call = call
         self._depth = depth
         self._function_name = function_name

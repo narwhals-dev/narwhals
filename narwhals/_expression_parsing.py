@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -34,13 +35,21 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import IntoPolarsExpr
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.typing import IntoSparkLikeExpr
 
     CompliantNamespace = Union[
-        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+        PandasLikeNamespace,
+        ArrowNamespace,
+        DaskNamespace,
+        PolarsNamespace,
+        SparkLikeNamespace,
     ]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr, SparkLikeExpr]
     IntoCompliantExpr = Union[
-        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr, IntoSparkLikeExpr
     ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
@@ -49,9 +58,15 @@ if TYPE_CHECKING:
         list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
     ListOfCompliantExpr = Union[
-        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+        list[PandasLikeExpr],
+        list[ArrowExpr],
+        list[DaskExpr],
+        list[PolarsExpr],
+        list[SparkLikeExpr],
     ]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
+    CompliantDataFrame = Union[
+        PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame, SparkLikeLazyFrame
+    ]
 
     T = TypeVar("T")
 
@@ -60,7 +75,7 @@ def evaluate_into_expr(
     df: CompliantDataFrame, into_expr: IntoCompliantExpr
 ) -> ListOfCompliantSeries:
     """Return list of raw columns."""
-    expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
+    expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())  # type: ignore[arg-type]
     return expr._call(df)  # type: ignore[arg-type]
 
 
@@ -151,6 +166,14 @@ def parse_into_exprs(
 ) -> list[PolarsExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoSparkLikeExpr,
+    namespace: SparkLikeNamespace,
+    **named_exprs: IntoSparkLikeExpr,
+) -> list[SparkLikeExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -160,13 +183,31 @@ def parse_into_exprs(
 
     See `parse_into_expr` for more details.
     """
-    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
-        parse_into_expr(expr, namespace=namespace).alias(name)
+    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [  # type: ignore[arg-type]
+        parse_into_expr(expr, namespace=namespace).alias(name)  # type: ignore[arg-type]
         for name, expr in named_exprs.items()
     ]
 
 
+@overload
+def parse_into_expr(into_expr: IntoArrowExpr, namespace: ArrowNamespace) -> ArrowExpr: ...
+@overload
 def parse_into_expr(
+    into_expr: IntoPandasLikeExpr, namespace: PandasLikeNamespace
+) -> PandasLikeExpr: ...
+@overload
+def parse_into_expr(
+    into_expr: IntoPolarsExpr, namespace: PolarsNamespace
+) -> PolarsExpr: ...
+@overload
+def parse_into_expr(
+    into_expr: IntoSparkLikeExpr, namespace: SparkLikeNamespace
+) -> SparkLikeExpr: ...
+@overload
+def parse_into_expr(into_expr: IntoDaskExpr, namespace: DaskNamespace) -> DaskExpr: ...
+
+
+def parse_into_expr(  # type: ignore[misc]
     into_expr: IntoCompliantExpr,
     *,
     namespace: CompliantNamespace,
@@ -223,9 +264,17 @@ def reuse_series_implementation(
             for arg_name, arg_value in kwargs.items()
         }
 
+        # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
+        # However, when working with expressions, we keep everything PyArrow-native.
+        extra_kwargs = (
+            {"_return_py_scalar": False}
+            if returns_scalar and expr._implementation is Implementation.PYARROW
+            else {}
+        )
+
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(series, attr)(*_args, **_kwargs),
+                getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
                 reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
@@ -235,7 +284,11 @@ def reuse_series_implementation(
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            msg = (
+                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
+                f"Expression output names: {expr._output_names}\n"
+                f"Series names: {[s.name for s in out]}"
+            )
             raise AssertionError(msg)
         return out
 

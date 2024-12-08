@@ -17,7 +17,7 @@ def run_common(session: Session, coverage_threshold: float) -> None:
     session.install("-e.", "-r", "requirements-dev.txt")
 
     if session.python != "3.8":
-        session.install("ibis-framework>=6.0.0 rich packaging pyarrow_hotfix")
+        session.install("ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix")
 
     session.run(
         "pytest",
@@ -55,6 +55,8 @@ def min_and_old_versions(session: Session, pandas_version: str) -> None:
         "scikit-learn==1.1.0",
         "tzdata",
     )
+    if pandas_version == "1.1.5":
+        session.install("pyspark==3.3.0")
     run_common(session, coverage_threshold=50)
 
 

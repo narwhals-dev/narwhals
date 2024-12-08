@@ -33,7 +33,7 @@ def get_function_name_option(
     function_name: str,
 ) -> pc.CountOptions | pc.VarianceOptions | None:
     """Map specific pyarrow compute function to respective option to match polars behaviour."""
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     function_name_to_options = {
         "count": pc.CountOptions(mode="all"),
@@ -48,7 +48,7 @@ class ArrowGroupBy:
     def __init__(
         self: Self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         if drop_null_keys:
             self._df = df.drop_nulls(keys)
@@ -87,8 +87,8 @@ class ArrowGroupBy:
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        import pyarrow as pa  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
         null_token = "__null_token_value__"  # noqa: S105
@@ -127,7 +127,7 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow.compute as pc
 
     all_simple_aggs = True
     for expr in exprs:

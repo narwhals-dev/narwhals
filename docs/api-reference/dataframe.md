@@ -16,6 +16,7 @@
         - get_column
         - group_by
         - head
+        - implementation
         - is_duplicated
         - is_empty
         - is_unique
