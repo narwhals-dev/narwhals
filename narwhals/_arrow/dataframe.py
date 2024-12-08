@@ -743,3 +743,72 @@ class ArrowDataFrame:
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+        native_frame = self._native_frame
+        counts = pc.list_value_length(native_frame[to_explode[0]])
+
+        if not all(
+            pc.all(pc.equal(pc.list_value_length(native_frame[col_name]), counts)).as_py()
+            for col_name in to_explode[1:]
+        ):
+            from narwhals.exceptions import ShapeError
+
+            msg = "exploded columns must have matching element counts"
+            raise ShapeError(msg)
+
+        original_columns = self.columns
+        other_columns = [c for c in original_columns if c not in to_explode]
+        fast_path = pc.all(pc.greater_equal(counts, 1)).as_py()
+
+        if fast_path:
+            indices = pc.list_parent_indices(native_frame[to_explode[0]])
+
+            exploded_frame = native_frame.take(indices=indices)
+            exploded_series = [
+                pc.list_flatten(native_frame[col_name]) for col_name in to_explode
+            ]
+            return self._from_native_frame(
+                pa.Table.from_arrays(
+                    [*[exploded_frame[c] for c in other_columns], *exploded_series],
+                    names=[*other_columns, *to_explode],
+                )
+            ).select(*original_columns)
+
+        else:
+
+            def explode_null_array(array: pa.ChunkedArray) -> pa.ChunkedArray:
+                exploded_values = []  # type: ignore[var-annotated]
+                for lst_element in array.to_pylist():
+                    if lst_element is None or len(lst_element) == 0:
+                        exploded_values.append(None)
+                    else:  # Non-empty list)
+                        exploded_values.extend(lst_element)
+                return pa.chunked_array([exploded_values])
+
+            indices = pa.array(
+                [
+                    i
+                    for i, count in enumerate(counts.to_pylist())
+                    for _ in range(max(count or 1, 1))
+                ]
+            )
+            exploded_frame = native_frame.take(indices=indices)
+            exploded_series = [
+                explode_null_array(native_frame[col_name]) for col_name in to_explode
+            ]
+
+            return self._from_native_frame(
+                pa.Table.from_arrays(
+                    [*[exploded_frame[c] for c in other_columns], *exploded_series],
+                    names=[*other_columns, *to_explode],
+                )
+            ).select(*original_columns)

@@ -334,6 +334,14 @@ class BaseFrame(Generic[FrameT]):
         )
         raise NotImplementedError(msg)
 
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.explode(
+                columns,
+                *more_columns,
+            )
+        )
+
 
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native dataframe.
@@ -2925,6 +2933,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        return super().explode(columns, *more_columns)
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """Narwhals DataFrame, backed by a native dataframe.
@@ -4643,3 +4654,6 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().unpivot(
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        return super().explode(columns, *more_columns)

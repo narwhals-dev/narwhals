@@ -11,6 +11,7 @@
         - columns
         - drop
         - drop_nulls
+        - explode
         - filter
         - gather_every
         - get_column

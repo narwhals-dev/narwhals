@@ -937,3 +937,41 @@ class PandasLikeDataFrame:
                 value_name=value_name if value_name is not None else "value",
             )
         )
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+
+        if len(to_explode) == 1:
+            return self._from_native_frame(self._native_frame.explode(to_explode[0]))
+        else:
+            native_frame = self._native_frame
+            anchor_series = native_frame[to_explode[0]].list.len()
+
+            if not all(
+                (native_frame[col_name].list.len() == anchor_series).all()
+                for col_name in to_explode[1:]
+            ):
+                from narwhals.exceptions import ShapeError
+
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+
+            original_columns = self.columns
+            other_columns = [c for c in original_columns if c not in to_explode]
+
+            exploded_frame = native_frame[[*other_columns, to_explode[0]]].explode(
+                to_explode[0]
+            )
+            exploded_series = [
+                native_frame[col_name].explode().to_frame() for col_name in to_explode[1:]
+            ]
+
+            plx = self.__native_namespace__()
+
+            return self._from_native_frame(
+                plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns]
+            )
