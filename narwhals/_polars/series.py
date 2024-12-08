@@ -419,12 +419,20 @@ class PolarsSeriesListNamespace:
 
     def len(self: Self) -> PolarsSeries:
         native_series = self._series._native_series
+        native_result = native_series.list.len()
+
         if self._series._backend_version < (1, 16):  # pragma: no cover
-            native_result = native_series.list.len().zip_with(
-                ~native_series.is_null(), native_series.list.first()
-            )
-        else:
-            native_result = native_series.list.len()
+            import polars as pl
+
+            native_result = pl.select(
+                pl.when(~native_series.is_null()).then(native_result).otherwise(None)
+            )[native_series.name].cast(pl.UInt32())
+
+        elif self._series._backend_version < (1, 17):  # pragma: no cover
+            import polars as pl
+
+            native_result = native_series.cast(pl.UInt32())
+
         return self._series._from_native_series(native_result)
 
     # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added

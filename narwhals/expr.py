@@ -5661,7 +5661,7 @@ class ExprListNamespace(Generic[ExprT]):
             pyarrow.Table
             a: list<item: int64>
               child 0, item: int64
-            a_len: int32
+            a_len: uint32
             ----
             a: [[[1,2],[3,4,null],null,[]]]
             a_len: [[2,3,null,0]]

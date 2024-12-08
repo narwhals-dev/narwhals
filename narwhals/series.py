@@ -5007,12 +5007,12 @@ class SeriesListNamespace(Generic[SeriesT]):
 
             >>> agnostic_list_len(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
-            Series: '' [i64]
+            Series: '' [u32]
             [
-                2
-                3
-                null
-                0
+               2
+               3
+               null
+               0
             ]
 
             >>> agnostic_list_len(pa.chunked_array([data]))  # doctest: +ELLIPSIS

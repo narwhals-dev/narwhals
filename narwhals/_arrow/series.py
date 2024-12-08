@@ -1469,8 +1469,9 @@ class ArrowSeriesListNamespace:
         self._arrow_series = series
 
     def len(self: Self) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return self._arrow_series._from_native_series(
-            pc.list_value_length(self._arrow_series._native_series)
+            pc.cast(pc.list_value_length(self._arrow_series._native_series), pa.uint32())
         )

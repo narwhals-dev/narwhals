@@ -1167,5 +1167,16 @@ class PandasLikeSeriesListNamespace:
         self._compliant_series = series
 
     def len(self: Self) -> PandasLikeSeries:
+        from narwhals.utils import import_dtypes_module
+
         s = self._compliant_series._native_series
-        return self._compliant_series._from_native_series(s.__class__(s.list.len()))
+
+        native_result = s.__class__(s.list.len())
+        dtype = narwhals_to_native_dtype(
+            dtype=import_dtypes_module(self._compliant_series._version).UInt32(),
+            starting_dtype=native_result.dtype,
+            implementation=self._compliant_series._implementation,
+            backend_version=self._compliant_series._backend_version,
+            version=self._compliant_series._version,
+        )
+        return self._compliant_series._from_native_series(native_result.astype(dtype))
