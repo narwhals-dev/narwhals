@@ -286,7 +286,7 @@ class ArrowDataFrame:
         return self.schema
 
     def estimated_size(self: Self) -> int | float:
-        return self._native_frame.nbytes
+        return float(self._native_frame.nbytes)
 
     @property
     def columns(self: Self) -> list[str]:

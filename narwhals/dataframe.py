@@ -763,11 +763,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             self._compliant_frame.get_column(name),
             level=self._level,
         )
-    
-    
-    def estimated_size(self) -> int | float:
-        """
-        Return an estimation of the total (heap) allocated size of the `DataFrame`.
+
+    def estimated_size(self) -> float:
+        """Return an estimation of the total (heap) allocated size of the `DataFrame`.
 
         Estimated size is given in the specified unit (bytes by default).
 
@@ -788,40 +786,40 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Returns:
             Integer or Float.
-        
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrameT
-            >>> df = {
-            ...     "x": list(reversed(range(1_000_000))),
-            ...     "y": [v / 1000 for v in range(1_000_000)],
-            ...     "z": [str(v) for v in range(1_000_000)],
+            >>> df = (
+            ...     {
+            ...         "x": list(reversed(range(1_000_000))),
+            ...         "y": [v / 1000 for v in range(1_000_000)],
+            ...         "z": [str(v) for v in range(1_000_000)],
             ...     },
-            ... 
+            ... )
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
             >>> df_pa = pa.table(df)
-    
+
             Let's define a dataframe-agnostic function:
-    
+
             >>> def agnostic_estimated_size(df_native: IntoDataFrameT) -> int | float:
-                    df = nw.from_native(df_native)
-                    return df.estimated_size()
-    
+            ...     df = nw.from_native(df_native)
+            ...     return df.estimated_size()
+
             We can then pass either pandas, Polars or PyArrow to `agnostic_estimated_size`:
-    
+
             >>> agnostic_estimated_size(df_pd)
             17888890
             >>> agnostic_estimated_size(df_pl)
-    
-            >>> agnostic_estimated_size(df_pa)
-      
-        """
-        return self._compliant_frame.estimated_size()
 
+            >>> agnostic_estimated_size(df_pa)
+
+        """
+        return float(self._compliant_frame.estimated_size())
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
