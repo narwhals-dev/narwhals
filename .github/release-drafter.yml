@@ -2,7 +2,7 @@ exclude-labels:
   - ignore
   - release
   - dependencies
-name-template: 'Narwhals v$RESOLVED_VERSION'
+name-template: 'Narwhals unreleased'
 version-template: unreleased
 
 change-template: '- $TITLE (#$NUMBER)' 
