@@ -23,7 +23,7 @@ def test_len_expr(
         request.applymarker(pytest.mark.xfail)
 
     result = nw.from_native(constructor(data)).select(
-        a=nw.col("a").cast(nw.List(nw.Int32())).list.len()
+        nw.col("a").cast(nw.List(nw.Int32())).list.len()
     )
 
     assert_equal_data(result, expected)
