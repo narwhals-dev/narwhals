@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
@@ -67,7 +68,7 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
-        if isinstance(idx, int):
+        if isinstance(idx, int) or is_numpy_scalar(idx):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 

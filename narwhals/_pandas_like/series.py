@@ -18,7 +18,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
-from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_scalar
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
@@ -113,8 +113,7 @@ class PandasLikeSeries:
     def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
-        np = get_numpy()
-        if np.isscalar(idx):
+        if isinstance(idx, int) or is_numpy_scalar(idx):
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
 
