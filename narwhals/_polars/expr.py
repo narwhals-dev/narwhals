@@ -184,13 +184,13 @@ class PolarsExpr:
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._expr._from_native_expr(
-                getattr(self._expr._native_expr.dt, attr)(*args, **kwargs)
+            return self._compliant_expr._from_native_expr(
+                getattr(self._compliant_expr._native_expr.dt, attr)(*args, **kwargs)
             )
 
         return func
@@ -198,13 +198,13 @@ class PolarsExprDateTimeNamespace:
 
 class PolarsExprStringNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._expr._from_native_expr(
-                getattr(self._expr._native_expr.str, attr)(*args, **kwargs)
+            return self._compliant_expr._from_native_expr(
+                getattr(self._compliant_expr._native_expr.str, attr)(*args, **kwargs)
             )
 
         return func
@@ -212,13 +212,13 @@ class PolarsExprStringNamespace:
 
 class PolarsExprCatNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._expr._from_native_expr(
-                getattr(self._expr._native_expr.cat, attr)(*args, **kwargs)
+            return self._compliant_expr._from_native_expr(
+                getattr(self._compliant_expr._native_expr.cat, attr)(*args, **kwargs)
             )
 
         return func
@@ -226,13 +226,13 @@ class PolarsExprCatNamespace:
 
 class PolarsExprNameNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._expr._from_native_expr(
-                getattr(self._expr._native_expr.name, attr)(*args, **kwargs)
+            return self._compliant_expr._from_native_expr(
+                getattr(self._compliant_expr._native_expr.name, attr)(*args, **kwargs)
             )
 
         return func
