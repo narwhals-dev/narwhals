@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -43,3 +44,15 @@ def test_len_series(
 
     result = df["a"].cast(nw.List(nw.Int32())).list.len()
     assert_equal_data({"a": result}, expected)
+
+
+def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    index = pd.Index(["a", "b", "c", "d", "e"])
+    df = nw.from_native(pd.DataFrame(data, index=index), eager_only=True)
+
+    result = df["a"].cast(nw.List(nw.Int32())).list.len()
+    assert_equal_data({"a": result}, expected)
+    assert (result.to_native().index == index).all()
