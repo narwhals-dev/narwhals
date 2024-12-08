@@ -516,11 +516,11 @@ class ArrowExpr:
 
 class ArrowExprCatNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def get_categories(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "cat",
             "get_categories",
         )
@@ -528,89 +528,103 @@ class ArrowExprCatNamespace:
 
 class ArrowExprDateTimeNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "to_string", format
+            self._compliant_expr, "dt", "to_string", format
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "replace_time_zone", time_zone
+            self._compliant_expr, "dt", "replace_time_zone", time_zone
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "convert_time_zone", time_zone
+            self._compliant_expr, "dt", "convert_time_zone", time_zone
         )
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "timestamp", time_unit
+            self._compliant_expr, "dt", "timestamp", time_unit
         )
 
     def date(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "date")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "date")
 
     def year(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "year")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "year")
 
     def month(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "month")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "month")
 
     def day(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "day")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "day")
 
     def hour(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "hour")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "hour")
 
     def minute(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "minute")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "minute")
 
     def second(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "second")
+        return reuse_series_namespace_implementation(self._compliant_expr, "dt", "second")
 
     def millisecond(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "millisecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "millisecond"
+        )
 
     def microsecond(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "microsecond"
+        )
 
     def nanosecond(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "nanosecond")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "nanosecond"
+        )
 
     def ordinal_day(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "ordinal_day"
+        )
 
     def total_minutes(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "total_minutes")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_minutes"
+        )
 
     def total_seconds(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "dt", "total_seconds")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "total_seconds"
+        )
 
     def total_milliseconds(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_milliseconds"
+            self._compliant_expr, "dt", "total_milliseconds"
         )
 
     def total_microseconds(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_microseconds"
+            self._compliant_expr, "dt", "total_microseconds"
         )
 
     def total_nanoseconds(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "dt", "total_nanoseconds"
+            self._compliant_expr, "dt", "total_nanoseconds"
         )
 
 
 class ArrowExprStringNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def len_chars(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(self._expr, "str", "len_chars")
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "str", "len_chars"
+        )
 
     def replace(
         self: Self,
@@ -621,7 +635,7 @@ class ArrowExprStringNamespace:
         n: int,
     ) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "replace",
             pattern,
@@ -638,7 +652,7 @@ class ArrowExprStringNamespace:
         literal: bool,
     ) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "replace_all",
             pattern,
@@ -648,7 +662,7 @@ class ArrowExprStringNamespace:
 
     def strip_chars(self: Self, characters: str | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "strip_chars",
             characters,
@@ -656,7 +670,7 @@ class ArrowExprStringNamespace:
 
     def starts_with(self: Self, prefix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "starts_with",
             prefix,
@@ -664,7 +678,7 @@ class ArrowExprStringNamespace:
 
     def ends_with(self: Self, suffix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "ends_with",
             suffix,
@@ -672,17 +686,17 @@ class ArrowExprStringNamespace:
 
     def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "str", "contains", pattern, literal=literal
+            self._compliant_expr, "str", "contains", pattern, literal=literal
         )
 
     def slice(self: Self, offset: int, length: int | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr, "str", "slice", offset, length
+            self._compliant_expr, "str", "slice", offset, length
         )
 
     def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_datetime",
             format,
@@ -690,14 +704,14 @@ class ArrowExprStringNamespace:
 
     def to_uppercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_uppercase",
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
+            self._compliant_expr,
             "str",
             "to_lowercase",
         )
@@ -705,10 +719,10 @@ class ArrowExprStringNamespace:
 
 class ArrowExprNameNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
-        self._expr = expr
+        self._compliant_expr = expr
 
     def keep(self: Self) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -718,21 +732,21 @@ class ArrowExprNameNamespace:
             )
             raise ValueError(msg)
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), root_names)
+                for series, name in zip(self._compliant_expr._call(df), root_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=root_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -744,21 +758,21 @@ class ArrowExprNameNamespace:
 
         output_names = [function(str(name)) for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = (
                 "Anonymous expressions are not supported in `.name.prefix`.\n"
@@ -768,21 +782,21 @@ class ArrowExprNameNamespace:
             raise ValueError(msg)
 
         output_names = [prefix + str(name) for name in root_names]
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = (
                 "Anonymous expressions are not supported in `.name.suffix`.\n"
@@ -793,21 +807,21 @@ class ArrowExprNameNamespace:
 
         output_names = [str(name) + suffix for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -818,21 +832,21 @@ class ArrowExprNameNamespace:
             raise ValueError(msg)
         output_names = [str(name).lower() for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
-        root_names = self._expr._root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = (
@@ -843,15 +857,15 @@ class ArrowExprNameNamespace:
             raise ValueError(msg)
         output_names = [str(name).upper() for name in root_names]
 
-        return self._expr.__class__(
+        return self._compliant_expr.__class__(
             lambda df: [
                 series.alias(name)
-                for series, name in zip(self._expr._call(df), output_names)
+                for series, name in zip(self._compliant_expr._call(df), output_names)
             ],
-            depth=self._expr._depth,
-            function_name=self._expr._function_name,
+            depth=self._compliant_expr._depth,
+            function_name=self._compliant_expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            backend_version=self._expr._backend_version,
-            version=self._expr._version,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
         )
