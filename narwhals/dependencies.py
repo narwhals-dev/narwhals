@@ -220,6 +220,11 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     return (np := get_numpy()) is not None and isinstance(arr, np.ndarray)
 
 
+def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
+    """Check whether `scalar` is a NumPy Array without importing NumPy."""
+    return (np := get_numpy()) is not None and np.isscalar(scalar)
+
+
 def is_pandas_like_dataframe(df: Any) -> bool:
     """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
