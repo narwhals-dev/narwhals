@@ -427,7 +427,8 @@ class PolarsSeriesListNamespace:
             native_result = native_series.list.len()
         return self._series._from_native_series(native_result)
 
-    def __getattr__(self: Self, attr: str) -> Any:
+    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
+    def __getattr__(self: Self, attr: str) -> Any:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(

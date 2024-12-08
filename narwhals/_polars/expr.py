@@ -258,7 +258,10 @@ class PolarsExprListNamespace:
             native_result = native_expr.list.len()
         return self._expr._from_native_expr(native_result)
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
+    def __getattr__(
+        self: Self, attr: str
+    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
