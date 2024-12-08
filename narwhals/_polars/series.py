@@ -24,9 +24,10 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
+from narwhals.typing import CompliantSeries
 
 
-class PolarsSeries:
+class PolarsSeries(CompliantSeries):
     def __init__(
         self: Self,
         series: pl.Series,
@@ -124,6 +125,10 @@ class PolarsSeries:
 
     def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
+
+    def alias(self: Self, name: str) -> Self:
+        ser = self._native_series
+        return self._from_native_series(ser.alias(name))
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series

@@ -37,8 +37,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
-class ArrowDataFrame:
+
+class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,

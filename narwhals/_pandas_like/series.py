@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+from narwhals.typing import CompliantSeries
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -76,7 +77,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries:
+class PandasLikeSeries(CompliantSeries):
     def __init__(
         self,
         native_series: Any,
