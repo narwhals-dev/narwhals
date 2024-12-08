@@ -1062,6 +1062,10 @@ class ArrowSeries:
     def str(self: Self) -> ArrowSeriesStringNamespace:
         return ArrowSeriesStringNamespace(self)
 
+    @property
+    def list(self: Self) -> ArrowSeriesListNamespace:
+        return ArrowSeriesListNamespace(self)
+
 
 class ArrowSeriesDateTimeNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
@@ -1457,4 +1461,17 @@ class ArrowSeriesStringNamespace:
 
         return self._compliant_series._from_native_series(
             pc.utf8_lower(self._compliant_series._native_series),
+        )
+
+
+class ArrowSeriesListNamespace:
+    def __init__(self: Self, series: ArrowSeries) -> None:
+        self._arrow_series = series
+
+    def len(self: Self) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.list_value_length(self._arrow_series._native_series), pa.uint32())
         )

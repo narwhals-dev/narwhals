@@ -513,6 +513,10 @@ class ArrowExpr:
     def name(self: Self) -> ArrowExprNameNamespace:
         return ArrowExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> ArrowExprListNamespace:
+        return ArrowExprListNamespace(self)
+
 
 class ArrowExprCatNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
@@ -868,4 +872,16 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+        )
+
+
+class ArrowExprListNamespace:
+    def __init__(self: Self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def len(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "list",
+            "len",
         )

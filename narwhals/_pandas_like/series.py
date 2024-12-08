@@ -864,6 +864,10 @@ class PandasLikeSeries:
     def cat(self) -> PandasLikeSeriesCatNamespace:
         return PandasLikeSeriesCatNamespace(self)
 
+    @property
+    def list(self) -> PandasLikeSeriesListNamespace:
+        return PandasLikeSeriesListNamespace(self)
+
 
 class PandasLikeSeriesCatNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
@@ -1156,3 +1160,22 @@ class PandasLikeSeriesDateTimeNamespace:
             raise TypeError(msg)
         result[mask_na] = None
         return self._compliant_series._from_native_series(result)
+
+
+class PandasLikeSeriesListNamespace:
+    def __init__(self, series: PandasLikeSeries) -> None:
+        self._compliant_series = series
+
+    def len(self: Self) -> PandasLikeSeries:
+        from narwhals.utils import import_dtypes_module
+
+        native_series = self._compliant_series._native_series
+        native_result = native_series.list.len().rename(native_series.name, copy=False)
+        dtype = narwhals_to_native_dtype(
+            dtype=import_dtypes_module(self._compliant_series._version).UInt32(),
+            starting_dtype=native_result.dtype,
+            implementation=self._compliant_series._implementation,
+            backend_version=self._compliant_series._backend_version,
+            version=self._compliant_series._version,
+        )
+        return self._compliant_series._from_native_series(native_result.astype(dtype))

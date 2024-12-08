@@ -181,6 +181,10 @@ class PolarsExpr:
     def name(self: Self) -> PolarsExprNameNamespace:
         return PolarsExprNameNamespace(self)
 
+    @property
+    def list(self: Self) -> PolarsExprListNamespace:
+        return PolarsExprListNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
@@ -233,6 +237,40 @@ class PolarsExprNameNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._compliant_expr._from_native_expr(
                 getattr(self._compliant_expr._native_expr.name, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsExprListNamespace:
+    def __init__(self: Self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def len(self: Self) -> PolarsExpr:
+        native_expr = self._expr._native_expr
+        native_result = native_expr.list.len()
+
+        if self._expr._backend_version < (1, 16):  # pragma: no cover
+            import polars as pl
+
+            native_result: pl.Expr = (  # type: ignore[no-redef]
+                pl.when(~native_expr.is_null()).then(native_result).cast(pl.UInt32())
+            )
+        elif self._expr._backend_version < (1, 17):  # pragma: no cover
+            import polars as pl
+
+            native_result = native_result.cast(pl.UInt32())
+
+        return self._expr._from_native_expr(native_result)
+
+    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
+    def __getattr__(
+        self: Self, attr: str
+    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.list, attr)(*args, **kwargs)
             )
 
         return func
