@@ -26,6 +26,7 @@ POLARS_TO_ARROW_AGGREGATIONS = {
     "n_unique": "count_distinct",
     "std": "stddev",
     "var": "variance",  # currently unused, we don't have `var` yet
+    "unique": "distinct",
 }
 
 
@@ -40,6 +41,7 @@ def get_function_name_option(
         "count_distinct": pc.CountOptions(mode="all"),
         "stddev": pc.VarianceOptions(ddof=1),
         "variance": pc.VarianceOptions(ddof=1),
+        "distinct": pc.CountOptions(mode="all"),
     }
     return function_name_to_options.get(function_name)
 
