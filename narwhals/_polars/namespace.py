@@ -132,14 +132,8 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        if self._backend_version < (0, 20, 4):
-            return PolarsExpr(
-                pl.mean([*column_names]),  # type: ignore[arg-type]
-                version=self._version,
-                backend_version=self._backend_version,
-            )
         return PolarsExpr(
-            pl.mean(*column_names),
+            pl.mean([*column_names]),  # type: ignore[arg-type]
             version=self._version,
             backend_version=self._backend_version,
         )
