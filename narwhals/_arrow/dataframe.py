@@ -807,7 +807,7 @@ class ArrowDataFrame:
             flatten_func = explode_null_array
 
         arrays = [
-            native_frame[col_name].take(indices=indices)
+            native_frame[col_name].take(indices)
             if col_name in other_columns
             else flatten_func(native_frame[col_name])
             for col_name in original_columns

@@ -9,6 +9,8 @@ from polars.exceptions import ShapeError as PlShapeError
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
+from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -38,6 +40,9 @@ def test_explode_single_col(
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
     result = (
         nw.from_native(constructor(data))
         .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
@@ -64,6 +69,9 @@ def test_explode_multiple_cols(
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
     result = (
         nw.from_native(constructor(data))
         .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
@@ -84,6 +92,9 @@ def test_explode_shape_error(
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
     with pytest.raises(
         (ShapeError, PlShapeError),
         match="exploded columns must have matching element counts",
@@ -101,6 +112,9 @@ def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
         request.applymarker(pytest.mark.xfail)
 
     with pytest.raises(
