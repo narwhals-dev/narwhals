@@ -742,15 +742,25 @@ class PandasLikeSeries:
         ser = self._native_series
         na_position = "last" if nulls_last else "first"
         return self._from_native_series(
-            ser.sort_values(ascending=not descending, na_position=na_position).rename(
-                self.name, copy=False
+            rename(
+                ser.sort_values(ascending=not descending, na_position=na_position),
+                self.name,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         )
 
     def alias(self, name: str) -> Self:
         if name != self.name:
             ser = self._native_series
-            return self._from_native_series(ser.rename(name, copy=False))
+            return self._from_native_series(
+                rename(
+                    ser,
+                    name,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                )
+            )
         return self
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
@@ -802,25 +812,45 @@ class PandasLikeSeries:
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
         res = self._native_series.duplicated(keep=False)
-        res = res.rename(self.name, copy=False)
+        res = rename(
+            res,
+            self.name,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_series(res)
 
     def is_empty(self: Self) -> bool:
         return self._native_series.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep=False).rename(self.name, copy=False)
+        res = rename(
+            ~self._native_series.duplicated(keep=False),
+            self.name,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_series(res)
 
     def null_count(self: Self) -> int:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep="first").rename(self.name, copy=False)
+        res = rename(
+            ~self._native_series.duplicated(keep="first"),
+            self.name,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_series(res)
 
     def is_last_distinct(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep="last").rename(self.name, copy=False)
+        res = rename(
+            ~self._native_series.duplicated(keep="last"),
+            self.name,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
         return self._from_native_series(res)
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
@@ -911,9 +941,14 @@ class PandasLikeSeries:
         if has_nulls:
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
-            result = select_columns_by_name(
-                result, output_order, self._backend_version, self._implementation
-            ).rename(columns={null_col_pd: null_col_pl}, copy=False)
+            result = rename(
+                select_columns_by_name(
+                    result, output_order, self._backend_version, self._implementation
+                ),
+                columns={null_col_pd: null_col_pl},
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
 
         return PandasLikeDataFrame(
             result,
@@ -1338,7 +1373,12 @@ class PandasLikeSeriesListNamespace:
         from narwhals.utils import import_dtypes_module
 
         native_series = self._compliant_series._native_series
-        native_result = native_series.list.len().rename(native_series.name, copy=False)
+        native_result = rename(
+            native_series.list.len(),
+            native_series.name,
+            implementation=self._compliant_series._implementation,
+            backend_version=self._compliant_series._backend_version,
+        )
         dtype = narwhals_to_native_dtype(
             dtype=import_dtypes_module(self._compliant_series._version).UInt32(),
             starting_dtype=native_result.dtype,

@@ -307,6 +307,7 @@ def set_axis(
     implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> T:
+    """Wrapper around pandas' set_axis so that we can set `copy` / `inplace` based on implementation/version."""
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
@@ -329,16 +330,17 @@ def set_axis(
 
 def rename(
     obj: T,
-    name: str,
-    *,
+    *args: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
+    **kwargs: Any,
 ) -> T:
+    """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and backend_version >= (
         3,
     ):  # pragma: no cover
-        return obj.rename(name)  # type: ignore[attr-defined, no-any-return]
-    return obj.rename(name, copy=False)  # type: ignore[attr-defined, no-any-return]
+        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined, no-any-return]
+    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined, no-any-return]
 
 
 def native_to_narwhals_dtype(
