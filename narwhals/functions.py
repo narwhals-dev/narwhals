@@ -936,3 +936,59 @@ def get_level(
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
     return obj._level
+
+
+def read_csv(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """Read a CSV file into a DataFrame.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoDataFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that reads a csv file with a specified native namespace:
+
+        >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
+        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
+
+        >>> agnostic_read_csv(native_namespace=pd)  # doctest:+SKIP
+        >>> agnostic_read_csv(native_namespace=pl)  # doctest:+SKIP
+        >>> agnostic_read_csv(native_namespace=pa)  # doctest:+SKIP
+    """
+    return _read_csv_impl(source, native_namespace=native_namespace)
+
+
+def _read_csv_impl(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation in (
+        Implementation.POLARS,
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    ):
+        native_frame = native_namespace.read_csv(source)
+    elif implementation is Implementation.PYARROW:
+        from pyarrow import csv  # ignore-banned-import
+
+        native_frame = csv.read_csv(source)
+    return from_native(native_frame, eager_only=True)
