@@ -21,6 +21,7 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import scale_bytes
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
 
@@ -285,8 +287,9 @@ class ArrowDataFrame:
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
-    def estimated_size(self: Self) -> int | float:
-        return float(self._native_frame.nbytes)
+    def estimated_size(self: Self, unit: SizeUnit = "b") -> float:
+        sz = float(self._native_frame.nbytes)
+        return scale_bytes(sz, unit)
 
     @property
     def columns(self: Self) -> list[str]:

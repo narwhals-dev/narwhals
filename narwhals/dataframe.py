@@ -19,6 +19,7 @@ from narwhals.translate import to_native
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
+from narwhals.utils import scale_bytes
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
@@ -764,7 +766,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             level=self._level,
         )
 
-    def estimated_size(self) -> float:
+    def estimated_size(self, unit: SizeUnit = "b") -> float:
         """Return an estimation of the total (heap) allocated size of the `DataFrame`.
 
         Estimated size is given in the specified unit (bytes by default).
@@ -781,7 +783,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         FFI buffers are included in this estimation.
 
         Arguments:
-            unit : {'b', 'kb', 'mb', 'gb', 'tb'}
+            unit : {'b', 'kb', 'mb', 'gb', 'tb', 'bytes', 'kilobytes', 'megabytes',
+                    'gigabytes', 'terabytes',}
                    Scale the returned size to the given unit.
 
         Returns:
@@ -793,20 +796,18 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrameT
-            >>> df = (
-            ...     {
-            ...         "x": list(reversed(range(1_000_000))),
-            ...         "y": [v / 1000 for v in range(1_000_000)],
-            ...         "z": [str(v) for v in range(1_000_000)],
-            ...     },
-            ... )
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
-            >>> df_pa = pa.table(df)
+            >>> data = {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_estimated_size(df_native: IntoDataFrameT) -> int | float:
+            >>> def agnostic_estimated_size(df_native: IntoDataFrameT) -> float:
             ...     df = nw.from_native(df_native)
             ...     return df.estimated_size()
 
@@ -819,7 +820,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> agnostic_estimated_size(df_pa)
 
         """
-        return float(self._compliant_frame.estimated_size())
+        sz = float(self._compliant_frame.estimated_size())
+        return scale_bytes(sz, unit)
+    
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...

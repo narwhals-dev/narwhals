@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import SizeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -679,6 +680,23 @@ def maybe_convert_dtypes(
             )
         )
     return obj_any  # type: ignore[no-any-return]
+
+
+def scale_bytes(sz: float, unit: SizeUnit) -> float:
+    """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb")."""
+    if unit in {"b", "bytes"}:
+        return sz
+    elif unit in {"kb", "kilobytes"}:
+        return sz / 1024
+    elif unit in {"mb", "megabytes"}:
+        return sz / 1024**2
+    elif unit in {"gb", "gigabytes"}:
+        return sz / 1024**3
+    elif unit in {"tb", "terabytes"}:
+        return sz / 1024**4
+    else:
+        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+        raise ValueError(msg)
 
 
 def is_ordered_categorical(series: Series[Any]) -> bool:

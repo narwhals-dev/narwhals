@@ -5,6 +5,7 @@ from typing import Any
 from typing import Protocol
 from typing import TypeVar
 from typing import Union
+from typing import Literal
 
 if TYPE_CHECKING:
     import sys
@@ -173,6 +174,18 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+SizeUnit: TypeAlias = Literal[
+    "b",
+    "kb",
+    "mb",
+    "gb",
+    "tb",
+    "bytes",
+    "kilobytes",
+    "megabytes",
+    "gigabytes",
+    "terabytes",
+]
 
 class DTypes:
     Int64: type[dtypes.Int64]
