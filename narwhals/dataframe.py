@@ -4733,7 +4733,7 @@ class LazyFrame(BaseFrame[FrameT]):
             *more_columns: Additional names of columns to explode, specified as positional arguments.
 
         Returns:
-            New DataFrame
+            New LazyFrame
 
         Examples:
             >>> import narwhals as nw
