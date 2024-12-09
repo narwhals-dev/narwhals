@@ -939,11 +939,22 @@ class PandasLikeDataFrame:
         )
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        from narwhals.exceptions import InvalidOperationError
+
+        dtypes = import_dtypes_module(self._version)
+
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
             else [*columns, *more_columns]
         )
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = f"`explode` operation not supported for dtype `{dtype}`"
+                raise InvalidOperationError(msg)
 
         if len(to_explode) == 1:
             return self._from_native_frame(self._native_frame.explode(to_explode[0]))

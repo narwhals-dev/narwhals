@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import Sequence
 
 import pytest
+from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -76,7 +78,7 @@ def test_explode_multiple_cols(
     assert_equal_data(result, expected)
 
 
-def test_explode_exception(
+def test_explode_shape_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
@@ -93,3 +95,16 @@ def test_explode_exception(
             .explode("l1", "l3")
             .collect()
         )
+
+
+def test_explode_invalid_operation_error(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    with pytest.raises(
+        (InvalidOperationError, PlInvalidOperationError),
+        match="`explode` operation not supported for dtype",
+    ):
+        _ = nw.from_native(constructor(data)).lazy().explode("a").collect()

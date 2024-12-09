@@ -19,6 +19,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -748,11 +749,24 @@ class ArrowDataFrame:
         import pyarrow as pa
         import pyarrow.compute as pc
 
+        from narwhals.exceptions import InvalidOperationError
+
+        dtypes = import_dtypes_module(self._version)
+
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
             else [*columns, *more_columns]
         )
+
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = f"`explode` operation not supported for dtype `{dtype}`"
+                raise InvalidOperationError(msg)
+
         native_frame = self._native_frame
         counts = pc.list_value_length(native_frame[to_explode[0]])
 

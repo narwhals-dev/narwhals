@@ -580,8 +580,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-
-
         """
         return self._compliant_frame.to_pandas()
 
@@ -2934,6 +2932,74 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        """Explode the dataframe to long format by exploding the given columns.
+
+        Notes:
+            It is possible to explode multiple columns only if these columns must have
+            matching element counts.
+
+        Arguments:
+            columns: Column names. The underlying columns being exploded must be of the `List` data type.
+            *more_columns: Additional names of columns to explode, specified as positional arguments.
+
+        Returns:
+            New DataFrame
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrameT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": ["x", "y", "z", "w"],
+            ...     "lst1": [[1, 2], None, [None], []],
+            ...     "lst2": [[3, None], None, [42], []],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> def agnostic_explode(df_native: IntoDataFrameT) -> IntoDataFrameT:
+            ...     return (
+            ...         nw.from_native(df_native)
+            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
+            ...         .explode("lst1", "lst2")
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `agnostic_explode`:
+
+            >>> agnostic_explode(pd.DataFrame(data))
+               a  lst1  lst2
+            0  x     1     3
+            0  x     2  <NA>
+            1  y  <NA>  <NA>
+            2  z  <NA>    42
+            3  w  <NA>  <NA>
+            >>> agnostic_explode(pl.DataFrame(data))
+            shape: (5, 3)
+            ┌─────┬──────┬──────┐
+            │ a   ┆ lst1 ┆ lst2 │
+            │ --- ┆ ---  ┆ ---  │
+            │ str ┆ i32  ┆ i32  │
+            ╞═════╪══════╪══════╡
+            │ x   ┆ 1    ┆ 3    │
+            │ x   ┆ 2    ┆ null │
+            │ y   ┆ null ┆ null │
+            │ z   ┆ null ┆ 42   │
+            │ w   ┆ null ┆ null │
+            └─────┴──────┴──────┘
+            >>> agnostic_explode(pa.table(data))
+            pyarrow.Table
+            a: string
+            lst1: int64
+            lst2: int64
+            ----
+            a: [["x","x","y","z","w"]]
+            lst1: [[1,2,null,null,null]]
+            lst2: [[3,null,null,42,null]]
+        """
         return super().explode(columns, *more_columns)
 
 
@@ -4656,4 +4722,54 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        """Explode the dataframe to long format by exploding the given columns.
+
+        Notes:
+            It is possible to explode multiple columns only if these columns must have
+            matching element counts.
+
+        Arguments:
+            columns: Column names. The underlying columns being exploded must be of the `List` data type.
+            *more_columns: Additional names of columns to explode, specified as positional arguments.
+
+        Returns:
+            New DataFrame
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": ["x", "y", "z", "w"],
+            ...     "lst1": [[1, 2], None, [None], []],
+            ...     "lst2": [[3, None], None, [42], []],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> def agnostic_explode(df_native: IntoFrameT) -> IntoFrameT:
+            ...     return (
+            ...         nw.from_native(df_native)
+            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
+            ...         .explode("lst1", "lst2")
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `agnostic_explode`:
+
+            >>> agnostic_explode(pl.LazyFrame(data)).collect()
+            shape: (5, 3)
+            ┌─────┬──────┬──────┐
+            │ a   ┆ lst1 ┆ lst2 │
+            │ --- ┆ ---  ┆ ---  │
+            │ str ┆ i32  ┆ i32  │
+            ╞═════╪══════╪══════╡
+            │ x   ┆ 1    ┆ 3    │
+            │ x   ┆ 2    ┆ null │
+            │ y   ┆ null ┆ null │
+            │ z   ┆ null ┆ 42   │
+            │ w   ┆ null ┆ null │
+            └─────┴──────┴──────┘
+        """
         return super().explode(columns, *more_columns)
