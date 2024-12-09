@@ -866,6 +866,61 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.max()
 
+    def arg_min(self) -> Self:
+        """Returns the index of the minimum value in every sub-array.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_arg_min(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_min()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> agnostic_arg_min(s_pd)
+            np.int64(0)
+            >>> agnostic_arg_min(s_pl)
+            0
+        """
+        return self._compliant_series.arg_min()
+
+    def arg_max(self) -> Self:
+        """Returns the index of the maximum value in every sub-array.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_arg_max(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_max()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> agnostic_arg_max(s_pd)
+            np.int64(2)
+            >>> agnostic_arg_max(s_pl)
+            2
+        """
+        return self._compliant_series.arg_max()
+
     def sum(self) -> Any:
         """Reduce this Series to the sum value.
 
