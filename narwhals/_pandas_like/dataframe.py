@@ -24,6 +24,7 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import scale_bytes
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
 
@@ -369,6 +371,10 @@ class PandasLikeDataFrame:
         subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+
+    def estimated_size(self, unit: SizeUnit = "b") -> int | float:
+        sz = int(self._native_frame.memory_usage(deep=True).sum())
+        return scale_bytes(sz, unit)
 
     def with_row_index(self, name: str) -> Self:
         row_index = create_compliant_series(
