@@ -327,6 +327,20 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
+def rename(
+    obj: T,
+    name: str,
+    *,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
+) -> T:
+    if implementation is Implementation.PANDAS and backend_version >= (
+        3,
+    ):  # pragma: no cover
+        return obj.rename(name)  # type: ignore[attr-defined, no-any-return]
+    return obj.rename(name, copy=False)  # type: ignore[attr-defined, no-any-return]
+
+
 def native_to_narwhals_dtype(
     native_column: Any, version: Version, implementation: Implementation
 ) -> DType:
