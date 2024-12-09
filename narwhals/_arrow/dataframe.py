@@ -771,19 +771,15 @@ class ArrowDataFrame:
 
         if fast_path:
             indices = pc.list_parent_indices(native_frame[to_explode[0]])
-
-            exploded_frame = native_frame.take(indices=indices)
-            exploded_series = [
-                pc.list_flatten(native_frame[col_name]) for col_name in to_explode
-            ]
-            return self._from_native_frame(
-                pa.Table.from_arrays(
-                    [*[exploded_frame[c] for c in other_columns], *exploded_series],
-                    names=[*other_columns, *to_explode],
-                )
-            ).select(*original_columns)
-
+            flatten_func = pc.list_flatten
         else:
+            indices = pa.array(
+                [
+                    i
+                    for i, count in enumerate(counts.to_pylist())
+                    for _ in range(max(count or 1, 1))
+                ]
+            )
 
             def explode_null_array(array: pa.ChunkedArray) -> pa.ChunkedArray:
                 exploded_values = []  # type: ignore[var-annotated]
@@ -794,21 +790,18 @@ class ArrowDataFrame:
                         exploded_values.extend(lst_element)
                 return pa.chunked_array([exploded_values])
 
-            indices = pa.array(
-                [
-                    i
-                    for i, count in enumerate(counts.to_pylist())
-                    for _ in range(max(count or 1, 1))
-                ]
-            )
-            exploded_frame = native_frame.take(indices=indices)
-            exploded_series = [
-                explode_null_array(native_frame[col_name]) for col_name in to_explode
-            ]
+            flatten_func = explode_null_array
 
-            return self._from_native_frame(
-                pa.Table.from_arrays(
-                    [*[exploded_frame[c] for c in other_columns], *exploded_series],
-                    names=[*other_columns, *to_explode],
-                )
-            ).select(*original_columns)
+        arrays = [
+            native_frame[col_name].take(indices=indices)
+            if col_name in other_columns
+            else flatten_func(native_frame[col_name])
+            for col_name in original_columns
+        ]
+
+        return self._from_native_frame(
+            pa.Table.from_arrays(
+                arrays=arrays,
+                names=original_columns,
+            )
+        )
