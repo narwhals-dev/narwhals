@@ -9,6 +9,9 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals._arrow.utils import (
+    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+)
+from narwhals._arrow.utils import (
     native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
 )
 from narwhals.exceptions import ColumnNotFoundError
@@ -567,9 +570,29 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
+
+            return pd.ArrowDtype(
+                pa.list_(
+                    value_type=arrow_narwhals_to_native_dtype(
+                        dtype.inner,  # type: ignore[union-attr]
+                        version=version,
+                    )
+                )
+            )
+        else:
+            msg = (
+                "Converting to List dtype is not supported for implementation "
+                f"{implementation} and version {version}."
+            )
+            return NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
         return NotImplementedError(msg)
