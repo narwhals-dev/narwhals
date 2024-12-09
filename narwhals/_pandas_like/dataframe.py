@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
     from narwhals.typing import SizeUnit
+    from narwhals.utils import Version
 
 
 class PandasLikeDataFrame:
@@ -372,8 +372,8 @@ class PandasLikeDataFrame:
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
-    def estimated_size(self, unit: SizeUnit = "b") -> float:
-        sz = float(self._native_frame.memory_usage(deep=True).sum())
+    def estimated_size(self, unit: SizeUnit = "b") -> int | float:
+        sz = int(self._native_frame.memory_usage(deep=True).sum())
         return scale_bytes(sz, unit)
 
     def with_row_index(self, name: str) -> Self:

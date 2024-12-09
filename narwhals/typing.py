@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Protocol
 from typing import TypeVar
 from typing import Union
-from typing import Literal
 
 if TYPE_CHECKING:
     import sys
@@ -186,6 +186,7 @@ SizeUnit: TypeAlias = Literal[
     "gigabytes",
     "terabytes",
 ]
+
 
 class DTypes:
     Int64: type[dtypes.Int64]

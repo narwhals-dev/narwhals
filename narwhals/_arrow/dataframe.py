@@ -287,8 +287,8 @@ class ArrowDataFrame:
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
-    def estimated_size(self: Self, unit: SizeUnit = "b") -> float:
-        sz = float(self._native_frame.nbytes)
+    def estimated_size(self: Self, unit: SizeUnit = "b") -> int | float:
+        sz = self._native_frame.nbytes
         return scale_bytes(sz, unit)
 
     @property

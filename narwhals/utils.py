@@ -682,8 +682,16 @@ def maybe_convert_dtypes(
     return obj_any  # type: ignore[no-any-return]
 
 
-def scale_bytes(sz: float, unit: SizeUnit) -> float:
-    """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb")."""
+def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
+    """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb").
+
+    Arguments:
+        sz: size
+        unit: size unit
+
+    Returns:
+        Integer or float.
+    """
     if unit in {"b", "bytes"}:
         return sz
     elif unit in {"kb", "kilobytes"}:
