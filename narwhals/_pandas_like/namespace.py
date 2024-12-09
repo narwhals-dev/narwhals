@@ -18,6 +18,7 @@ from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
+from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class PandasLikeNamespace:
+class PandasLikeNamespace(CompliantNamespace):
     @property
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(

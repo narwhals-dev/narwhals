@@ -31,9 +31,11 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
 
-class PolarsDataFrame:
+class PolarsDataFrame(CompliantDataFrame):
     def __init__(
         self: Self,
         df: pl.DataFrame,
@@ -333,7 +335,7 @@ class PolarsDataFrame:
         return self._from_native_object(result)
 
 
-class PolarsLazyFrame:
+class PolarsLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
         df: pl.LazyFrame,
