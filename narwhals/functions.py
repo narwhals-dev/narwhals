@@ -949,7 +949,9 @@ def read_csv(
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
-        kwargs: keyword arguments used in the native namespace.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -1033,7 +1035,9 @@ def scan_csv(
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
-        kwargs: keyword arguments used in the native namespace.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
