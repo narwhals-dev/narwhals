@@ -24,6 +24,7 @@ from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
+from narwhals.functions import _read_csv_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
@@ -3385,6 +3386,67 @@ def from_numpy(
     )
 
 
+def read_csv(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """Read a CSV file into a DataFrame.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoDataFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that reads a csv file with a specified native namespace:
+
+        >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
+        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
+
+        >>> agnostic_read_csv(native_namespace=pd)  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+        >>> agnostic_read_csv(native_namespace=pl)  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_read_csv(native_namespace=pa)  # doctest:+SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _read_csv_impl(
+            source,
+            native_namespace=native_namespace,
+        )
+    )
+
+
 __all__ = [
     "Array",
     "Boolean",
@@ -3449,6 +3511,7 @@ __all__ = [
     "narwhalify",
     "new_series",
     "nth",
+    "read_csv",
     "selectors",
     "show_versions",
     "sum",
