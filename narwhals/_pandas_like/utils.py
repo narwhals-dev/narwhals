@@ -312,8 +312,8 @@ def set_axis(
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
         return obj
-    if implementation is Implementation.PANDAS and backend_version < (
-        1,
+    if implementation is Implementation.PANDAS and (
+        backend_version < (1,)
     ):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
@@ -335,8 +335,8 @@ def rename(
     **kwargs: Any,
 ) -> T:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
-    if implementation is Implementation.PANDAS and backend_version >= (
-        3,
+    if implementation is Implementation.PANDAS and (
+        backend_version >= (3,)
     ):  # pragma: no cover
         return obj.rename(*args, **kwargs)  # type: ignore[attr-defined, no-any-return]
     return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined, no-any-return]
