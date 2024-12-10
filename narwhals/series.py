@@ -95,6 +95,39 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+        """Retrieve elements from the object using integer indexing, slicing, or a sequence of indices.
+
+        This method supports three modes of access:
+        1. Single integer indexing to retrieve a single element.
+        2. Slicing to retrieve a subset of the object, returning a new instance of the same type.
+        3. A sequence of integers to retrieve a subset of the object, also returning a new instance.
+
+        Args:
+            idx (int | slice | Sequence[int]):
+                The index, slice, or sequence of indices to retrieve.
+                - If `idx` is an integer, a single element is returned.
+                - If `idx` is a slice, a subset of the object is returned as a new instance.
+                - If `idx` is a sequence of integers, the elements at the specified indices are returned as a new instance.
+
+        Returns:
+            Any | Self:
+                - A single element if `idx` is an integer.
+                - A new instance of the object containing the subset if `idx` is a slice or a sequence of integers.
+
+        Raises:
+            IndexError: If an index is out of range.
+            TypeError: If `idx` is not an integer, slice, or sequence of integers.
+
+        Examples:
+            >>> from narwhals.series import Series
+            >>> obj = Series([1, 2, 3, 4, 5])
+            >>> obj[1]
+            2
+            >>> obj[1:4]
+            Series([2, 3, 4])
+            >>> obj[[0, 2, 4]]
+            Series([1, 3, 5])
+        """
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
