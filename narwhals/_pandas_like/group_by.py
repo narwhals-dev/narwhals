@@ -11,6 +11,7 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
@@ -200,8 +201,11 @@ def agg_pandas(  # noqa: PLR0915
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
-            result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping, copy=False
+            result_simple_aggs = rename(
+                result_simple_aggs,
+                columns=name_mapping,
+                implementation=implementation,
+                backend_version=backend_version,
             )
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
