@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pandas as pd
 import polars as pl
+import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    import pytest
 
 data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
@@ -44,9 +41,8 @@ def test_scan_csv_v1(
     assert isinstance(result, nw_v1.LazyFrame)
 
 
-def test_scan_csv_kwargs(
-    tmpdir: pytest.TempdirFactory,
-) -> None:
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
