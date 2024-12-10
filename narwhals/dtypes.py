@@ -391,6 +391,7 @@ class Datetime(TemporalType):
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
+        >>> import pyarrow.compute as pc
         >>> import narwhals as nw
         >>> from datetime import datetime, timedelta
         >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
@@ -402,7 +403,9 @@ class Datetime(TemporalType):
         >>> ser_pl = (
         ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
         ... )
-        >>> ser_pa = pa.chunked_array([data]).cast(pa.timestamp("ms", tz="Africa/Accra"))
+        >>> ser_pa = pc.assume_timezone(
+        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
+        ... )
 
         >>> nw.from_native(ser_pd, series_only=True).dtype
         Datetime(time_unit='ms', time_zone='Africa/Accra')
