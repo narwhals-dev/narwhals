@@ -801,7 +801,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             We can then pass either pandas, Polars or PyArrow to `agnostic_estimated_size`:
 
             >>> agnostic_estimated_size(df_pd)
-            330
+            np.int64(330)
             >>> agnostic_estimated_size(df_pl)
             51
             >>> agnostic_estimated_size(df_pa)
