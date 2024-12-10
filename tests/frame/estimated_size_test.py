@@ -15,7 +15,7 @@ data = {"a": list(range(100))}
 def test_estimated_size(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    assert df.estimated_size() > 0
+    assert df.estimated_size("b") > 0
     assert df.estimated_size("kb") == (df.estimated_size("b") / 1024)
     assert df.estimated_size("mb") == (df.estimated_size("kb") / 1024)
     assert df.estimated_size("gb") == (df.estimated_size("mb") / 1024)

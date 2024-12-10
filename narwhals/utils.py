@@ -686,8 +686,8 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb").
 
     Arguments:
-        sz: size
-        unit: size unit
+        sz: original size in bytes
+        unit: size unit to convert into
 
     Returns:
         Integer or float.

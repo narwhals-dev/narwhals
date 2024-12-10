@@ -19,7 +19,6 @@ from narwhals.translate import to_native
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
-from narwhals.utils import scale_bytes
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -772,7 +771,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Estimated size is given in the specified unit (bytes by default).
 
         Arguments:
-            unit : 'b', 'kb', 'mb', 'gb', 'tb', 'bytes', 'kilobytes', 'megabytes',
+            unit: 'b', 'kb', 'mb', 'gb', 'tb', 'bytes', 'kilobytes', 'megabytes',
                     'gigabytes', or 'terabytes'.
 
         Returns:
@@ -808,8 +807,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> agnostic_estimated_size(df_pa)
             63
         """
-        sz = self._compliant_frame.estimated_size()
-        return scale_bytes(sz, unit)
+        return self._compliant_frame.estimated_size(unit=unit)
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
