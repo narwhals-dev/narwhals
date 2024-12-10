@@ -115,8 +115,8 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
-        import pandas as pd  # ignore-banned-import
+        import dask.dataframe as dd
+        import pandas as pd
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             if not df.columns:
@@ -200,7 +200,7 @@ class DaskNamespace:
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         if len(list(items)) == 0:
             msg = "No items to concatenate"  # pragma: no cover
@@ -276,7 +276,7 @@ class DaskNamespace:
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -297,7 +297,7 @@ class DaskNamespace:
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -436,10 +436,10 @@ class DaskWhen:
 
         plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
         condition = cast("dask_expr.Series", condition)
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             _df = condition.to_frame("a")
@@ -453,7 +453,7 @@ class DaskWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]  # type: ignore[arg-type]
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]

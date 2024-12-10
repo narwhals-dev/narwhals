@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
-from typing import cast
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -18,6 +17,7 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
@@ -296,11 +296,14 @@ class PandasLikeNamespace:
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.min(axis=1)
-                    .rename(series[0].name, copy=False),
+                    native_series=rename(
+                        self.concat(
+                            (s.to_frame() for s in series), how="horizontal"
+                        )._native_frame.min(axis=1),
+                        series[0].name,
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    ),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -323,11 +326,14 @@ class PandasLikeNamespace:
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.max(axis=1)
-                    .rename(series[0].name, copy=False),
+                    rename(
+                        self.concat(
+                            (s.to_frame() for s in series), how="horizontal"
+                        )._native_frame.max(axis=1),
+                        series[0].name,
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    ),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -486,12 +492,12 @@ class PandasWhen:
             version=self._version,
         )
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
+            value_series = condition.__class__._from_iterable(
                 [self._then_value] * len(condition),
                 name="literal",
                 index=condition._native_series.index,
@@ -499,8 +505,6 @@ class PandasWhen:
                 backend_version=self._backend_version,
                 version=self._version,
             )
-        value_series = cast(PandasLikeSeries, value_series)
-
         value_series_native, condition_native = broadcast_align_and_extract_native(
             value_series, condition
         )
@@ -514,7 +518,7 @@ class PandasWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]  # type: ignore[arg-type]
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [

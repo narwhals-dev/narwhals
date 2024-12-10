@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
-from typing import cast
 
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
@@ -81,7 +80,7 @@ class ArrowNamespace:
         )
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -255,7 +254,7 @@ class ArrowNamespace:
         )
 
     def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -283,7 +282,7 @@ class ArrowNamespace:
         )
 
     def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -386,7 +385,7 @@ class ArrowNamespace:
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs: list[ArrowExpr] = [
             *parse_into_exprs(*exprs, namespace=self),
@@ -439,26 +438,25 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> list[ArrowSeries]:
-        import pyarrow as pa  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         from narwhals._arrow.namespace import ArrowNamespace
         from narwhals._expression_parsing import parse_into_expr
 
         plx = ArrowNamespace(backend_version=self._backend_version, version=self._version)
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
+            value_series = condition.__class__._from_iterable(
                 [self._then_value] * len(condition),
                 name="literal",
                 backend_version=self._backend_version,
                 version=self._version,
             )
-        value_series = cast(ArrowSeries, value_series)
 
         value_series_native = value_series._native_series
         condition_native = condition._native_series.combine_chunks()
@@ -475,7 +473,7 @@ class ArrowWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]  # type: ignore[arg-type]
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression.
             # Remark that string values _are_ converted into expressions!
@@ -487,8 +485,6 @@ class ArrowWhen:
                 )
             ]
         else:
-            otherwise_series = cast(ArrowSeries, otherwise_series)
-            condition = cast(ArrowSeries, condition)
             condition_native, otherwise_native = broadcast_series(
                 [condition, otherwise_series]
             )

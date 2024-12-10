@@ -74,7 +74,7 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
@@ -230,7 +230,7 @@ class PolarsSeries:
         return self._native_series.median()
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
-        import polars as pl  # ignore-banned-import
+        import polars as pl
 
         from narwhals._polars.dataframe import PolarsDataFrame
 
@@ -283,7 +283,7 @@ class PolarsSeries:
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                import polars as pl  # ignore-banned-import()
+                import polars as pl
 
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
@@ -311,7 +311,7 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):
-            import polars as pl  # ignore-banned-import()
+            import polars as pl
 
             value_name_ = name or ("proportion" if normalize else "count")
 
@@ -366,16 +366,20 @@ class PolarsSeries:
     def cat(self: Self) -> PolarsSeriesCatNamespace:
         return PolarsSeriesCatNamespace(self)
 
+    @property
+    def list(self: Self) -> PolarsSeriesListNamespace:
+        return PolarsSeriesListNamespace(self)
+
 
 class PolarsSeriesDateTimeNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
-        self._series = series
+        self._compliant_series = series
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._series._from_native_series(
-                getattr(self._series._native_series.dt, attr)(*args, **kwargs)
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.dt, attr)(*args, **kwargs)
             )
 
         return func
@@ -383,13 +387,13 @@ class PolarsSeriesDateTimeNamespace:
 
 class PolarsSeriesStringNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
-        self._series = series
+        self._compliant_series = series
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._series._from_native_series(
-                getattr(self._series._native_series.str, attr)(*args, **kwargs)
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.str, attr)(*args, **kwargs)
             )
 
         return func
@@ -397,13 +401,46 @@ class PolarsSeriesStringNamespace:
 
 class PolarsSeriesCatNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
-        self._series = series
+        self._compliant_series = series
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.cat, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesListNamespace:
+    def __init__(self: Self, series: PolarsSeries) -> None:
+        self._series = series
+
+    def len(self: Self) -> PolarsSeries:
+        native_series = self._series._native_series
+        native_result = native_series.list.len()
+
+        if self._series._backend_version < (1, 16):  # pragma: no cover
+            import polars as pl
+
+            native_result = pl.select(
+                pl.when(~native_series.is_null()).then(native_result).otherwise(None)
+            )[native_series.name].cast(pl.UInt32())
+
+        elif self._series._backend_version < (1, 17):  # pragma: no cover
+            import polars as pl
+
+            native_result = native_series.cast(pl.UInt32())
+
+        return self._series._from_native_series(native_result)
+
+    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
+    def __getattr__(self: Self, attr: str) -> Any:  # pragma: no cover
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
-                getattr(self._series._native_series.cat, attr)(*args, **kwargs)
+                getattr(self._series._native_series.list, attr)(*args, **kwargs)
             )
 
         return func

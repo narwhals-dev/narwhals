@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
@@ -73,7 +74,7 @@ class BaseFrame(Generic[FrameT]):
         if isinstance(arg, Series):
             return arg._compliant_series
         if isinstance(arg, Expr):
-            return arg._call(self.__narwhals_namespace__())
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
@@ -365,6 +366,33 @@ class DataFrame(BaseFrame[DataFrameT]):
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
+
+    @property
+    def implementation(self) -> Implementation:
+        """Return implementation of native frame.
+
+        This can be useful when you need to some special-casing for
+        some libraries for features outside of Narwhals' scope - for
+        example, when dealing with pandas' Period Dtype.
+
+        Returns:
+            Implementation.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation
+            <Implementation.PANDAS: 1>
+            >>> df.implementation.is_pandas()
+            True
+            >>> df.implementation.is_pandas_like()
+            True
+            >>> df.implementation.is_polars()
+            False
+        """
+        return self._compliant_frame._implementation  # type: ignore[no-any-return]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
@@ -2937,6 +2965,31 @@ class LazyFrame(BaseFrame[FrameT]):
             + "─" * length
             + "┘"
         )
+
+    @property
+    def implementation(self) -> Implementation:
+        """Return implementation of native frame.
+
+        This can be useful when you need to some special-casing for
+        some libraries for features outside of Narwhals' scope - for
+        example, when dealing with pandas' Period Dtype.
+
+        Returns:
+            Implementation.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> lf_native = pl.LazyFrame({"a": [1, 2, 3]})
+            >>> lf = nw.from_native(lf_native)
+            >>> lf.implementation
+            <Implementation.POLARS: 6>
+            >>> lf.implementation.is_pandas()
+            False
+            >>> lf.implementation.is_polars()
+            True
+        """
+        return self._compliant_frame._implementation  # type: ignore[no-any-return]
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"

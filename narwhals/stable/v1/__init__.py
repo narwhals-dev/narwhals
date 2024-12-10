@@ -59,6 +59,7 @@ from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
+from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
@@ -1180,7 +1181,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._call)
+        return Expr(obj._to_compliant_expr)
     return obj
 
 
@@ -2973,7 +2974,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._call)
+        return cls(then._to_compliant_expr)
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
@@ -3397,6 +3398,7 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "Implementation",
     "Int8",
     "Int16",
     "Int32",

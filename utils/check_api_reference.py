@@ -11,10 +11,11 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
-NAMESPACES = {"dt", "str", "cat", "name"}
+NAMESPACES = {"dt", "str", "cat", "name", "list"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
+    "implementation",
     "is_empty",
     "is_sorted",
     "item",
