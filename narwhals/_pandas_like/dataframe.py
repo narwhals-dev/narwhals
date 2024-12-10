@@ -373,7 +373,7 @@ class PandasLikeDataFrame:
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
-        sz = int(self._native_frame.memory_usage(deep=True).sum())
+        sz = self._native_frame.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
     def with_row_index(self, name: str) -> Self:

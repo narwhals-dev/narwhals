@@ -807,7 +807,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> agnostic_estimated_size(df_pa)
             63
         """
-        return self._compliant_frame.estimated_size(unit=unit)
+        return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
