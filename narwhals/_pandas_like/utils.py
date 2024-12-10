@@ -318,8 +318,8 @@ def set_axis(
         kwargs = {"inplace": False}
     else:
         kwargs = {}
-    if implementation is Implementation.PANDAS and (1, 5) <= backend_version < (
-        3,
+    if implementation is Implementation.PANDAS and (
+        (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
         kwargs["copy"] = False
     else:  # pragma: no cover
