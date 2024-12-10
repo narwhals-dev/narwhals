@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
 
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+    from narwhals.series import Series
     from narwhals.typing import IntoSeries
 
 # We silently allow these but - given that they claim
@@ -102,11 +105,6 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
-
-
-def get_narwhals() -> Any:
-    """Get narwhals module (if already imported - else return Nonde)."""
-    return sys.modules.get("narwhals", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -325,25 +323,40 @@ def is_into_dataframe(native_dataframe: Any) -> bool:
     )
 
 
-def is_narwhals_dataframe(df: Any) -> bool:
-    """Check whether `df` is a Narwhals DataFrame without doing any imports."""
-    return (nw := get_narwhals()) is not None and isinstance(
-        df, (nw.DataFrame, nw.stable.v1.DataFrame)
-    )
+def is_narwhals_dataframe(df: Any) -> TypeGuard[DataFrame[Any]]:
+    """Check whether `df` is a Narwhals DataFrame.
+
+    This is useful if you expect a user to pass in a Narwhals
+    DataFrame directly, and you want to catch both ``narwhals.DataFrame``
+    and ``narwhals.stable.v1.DataFrame`.
+    """
+    from narwhals.dataframe import DataFrame
+
+    return isinstance(df, DataFrame)
 
 
-def is_narwhals_lazyframe(lf: Any) -> bool:
-    """Check whether `lf` is a Narwhals LazyFrame without doing any imports."""
-    return (nw := get_narwhals()) is not None and isinstance(
-        lf, (nw.LazyFrame, nw.stable.v1.LazyFrame)
-    )
+def is_narwhals_lazyframe(lf: Any) -> TypeGuard[LazyFrame[Any]]:
+    """Check whether `lf` is a Narwhals LazyFrame.
+
+    This is useful if you expect a user to pass in a Narwhals
+    LazyFrame directly, and you want to catch both ``narwhals.LazyFrame``
+    and ``narwhals.stable.v1.LazyFrame`.
+    """
+    from narwhals.dataframe import LazyFrame
+
+    return isinstance(lf, LazyFrame)
 
 
-def is_narwhals_series(ns: Any) -> bool:
-    """Check whether `ns` is a Narwhals series without doing any imports."""
-    return (nw := get_narwhals()) is not None and isinstance(
-        ns, (nw.Series, nw.stable.v1.Series)
-    )
+def is_narwhals_series(ser: Any) -> TypeGuard[Series[Any]]:
+    """Check whether `ser` is a Narwhals Series.
+
+    This is useful if you expect a user to pass in a Narwhals
+    Series directly, and you want to catch both ``narwhals.Series``
+    and ``narwhals.stable.v1.Series`.
+    """
+    from narwhals.series import Series
+
+    return isinstance(ser, Series)
 
 
 __all__ = [
