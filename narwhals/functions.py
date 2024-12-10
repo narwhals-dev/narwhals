@@ -1017,7 +1017,7 @@ def _read_csv_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `read_csv` function in the top-level namespace.
-            native_frame = native_namespace.read_csv(source=source)
+            native_frame = native_namespace.read_csv(source=source, **kwargs)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `read_csv` function."
             raise AttributeError(msg) from e
@@ -1099,7 +1099,7 @@ def _scan_csv_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `scan_csv` function in the top-level namespace.
-            native_frame = native_namespace.scan_csv(source=source)
+            native_frame = native_namespace.scan_csv(source=source, **kwargs)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `scan_csv` function."
             raise AttributeError(msg) from e

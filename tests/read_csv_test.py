@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import polars as pl
 
 import narwhals as nw
@@ -40,3 +41,13 @@ def test_read_csv_v1(
     result = nw_v1.read_csv(filepath, native_namespace=native_namespace)
     assert_equal_data(result, data)
     assert isinstance(result, nw_v1.DataFrame)
+
+
+def test_read_csv_kwargs(
+    tmpdir: pytest.TempdirFactory,
+) -> None:
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    df_pl.write_csv(filepath)
+    result = nw.read_csv(filepath, native_namespace=pd, engine="pyarrow")
+    assert_equal_data(result, data)
