@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pyarrow as pa
+
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -32,3 +34,8 @@ def test_slice(constructor_eager: ConstructorEager) -> None:
     result = {"b": df[[], 1]}
     expected = {"b": []}
     assert_equal_data(result, expected)
+
+
+def test_getitem_arrow_scalar() -> None:
+    result = nw.from_native(pa.chunked_array([[1]]), series_only=True)[0]
+    assert isinstance(result, int)
