@@ -968,8 +968,28 @@ def read_csv(
         Then we can read the file by passing pandas, Polars or PyArrow namespaces:
 
         >>> agnostic_read_csv(native_namespace=pd)  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
         >>> agnostic_read_csv(native_namespace=pl)  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
         >>> agnostic_read_csv(native_namespace=pa)  # doctest:+SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
     """
     return _read_csv_impl(source, native_namespace=native_namespace)
 
@@ -991,4 +1011,12 @@ def _read_csv_impl(
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement `read_csv` function in the top-level namespace.
+            native_frame = native_namespace.read_csv(source=source)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `read_csv` function."
+            raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
