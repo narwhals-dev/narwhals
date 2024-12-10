@@ -3416,7 +3416,11 @@ def scan_csv(
         Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
 
         >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return (
+        ...         nw.scan_csv("file.csv", native_namespace=native_namespace)
+        ...         .to_native()
+        ...         .collect()
+        ...     )
 
         Then we can read the file by passing Polars or dask namespaces:
 
