@@ -1020,3 +1020,86 @@ def _read_csv_impl(
             msg = "Unknown namespace is expected to implement `read_csv` function."
             raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
+
+
+def scan_csv(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> LazyFrame[Any]:
+    """Lazily read from a CSV file.
+
+    For the libraries that do not support lazy dataframes, the function reads
+    a csv file eagerly and then converts the resulting dataframe to a lazyframe.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        LazyFrame.
+
+    Examples:
+        >>> import dask.dataframe as dd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
+
+        >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
+        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing, for example, Polars or Dask namespaces:
+
+        >>> agnostic_scan_csv(native_namespace=pl).collect()  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_scan_csv(native_namespace=dd).compute()  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+    """
+    return _scan_csv_impl(source, native_namespace=native_namespace)
+
+
+def _scan_csv_impl(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> LazyFrame[Any]:
+    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation is Implementation.POLARS:
+        native_frame = native_namespace.scan_csv(source)
+    elif implementation in (
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    ):
+        native_frame = native_namespace.read_csv(source)
+    elif implementation is Implementation.PYARROW:
+        from pyarrow import csv  # ignore-banned-import
+
+        native_frame = csv.read_csv(source)
+    elif implementation is Implementation.DASK:
+        native_frame = native_namespace.read_csv(source)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement `scan_csv` function in the top-level namespace.
+            native_frame = native_namespace.scan_csv(source=source)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `scan_csv` function."
+            raise AttributeError(msg) from e
+    return from_native(native_frame).lazy()

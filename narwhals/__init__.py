@@ -56,6 +56,7 @@ from narwhals.functions import from_numpy
 from narwhals.functions import get_level
 from narwhals.functions import new_series
 from narwhals.functions import read_csv
+from narwhals.functions import scan_csv
 from narwhals.functions import show_versions
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -140,6 +141,7 @@ __all__ = [
     "new_series",
     "nth",
     "read_csv",
+    "scan_csv",
     "selectors",
     "show_versions",
     "stable",

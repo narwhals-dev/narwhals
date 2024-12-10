@@ -25,6 +25,7 @@ from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
 from narwhals.functions import _read_csv_impl
+from narwhals.functions import _scan_csv_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
@@ -3447,6 +3448,60 @@ def read_csv(
     )
 
 
+def scan_csv(
+    source: str,
+    *,
+    native_namespace: ModuleType,
+) -> LazyFrame[Any]:
+    """Lazily read from a CSV file.
+
+    For the libraries that do not support lazy dataframes, the function reads
+    a csv file eagerly and then converts the resulting dataframe to a lazyframe.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Returns:
+        LazyFrame.
+
+    Examples:
+        >>> import dask.dataframe as dd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
+
+        >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
+        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing, for example, Polars or Dask namespaces:
+
+        >>> agnostic_scan_csv(native_namespace=pl).collect()  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_scan_csv(native_namespace=dd).compute()  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _scan_csv_impl(source, native_namespace=native_namespace)
+    )
+
+
 __all__ = [
     "Array",
     "Boolean",
@@ -3512,6 +3567,7 @@ __all__ = [
     "new_series",
     "nth",
     "read_csv",
+    "scan_csv",
     "selectors",
     "show_versions",
     "sum",
