@@ -221,7 +221,7 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
 
 
 def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
-    """Check whether `scalar` is a NumPy Array without importing NumPy."""
+    """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
     return (np := get_numpy()) is not None and np.isscalar(scalar)
 
 
