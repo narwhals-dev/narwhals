@@ -17,6 +17,7 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
@@ -295,11 +296,14 @@ class PandasLikeNamespace:
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.min(axis=1)
-                    .rename(series[0].name, copy=False),
+                    native_series=rename(
+                        self.concat(
+                            (s.to_frame() for s in series), how="horizontal"
+                        )._native_frame.min(axis=1),
+                        series[0].name,
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    ),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -322,11 +326,14 @@ class PandasLikeNamespace:
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.max(axis=1)
-                    .rename(series[0].name, copy=False),
+                    rename(
+                        self.concat(
+                            (s.to_frame() for s in series), how="horizontal"
+                        )._native_frame.max(axis=1),
+                        series[0].name,
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    ),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
