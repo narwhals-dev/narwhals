@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
@@ -763,6 +764,50 @@ class DataFrame(BaseFrame[DataFrameT]):
             self._compliant_frame.get_column(name),
             level=self._level,
         )
+
+    def estimated_size(self, unit: SizeUnit = "b") -> int | float:
+        """Return an estimation of the total (heap) allocated size of the `DataFrame`.
+
+        Estimated size is given in the specified unit (bytes by default).
+
+        Arguments:
+            unit: 'b', 'kb', 'mb', 'gb', 'tb', 'bytes', 'kilobytes', 'megabytes',
+                    'gigabytes', or 'terabytes'.
+
+        Returns:
+            Integer or Float.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrameT
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_estimated_size(df_native: IntoDataFrameT) -> int | float:
+            ...     df = nw.from_native(df_native)
+            ...     return df.estimated_size()
+
+            We can then pass either pandas, Polars or PyArrow to `agnostic_estimated_size`:
+
+            >>> agnostic_estimated_size(df_pd)
+            np.int64(330)
+            >>> agnostic_estimated_size(df_pl)
+            51
+            >>> agnostic_estimated_size(df_pa)
+            63
+        """
+        return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
