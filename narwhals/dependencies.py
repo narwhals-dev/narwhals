@@ -104,6 +104,11 @@ def get_pyspark_sql() -> Any:
     return sys.modules.get("pyspark.sql", None)
 
 
+def get_narwhals() -> Any:
+    """Get narwhals module (if already imported - else return Nonde)."""
+    return sys.modules.get("narwhals", None)
+
+
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
@@ -320,6 +325,27 @@ def is_into_dataframe(native_dataframe: Any) -> bool:
     )
 
 
+def is_narwhals_dataframe(df: Any) -> bool:
+    """Check whether `df` is a Narwhals DataFrame without doing any imports."""
+    return (nw := get_narwhals()) is not None and isinstance(
+        df, (nw.DataFrame, nw.stable.v1.DataFrame)
+    )
+
+
+def is_narwhals_lazyframe(lf: Any) -> bool:
+    """Check whether `lf` is a Narwhals LazyFrame without doing any imports."""
+    return (nw := get_narwhals()) is not None and isinstance(
+        lf, (nw.LazyFrame, nw.stable.v1.LazyFrame)
+    )
+
+
+def is_narwhals_series(ns: Any) -> bool:
+    """Check whether `ns` is a Narwhals series without doing any imports."""
+    return (nw := get_narwhals()) is not None and isinstance(
+        ns, (nw.Series, nw.stable.v1.Series)
+    )
+
+
 __all__ = [
     "get_cudf",
     "get_ibis",
@@ -336,6 +362,9 @@ __all__ = [
     "is_into_series",
     "is_modin_dataframe",
     "is_modin_series",
+    "is_narwhals_dataframe",
+    "is_narwhals_lazyframe",
+    "is_narwhals_series",
     "is_numpy_array",
     "is_pandas_dataframe",
     "is_pandas_index",
