@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -342,13 +343,11 @@ def rename(
     return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(
-    native_column: Any, version: Version, implementation: Implementation
+@lru_cache(maxsize=16)
+def non_object_native_to_narwhals_dtype(
+    dtype: str, version: Version, _implementation: Implementation
 ) -> DType:
-    dtype = str(native_column.dtype)
-
     dtypes = import_dtypes_module(version)
-
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
     if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
@@ -400,36 +399,47 @@ def native_to_narwhals_dtype(
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
+    return dtypes.Unknown()  # pragma: no cover
+
+
+def native_to_narwhals_dtype(
+    native_column: Any, version: Version, implementation: Implementation
+) -> DType:
+    dtype = str(native_column.dtype)
+
+    dtypes = import_dtypes_module(version)
+
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
-    if dtype == "object":
-        if implementation is Implementation.DASK:
-            # Dask columns are lazy, so we can't inspect values.
-            # The most useful assumption is probably String
+    if dtype != "object":
+        return non_object_native_to_narwhals_dtype(dtype, version, implementation)
+    if implementation is Implementation.DASK:
+        # Dask columns are lazy, so we can't inspect values.
+        # The most useful assumption is probably String
+        return dtypes.String()
+    if implementation is Implementation.PANDAS:  # pragma: no cover
+        # This is the most efficient implementation for pandas,
+        # and doesn't require the interchange protocol
+        import pandas as pd
+
+        dtype = pd.api.types.infer_dtype(native_column, skipna=True)
+        if dtype == "string":
             return dtypes.String()
-        if implementation is Implementation.PANDAS:  # pragma: no cover
-            # This is the most efficient implementation for pandas,
-            # and doesn't require the interchange protocol
-            import pandas as pd
+        return dtypes.Object()
+    else:  # pragma: no cover
+        df = native_column.to_frame()
+        if hasattr(df, "__dataframe__"):
+            from narwhals._interchange.dataframe import (
+                map_interchange_dtype_to_narwhals_dtype,
+            )
 
-            dtype = pd.api.types.infer_dtype(native_column, skipna=True)
-            if dtype == "string":
-                return dtypes.String()
-            return dtypes.Object()
-        else:  # pragma: no cover
-            df = native_column.to_frame()
-            if hasattr(df, "__dataframe__"):
-                from narwhals._interchange.dataframe import (
-                    map_interchange_dtype_to_narwhals_dtype,
+            try:
+                return map_interchange_dtype_to_narwhals_dtype(
+                    df.__dataframe__().get_column(0).dtype, version
                 )
-
-                try:
-                    return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype, version
-                    )
-                except Exception:  # noqa: BLE001, S110
-                    pass
-    return dtypes.Unknown()
+            except Exception:  # noqa: BLE001, S110
+                pass
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
@@ -588,7 +598,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.List):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
-                import pandas as pd  # ignore-banned-import
+                import pandas as pd
                 import pyarrow as pa  # ignore-banned-import
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"

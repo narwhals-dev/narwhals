@@ -584,7 +584,7 @@ class ArrowDataFrame:
 
     def write_csv(self: Self, file: Any) -> Any:
         import pyarrow as pa
-        import pyarrow.csv as pa_csv  # ignore-banned-import
+        import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
         if file is None:
