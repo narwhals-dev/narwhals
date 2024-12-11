@@ -439,7 +439,7 @@ def native_to_narwhals_dtype(
                 )
             except Exception:  # noqa: BLE001, S110
                 pass
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
