@@ -942,12 +942,16 @@ def read_csv(
     source: str,
     *,
     native_namespace: ModuleType,
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -991,13 +995,11 @@ def read_csv(
         a: [[1,2,3]]
         b: [[4,5,6]]
     """
-    return _read_csv_impl(source, native_namespace=native_namespace)
+    return _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
 
 
 def _read_csv_impl(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
     if implementation in (
@@ -1006,16 +1008,16 @@ def _read_csv_impl(
         Implementation.MODIN,
         Implementation.CUDF,
     ):
-        native_frame = native_namespace.read_csv(source)
+        native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(source)
+        native_frame = csv.read_csv(source, **kwargs)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `read_csv` function in the top-level namespace.
-            native_frame = native_namespace.read_csv(source=source)
+            native_frame = native_namespace.read_csv(source=source, **kwargs)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `read_csv` function."
             raise AttributeError(msg) from e
@@ -1023,9 +1025,7 @@ def _read_csv_impl(
 
 
 def scan_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1035,6 +1035,9 @@ def scan_csv(
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
@@ -1071,34 +1074,32 @@ def scan_csv(
         1  2  5
         2  3  6
     """
-    return _scan_csv_impl(source, native_namespace=native_namespace)
+    return _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
 
 
 def _scan_csv_impl(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
     if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_csv(source)
+        native_frame = native_namespace.scan_csv(source, **kwargs)
     elif implementation in (
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
     ):
-        native_frame = native_namespace.read_csv(source)
+        native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(source)
+        native_frame = csv.read_csv(source, **kwargs)
     elif implementation is Implementation.DASK:
-        native_frame = native_namespace.read_csv(source)
+        native_frame = native_namespace.read_csv(source, **kwargs)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `scan_csv` function in the top-level namespace.
-            native_frame = native_namespace.scan_csv(source=source)
+            native_frame = native_namespace.scan_csv(source=source, **kwargs)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `scan_csv` function."
             raise AttributeError(msg) from e

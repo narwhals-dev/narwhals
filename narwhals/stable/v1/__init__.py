@@ -3388,15 +3388,16 @@ def from_numpy(
 
 
 def read_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -3441,17 +3442,12 @@ def read_csv(
         b: [[4,5,6]]
     """
     return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(
-            source,
-            native_namespace=native_namespace,
-        )
+        _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
     )
 
 
 def scan_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -3461,6 +3457,9 @@ def scan_csv(
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
@@ -3498,7 +3497,7 @@ def scan_csv(
         2  3  6
     """
     return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, native_namespace=native_namespace)
+        _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
     )
 
 
