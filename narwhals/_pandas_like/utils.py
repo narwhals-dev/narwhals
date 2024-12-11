@@ -399,7 +399,7 @@ def non_object_native_to_narwhals_dtype(
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def native_to_narwhals_dtype(
@@ -598,7 +598,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.List):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
-                import pandas as pd  # ignore-banned-import
+                import pandas as pd
                 import pyarrow as pa  # ignore-banned-import
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
