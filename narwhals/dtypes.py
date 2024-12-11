@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
@@ -9,6 +10,8 @@ from typing import Mapping
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+    from typing import Iterable
     from typing import Iterator
     from typing import Sequence
 
@@ -445,6 +448,29 @@ class Enum(DType):
        >>> nw.from_native(s_native, series_only=True).dtype
        Enum
     """
+
+    def __init__(self, categories: Iterable[Hashable] | type[enum.Enum]) -> None:
+        # TODO(Unassigned): pandas errors on NaN, NA, NaT OR duplicated value category
+        #       Polars errors on Null, NaN OR duplicated OR any non-string category
+        #       should the intersection of the above be caught at the narwhals layer?
+        if isinstance(categories, enum.Enum):
+            categories = (getattr(v, "value", v) for v in categories.__members__.values())
+        self.categories = [*categories]
+
+    def __eq__(self: Self, other: object) -> bool:
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.categories == other.categories
+        return False
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, tuple(self.categories)))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(categories={self.categories!r})"
 
 
 class Field:
