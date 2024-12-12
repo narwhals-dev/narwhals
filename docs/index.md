@@ -1,6 +1,6 @@
 # Narwhals
 
-![](assets/image.png)
+![](https://github.com/narwhals-dev/assets/blob/e605e93cbb763e65c3d7c01b830b3408df26858e/image.png)
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
