@@ -95,38 +95,70 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
-        """Retrieve elements from the object using integer indexing, slicing, or a sequence of indices.
+        """Retrieve elements from the object using integer indexing or slicing.
 
-        This method supports three modes of access:
-        1. Single integer indexing to retrieve a single element.
-        2. Slicing to retrieve a subset of the object, returning a new instance of the same type.
-        3. A sequence of integers to retrieve a subset of the object, also returning a new instance.
+        Arguments:
+            idx: The index, slice, or sequence of indices to retrieve.
 
-        Args:
-            idx (int | slice | Sequence[int]):
-                The index, slice, or sequence of indices to retrieve.
                 - If `idx` is an integer, a single element is returned.
-                - If `idx` is a slice, a subset of the object is returned as a new instance.
-                - If `idx` is a sequence of integers, the elements at the specified indices are returned as a new instance.
+                - If `idx` is a slice or a sequence of integers,
+                  a subset of the Series is returned.
 
         Returns:
-            Any | Self:
-                - A single element if `idx` is an integer.
-                - A new instance of the object containing the subset if `idx` is a slice or a sequence of integers.
-
-        Raises:
-            IndexError: If an index is out of range.
-            TypeError: If `idx` is not an integer, slice, or sequence of integers.
+            A single element if `idx` is an integer, else a subset of the Series.
 
         Examples:
-            >>> from narwhals.series import Series
-            >>> obj = Series([1, 2, 3, 4, 5])
-            >>> obj[1]
-            2
-            >>> obj[1:4]
-            Series([2, 3, 4])
-            >>> obj[[0, 2, 4]]
-            Series([1, 3, 5])
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> from typing import Any
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_get_first_item(s_native: IntoSeriesT) -> Any:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[0]
+
+            We can then pass either pandas, Polars, or any supported library:
+
+            >>> agnostic_get_first_item(s_pd)
+            np.int64(1)
+            >>> agnostic_get_first_item(s_pl)
+            1
+            >>> agnostic_get_first_item(s_pa)
+            1
+
+            We can also make a function to slice the Series:
+
+            >>> def agnostic_slice(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[:2].to_native()
+
+            >>> agnostic_slice(s_pd)
+            0    1
+            1    2
+            dtype: int64
+            >>> agnostic_slice(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                1
+                2
+            ]
+            >>> agnostic_slice(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2
+              ]
+            ]
         """
         if isinstance(idx, int):
             return self._compliant_series[idx]
