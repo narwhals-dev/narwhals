@@ -166,7 +166,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for pyarrow")
 def test_q1_w_pandas_agg_generic_path() -> None:
-    df_raw = pd.read_parquet("tests/data/lineitem.parquet")
+    df_raw = pd.read_csv("tests/data/lineitem.csv")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
