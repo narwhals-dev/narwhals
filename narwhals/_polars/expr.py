@@ -74,13 +74,10 @@ class PolarsExpr:
         )
         if self._backend_version < (1,):  # pragma: no cover
             pl = get_polars()
-            result = self._from_native_expr(
+            return self._from_native_expr(
                 pl.when(expr.is_null()).then(None).otherwise(native_expr).name.keep()
             )
-
-        else:
-            result = self._from_native_expr(native_expr)
-        return result
+        return self._from_native_expr(native_expr)
 
     def map_batches(
         self,
