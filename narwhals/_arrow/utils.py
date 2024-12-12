@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
+@lru_cache(maxsize=16)
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     import pyarrow as pa
 
