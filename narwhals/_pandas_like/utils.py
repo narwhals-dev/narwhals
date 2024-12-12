@@ -399,6 +399,8 @@ def non_object_native_to_narwhals_dtype(
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
+    if dtype.startswith("decimal") and dtype.endswith("[pyarrow]"):
+        return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 
 

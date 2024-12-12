@@ -229,3 +229,7 @@ def test_decimal() -> None:
                      """)
     result = nw.from_native(rel).schema
     assert result["a"] == nw.Decimal
+    result = nw.from_native(df.to_pandas(use_pyarrow_extension_array=True)).schema
+    assert result["a"] == nw.Decimal
+    result = nw.from_native(df.to_arrow()).schema
+    assert result["a"] == nw.Decimal
