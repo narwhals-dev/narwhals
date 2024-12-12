@@ -395,7 +395,7 @@ class PandasLikeExpr:
             # Pandas cumcount starts counting from 0 while Polars starts from 1
             # Pandas cumcount counts nulls while Polars does not
             # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
-            "col->cum_count": lambda s: s.notna().cumsum(),
+            "col->cum_count": "cumsum",
         }
 
         if self._function_name in cumulative_functions_to_pandas_equivalent:
@@ -415,10 +415,14 @@ class PandasLikeExpr:
                     )
                     raise ValueError(msg)
 
+                native_frame = df._native_frame
+                if self._function_name == "col->cum_count":
+                    native_frame = native_frame.assign(
+                        **{self._root_names[0]: native_frame[self._root_names[0]].notna()}
+                    )
+
                 res_native = (
-                    df._native_frame.groupby(list(keys), as_index=False)[
-                        self._root_names[0]
-                    ]
+                    native_frame.groupby(list(keys), as_index=False)[self._root_names[0]]
                     .transform(
                         cumulative_functions_to_pandas_equivalent[self._function_name]
                     )
