@@ -9,6 +9,7 @@ good security practices. Here are some practices we follow:
   releases.
 - All members of `narwhals-dev` are required to have two-factor authentication
   enabled.
+- There are no binary or opaque files in the Narwhals repository.
 - Release permissions are only given to people who satisfy all of the following:
 
     - Have met the original author in real life on multiple days.
