@@ -204,7 +204,7 @@ def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):
         result = nw.from_native(df).schema
-        assert result["a"] == nw.UInt128
+        assert result["a"] == nw.Int128
     else:  # pragma: no cover
         # UInt128 was not available yet
         pass
