@@ -416,7 +416,7 @@ class PandasLikeExpr:
                     raise ValueError(msg)
 
                 if self._function_name == "col->cum_count":
-                    df = df.with_columns(~df[self._root_names[0]].is_null())._native_frame
+                    df = df.with_columns(~df[self._root_names[0]].is_null())
 
                 res_native = (
                     df._native_frame.groupby(list(keys), as_index=False)[
