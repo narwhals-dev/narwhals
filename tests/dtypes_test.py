@@ -200,7 +200,6 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):
@@ -233,6 +232,7 @@ def test_huge_int() -> None:
     # add tests for them too
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
