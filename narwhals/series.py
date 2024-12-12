@@ -95,6 +95,71 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+        """Retrieve elements from the object using integer indexing or slicing.
+
+        Arguments:
+            idx: The index, slice, or sequence of indices to retrieve.
+
+                - If `idx` is an integer, a single element is returned.
+                - If `idx` is a slice or a sequence of integers,
+                  a subset of the Series is returned.
+
+        Returns:
+            A single element if `idx` is an integer, else a subset of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> from typing import Any
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_get_first_item(s_native: IntoSeriesT) -> Any:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[0]
+
+            We can then pass either pandas, Polars, or any supported library:
+
+            >>> agnostic_get_first_item(s_pd)
+            np.int64(1)
+            >>> agnostic_get_first_item(s_pl)
+            1
+            >>> agnostic_get_first_item(s_pa)
+            1
+
+            We can also make a function to slice the Series:
+
+            >>> def agnostic_slice(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[:2].to_native()
+
+            >>> agnostic_slice(s_pd)
+            0    1
+            1    2
+            dtype: int64
+            >>> agnostic_slice(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                1
+                2
+            ]
+            >>> agnostic_slice(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2
+              ]
+            ]
+        """
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
