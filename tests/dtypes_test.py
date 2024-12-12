@@ -201,7 +201,13 @@ def test_pandas_fixed_offset_1302() -> None:
 
 
 def test_huge_int() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]})  # noqa: F841
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    if POLARS_VERSION >= (1, 18):
+        result = nw.from_native(df).schema
+        assert result["a"] == nw.UInt128
+    else:  # pragma: no cover
+        # UInt128 was not available yet
+        pass
     rel = duckdb.sql("""
         select cast(a as int128) as a
         from df
@@ -214,6 +220,13 @@ def test_huge_int() -> None:
                      """)
     result = nw.from_native(rel).schema
     assert result["a"] == nw.UInt128
+
+    if POLARS_VERSION >= (1, 18):
+        result = nw.from_native(df).schema
+        assert result["a"] == nw.UInt128
+    else:  # pragma: no cover
+        # UInt128 was not available yet
+        pass
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
     # add tests for them too
