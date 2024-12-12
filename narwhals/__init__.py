@@ -21,6 +21,7 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import Int128
 from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
@@ -29,6 +30,7 @@ from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
+from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
 from narwhals.expr import all_ as all
@@ -94,6 +96,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "LazyFrame",
     "List",
     "Object",
@@ -105,6 +108,7 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
     "all",
     "all_horizontal",

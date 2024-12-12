@@ -6,10 +6,12 @@
       members:
         - Array
         - List
+        - Int128
         - Int64
         - Int32
         - Int16
         - Int8
+        - UInt128
         - UInt64
         - UInt32
         - UInt16

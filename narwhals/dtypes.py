@@ -47,6 +47,10 @@ class NumericType(DType): ...
 class TemporalType(DType): ...
 
 
+class Int128(NumericType):
+    """128-bit signed integer type."""
+
+
 class Int64(NumericType):
     """64-bit signed integer type.
 
@@ -145,6 +149,10 @@ class Int8(NumericType):
        >>> func(ser_pa)
        Int8
     """
+
+
+class UInt128(NumericType):
+    """128-bit unsigned integer type."""
 
 
 class UInt64(NumericType):

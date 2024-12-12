@@ -46,6 +46,7 @@ from narwhals.stable.v1.dtypes import Int8
 from narwhals.stable.v1.dtypes import Int16
 from narwhals.stable.v1.dtypes import Int32
 from narwhals.stable.v1.dtypes import Int64
+from narwhals.stable.v1.dtypes import Int128
 from narwhals.stable.v1.dtypes import List
 from narwhals.stable.v1.dtypes import Object
 from narwhals.stable.v1.dtypes import String
@@ -54,6 +55,7 @@ from narwhals.stable.v1.dtypes import UInt8
 from narwhals.stable.v1.dtypes import UInt16
 from narwhals.stable.v1.dtypes import UInt32
 from narwhals.stable.v1.dtypes import UInt64
+from narwhals.stable.v1.dtypes import UInt128
 from narwhals.stable.v1.dtypes import Unknown
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
@@ -3388,15 +3390,16 @@ def from_numpy(
 
 
 def read_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -3441,17 +3444,12 @@ def read_csv(
         b: [[4,5,6]]
     """
     return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(
-            source,
-            native_namespace=native_namespace,
-        )
+        _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
     )
 
 
 def scan_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -3461,6 +3459,9 @@ def scan_csv(
     Arguments:
         source: Path to a file.
         native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
@@ -3498,7 +3499,7 @@ def scan_csv(
         2  3  6
     """
     return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, native_namespace=native_namespace)
+        _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
     )
 
 
@@ -3520,6 +3521,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "LazyFrame",
     "List",
     "Object",
@@ -3531,6 +3533,7 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
     "all",
     "all_horizontal",
