@@ -117,12 +117,16 @@ def test_over_cumcount(constructor: Constructor) -> None:
 
 
 def test_over_cumcount_missing_values(constructor: Constructor) -> None:
-    data["b"][4] = None  # type: ignore[index]
+    data_with_missing_value = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, None],
+        "c": [5, 4, 3, 2, 1],
+    }
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_with_missing_value))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": data["b"],
+        "b": [1, 2, 3, 5, None],
         "c": [5, 4, 3, 2, 1],
         "b_cumcount": [1, 2, 1, 2, 2],
     }
