@@ -20,5 +20,4 @@ good security practices. Here are some practices we follow:
         to say, even if someone satisfies all of the above, if there are already 5
         people with release permissions, then we will not be adding any more (though
         you may still be added to `narwhals-dev` and get permission to merge pull
-        requests which you believe are ready). Note that we currently at capacity
-        here.
+        requests which you believe are ready). Note that we already meet that limit.
