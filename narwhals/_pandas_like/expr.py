@@ -387,19 +387,67 @@ class PandasLikeExpr:
         )
 
     def over(self, keys: list[str]) -> Self:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            if self._output_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in over.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
+        cumulative_functions_to_pandas_equivalent = {
+            "col->cum_count": "cumcount",
+            "col->cum_sum": "cumsum",
+            "col->cum_min": "cummin",
+            "col->cum_max": "cummax",
+            "col->cum_prod": "cumprod",
+        }
+
+        if self._function_name in cumulative_functions_to_pandas_equivalent:
+
+            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+                if self._output_names is None:
+                    msg = (
+                        "Anonymous expressions are not supported in over.\n"
+                        "Instead of `nw.all()`, try using a named expression, such as "
+                        "`nw.col('a', 'b')`\n"
+                    )
+                    raise ValueError(msg)
+                if self._root_names is None:
+                    msg = (
+                        "Anonymous expressions are not supported in over with cumulative "
+                        "operations.\n"
+                    )
+                    raise ValueError(msg)
+                res_native = df._native_frame.groupby(list(keys), as_index=False)[
+                    self._root_names[0]
+                ].transform(
+                    cumulative_functions_to_pandas_equivalent[self._function_name]
                 )
-                raise ValueError(msg)
-            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-            tmp = df.select(*keys).join(
-                tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
-            )
-            return [tmp[name] for name in self._output_names]
+                if self._function_name == "col->cum_count":
+                    # Pandas cumcount starts counting from 0, while Polars starts counting from 1
+                    # So we need to add 1 to the result
+                    # Also, for some reason pandas cumcount transform("cumcount") returns a Series
+                    # while all other cumulative functions return a DataFrame
+                    res_native = (
+                        res_native.rename(self._output_names[0], copy=False)
+                        .add(1)
+                        .to_frame()
+                    )
+                else:
+                    res_native = res_native.rename(
+                        columns={self._root_names[0]: self._output_names[0]}, copy=False
+                    )
+
+                return [df._from_native_frame(res_native)[self._output_names[0]]]
+
+        else:
+
+            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+                if self._output_names is None:
+                    msg = (
+                        "Anonymous expressions are not supported in over.\n"
+                        "Instead of `nw.all()`, try using a named expression, such as "
+                        "`nw.col('a', 'b')`\n"
+                    )
+                    raise ValueError(msg)
+                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                tmp = df.select(*keys).join(
+                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                )
+                return [tmp[name] for name in self._output_names]
 
         return self.__class__(
             func,

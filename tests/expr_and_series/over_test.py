@@ -68,3 +68,118 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
     df = nw.from_native(constructor(data))
     with pytest.raises(ValueError, match="Anonymous expressions"):
         df.with_columns(c_min=nw.all().min().over("a", "b"))
+
+
+def test_over_cumsum(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cumsum": [1, 3, 3, 8, 11],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
+        assert_equal_data(result, expected)
+
+
+def test_over_cumcount(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cumcount": [1, 2, 1, 2, 3],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
+        assert_equal_data(result, expected)
+
+
+def test_over_cummax(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cummax": [1, 2, 3, 5, 5],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
+        assert_equal_data(result, expected)
+
+
+def test_over_cummin(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cummin": [1, 1, 3, 3, 3],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
+        assert_equal_data(result, expected)
+
+
+def test_over_cumprod(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_cumprod": [1, 2, 3, 15, 45],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
+        assert_equal_data(result, expected)
