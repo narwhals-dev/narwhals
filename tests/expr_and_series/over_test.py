@@ -116,6 +116,31 @@ def test_over_cumcount(constructor: Constructor) -> None:
         assert_equal_data(result, expected)
 
 
+def test_over_cumcount_missing_values(constructor: Constructor) -> None:
+    data["b"][4] = None  # type: ignore[index]
+
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": data["b"],
+        "c": [5, 4, 3, 2, 1],
+        "b_cumcount": [1, 2, 1, 2, 2],
+    }
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
+        assert_equal_data(result, expected)
+
+
 def test_over_cummax(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     expected = {

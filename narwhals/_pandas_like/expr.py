@@ -388,11 +388,14 @@ class PandasLikeExpr:
 
     def over(self, keys: list[str]) -> Self:
         cumulative_functions_to_pandas_equivalent = {
-            "col->cum_count": "cumcount",
             "col->cum_sum": "cumsum",
             "col->cum_min": "cummin",
             "col->cum_max": "cummax",
             "col->cum_prod": "cumprod",
+            # Pandas cumcount starts counting from 0 while Polars starts from 1
+            # Pandas cumcount counts nulls while Polars does not
+            # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
+            "col->cum_count": lambda s: s.notna().cumsum(),
         }
 
         if self._function_name in cumulative_functions_to_pandas_equivalent:
@@ -411,25 +414,18 @@ class PandasLikeExpr:
                         "operations.\n"
                     )
                     raise ValueError(msg)
-                res_native = df._native_frame.groupby(list(keys), as_index=False)[
-                    self._root_names[0]
-                ].transform(
-                    cumulative_functions_to_pandas_equivalent[self._function_name]
-                )
-                if self._function_name == "col->cum_count":
-                    # Pandas cumcount starts counting from 0, while Polars starts counting from 1
-                    # So we need to add 1 to the result
-                    # Also, for some reason pandas cumcount transform("cumcount") returns a Series
-                    # while all other cumulative functions return a DataFrame
-                    res_native = (
-                        res_native.rename(self._output_names[0], copy=False)
-                        .add(1)
-                        .to_frame()
+
+                res_native = (
+                    df._native_frame.groupby(list(keys), as_index=False)[
+                        self._root_names[0]
+                    ]
+                    .transform(
+                        cumulative_functions_to_pandas_equivalent[self._function_name]
                     )
-                else:
-                    res_native = res_native.rename(
+                    .rename(
                         columns={self._root_names[0]: self._output_names[0]}, copy=False
                     )
+                )
 
                 return [df._from_native_frame(res_native)[self._output_names[0]]]
 
