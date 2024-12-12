@@ -22,8 +22,6 @@ if TYPE_CHECKING:
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
-    if ibis_dtype.is_int128():
-        return dtypes.Int128()
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -32,8 +30,6 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Int16()
     if ibis_dtype.is_int8():
         return dtypes.Int8()
-    if ibis_dtype.is_uint128():
-        return dtypes.UInt128()
     if ibis_dtype.is_uint64():
         return dtypes.UInt64()
     if ibis_dtype.is_uint32():
