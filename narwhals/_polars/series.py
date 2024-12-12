@@ -276,16 +276,13 @@ class PolarsSeries:
         )
         if self._backend_version < (1,):  # pragma: no cover
             pl = get_polars()
-            result = self._from_native_series(
+            return self._from_native_series(
                 pl.select(
                     pl.when(~native_series.is_null()).then(native_result).otherwise(None)
                 )[native_series.name]
             )
 
-        else:
-            result = self._from_native_series(native_result)
-
-        return result
+        return self._from_native_series(native_result)
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         if self._backend_version < (0, 20, 6):
