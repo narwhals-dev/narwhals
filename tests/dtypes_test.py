@@ -5,6 +5,7 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Literal
 
+import duckdb
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -197,3 +198,13 @@ def test_pandas_fixed_offset_1302() -> None:
         assert result == nw.Datetime("ns", "+01:00")
     else:  # pragma: no cover
         pass
+
+
+def test_huge_int() -> None:
+    df = pl.DataFrame({"a": [1, 2, 3]})  # noqa: F841
+    rel = duckdb.sql("""
+        select cast(a as int128) as a
+        from df
+                     """)
+    result = nw.from_native(rel).schema
+    assert result["a"] == nw.Int128

@@ -15,6 +15,7 @@ from narwhals.stable.v1._dtypes import Int8
 from narwhals.stable.v1._dtypes import Int16
 from narwhals.stable.v1._dtypes import Int32
 from narwhals.stable.v1._dtypes import Int64
+from narwhals.stable.v1._dtypes import Int128
 from narwhals.stable.v1._dtypes import List
 from narwhals.stable.v1._dtypes import NumericType
 from narwhals.stable.v1._dtypes import Object
@@ -24,6 +25,7 @@ from narwhals.stable.v1._dtypes import UInt8
 from narwhals.stable.v1._dtypes import UInt16
 from narwhals.stable.v1._dtypes import UInt32
 from narwhals.stable.v1._dtypes import UInt64
+from narwhals.stable.v1._dtypes import UInt128
 from narwhals.stable.v1._dtypes import Unknown
 
 __all__ = [
@@ -42,6 +44,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "List",
     "NumericType",
     "Object",
@@ -51,5 +54,6 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
 ]
