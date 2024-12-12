@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
+    if duckdb_dtype == "HUGEINT":
+        return dtypes.Int128()
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -32,6 +34,8 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         return dtypes.Int16()
     if duckdb_dtype == "TINYINT":
         return dtypes.Int8()
+    if duckdb_dtype == "UHUGEINT":
+        return dtypes.UInt128()
     if duckdb_dtype == "UBIGINT":
         return dtypes.UInt64()
     if duckdb_dtype == "UINTEGER":
@@ -72,7 +76,7 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
             native_to_narwhals_dtype(match_.group(1), version),
             int(match_.group(2)),
         )
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 class DuckDBInterchangeFrame:

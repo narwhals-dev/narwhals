@@ -208,3 +208,12 @@ def test_huge_int() -> None:
                      """)
     result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
+    rel = duckdb.sql("""
+        select cast(a as uint128) as a
+        from df
+                     """)
+    result = nw.from_native(rel).schema
+    assert result["a"] == nw.UInt128
+
+    # TODO(unassigned): once other libraries support Int128/UInt128,
+    # add tests for them too

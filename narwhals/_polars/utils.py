@@ -78,7 +78,7 @@ def native_to_narwhals_dtype(
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
-    if dtype == getattr(pl, "Int128", None):  # type: ignore[operator]
+    if dtype == getattr(pl, "Int128", None):  # type: ignore[operator]  # pragma: no cover
         # Not available for Polars pre 1.8.0
         return dtypes.Int128()
     if dtype == pl.Int64:
@@ -89,7 +89,7 @@ def native_to_narwhals_dtype(
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if dtype == getattr(pl, "UInt128", None):  # type: ignore[operator]
+    if dtype == getattr(pl, "UInt128", None):  # type: ignore[operator]  # pragma: no cover
         # Not available for Polars pre 1.8.0
         return dtypes.UInt128()
     if dtype == pl.UInt64:
