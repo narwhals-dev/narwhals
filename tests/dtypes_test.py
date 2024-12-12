@@ -179,6 +179,7 @@ def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> Non
     assert snw.dtype == nw.Float64
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_pandas_fixed_offset_1302() -> None:
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
