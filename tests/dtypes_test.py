@@ -217,3 +217,15 @@ def test_huge_int() -> None:
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
     # add tests for them too
+
+
+def test_decimal() -> None:
+    df = pl.DataFrame({"a": ["1.5"]}, schema={"a": pl.Decimal})
+    result = nw.from_native(df).schema
+    assert result["a"] == nw.Decimal
+    rel = duckdb.sql("""
+        select *
+        from df
+                     """)
+    result = nw.from_native(rel).schema
+    assert result["a"] == nw.Decimal

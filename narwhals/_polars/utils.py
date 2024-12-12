@@ -144,6 +144,8 @@ def native_to_narwhals_dtype(
                 native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
                 dtype.size,  # type: ignore[attr-defined]
             )
+    if dtype == pl.Decimal:
+        return dtypes.Decimal()
     return dtypes.Unknown()
 
 

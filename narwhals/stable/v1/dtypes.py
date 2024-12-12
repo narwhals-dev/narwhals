@@ -5,6 +5,7 @@ from narwhals.stable.v1._dtypes import Boolean
 from narwhals.stable.v1._dtypes import Categorical
 from narwhals.stable.v1._dtypes import Date
 from narwhals.stable.v1._dtypes import Datetime
+from narwhals.stable.v1._dtypes import Decimal
 from narwhals.stable.v1._dtypes import DType
 from narwhals.stable.v1._dtypes import Duration
 from narwhals.stable.v1._dtypes import Enum
@@ -35,6 +36,7 @@ __all__ = [
     "DType",
     "Date",
     "Datetime",
+    "Decimal",
     "Duration",
     "Enum",
     "Field",
