@@ -35,8 +35,6 @@ jobs:
         run: |
             cd altair
             uv pip install -e ".[dev, all]" --system
-            # temporary pin to get ci green
-            uv pip install "numpy<2.2" --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
@@ -91,8 +89,6 @@ jobs:
             . .venv/bin/activate
             uv pip uninstall narwhals
             uv pip install -e ./..
-            # temporary pin
-            uv pip install "altair<5.5"
       - name: show-deps
         run: |
             cd marimo
@@ -142,8 +138,6 @@ jobs:
         run: |
             cd scikit-lego
             uv pip install -e ".[test]" --system
-            # temporary pin to get ci green
-            uv pip install "scikit-learn<1.6" --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system

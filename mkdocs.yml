@@ -21,6 +21,7 @@ nav:
   - Supported libraries and extending Narwhals: extending.md
   - How it works: how_it_works.md
   - Ecosystem: ecosystem.md
+  - Security: security.md
   - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
