@@ -189,10 +189,12 @@ SizeUnit: TypeAlias = Literal[
 
 
 class DTypes:
+    Int128: type[dtypes.Int128]
     Int64: type[dtypes.Int64]
     Int32: type[dtypes.Int32]
     Int16: type[dtypes.Int16]
     Int8: type[dtypes.Int8]
+    UInt128: type[dtypes.UInt128]
     UInt64: type[dtypes.UInt64]
     UInt32: type[dtypes.UInt32]
     UInt16: type[dtypes.UInt16]
