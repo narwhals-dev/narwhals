@@ -202,7 +202,7 @@ def test_pandas_fixed_offset_1302() -> None:
 
 def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
-    if POLARS_VERSION >= (1, 18):
+    if POLARS_VERSION >= (1, 18):  # pragma: no cover
         result = nw.from_native(df).schema
         assert result["a"] == nw.Int128
     else:  # pragma: no cover
@@ -221,7 +221,7 @@ def test_huge_int() -> None:
     result = nw.from_native(rel).schema
     assert result["a"] == nw.UInt128
 
-    if POLARS_VERSION >= (1, 18):
+    if POLARS_VERSION >= (1, 18):  # pragma: no cover
         result = nw.from_native(df).schema
         assert result["a"] == nw.UInt128
     else:  # pragma: no cover
