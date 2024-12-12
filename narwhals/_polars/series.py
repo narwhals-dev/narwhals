@@ -9,6 +9,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -262,21 +263,29 @@ class PolarsSeries:
         min_periods: int,
         ignore_nulls: bool,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
-        expr = self._native_series
-        return self._from_native_series(
-            expr.ewm_mean(
-                com=com,
-                span=span,
-                half_life=half_life,
-                alpha=alpha,
-                adjust=adjust,
-                min_periods=min_periods,
-                ignore_nulls=ignore_nulls,
-            )
+        native_series = self._native_series
+
+        native_result = native_series.ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
         )
+        if self._backend_version < (1,):  # pragma: no cover
+            pl = get_polars()
+            result = self._from_native_series(
+                pl.select(
+                    pl.when(~native_series.is_null()).then(native_result).otherwise(None)
+                )[native_series.name]
+            )
+
+        else:
+            result = self._from_native_series(native_result)
+
+        return result
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         if self._backend_version < (0, 20, 6):

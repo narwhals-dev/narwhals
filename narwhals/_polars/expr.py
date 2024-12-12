@@ -8,6 +8,7 @@ from typing import Sequence
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -60,21 +61,26 @@ class PolarsExpr:
         min_periods: int,
         ignore_nulls: bool,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         expr = self._native_expr
-        return self._from_native_expr(
-            expr.ewm_mean(
-                com=com,
-                span=span,
-                half_life=half_life,
-                alpha=alpha,
-                adjust=adjust,
-                min_periods=min_periods,
-                ignore_nulls=ignore_nulls,
-            )
+
+        native_expr = expr.ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
         )
+        if self._backend_version < (1,):  # pragma: no cover
+            pl = get_polars()
+            result = self._from_native_expr(
+                pl.when(expr.is_null()).then(None).otherwise(native_expr).name.keep()
+            )
+
+        else:
+            result = self._from_native_expr(native_expr)
+        return result
 
     def map_batches(
         self,
