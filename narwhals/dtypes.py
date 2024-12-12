@@ -692,6 +692,28 @@ class Array(DType):
     Arguments:
         inner: The datatype of the values within each array.
         width: the length of each array.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [1, 2, 3]
+        >>> ser_pd = pd.Series(data)
+        >>> ser_pl = pl.Series(data)
+        >>> ser_pa = pa.chunked_array([data])
+
+        >>> def func(ser):
+        ...     ser_nw = nw.from_native(ser, series_only=True)
+        ...     casted_series = ser_nw.cast(nw.Int32)
+        ...     return nw.Array(inner=nw.Int32, width=casted_series.shape[0])
+
+        >>> func(ser_pd)
+        Array(<class 'narwhals.dtypes.Int32'>, 3)
+        >>> func(ser_pl)
+        Array(<class 'narwhals.dtypes.Int64'>, 3)
+        >>> func(ser_pa)
+        Array(<class 'narwhals.dtypes.Int64'>, 3)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
