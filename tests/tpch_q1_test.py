@@ -109,9 +109,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
-    schema = df.collect_schema()
-    if schema["l_shipdate"] != nw.Date and schema["l_shipdate"] != nw.Datetime:
-        df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
+    df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
