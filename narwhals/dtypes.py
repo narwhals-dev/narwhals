@@ -711,9 +711,9 @@ class Array(DType):
         >>> func(ser_pd)
         Array(<class 'narwhals.dtypes.Int32'>, 3)
         >>> func(ser_pl)
-        Array(<class 'narwhals.dtypes.Int64'>, 3)
+        Array(<class 'narwhals.dtypes.Int32'>, 3)
         >>> func(ser_pa)
-        Array(<class 'narwhals.dtypes.Int64'>, 3)
+        Array(<class 'narwhals.dtypes.Int32'>, 3)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
