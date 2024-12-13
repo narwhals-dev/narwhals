@@ -44,10 +44,10 @@ def test_invalid_group_by_dask() -> None:
 
     df_dask = dd.from_pandas(df_pandas)
 
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
 
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="Non-trivial complex aggregation"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     with pytest.raises(
@@ -59,7 +59,7 @@ def test_invalid_group_by_dask() -> None:
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
@@ -69,7 +69,7 @@ def test_invalid_group_by() -> None:
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
     ):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
             nw.col("b").mean().min()
         )
