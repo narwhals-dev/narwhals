@@ -189,6 +189,7 @@ SizeUnit: TypeAlias = Literal[
 
 
 class DTypes:
+    Decimal: type[dtypes.Decimal]
     Int128: type[dtypes.Int128]
     Int64: type[dtypes.Int64]
     Int32: type[dtypes.Int32]

@@ -76,6 +76,8 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
             native_to_narwhals_dtype(match_.group(1), version),
             int(match_.group(2)),
         )
+    if duckdb_dtype.startswith("DECIMAL("):
+        return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 
 

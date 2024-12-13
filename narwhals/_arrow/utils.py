@@ -78,6 +78,8 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
+    if pa.types.is_decimal(dtype):
+        return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 
 

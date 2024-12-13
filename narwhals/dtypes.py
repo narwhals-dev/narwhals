@@ -47,6 +47,18 @@ class NumericType(DType): ...
 class TemporalType(DType): ...
 
 
+class Decimal(NumericType):
+    """Decimal type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
+        >>> nw.from_native(s, series_only=True).dtype
+        Decimal
+    """
+
+
 class Int128(NumericType):
     """128-bit signed integer type."""
 

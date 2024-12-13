@@ -12,6 +12,7 @@ from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
+from narwhals.dtypes import Decimal
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
 from narwhals.dtypes import Field
@@ -87,6 +88,7 @@ __all__ = [
     "DataFrame",
     "Date",
     "Datetime",
+    "Decimal",
     "Duration",
     "Enum",
     "Expr",

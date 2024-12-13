@@ -39,6 +39,7 @@ from narwhals.stable.v1.dtypes import Boolean
 from narwhals.stable.v1.dtypes import Categorical
 from narwhals.stable.v1.dtypes import Date
 from narwhals.stable.v1.dtypes import Datetime
+from narwhals.stable.v1.dtypes import Decimal
 from narwhals.stable.v1.dtypes import Duration
 from narwhals.stable.v1.dtypes import Enum
 from narwhals.stable.v1.dtypes import Field
@@ -3630,6 +3631,7 @@ __all__ = [
     "DataFrame",
     "Date",
     "Datetime",
+    "Decimal",
     "Duration",
     "Enum",
     "Expr",
