@@ -91,7 +91,7 @@ def agg_pyspark(
     for expr in exprs:
         if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (
-                "Non-trivial complex found.\n\n"
+                "Non-trivial complex aggregation found.\n\n"
                 "Hint: you were probably trying to apply a non-elementary aggregation with a "
                 "dask dataframe.\n"
                 "Please rewrite your query such that group-by aggregations "

@@ -44,10 +44,10 @@ def test_invalid_group_by_dask() -> None:
 
     df_dask = dd.from_pandas(df_pandas)
 
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
 
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="Non-trivial complex aggregation"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     with pytest.raises(
@@ -56,9 +56,10 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
 
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
@@ -68,7 +69,7 @@ def test_invalid_group_by() -> None:
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
     ):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
             nw.col("b").mean().min()
         )
@@ -340,3 +341,27 @@ def test_group_by_categorical(
         .sort("x")
     )
     assert_equal_data(result, data)
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+def test_group_by_shift_raises(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor):
+        # Polars supports all kinds of crazy group-by aggregations, so
+        # we don't check that it errors here.
+        request.applymarker(pytest.mark.xfail)
+    df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
+    df = nw.from_native(constructor(df_native))
+    with pytest.raises(
+        ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
+    ):
+        df.group_by("b").agg(nw.col("a").shift(1))
+
+
+def test_group_by_count(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by("a").agg(nw.col("b").count()).sort("a")
+    expected = {"a": [1, 2], "b": [2, 1]}
+    assert_equal_data(result, expected)

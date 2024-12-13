@@ -35,8 +35,16 @@ def n_unique() -> dd.Aggregation:
 
 
 POLARS_TO_DASK_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "median",
+    "max": "max",
+    "min": "min",
+    "std": "std",
+    "var": "var",
     "len": "size",
     "n_unique": n_unique,
+    "count": "count",
 }
 
 
@@ -108,7 +116,10 @@ def agg_dask(
 
     all_simple_aggs = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->") in POLARS_TO_DASK_AGGREGATIONS
+        ):
             all_simple_aggs = False
             break
 
@@ -143,15 +154,11 @@ def agg_dask(
 
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
-        try:
-            result_simple = grouped.agg(**simple_aggregations)
-        except ValueError as exc:
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
+        result_simple = grouped.agg(**simple_aggregations)
         return from_dataframe(result_simple.reset_index())
 
     msg = (
-        "Non-trivial complex found.\n\n"
+        "Non-trivial complex aggregation found.\n\n"
         "Hint: you were probably trying to apply a non-elementary aggregation with a "
         "dask dataframe.\n"
         "Please rewrite your query such that group-by aggregations "

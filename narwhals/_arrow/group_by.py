@@ -21,11 +21,16 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import IntoArrowExpr
 
 POLARS_TO_ARROW_AGGREGATIONS = {
-    "len": "count",
+    "sum": "sum",
+    "mean": "mean",
     "median": "approximate_median",
-    "n_unique": "count_distinct",
+    "max": "max",
+    "min": "min",
     "std": "stddev",
     "var": "variance",  # currently unused, we don't have `var` yet
+    "len": "count",
+    "n_unique": "count_distinct",
+    "count": "count",
 }
 
 
@@ -36,7 +41,7 @@ def get_function_name_option(
     import pyarrow.compute as pc
 
     function_name_to_options = {
-        "count": pc.CountOptions(mode="all"),
+        "count": pc.CountOptions(mode="only_valid"),
         "count_distinct": pc.CountOptions(mode="all"),
         "stddev": pc.VarianceOptions(ddof=1),
         "variance": pc.VarianceOptions(ddof=1),
@@ -131,7 +136,11 @@ def agg_arrow(
 
     all_simple_aggs = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->")
+            in POLARS_TO_ARROW_AGGREGATIONS
+        ):
             all_simple_aggs = False
             break
 
@@ -185,7 +194,7 @@ def agg_arrow(
         return from_dataframe(result_simple)
 
     msg = (
-        "Non-trivial complex found.\n\n"
+        "Non-trivial complex aggregation found.\n\n"
         "Hint: you were probably trying to apply a non-elementary aggregation with a "
         "pyarrow table.\n"
         "Please rewrite your query such that group-by aggregations "
