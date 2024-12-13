@@ -98,3 +98,4 @@ jobs:
       run: >-
         gh release upload
         '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
