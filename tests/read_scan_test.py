@@ -87,6 +87,7 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     assert_equal_data(result, data)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet(
     tmpdir: pytest.TempdirFactory,
     constructor_eager: ConstructorEager,
@@ -101,6 +102,7 @@ def test_read_parquet(
     assert isinstance(result, nw.DataFrame)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet_v1(
     tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
 ) -> None:
@@ -123,6 +125,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     assert_equal_data(result, data)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet(
     tmpdir: pytest.TempdirFactory,
     constructor: Constructor,
@@ -137,6 +140,7 @@ def test_scan_parquet(
     assert isinstance(result, nw.LazyFrame)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_v1(
     tmpdir: pytest.TempdirFactory,
     constructor: Constructor,
