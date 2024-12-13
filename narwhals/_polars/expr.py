@@ -75,7 +75,7 @@ class PolarsExpr:
             import polars as pl
 
             return self._from_native_expr(
-                pl.when(~expr.is_null()).then(native_expr).otherwise(None).name.keep()
+                pl.when(~expr.is_null()).then(native_expr).otherwise(None)
             )
         return self._from_native_expr(native_expr)
 
