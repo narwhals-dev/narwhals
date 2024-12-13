@@ -2,7 +2,6 @@
 # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/#the-whole-ci-cd-workflow
 # but with the following differences
 # - removed the TestPyPI part
-# - sanitise the `github.ref_name` part
 # - instead of `on: push`, we have `tags` in there too
 
 name: Publish Python 🐍 distribution 📦 to PyPI
@@ -85,38 +84,17 @@ jobs:
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        # Sanitize ref_name by removing unsafe characters
-        SAFE_REF_NAME=$(echo '${{ github.ref_name }}' | tr -cd '[:alnum:]-_')
-
-        # Validate that the sanitized name is not empty (to avoid invalid input)
-        if [ -z "$SAFE_REF_NAME" ]; then
-          echo "Sanitized reference name is empty. Exiting."
-          exit 1
-        fi
-
-        # Use the sanitized name in the gh command
-        gh release create \
-          "$SAFE_REF_NAME" \
-          --repo '${{ github.repository }}' \
-          --notes ""
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --notes ""
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
       # Upload to GitHub Release using the `gh` CLI.
       # `dist/` contains the built packages, and the
       # sigstore-produced signatures and certificates.
-      run: |
-        # Sanitize ref_name by removing unsafe characters
-        SAFE_REF_NAME=$(echo '${{ github.ref_name }}' | tr -cd '[:alnum:]-_')
-
-        # Validate that the sanitized name is not empty (to avoid invalid input)
-        if [ -z "$SAFE_REF_NAME" ]; then
-          echo "Sanitized reference name is empty. Exiting."
-          exit 1
-        fi
-
-        # Use the sanitized name in the gh command
-        gh release upload \
-        "$SAFE_REF_NAME" dist/** \
-        --repo '${{ github.repository }}'
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
