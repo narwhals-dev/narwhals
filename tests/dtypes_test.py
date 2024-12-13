@@ -206,7 +206,7 @@ def test_huge_int() -> None:
         result = nw.from_native(df).schema
         assert result["a"] == nw.Int128
     else:  # pragma: no cover
-        # UInt128 was not available yet
+        # Int128 was not available yet
         pass
     rel = duckdb.sql("""
         select cast(a as int128) as a
