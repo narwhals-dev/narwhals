@@ -56,6 +56,7 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
 
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
     with pytest.raises(RuntimeError, match="does your"):
@@ -340,3 +341,11 @@ def test_group_by_categorical(
         .sort("x")
     )
     assert_equal_data(result, data)
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+def test_group_by_shift_pandas_raises() -> None:
+    df_native = pd.DataFrame({"a": [1, 2, 3], "b": [1, 1, 2]})
+    df = nw.from_native(df_native)
+    with pytest.raises(RuntimeError, match=".*failed to aggregate"):
+        df.group_by("b").agg(nw.col("a").shift(1))

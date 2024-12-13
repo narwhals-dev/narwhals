@@ -23,6 +23,13 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "median",
+    "max": "max",
+    "min": "min",
+    "std": "std",
+    "var": "var",
     "len": "size",
     "n_unique": "nunique",
 }
@@ -144,7 +151,11 @@ def agg_pandas(  # noqa: PLR0915
     """
     all_aggs_are_simple = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->")
+            in POLARS_TO_PANDAS_AGGREGATIONS
+        ):
             all_aggs_are_simple = False
             break
 
@@ -193,11 +204,7 @@ def agg_pandas(  # noqa: PLR0915
             simple_aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         if simple_aggs:
-            try:
-                result_simple_aggs = grouped.agg(simple_aggs)
-            except AttributeError as exc:
-                msg = "Failed to aggregated - does your aggregation function return a scalar?"
-                raise RuntimeError(msg) from exc
+            result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
@@ -272,6 +279,9 @@ def agg_pandas(  # noqa: PLR0915
         out_names = []
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df))
+            if not all(len(x) == 1 for x in results_keys):
+                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
+                raise RuntimeError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)
