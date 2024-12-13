@@ -40,7 +40,6 @@ class PandasLikeExpr:
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
-        self._depth = depth
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version
@@ -53,6 +52,7 @@ class PandasLikeExpr:
             f"function_name={self._function_name}, "
             f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
+            ")"
         )
 
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
