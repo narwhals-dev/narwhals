@@ -698,22 +698,17 @@ class Array(DType):
         >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> data = [1, 2, 3]
-        >>> ser_pd = pd.Series(data)
-        >>> ser_pl = pl.Series(data)
-        >>> ser_pa = pa.chunked_array([data])
+        >>> data = [[1, 2], [3, 4], [5, 6]]
+        >>> ser_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.list_(pa.int32(), 2)))
+        >>> ser_pl = pl.Series(data, dtype=pl.Array(pl.Int32, 2))
+        >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
 
-        >>> def func(ser):
-        ...     ser_nw = nw.from_native(ser, series_only=True)
-        ...     casted_series = ser_nw.cast(nw.Int32)
-        ...     return nw.Array(inner=nw.Int32, width=casted_series.shape[0])
-
-        >>> func(ser_pd)
-        Array(<class 'narwhals.dtypes.Int32'>, 3)
-        >>> func(ser_pl)
-        Array(<class 'narwhals.dtypes.Int32'>, 3)
-        >>> func(ser_pa)
-        Array(<class 'narwhals.dtypes.Int32'>, 3)
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Array(Int32, 2)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
