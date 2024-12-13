@@ -41,7 +41,7 @@ def get_function_name_option(
     import pyarrow.compute as pc
 
     function_name_to_options = {
-        "count": pc.CountOptions(mode="all"),
+        "count": pc.CountOptions(mode="only_valid"),
         "count_distinct": pc.CountOptions(mode="all"),
         "stddev": pc.VarianceOptions(ddof=1),
         "variance": pc.VarianceOptions(ddof=1),
