@@ -30,6 +30,7 @@ POLARS_TO_ARROW_AGGREGATIONS = {
     "var": "variance",  # currently unused, we don't have `var` yet
     "len": "count",
     "n_unique": "count_distinct",
+    "count": "count",
 }
 
 

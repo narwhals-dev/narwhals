@@ -14,6 +14,7 @@ from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
+from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
 from narwhals.utils import tupleify
 
@@ -32,6 +33,7 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
     "var": "var",
     "len": "size",
     "n_unique": "nunique",
+    "count": "count",
 }
 
 
@@ -271,7 +273,7 @@ def agg_pandas(  # noqa: PLR0915
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...).",
         UserWarning,
-        stacklevel=2,
+        stacklevel=find_stacklevel(),
     )
 
     def func(df: Any) -> Any:

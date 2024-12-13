@@ -44,6 +44,7 @@ POLARS_TO_DASK_AGGREGATIONS = {
     "var": "var",
     "len": "size",
     "n_unique": n_unique,
+    "count": "count",
 }
 
 
