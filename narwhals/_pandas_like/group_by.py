@@ -281,7 +281,7 @@ def agg_pandas(  # noqa: PLR0915
             results_keys = expr._call(from_dataframe(df))
             if not all(len(x) == 1 for x in results_keys):
                 msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
-                raise RuntimeError(msg)
+                raise ValueError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)

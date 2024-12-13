@@ -344,8 +344,16 @@ def test_group_by_categorical(
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_group_by_shift_pandas_raises() -> None:
-    df_native = pd.DataFrame({"a": [1, 2, 3], "b": [1, 1, 2]})
-    df = nw.from_native(df_native)
-    with pytest.raises(RuntimeError, match=".*failed to aggregate"):
+def test_group_by_shift_raises(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor):
+        # Polars supports all kinds of crazy group-by aggregations, so
+        # we don't check that it errors here.
+        request.applymarker(pytest.mark.xfail)
+    df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
+    df = nw.from_native(constructor(df_native))
+    with pytest.raises(
+        ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
+    ):
         df.group_by("b").agg(nw.col("a").shift(1))
