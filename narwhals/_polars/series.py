@@ -9,7 +9,6 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
-from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -275,7 +274,8 @@ class PolarsSeries:
             ignore_nulls=ignore_nulls,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            pl = get_polars()
+            import polars as pl
+
             return self._from_native_series(
                 pl.select(
                     pl.when(~native_series.is_null()).then(native_result).otherwise(None)

@@ -8,7 +8,6 @@ from typing import Sequence
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -73,9 +72,10 @@ class PolarsExpr:
             ignore_nulls=ignore_nulls,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            pl = get_polars()
+            import polars as pl
+
             return self._from_native_expr(
-                pl.when(expr.is_null()).then(None).otherwise(native_expr).name.keep()
+                pl.when(~expr.is_null()).then(native_expr).otherwise(None).name.keep()
             )
         return self._from_native_expr(native_expr)
 
