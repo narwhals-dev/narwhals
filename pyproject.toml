@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.16.0"
+version = "1.17.0"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -113,7 +113,6 @@ filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
   'ignore:In the future `np.bool`',
-  'ignore:The copy keyword is deprecated and will be removed',
   'ignore:make_block is deprecated and will be removed',
   'ignore:np.find_common_type is deprecated',
   'ignore:is_sparse is deprecated and will be removed',

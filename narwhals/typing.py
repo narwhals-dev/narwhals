@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Protocol
 from typing import TypeVar
 from typing import Union
@@ -173,12 +174,27 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+SizeUnit: TypeAlias = Literal[
+    "b",
+    "kb",
+    "mb",
+    "gb",
+    "tb",
+    "bytes",
+    "kilobytes",
+    "megabytes",
+    "gigabytes",
+    "terabytes",
+]
+
 
 class DTypes:
+    Int128: type[dtypes.Int128]
     Int64: type[dtypes.Int64]
     Int32: type[dtypes.Int32]
     Int16: type[dtypes.Int16]
     Int8: type[dtypes.Int8]
+    UInt128: type[dtypes.UInt128]
     UInt64: type[dtypes.UInt64]
     UInt32: type[dtypes.UInt32]
     UInt16: type[dtypes.UInt16]

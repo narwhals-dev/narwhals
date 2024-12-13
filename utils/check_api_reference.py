@@ -132,7 +132,7 @@ if extra := set(documented).difference(series_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Series.{cat, dt, str} methods
+# Series.{cat, dt, list, str} methods
 for namespace in NAMESPACES.difference({"name"}):
     series_methods = [
         i
@@ -177,7 +177,7 @@ if extra := set(documented).difference(expr_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Expr.{cat, dt, name, str} methods
+# Expr.{cat, dt, list, name, str} methods
 for namespace in NAMESPACES:
     expr_methods = [
         i

@@ -24,6 +24,10 @@ from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
+from narwhals.functions import _read_csv_impl
+from narwhals.functions import _read_parquet_impl
+from narwhals.functions import _scan_csv_impl
+from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
@@ -44,6 +48,7 @@ from narwhals.stable.v1.dtypes import Int8
 from narwhals.stable.v1.dtypes import Int16
 from narwhals.stable.v1.dtypes import Int32
 from narwhals.stable.v1.dtypes import Int64
+from narwhals.stable.v1.dtypes import Int128
 from narwhals.stable.v1.dtypes import List
 from narwhals.stable.v1.dtypes import Object
 from narwhals.stable.v1.dtypes import String
@@ -52,6 +57,7 @@ from narwhals.stable.v1.dtypes import UInt8
 from narwhals.stable.v1.dtypes import UInt16
 from narwhals.stable.v1.dtypes import UInt32
 from narwhals.stable.v1.dtypes import UInt64
+from narwhals.stable.v1.dtypes import UInt128
 from narwhals.stable.v1.dtypes import Unknown
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
@@ -3385,6 +3391,238 @@ def from_numpy(
     )
 
 
+def read_csv(
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
+) -> DataFrame[Any]:
+    """Read a CSV file into a DataFrame.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
+
+    Returns:
+        DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoDataFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that reads a csv file with a specified native namespace:
+
+        >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
+        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
+
+        >>> agnostic_read_csv(native_namespace=pd)  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+        >>> agnostic_read_csv(native_namespace=pl)  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_read_csv(native_namespace=pa)  # doctest:+SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
+    )
+
+
+def scan_csv(
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
+) -> LazyFrame[Any]:
+    """Lazily read from a CSV file.
+
+    For the libraries that do not support lazy dataframes, the function reads
+    a csv file eagerly and then converts the resulting dataframe to a lazyframe.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.scan_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
+
+    Returns:
+        LazyFrame.
+
+    Examples:
+        >>> import dask.dataframe as dd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
+
+        >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
+        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+
+        Then we can read the file by passing, for example, Polars or Dask namespaces:
+
+        >>> agnostic_scan_csv(native_namespace=pl).collect()  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_scan_csv(native_namespace=dd).compute()  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
+    )
+
+
+def read_parquet(
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
+) -> DataFrame[Any]:
+    """Read into a DataFrame from a parquet file.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native parquet reader.
+            For example, you could use
+            `nw.read_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+
+    Returns:
+        DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoDataFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that reads a parquet file with a specified native namespace:
+
+        >>> def agnostic_read_parquet(native_namespace: ModuleType) -> IntoDataFrame:
+        ...     return nw.read_parquet(
+        ...         "file.parquet", native_namespace=native_namespace
+        ...     ).to_native()
+
+        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
+
+        >>> agnostic_read_parquet(native_namespace=pd)  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+        >>> agnostic_read_parquet(native_namespace=pl)  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_read_parquet(native_namespace=pa)  # doctest:+SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _read_parquet_impl(source, native_namespace=native_namespace, **kwargs)
+    )
+
+
+def scan_parquet(
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
+) -> LazyFrame[Any]:
+    """Lazily read from a parquet file.
+
+    For the libraries that do not support lazy dataframes, the function reads
+    a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
+
+    Arguments:
+        source: Path to a file.
+        native_namespace: The native library to use for DataFrame creation.
+        kwargs: Extra keyword arguments which are passed to the native parquet reader.
+            For example, you could use
+            `nw.scan_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+
+    Returns:
+        LazyFrame.
+
+    Examples:
+        >>> import dask.dataframe as dd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrame
+        >>> from types import ModuleType
+
+        Let's create an agnostic function that lazily reads a parquet file with a specified native namespace:
+
+        >>> def agnostic_scan_parquet(native_namespace: ModuleType) -> IntoFrame:
+        ...     return nw.scan_parquet(
+        ...         "file.parquet", native_namespace=native_namespace
+        ...     ).to_native()
+
+        Then we can read the file by passing, for example, Polars or Dask namespaces:
+
+        >>> agnostic_scan_parquet(native_namespace=pl).collect()  # doctest:+SKIP
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        └─────┴─────┘
+        >>> agnostic_scan_parquet(native_namespace=dd).compute()  # doctest:+SKIP
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        _scan_parquet_impl(source, native_namespace=native_namespace, **kwargs)
+    )
+
+
 __all__ = [
     "Array",
     "Boolean",
@@ -3403,6 +3641,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "LazyFrame",
     "List",
     "Object",
@@ -3414,6 +3653,7 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
     "all",
     "all_horizontal",
@@ -3449,6 +3689,10 @@ __all__ = [
     "narwhalify",
     "new_series",
     "nth",
+    "read_csv",
+    "read_parquet",
+    "scan_csv",
+    "scan_parquet",
     "selectors",
     "show_versions",
     "sum",

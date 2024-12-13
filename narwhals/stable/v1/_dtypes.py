@@ -15,6 +15,7 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import Int128
 from narwhals.dtypes import List
 from narwhals.dtypes import NumericType
 from narwhals.dtypes import Object
@@ -24,6 +25,7 @@ from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
+from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 
 
@@ -37,6 +39,33 @@ class Datetime(NwDatetime):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import pyarrow.compute as pc
+        >>> import narwhals as nw
+        >>> from datetime import datetime, timedelta
+        >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
+        >>> ser_pd = (
+        ...     pd.Series(data)
+        ...     .dt.tz_localize("Africa/Accra")
+        ...     .astype("datetime64[ms, Africa/Accra]")
+        ... )
+        >>> ser_pl = (
+        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ... )
+        >>> ser_pa = pc.assume_timezone(
+        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
+        ... )
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
     def __hash__(self) -> int:
@@ -91,6 +120,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "List",
     "NumericType",
     "Object",
@@ -100,5 +130,6 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
 ]

@@ -37,6 +37,10 @@ Here are the top-level functions available in Narwhals.
         - narwhalify
         - new_series
         - nth
+        - read_csv
+        - read_parquet
+        - scan_csv
+        - scan_parquet
         - sum
         - sum_horizontal
         - show_versions

@@ -372,7 +372,9 @@ class ArrowSeries:
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
-            return self._native_series[idx]
+            return maybe_extract_py_scalar(
+                self._native_series[idx], return_py_scalar=True
+            )
         if isinstance(idx, Sequence):
             return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
@@ -1469,8 +1471,8 @@ class ArrowSeriesListNamespace:
         self._arrow_series = series
 
     def len(self: Self) -> ArrowSeries:
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         return self._arrow_series._from_native_series(
             pc.cast(pc.list_value_length(self._arrow_series._native_series), pa.uint32())
