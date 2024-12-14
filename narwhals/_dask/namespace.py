@@ -116,8 +116,8 @@ class DaskNamespace(CompliantNamespace):
         ).sum()
 
     def len(self) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
-        import pandas as pd  # ignore-banned-import
+        import dask.dataframe as dd
+        import pandas as pd
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             if not df.columns:
@@ -201,7 +201,7 @@ class DaskNamespace(CompliantNamespace):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         if len(list(items)) == 0:
             msg = "No items to concatenate"  # pragma: no cover
@@ -277,7 +277,7 @@ class DaskNamespace(CompliantNamespace):
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
 
@@ -298,7 +298,7 @@ class DaskNamespace(CompliantNamespace):
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
 

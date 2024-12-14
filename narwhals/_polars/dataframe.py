@@ -88,7 +88,7 @@ class PolarsDataFrame(CompliantDataFrame):
     def _from_native_object(
         self: Self, obj: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsSeries | T:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
@@ -103,7 +103,7 @@ class PolarsDataFrame(CompliantDataFrame):
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            import polars as pl  # ignore-banned-import()
+            import polars as pl
 
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
@@ -186,7 +186,7 @@ class PolarsDataFrame(CompliantDataFrame):
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            import polars as pl  # ignore-banned-import()
+            import polars as pl
 
             if (
                 isinstance(item, tuple)
@@ -378,7 +378,7 @@ class PolarsLazyFrame(CompliantLazyFrame):
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            import polars as pl  # ignore-banned-import
+            import polars as pl
 
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
@@ -427,7 +427,7 @@ class PolarsLazyFrame(CompliantLazyFrame):
             }
 
     def collect(self: Self) -> PolarsDataFrame:
-        import polars as pl  # ignore-banned-import
+        import polars as pl
 
         try:
             result = self._native_frame.collect()

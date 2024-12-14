@@ -11,8 +11,10 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
+from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
 from narwhals.utils import tupleify
 
@@ -22,8 +24,16 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "median",
+    "max": "max",
+    "min": "min",
+    "std": "std",
+    "var": "var",
     "len": "size",
     "n_unique": "nunique",
+    "count": "count",
 }
 
 
@@ -143,7 +153,11 @@ def agg_pandas(  # noqa: PLR0915
     """
     all_aggs_are_simple = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->")
+            in POLARS_TO_PANDAS_AGGREGATIONS
+        ):
             all_aggs_are_simple = False
             break
 
@@ -192,16 +206,15 @@ def agg_pandas(  # noqa: PLR0915
             simple_aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         if simple_aggs:
-            try:
-                result_simple_aggs = grouped.agg(simple_aggs)
-            except AttributeError as exc:
-                msg = "Failed to aggregated - does your aggregation function return a scalar?"
-                raise RuntimeError(msg) from exc
+            result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
-            result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping, copy=False
+            result_simple_aggs = rename(
+                result_simple_aggs,
+                columns=name_mapping,
+                implementation=implementation,
+                backend_version=backend_version,
             )
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
@@ -260,7 +273,7 @@ def agg_pandas(  # noqa: PLR0915
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...).",
         UserWarning,
-        stacklevel=2,
+        stacklevel=find_stacklevel(),
     )
 
     def func(df: Any) -> Any:
@@ -268,6 +281,9 @@ def agg_pandas(  # noqa: PLR0915
         out_names = []
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df))
+            if not all(len(x) == 1 for x in results_keys):
+                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
+                raise ValueError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)

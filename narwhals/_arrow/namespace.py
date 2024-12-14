@@ -81,7 +81,7 @@ class ArrowNamespace(CompliantNamespace):
         )
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         from narwhals._arrow.series import ArrowSeries
 
@@ -255,7 +255,7 @@ class ArrowNamespace(CompliantNamespace):
         )
 
     def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -283,7 +283,7 @@ class ArrowNamespace(CompliantNamespace):
         )
 
     def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
@@ -386,7 +386,7 @@ class ArrowNamespace(CompliantNamespace):
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow.compute as pc
 
         parsed_exprs: list[ArrowExpr] = [
             *parse_into_exprs(*exprs, namespace=self),
@@ -439,8 +439,8 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> list[ArrowSeries]:
-        import pyarrow as pa  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         from narwhals._arrow.namespace import ArrowNamespace
         from narwhals._expression_parsing import parse_into_expr

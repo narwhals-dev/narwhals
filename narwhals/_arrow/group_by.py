@@ -21,11 +21,16 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import IntoArrowExpr
 
 POLARS_TO_ARROW_AGGREGATIONS = {
-    "len": "count",
+    "sum": "sum",
+    "mean": "mean",
     "median": "approximate_median",
-    "n_unique": "count_distinct",
+    "max": "max",
+    "min": "min",
     "std": "stddev",
     "var": "variance",  # currently unused, we don't have `var` yet
+    "len": "count",
+    "n_unique": "count_distinct",
+    "count": "count",
 }
 
 
@@ -33,10 +38,10 @@ def get_function_name_option(
     function_name: str,
 ) -> pc.CountOptions | pc.VarianceOptions | None:
     """Map specific pyarrow compute function to respective option to match polars behaviour."""
-    import pyarrow.compute as pc  # ignore-banned-import
+    import pyarrow.compute as pc
 
     function_name_to_options = {
-        "count": pc.CountOptions(mode="all"),
+        "count": pc.CountOptions(mode="only_valid"),
         "count_distinct": pc.CountOptions(mode="all"),
         "stddev": pc.VarianceOptions(ddof=1),
         "variance": pc.VarianceOptions(ddof=1),
@@ -48,7 +53,7 @@ class ArrowGroupBy:
     def __init__(
         self: Self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
-        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow as pa
 
         if drop_null_keys:
             self._df = df.drop_nulls(keys)
@@ -87,8 +92,8 @@ class ArrowGroupBy:
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        import pyarrow as pa  # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
         null_token = "__null_token_value__"  # noqa: S105
@@ -127,11 +132,15 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow.compute as pc
 
     all_simple_aggs = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->")
+            in POLARS_TO_ARROW_AGGREGATIONS
+        ):
             all_simple_aggs = False
             break
 
@@ -185,7 +194,7 @@ def agg_arrow(
         return from_dataframe(result_simple)
 
     msg = (
-        "Non-trivial complex found.\n\n"
+        "Non-trivial complex aggregation found.\n\n"
         "Hint: you were probably trying to apply a non-elementary aggregation with a "
         "pyarrow table.\n"
         "Please rewrite your query such that group-by aggregations "

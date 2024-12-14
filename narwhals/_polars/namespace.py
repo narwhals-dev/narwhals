@@ -33,7 +33,7 @@ class PolarsNamespace(CompliantNamespace):
         self._version = version
 
     def __getattr__(self: Self, attr: str) -> Any:
-        import polars as pl  # ignore-banned-import
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -48,7 +48,7 @@ class PolarsNamespace(CompliantNamespace):
         return func
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -71,7 +71,7 @@ class PolarsNamespace(CompliantNamespace):
         )
 
     def len(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -107,7 +107,7 @@ class PolarsNamespace(CompliantNamespace):
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.dataframe import PolarsDataFrame
         from narwhals._polars.dataframe import PolarsLazyFrame
@@ -125,7 +125,7 @@ class PolarsNamespace(CompliantNamespace):
         )
 
     def lit(self: Self, value: Any, dtype: DType | None = None) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -140,24 +140,18 @@ class PolarsNamespace(CompliantNamespace):
         )
 
     def mean(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
-        if self._backend_version < (0, 20, 4):
-            return PolarsExpr(
-                pl.mean([*column_names]),  # type: ignore[arg-type]
-                version=self._version,
-                backend_version=self._backend_version,
-            )
         return PolarsExpr(
-            pl.mean(*column_names),
+            pl.mean([*column_names]),  # type: ignore[arg-type]
             version=self._version,
             backend_version=self._backend_version,
         )
 
     def mean_horizontal(self: Self, *exprs: IntoPolarsExpr) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -178,7 +172,7 @@ class PolarsNamespace(CompliantNamespace):
         )
 
     def median(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -195,7 +189,7 @@ class PolarsNamespace(CompliantNamespace):
         separator: str,
         ignore_nulls: bool,
     ) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -258,7 +252,7 @@ class PolarsSelectors:
         self._backend_version = backend_version
 
     def by_dtype(self: Self, dtypes: Iterable[DType]) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -271,7 +265,7 @@ class PolarsSelectors:
         )
 
     def numeric(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -282,7 +276,7 @@ class PolarsSelectors:
         )
 
     def boolean(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -293,7 +287,7 @@ class PolarsSelectors:
         )
 
     def string(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -304,7 +298,7 @@ class PolarsSelectors:
         )
 
     def categorical(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -315,7 +309,7 @@ class PolarsSelectors:
         )
 
     def all(self: Self) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 

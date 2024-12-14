@@ -79,6 +79,11 @@ repos:
             narwhals/.*__init__.py|
             narwhals/.*typing\.py
           )
+    - id: pull-request-target
+      name: don't use `pull_request_target`
+      entry: pull_request_target
+      language: pygrep
+      files: ^\.github/workflows/
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:
@@ -91,3 +96,6 @@ repos:
   hooks:
   -   id: name-tests-test
       exclude: ^tests/utils\.py
+  -   id: no-commit-to-branch
+  -   id: end-of-file-fixer
+      exclude: .svg$

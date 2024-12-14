@@ -6,7 +6,7 @@ from unittest import mock
 
 import pandas as pd
 import polars as pl
-import pyarrow.parquet as pq
+import pyarrow.csv as pa_csv
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -23,22 +23,24 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
-        df_raw = pd.read_parquet("tests/data/lineitem.parquet")
-        df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
+        df_raw = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
-        df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+        df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
         pytest.importorskip("dask_expr", exc_type=ImportError)
         import dask.dataframe as dd
 
         df_raw = dd.from_pandas(
-            pd.read_parquet("tests/data/lineitem.parquet", dtype_backend="pyarrow")
+            pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
         )
     else:
-        df_raw = pq.read_table("tests/data/lineitem.parquet")
+        df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
+    schema = df.collect_schema()
+    if schema["l_shipdate"] != nw.Date and schema["l_shipdate"] != nw.Datetime:
+        df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -102,12 +104,12 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
-        df_raw = pd.read_parquet("tests/data/lineitem.parquet")
-        df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
+        df_raw = pd.read_csv("tests/data/lineitem.csv")
     else:
-        df_raw = pl.read_parquet("tests/data/lineitem.parquet")
+        df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
+    df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -162,7 +164,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for pyarrow")
 def test_q1_w_pandas_agg_generic_path() -> None:
-    df_raw = pd.read_parquet("tests/data/lineitem.parquet")
+    df_raw = pd.read_csv("tests/data/lineitem.csv")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()

@@ -23,6 +23,10 @@ If the terminal output informs about `command not found` you need to [install gi
 
 If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
 
+You should also [check for existing SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys) and
+[generate and add a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+if you don't have one already.
+
 ### 2. Fork the repository
 
 Go to the [main project page](https://github.com/narwhals-dev/narwhals).
