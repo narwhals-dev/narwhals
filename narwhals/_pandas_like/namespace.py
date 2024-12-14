@@ -416,11 +416,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> PandasLikeExpr:
-        # TODO(Marco): if we made Namespace generic in both expr and series,
-        # maybe we wouldn't need the type: ignore here.
-        parsed_exprs: list[PandasLikeExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
-            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[list-item]
+        parsed_exprs = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
         ]
         dtypes = import_dtypes_module(self._version)
 

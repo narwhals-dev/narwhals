@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr:
+class DaskExpr(CompliantExpr[Any]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(

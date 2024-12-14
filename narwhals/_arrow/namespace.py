@@ -388,9 +388,9 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     ) -> ArrowExpr:
         import pyarrow.compute as pc
 
-        parsed_exprs: list[ArrowExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
-            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[list-item]
+        parsed_exprs = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
         ]
         dtypes = import_dtypes_module(self._version)
 

@@ -13,6 +13,7 @@ from typing import runtime_checkable
 if TYPE_CHECKING:
     import sys
 
+    from narwhals.dtypes import DType
     from narwhals.utils import Implementation
 
     if sys.version_info >= (3, 10):
@@ -79,6 +80,7 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
     def is_null(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
+    def cast(self, dtype: DType) -> Self: ...
 
 
 class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
