@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.expr import DaskExpr
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.typing import CompliantExpr
 
@@ -68,7 +67,7 @@ class DaskLazyGroupBy:
         *aggs: IntoDaskExpr,
         **named_aggs: IntoDaskExpr,
     ) -> DaskLazyFrame:
-        exprs: list[DaskExpr] = parse_into_exprs(  # type: ignore[assignment]
+        exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
