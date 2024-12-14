@@ -9,6 +9,7 @@ from typing import Any
 from typing import Sequence
 from typing import TypeAlias
 from typing import TypeVar
+from typing import cast
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
@@ -64,8 +65,9 @@ def maybe_evaluate_expr(
     df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
 ) -> Sequence[CompliantSeriesT_co] | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    if isinstance(expr, CompliantExpr):
-        return expr(df)
+    if hasattr(expr, "__narwhals_expr__"):
+        compliant_expr = cast(CompliantExpr[Any], expr)
+        return compliant_expr(df)
     return expr
 
 
