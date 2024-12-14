@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -17,8 +18,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals.typing import CompliantExpr
 
 POLARS_TO_ARROW_AGGREGATIONS = {
     "sum": "sum",
@@ -67,7 +69,7 @@ class ArrowGroupBy:
         *aggs: IntoArrowExpr,
         **named_aggs: IntoArrowExpr,
     ) -> ArrowDataFrame:
-        exprs: list[ArrowExpr] = parse_into_exprs(  # type: ignore[assignment]
+        exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
@@ -127,7 +129,7 @@ class ArrowGroupBy:
 
 def agg_arrow(
     grouped: pa.TableGroupBy,
-    exprs: list[ArrowExpr],
+    exprs: Sequence[CompliantExpr[ArrowSeries]],
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],

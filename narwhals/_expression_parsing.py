@@ -7,8 +7,8 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import TypeAlias
 from typing import TypeVar
-from typing import Union
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
@@ -22,8 +22,10 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
 
-    IntoCompliantExpr = Union[CompliantExpr[Any] | str | CompliantSeries]
-    IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
+    IntoCompliantExpr: TypeAlias = (
+        CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
+    )
+    IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr[Any])
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr[Any])
 
     T = TypeVar("T")
@@ -68,43 +70,11 @@ def maybe_evaluate_expr(
     return expr
 
 
-# @overload
-# def parse_into_exprs(
-#     *exprs: IntoPandasLikeExpr,
-#     namespace: PandasLikeNamespace,
-#     **named_exprs: IntoPandasLikeExpr,
-# ) -> list[PandasLikeExpr]: ...
-
-
-# @overload
-# def parse_into_exprs(
-#     *exprs: IntoArrowExpr,
-#     namespace: ArrowNamespace,
-#     **named_exprs: IntoArrowExpr,
-# ) -> list[ArrowExpr]: ...
-
-
-# @overload
-# def parse_into_exprs(
-#     *exprs: IntoPolarsExpr,
-#     namespace: PolarsNamespace,
-#     **named_exprs: IntoPolarsExpr,
-# ) -> list[PolarsExpr]: ...
-
-
-# @overload
-# def parse_into_exprs(
-#     *exprs: IntoSparkLikeExpr,
-#     namespace: SparkLikeNamespace,
-#     **named_exprs: IntoSparkLikeExpr,
-# ) -> list[SparkLikeExpr]: ...
-
-
 def parse_into_exprs(
-    *exprs: IntoCompliantExpr,
+    *exprs: IntoCompliantExpr[CompliantSeriesT_co],
     namespace: CompliantNamespace[CompliantSeriesT_co],
-    **named_exprs: IntoCompliantExpr,
-) -> list[CompliantExpr[CompliantSeriesT_co]]:
+    **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
+) -> Sequence[CompliantExpr[CompliantSeriesT_co]]:
     """Parse each input as an expression (if it's not already one).
 
     See `parse_into_expr` for more details.
@@ -116,7 +86,7 @@ def parse_into_exprs(
 
 
 def parse_into_expr(
-    into_expr: IntoCompliantExpr,
+    into_expr: IntoCompliantExpr[CompliantSeriesT_co],
     *,
     namespace: CompliantNamespace[CompliantSeriesT_co],
 ) -> CompliantExpr[CompliantSeriesT_co]:
