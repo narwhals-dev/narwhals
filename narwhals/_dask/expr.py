@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr[Any]):
+class DaskExpr(CompliantExpr["dask_expr.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
