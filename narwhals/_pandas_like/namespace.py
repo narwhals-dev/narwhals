@@ -517,9 +517,7 @@ class PandasWhen:
                 )
             ]
         try:
-            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
-                0
-            ]
+            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
@@ -528,6 +526,7 @@ class PandasWhen:
                 )
             ]
         else:
+            otherwise_series = otherwise_expr(df)[0]
             return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
