@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
@@ -19,7 +19,7 @@ from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.typing import CompliantNamespace, CompliantExpr
+from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -416,7 +416,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> PandasLikeExpr:
-        # todo(Marco): if we made Namespace generic in both expr and series,
+        # TODO(Marco): if we made Namespace generic in both expr and series,
         # maybe we wouldn't need the type: ignore here.
         parsed_exprs: list[PandasLikeExpr] = [
             *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
@@ -519,9 +519,9 @@ class PandasWhen:
                 )
             ]
         try:
-            otherwise_series = parse_into_expr(
-                self._otherwise_value, namespace=plx
-            )(df)[0]
+            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
+                0
+            ]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
