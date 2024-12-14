@@ -12,6 +12,7 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
-    from narwhals.typing import CompliantExpr
 
 
 class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
@@ -45,7 +45,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-    
+
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         return self._call(df)
 
