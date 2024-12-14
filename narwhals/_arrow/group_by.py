@@ -172,7 +172,10 @@ def agg_arrow(
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
 
-            option = get_function_name_option(function_name)
+            if expr._function_name != "col->len":
+                option = get_function_name_option(function_name)
+            else:
+                option = pc.CountOptions(mode="all")
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (
                     (root_name, function_name, option),
