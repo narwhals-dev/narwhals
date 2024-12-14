@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._expression_parsing import parse_into_exprs
@@ -61,7 +62,7 @@ class PolarsNamespace(CompliantNamespace[PolarsSeries]):
         )
 
     def col(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl  # ignore-banned-import()
+        import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
@@ -156,7 +157,7 @@ class PolarsNamespace(CompliantNamespace[PolarsSeries]):
 
         from narwhals._polars.expr import PolarsExpr
 
-        polars_exprs: list[PolarsExpr] = parse_into_exprs(*exprs, namespace=self)  # type: ignore[assignment]
+        polars_exprs = cast(list[PolarsExpr], parse_into_exprs(*exprs, namespace=self))
 
         if self._backend_version < (0, 20, 8):
             return PolarsExpr(

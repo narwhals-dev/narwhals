@@ -19,6 +19,7 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
+from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
@@ -30,7 +31,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-from narwhals.typing import CompliantSeries
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",

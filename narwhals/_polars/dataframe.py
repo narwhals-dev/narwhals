@@ -12,6 +12,8 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -31,8 +33,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
 
 
 class PolarsDataFrame(CompliantDataFrame):
