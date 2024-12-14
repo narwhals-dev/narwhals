@@ -11,7 +11,6 @@ from typing import overload
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -23,10 +22,9 @@ if TYPE_CHECKING:
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-from narwhals._polars.series import PolarsSeries
 
 
-class PolarsNamespace(CompliantNamespace[PolarsSeries]):
+class PolarsNamespace:
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
