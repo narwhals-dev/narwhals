@@ -9,7 +9,6 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 
-class PolarsSeries(CompliantSeries):
+class PolarsSeries:
     def __init__(
         self: Self,
         series: pl.Series,
@@ -125,10 +124,6 @@ class PolarsSeries(CompliantSeries):
 
     def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
-
-    def alias(self: Self, name: str) -> Self:
-        ser = self._native_series
-        return self._from_native_series(ser.alias(name))
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
