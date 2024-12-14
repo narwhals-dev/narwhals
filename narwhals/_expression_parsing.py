@@ -152,6 +152,8 @@ def reuse_series_implementation(
             else {}
         )
 
+        # TODO(marco): `_create_series_from_scalar` is only defined for pandas-like
+        # and PyArrow. Find a better way to type it? Create another protocol?
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(  # type: ignore[attr-defined]
                 getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
