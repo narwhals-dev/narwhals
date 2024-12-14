@@ -354,9 +354,7 @@ class PandasLikeDataFrame:
                     self._implementation,
                 )
             )
-        new_series: list[PandasLikeSeries] = evaluate_into_exprs(
-            self, *exprs, **named_exprs
-        )  # type: ignore[assignment]
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__())

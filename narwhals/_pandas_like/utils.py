@@ -630,7 +630,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
+def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
     native_namespace = series[0].__native_namespace__()
 
     lengths = [len(s) for s in series]

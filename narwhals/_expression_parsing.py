@@ -30,8 +30,9 @@ if TYPE_CHECKING:
 
 
 def evaluate_into_expr(
-    df: CompliantDataFrame | CompliantLazyFrame, into_expr: IntoCompliantExpr
-) -> Sequence[CompliantSeries]:
+    df: CompliantDataFrame | CompliantLazyFrame,
+    into_expr: CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co,
+) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns."""
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
     return expr(df)
@@ -39,9 +40,9 @@ def evaluate_into_expr(
 
 def evaluate_into_exprs(
     df: CompliantDataFrame,
-    *exprs: IntoCompliantExprT,
-    **named_exprs: IntoCompliantExprT,
-) -> Sequence[CompliantSeries]:
+    *exprs: CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co,
+    **named_exprs: CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co,
+) -> Sequence[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     series: list[CompliantSeries] = [
         item
@@ -55,7 +56,7 @@ def evaluate_into_exprs(
             raise AssertionError(msg)
         to_append = evaluated_expr[0].alias(name)
         series.append(to_append)
-    return series
+    return series  # type: ignore[return-value]
 
 
 def maybe_evaluate_expr(
