@@ -126,36 +126,36 @@ def maybe_evaluate_expr(
     return expr
 
 
-@overload
-def parse_into_exprs(
-    *exprs: IntoPandasLikeExpr,
-    namespace: PandasLikeNamespace,
-    **named_exprs: IntoPandasLikeExpr,
-) -> list[PandasLikeExpr]: ...
+# @overload
+# def parse_into_exprs(
+#     *exprs: IntoPandasLikeExpr,
+#     namespace: PandasLikeNamespace,
+#     **named_exprs: IntoPandasLikeExpr,
+# ) -> list[PandasLikeExpr]: ...
 
 
-@overload
-def parse_into_exprs(
-    *exprs: IntoArrowExpr,
-    namespace: ArrowNamespace,
-    **named_exprs: IntoArrowExpr,
-) -> list[ArrowExpr]: ...
+# @overload
+# def parse_into_exprs(
+#     *exprs: IntoArrowExpr,
+#     namespace: ArrowNamespace,
+#     **named_exprs: IntoArrowExpr,
+# ) -> list[ArrowExpr]: ...
 
 
-@overload
-def parse_into_exprs(
-    *exprs: IntoPolarsExpr,
-    namespace: PolarsNamespace,
-    **named_exprs: IntoPolarsExpr,
-) -> list[PolarsExpr]: ...
+# @overload
+# def parse_into_exprs(
+#     *exprs: IntoPolarsExpr,
+#     namespace: PolarsNamespace,
+#     **named_exprs: IntoPolarsExpr,
+# ) -> list[PolarsExpr]: ...
 
 
-@overload
-def parse_into_exprs(
-    *exprs: IntoSparkLikeExpr,
-    namespace: SparkLikeNamespace,
-    **named_exprs: IntoSparkLikeExpr,
-) -> list[SparkLikeExpr]: ...
+# @overload
+# def parse_into_exprs(
+#     *exprs: IntoSparkLikeExpr,
+#     namespace: SparkLikeNamespace,
+#     **named_exprs: IntoSparkLikeExpr,
+# ) -> list[SparkLikeExpr]: ...
 
 
 def parse_into_exprs(

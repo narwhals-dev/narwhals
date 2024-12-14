@@ -416,7 +416,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> PandasLikeExpr:
-        parsed_exprs: list[PandasLikeExpr] = [
+        parsed_exprs: list[PandasLikeSeries] = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
         ]
