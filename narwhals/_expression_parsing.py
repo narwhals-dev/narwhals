@@ -45,7 +45,7 @@ def evaluate_into_exprs(
     **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
 ) -> Sequence[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
-    series: list[CompliantSeries] = [
+    series = [
         item
         for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
         for item in sublist
@@ -57,7 +57,7 @@ def evaluate_into_exprs(
             raise AssertionError(msg)
         to_append = evaluated_expr[0].alias(name)
         series.append(to_append)
-    return series  # type: ignore[return-value]
+    return series
 
 
 def maybe_evaluate_expr(
