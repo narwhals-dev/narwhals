@@ -59,17 +59,6 @@ class PolarsNamespace:
             pl.nth(*indices), version=self._version, backend_version=self._backend_version
         )
 
-    def col(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl
-
-        from narwhals._polars.expr import PolarsExpr
-
-        return PolarsExpr(
-            pl.col(*column_names),
-            version=self._version,
-            backend_version=self._backend_version,
-        )
-
     def len(self: Self) -> PolarsExpr:
         import polars as pl
 
