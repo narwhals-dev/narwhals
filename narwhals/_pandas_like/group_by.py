@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -20,8 +21,9 @@ from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals.typing import CompliantExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
     "sum": "sum",
@@ -81,7 +83,7 @@ class PandasLikeGroupBy:
         *aggs: IntoPandasLikeExpr,
         **named_aggs: IntoPandasLikeExpr,
     ) -> PandasLikeDataFrame:
-        exprs: list[PandasLikeExpr] = parse_into_exprs(  # type: ignore[assignment]
+        exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
@@ -136,7 +138,7 @@ class PandasLikeGroupBy:
 
 def agg_pandas(  # noqa: PLR0915
     grouped: Any,
-    exprs: list[PandasLikeExpr],
+    exprs: Sequence[CompliantExpr[PandasLikeSeries]],
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasLikeDataFrame],
@@ -280,7 +282,7 @@ def agg_pandas(  # noqa: PLR0915
         out_group = []
         out_names = []
         for expr in exprs:
-            results_keys = expr._call(from_dataframe(df))
+            results_keys = expr(from_dataframe(df))
             if not all(len(x) == 1 for x in results_keys):
                 msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
                 raise ValueError(msg)
