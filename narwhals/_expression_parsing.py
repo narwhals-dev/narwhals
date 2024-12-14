@@ -153,7 +153,7 @@ def reuse_series_implementation(
         )
 
         out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(
+            plx._create_series_from_scalar(  # type: ignore[attr-defined]
                 getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
                 reference_series=series,
             )

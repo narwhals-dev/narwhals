@@ -84,9 +84,6 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
 
 class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
-    def _create_series_from_scalar(
-        self, value: Any, *, reference_series: Any
-    ) -> CompliantSeriesT_co: ...
     def _create_expr_from_callable(
         self,
         # Should be

@@ -3,9 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Callable
-from typing import NoReturn
 from typing import Sequence
 
 from narwhals._expression_parsing import combine_root_names
@@ -27,20 +25,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
-
-    def _create_expr_from_series(self, _: Any) -> NoReturn:
-        msg = "`_create_expr_from_series` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_compliant_series(self, _: Any) -> NoReturn:
-        msg = "`_create_compliant_series` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_series_from_scalar(
-        self, value: Any, *, reference_series: SparkLikeExpr
-    ) -> NoReturn:
-        msg = "`_create_series_from_scalar` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
 
     def _create_expr_from_callable(  # pragma: no cover
         self,

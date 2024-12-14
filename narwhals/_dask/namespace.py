@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
-from typing import NoReturn
 from typing import Sequence
 from typing import cast
 
@@ -318,22 +317,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def _create_expr_from_series(self, _: Any) -> NoReturn:
-        msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_compliant_series(self, _: Any) -> NoReturn:
-        msg = "`_create_compliant_series` for DaskNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_series_from_scalar(
-        self, value: Any, *, reference_series: DaskExpr
-    ) -> NoReturn:
-        msg = (
-            "`_create_series_from_scalar` for DaskNamespace exists only for compatibility"
-        )
-        raise NotImplementedError(msg)
 
     def _create_expr_from_callable(  # pragma: no cover
         self,
