@@ -81,7 +81,7 @@ class PandasLikeGroupBy:
         *aggs: IntoPandasLikeExpr,
         **named_aggs: IntoPandasLikeExpr,
     ) -> PandasLikeDataFrame:
-        exprs = parse_into_exprs(
+        exprs: list[PandasLikeExpr] = parse_into_exprs(  # type: ignore[assignment]
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,

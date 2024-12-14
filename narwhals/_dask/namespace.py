@@ -55,7 +55,7 @@ class DaskNamespace(CompliantNamespace[Any]):
             version=self._version,
         )
 
-    def col(self, *column_names: str) -> DaskExpr:  # type: ignore[override]
+    def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
@@ -142,10 +142,10 @@ class DaskNamespace(CompliantNamespace[Any]):
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
 
         return DaskExpr(
@@ -160,10 +160,10 @@ class DaskNamespace(CompliantNamespace[Any]):
         )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
 
         return DaskExpr(
@@ -178,10 +178,10 @@ class DaskNamespace(CompliantNamespace[Any]):
         )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s.fillna(0) for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s.fillna(0) for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
 
         return DaskExpr(
@@ -253,11 +253,11 @@ class DaskNamespace(CompliantNamespace[Any]):
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = (s.fillna(0) for _expr in parsed_exprs for s in _expr._call(df))
-            non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s.fillna(0) for _expr in parsed_exprs for s in _expr(df))
+            non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr(df))
             return [
                 name_preserving_div(
                     reduce(name_preserving_sum, series),
@@ -279,10 +279,10 @@ class DaskNamespace(CompliantNamespace[Any]):
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         import dask.dataframe as dd
 
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [dd.concat(series, axis=1).min(axis=1).rename(series[0].name)]
 
@@ -300,10 +300,10 @@ class DaskNamespace(CompliantNamespace[Any]):
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         import dask.dataframe as dd
 
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)  # type: ignore[call-overload]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [dd.concat(series, axis=1).max(axis=1).rename(series[0].name)]
 
@@ -371,13 +371,13 @@ class DaskNamespace(CompliantNamespace[Any]):
         ignore_nulls: bool = False,
     ) -> DaskExpr:
         parsed_exprs: list[DaskExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[arg-type, list-item]
-            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[arg-type, list-item]
+            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
+            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[list-item]
         ]
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = (s.astype(str) for _expr in parsed_exprs for s in _expr._call(df))
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
+            series = (s.astype(str) for _expr in parsed_exprs for s in _expr(df))
+            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
@@ -405,8 +405,8 @@ class DaskNamespace(CompliantNamespace[Any]):
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(parsed_exprs),  # type: ignore[arg-type]
-            output_names=reduce_output_names(parsed_exprs),  # type: ignore[arg-type]
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -437,10 +437,10 @@ class DaskWhen:
 
         plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[call-overload]
+        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("dask_expr.Series", condition)
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[call-overload]
+            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             _df = condition.to_frame("a")
@@ -452,9 +452,9 @@ class DaskWhen:
         if self._otherwise_value is None:
             return [value_series.where(condition)]
         try:
-            otherwise_series = parse_into_expr(  # type: ignore[call-overload]
-                self._otherwise_value, namespace=plx
-            )._call(df)[0]
+            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
+                0
+            ]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]

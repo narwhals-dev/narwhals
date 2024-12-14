@@ -182,7 +182,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s for _expr in parsed_exprs for s in _expr(df))
             return [reduce(lambda x, y: x & y, series)]
 
         return self._create_expr_from_callable(
@@ -197,7 +197,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s for _expr in parsed_exprs for s in _expr(df))
             return [reduce(lambda x, y: x | y, series)]
 
         return self._create_expr_from_callable(
@@ -215,7 +215,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             series = (
                 s.fill_null(0, strategy=None, limit=None)
                 for _expr in parsed_exprs
-                for s in _expr._call(df)
+                for s in _expr(df)
             )
             return [reduce(lambda x, y: x + y, series)]
 
@@ -235,12 +235,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             series = (
                 s.fill_null(0, strategy=None, limit=None)
                 for _expr in parsed_exprs
-                for s in _expr._call(df)
+                for s in _expr(df)
             )
             non_na = (
                 1 - s.is_null().cast(dtypes.Int64())
                 for _expr in parsed_exprs
-                for s in _expr._call(df)
+                for s in _expr(df)
             )
             return [
                 reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
@@ -260,7 +260,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [
                 ArrowSeries(
                     native_series=reduce(
@@ -288,7 +288,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [
                 ArrowSeries(
                     native_series=reduce(
@@ -389,8 +389,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         import pyarrow.compute as pc
 
         parsed_exprs: list[ArrowExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
+            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
+            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[list-item]
         ]
         dtypes = import_dtypes_module(self._version)
 
@@ -398,7 +398,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             series = (
                 s._native_series
                 for _expr in parsed_exprs
-                for s in _expr.cast(dtypes.String())._call(df)
+                for s in _expr.cast(dtypes.String())(df)
             )
             null_handling = "skip" if ignore_nulls else "emit_null"
             result_series = pc.binary_join_element_wise(
@@ -447,9 +447,9 @@ class ArrowWhen:
 
         plx = ArrowNamespace(backend_version=self._backend_version, version=self._version)
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
+        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
+            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             value_series = condition.__class__._from_iterable(
@@ -472,9 +472,9 @@ class ArrowWhen:
                 )
             ]
         try:
-            otherwise_series = parse_into_expr(
-                self._otherwise_value, namespace=plx
-            )._call(df)[0]
+            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
+                0
+            ]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression.
             # Remark that string values _are_ converted into expressions!

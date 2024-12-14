@@ -44,7 +44,7 @@ class SparkLikeLazyGroupBy:
         *aggs: IntoSparkLikeExpr,
         **named_aggs: IntoSparkLikeExpr,
     ) -> SparkLikeLazyFrame:
-        exprs = parse_into_exprs(
+        exprs: list[SparkLikeExpr] = parse_into_exprs(  # type: ignore[assignment]
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
@@ -89,7 +89,7 @@ def agg_pyspark(
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
     for expr in exprs:
-        if not is_simple_aggregation(expr):  # pragma: no cover  # type: ignore[arg-type]
+        if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (
                 "Non-trivial complex aggregation found.\n\n"
                 "Hint: you were probably trying to apply a non-elementary aggregation with a "

@@ -305,7 +305,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     ) -> Self:
         import pyarrow as pa
 
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)  # type: ignore[assignment]
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))

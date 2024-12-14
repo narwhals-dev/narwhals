@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, Sequence
-from typing import Any, runtime_checkable
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Generic
 from typing import Literal
 from typing import Protocol
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
+from typing import runtime_checkable
 
 if TYPE_CHECKING:
-    from narwhals.utils import Implementation
     import sys
+
+    from narwhals.utils import Implementation
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
@@ -56,22 +60,29 @@ class CompliantLazyFrame(Protocol):
     def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
 
-CompliantSeriesT = TypeVar('CompliantSeriesT', bound=CompliantSeries, covariant=True)
+
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
+)
+
 
 @runtime_checkable
-class CompliantExpr(Protocol, Generic[CompliantSeriesT]):
+class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
     _output_names: list[str] | None
     _root_names: list[str] | None
     _depth: int
     _function_name: str
-    def __call__(self, df: Any) -> Sequence[CompliantSeriesT]: ...
+
+    def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
     def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT]: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
+    def is_null(self) -> Self: ...
+    def alias(self, name: str) -> Self: ...
 
 
-class CompliantNamespace(Protocol, Generic[CompliantSeriesT]):
-    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT]: ...
+class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
+    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]

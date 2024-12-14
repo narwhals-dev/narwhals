@@ -67,7 +67,7 @@ class ArrowGroupBy:
         *aggs: IntoArrowExpr,
         **named_aggs: IntoArrowExpr,
     ) -> ArrowDataFrame:
-        exprs = parse_into_exprs(
+        exprs: list[ArrowExpr] = parse_into_exprs(  # type: ignore[assignment]
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,

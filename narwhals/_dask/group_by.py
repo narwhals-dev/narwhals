@@ -65,7 +65,7 @@ class DaskLazyGroupBy:
         *aggs: IntoDaskExpr,
         **named_aggs: IntoDaskExpr,
     ) -> DaskLazyFrame:
-        exprs = parse_into_exprs(  # type: ignore[call-overload]
+        exprs: list[DaskExpr] = parse_into_exprs(  # type: ignore[assignment]
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
@@ -117,7 +117,7 @@ def agg_dask(
     all_simple_aggs = True
     for expr in exprs:
         if not (
-            is_simple_aggregation(expr)  # type: ignore[arg-type]
+            is_simple_aggregation(expr)
             and remove_prefix(expr._function_name, "col->") in POLARS_TO_DASK_AGGREGATIONS
         ):
             all_simple_aggs = False

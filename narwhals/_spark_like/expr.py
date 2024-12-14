@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 from copy import copy
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 
 from narwhals._spark_like.utils import get_column_name
@@ -18,8 +19,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantExpr
 
-class SparkLikeExpr:
+
+class SparkLikeExpr(CompliantExpr[Any]):
     _implementation = Implementation.PYSPARK
 
     def __init__(
@@ -44,7 +47,7 @@ class SparkLikeExpr:
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
-    
+
     def __call__(self, df: SparkLikeLazyFrame) -> list[Column]:
         return self._call(df)
 

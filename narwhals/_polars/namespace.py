@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-    from narwhals._polars.series import PolarsSeries
+from narwhals._polars.series import PolarsSeries
 
 
 class PolarsNamespace(CompliantNamespace[PolarsSeries]):
@@ -156,7 +156,7 @@ class PolarsNamespace(CompliantNamespace[PolarsSeries]):
 
         from narwhals._polars.expr import PolarsExpr
 
-        polars_exprs = parse_into_exprs(*exprs, namespace=self)
+        polars_exprs: list[PolarsExpr] = parse_into_exprs(*exprs, namespace=self)  # type: ignore[assignment]
 
         if self._backend_version < (0, 20, 8):
             return PolarsExpr(
@@ -195,7 +195,7 @@ class PolarsNamespace(CompliantNamespace[PolarsSeries]):
         from narwhals._polars.expr import PolarsExpr
 
         pl_exprs: list[pl.Expr] = [
-            expr._native_expr
+            expr._native_expr  # type: ignore[attr-defined]
             for expr in (
                 *parse_into_exprs(*exprs, namespace=self),
                 *parse_into_exprs(*more_exprs, namespace=self),

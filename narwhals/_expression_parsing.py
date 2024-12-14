@@ -9,67 +9,24 @@ from typing import Any
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
-from typing import cast
-from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import IntoArrowExpr
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.expr import PandasLikeExpr
-    from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._polars.series import PolarsSeries
-    from narwhals._polars.typing import IntoPolarsExpr
-    from narwhals._spark_like.expr import SparkLikeExpr
-    from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantNamespace
-    from narwhals.typing import CompliantSeries, CompliantExpr, CompliantSeriesT
+    from narwhals.typing import CompliantSeries
+    from narwhals.typing import CompliantSeriesT_co
 
-    # CompliantExpr = Union[PandasLikeExpr, ArrowExpr, PolarsExpr, SparkLikeExpr]
-    IntoCompliantExpr = Union[
-        IntoPandasLikeExpr, IntoArrowExpr, IntoPolarsExpr, IntoSparkLikeExpr
-    ]
+    IntoCompliantExpr = Union[CompliantExpr[Any] | str | CompliantSeries]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr[Any])
-    ListOfCompliantSeries = Union[
-        list[PandasLikeSeries], list[ArrowSeries], list[PolarsSeries]
-    ]
-    ListOfCompliantExpr = Union[
-        list[PandasLikeExpr],
-        list[ArrowExpr],
-        list[PolarsExpr],
-        list[SparkLikeExpr],
-    ]
 
     T = TypeVar("T")
-
-
-@overload
-def evaluate_into_expr(
-    df: PandasLikeDataFrame,
-    into_expr: IntoPandasLikeExpr,
-) -> Sequence[PandasLikeSeries]: ...
-
-
-@overload
-def evaluate_into_expr(
-    df: ArrowDataFrame,
-    into_expr: IntoArrowExpr,
-) -> Sequence[ArrowSeries]: ...
 
 
 def evaluate_into_expr(
@@ -77,23 +34,7 @@ def evaluate_into_expr(
 ) -> Sequence[CompliantSeries]:
     """Return list of raw columns."""
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
-    return expr._call(df)  # type: ignore[arg-type]
-
-
-@overload
-def evaluate_into_exprs(
-    df: PandasLikeDataFrame,
-    *exprs: IntoPandasLikeExpr,
-    **named_exprs: IntoPandasLikeExpr,
-) -> list[PandasLikeSeries]: ...
-
-
-@overload
-def evaluate_into_exprs(
-    df: ArrowDataFrame,
-    *exprs: IntoArrowExpr,
-    **named_exprs: IntoArrowExpr,
-) -> list[ArrowSeries]: ...
+    return expr(df)
 
 
 def evaluate_into_exprs(
@@ -102,13 +43,13 @@ def evaluate_into_exprs(
     **named_exprs: IntoCompliantExprT,
 ) -> Sequence[CompliantSeries]:
     """Evaluate each expr into Series."""
-    series: ListOfCompliantSeries = [
+    series: list[CompliantSeries] = [
         item
-        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)  # type: ignore[call-overload]
+        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
         for item in sublist
     ]
     for name, expr in named_exprs.items():
-        evaluated_expr = evaluate_into_expr(df, expr)  # type: ignore[call-overload]
+        evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
             msg = "Named expressions must return a single column"  # pragma: no cover
             raise AssertionError(msg)
@@ -118,8 +59,8 @@ def evaluate_into_exprs(
 
 
 def maybe_evaluate_expr(
-    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT] | T
-) -> Sequence[CompliantSeriesT] | T:
+    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
+) -> Sequence[CompliantSeriesT_co] | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     if isinstance(expr, CompliantExpr):
         return expr(df)
@@ -160,40 +101,24 @@ def maybe_evaluate_expr(
 
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
-    namespace: CompliantNamespace[CompliantSeriesT],
+    namespace: CompliantNamespace[CompliantSeriesT_co],
     **named_exprs: IntoCompliantExpr,
-) -> list[CompliantExpr[CompliantSeriesT]]:
+) -> list[CompliantExpr[CompliantSeriesT_co]]:
     """Parse each input as an expression (if it's not already one).
 
     See `parse_into_expr` for more details.
     """
-    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [  # type: ignore[call-overload]
-        parse_into_expr(expr, namespace=namespace).alias(name)  # type: ignore[call-overload]
+    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
+        parse_into_expr(expr, namespace=namespace).alias(name)
         for name, expr in named_exprs.items()
     ]
 
 
-@overload
-def parse_into_expr(into_expr: IntoArrowExpr, namespace: ArrowNamespace) -> ArrowExpr: ...
-@overload
 def parse_into_expr(
-    into_expr: IntoPandasLikeExpr, namespace: PandasLikeNamespace
-) -> PandasLikeExpr: ...
-@overload
-def parse_into_expr(
-    into_expr: IntoPolarsExpr, namespace: PolarsNamespace
-) -> PolarsExpr: ...
-@overload
-def parse_into_expr(
-    into_expr: IntoSparkLikeExpr, namespace: SparkLikeNamespace
-) -> SparkLikeExpr: ...
-
-
-def parse_into_expr(  # type: ignore[misc]
     into_expr: IntoCompliantExpr,
     *,
-    namespace: CompliantNamespace[CompliantSeriesT],
-) -> CompliantExpr[CompliantSeriesT]:
+    namespace: CompliantNamespace[CompliantSeriesT_co],
+) -> CompliantExpr[CompliantSeriesT_co]:
     """Parse `into_expr` as an expression.
 
     For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
@@ -212,8 +137,8 @@ def parse_into_expr(  # type: ignore[misc]
     if isinstance(into_expr, str):
         return namespace.col(into_expr)
     if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
-        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
+        series = namespace._create_compliant_series(into_expr)
+        return namespace._create_expr_from_series(series)
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 

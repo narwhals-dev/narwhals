@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace[Column]):
+class SparkLikeNamespace(CompliantNamespace[Any]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -59,7 +59,7 @@ class SparkLikeNamespace(CompliantNamespace[Column]):
 
             return [F.col(col_name) for col_name in df.columns]
 
-        return SparkLikeExpr(
+        return SparkLikeExpr(  # type: ignore[abstract]
             call=_all,
             depth=0,
             function_name="all",
@@ -74,11 +74,11 @@ class SparkLikeNamespace(CompliantNamespace[Column]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr._call(df)]
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
-        return SparkLikeExpr(
+        return SparkLikeExpr(  # type: ignore[abstract]
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
