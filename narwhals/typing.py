@@ -8,7 +8,6 @@ from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
-from typing import runtime_checkable
 
 if TYPE_CHECKING:
     import sys
@@ -67,7 +66,6 @@ CompliantSeriesT_co = TypeVar(
 )
 
 
-@runtime_checkable
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
     _output_names: list[str] | None
