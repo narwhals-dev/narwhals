@@ -89,7 +89,7 @@ def agg_pyspark(
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
     for expr in exprs:
-        if not is_simple_aggregation(expr):  # pragma: no cover
+        if not is_simple_aggregation(expr):  # pragma: no cover  # type: ignore[arg-type]
             msg = (
                 "Non-trivial complex aggregation found.\n\n"
                 "Hint: you were probably trying to apply a non-elementary aggregation with a "

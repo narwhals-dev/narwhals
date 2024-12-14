@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class PandasLikeNamespace(CompliantNamespace):
+class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     @property
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(

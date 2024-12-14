@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Generic, Sequence
+from typing import Any, runtime_checkable
 from typing import Literal
 from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
+    from narwhals.utils import Implementation
     import sys
 
     if sys.version_info >= (3, 10):
@@ -55,13 +56,22 @@ class CompliantLazyFrame(Protocol):
     def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
 
+CompliantSeriesT = TypeVar('CompliantSeriesT', bound=CompliantSeries, covariant=True)
 
-class CompliantExpr(Protocol):
+@runtime_checkable
+class CompliantExpr(Protocol, Generic[CompliantSeriesT]):
+    _implementation: Implementation
+    _output_names: list[str] | None
+    _root_names: list[str] | None
+    _depth: int
+    _function_name: str
+    def __call__(self, df: Any) -> Sequence[CompliantSeriesT]: ...
     def __narwhals_expr__(self) -> None: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT]: ...
 
 
-class CompliantNamespace(Protocol):
-    def col(self, *column_names: str) -> CompliantExpr: ...
+class CompliantNamespace(Protocol, Generic[CompliantSeriesT]):
+    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT]: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]

@@ -22,9 +22,10 @@ if TYPE_CHECKING:
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals._polars.series import PolarsSeries
 
 
-class PolarsNamespace(CompliantNamespace):
+class PolarsNamespace(CompliantNamespace[PolarsSeries]):
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:

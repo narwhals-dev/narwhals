@@ -44,6 +44,9 @@ class PandasLikeExpr:
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+    
+    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+        return self._call(df)
 
     def __repr__(self) -> str:  # pragma: no cover
         return (

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskNamespace(CompliantNamespace):
+class DaskNamespace(CompliantNamespace[Any]):
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
@@ -55,7 +55,7 @@ class DaskNamespace(CompliantNamespace):
             version=self._version,
         )
 
-    def col(self, *column_names: str) -> DaskExpr:
+    def col(self, *column_names: str) -> DaskExpr:  # type: ignore[override]
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )

@@ -44,6 +44,9 @@ class SparkLikeExpr:
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
+    
+    def __call__(self, df: SparkLikeLazyFrame) -> list[Column]:
+        return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
 

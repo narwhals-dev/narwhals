@@ -56,6 +56,9 @@ class ArrowExpr:
             f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
         )
+    
+    def __call__(self, df: ArrowDataFrame) -> list[ArrowSeries]:
+        return self._call(df)
 
     @classmethod
     def from_column_names(
