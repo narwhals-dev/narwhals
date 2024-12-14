@@ -9,6 +9,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
-from narwhals.typing import CompliantSeries
 
 
 class PolarsSeries(CompliantSeries):

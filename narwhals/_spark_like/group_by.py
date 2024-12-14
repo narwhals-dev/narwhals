@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -14,8 +15,8 @@ if TYPE_CHECKING:
     from pyspark.sql import GroupedData
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals.typing import CompliantExpr
 
 POLARS_TO_PYSPARK_AGGREGATIONS = {
     "len": "count",
@@ -44,7 +45,7 @@ class SparkLikeLazyGroupBy:
         *aggs: IntoSparkLikeExpr,
         **named_aggs: IntoSparkLikeExpr,
     ) -> SparkLikeLazyFrame:
-        exprs: list[SparkLikeExpr] = parse_into_exprs(  # type: ignore[assignment]
+        exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
@@ -84,7 +85,7 @@ def get_spark_function(function_name: str) -> Column:
 
 def agg_pyspark(
     grouped: GroupedData,
-    exprs: list[SparkLikeExpr],
+    exprs: Sequence[CompliantExpr[Column]],
     keys: list[str],
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
