@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -317,20 +316,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def _create_expr_from_callable(  # pragma: no cover
-        self,
-        func: Callable[[DaskLazyFrame], Sequence[DaskExpr]],
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> DaskExpr:
-        msg = (
-            "`_create_expr_from_callable` for DaskNamespace exists only for compatibility"
-        )
-        raise NotImplementedError(msg)
 
     def when(
         self,
