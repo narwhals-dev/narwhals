@@ -121,7 +121,7 @@ Examples:
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 """TypeVar bound to object convertible to Narwhals DataFrame.
 
-Use this if your function accepts a function which can be converted to `nw.DataFrame`
+Use this if your function accepts an object which can be converted to `nw.DataFrame`
 and returns an object of the same class.
 
 Examples:
@@ -163,7 +163,7 @@ Examples:
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
 
-Use this if your function accepts a function which can be converted to `nw.Series`
+Use this if your function accepts an object  which can be converted to `nw.Series`
 and returns an object of the same class.
 
 Examples:
