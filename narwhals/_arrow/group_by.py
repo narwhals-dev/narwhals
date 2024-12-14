@@ -20,33 +20,28 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
 
-POLARS_TO_ARROW_AGGREGATIONS = {
-    "sum": "sum",
-    "mean": "mean",
-    "median": "approximate_median",
-    "max": "max",
-    "min": "min",
-    "std": "stddev",
-    "var": "variance",  # currently unused, we don't have `var` yet
-    "len": "count",
-    "n_unique": "count_distinct",
-    "count": "count",
-}
 
-
-def get_function_name_option(
-    function_name: str,
-) -> pc.CountOptions | pc.VarianceOptions | None:
-    """Map specific pyarrow compute function to respective option to match polars behaviour."""
+def polars_to_arrow_aggregations() -> (
+    dict[str, tuple[str, pc.VarianceOptions | pc.CountOptions | None]]
+):
+    """Map polars compute functions to their pyarrow counterparts and options that help match polars behaviour."""
     import pyarrow.compute as pc
 
-    function_name_to_options = {
-        "count": pc.CountOptions(mode="only_valid"),
-        "count_distinct": pc.CountOptions(mode="all"),
-        "stddev": pc.VarianceOptions(ddof=1),
-        "variance": pc.VarianceOptions(ddof=1),
+    return {
+        "sum": ("sum", None),
+        "mean": ("mean", None),
+        "median": ("approximate_median", None),
+        "max": ("max", None),
+        "min": ("min", None),
+        "std": ("stddev", pc.VarianceOptions(ddof=1)),
+        "var": (
+            "variance",
+            pc.VarianceOptions(ddof=1),
+        ),  # currently unused, we don't have `var` yet
+        "len": ("count", pc.CountOptions(mode="all")),
+        "n_unique": ("count_distinct", pc.CountOptions(mode="all")),
+        "count": ("count", pc.CountOptions(mode="only_valid")),
     }
-    return function_name_to_options.get(function_name)
 
 
 class ArrowGroupBy:
@@ -139,7 +134,7 @@ def agg_arrow(
         if not (
             is_simple_aggregation(expr)
             and remove_prefix(expr._function_name, "col->")
-            in POLARS_TO_ARROW_AGGREGATIONS
+            in polars_to_arrow_aggregations()
         ):
             all_simple_aggs = False
             break
@@ -170,9 +165,10 @@ def agg_arrow(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
-            function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
+            function_name, option = polars_to_arrow_aggregations().get(
+                function_name, (function_name, None)
+            )
 
-            option = get_function_name_option(function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (
                     (root_name, function_name, option),
