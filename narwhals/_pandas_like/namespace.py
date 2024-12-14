@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from typing import Any
 from typing import Callable
 from typing import Iterable
@@ -19,7 +19,7 @@ from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.typing import CompliantNamespace
+from narwhals.typing import CompliantNamespace, CompliantExpr
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -230,7 +230,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr(df))
             return [reduce(lambda x, y: x + y, series)]
 
         return self._create_expr_from_callable(
@@ -245,7 +245,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s for _expr in parsed_exprs for s in _expr(df))
             return [reduce(lambda x, y: x & y, series)]
 
         return self._create_expr_from_callable(
@@ -260,7 +260,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s for _expr in parsed_exprs for s in _expr(df))
             return [reduce(lambda x, y: x | y, series)]
 
         return self._create_expr_from_callable(
@@ -275,8 +275,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
-            non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr._call(df))
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr(df))
+            non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr(df))
             return [
                 reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
             ]
@@ -293,7 +293,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
@@ -323,7 +323,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
@@ -416,17 +416,19 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> PandasLikeExpr:
-        parsed_exprs: list[PandasLikeSeries] = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
+        # todo(Marco): if we made Namespace generic in both expr and series,
+        # maybe we wouldn't need the type: ignore here.
+        parsed_exprs: list[PandasLikeExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[list-item]
+            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[list-item]
         ]
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
-                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())._call(df)
+                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())(df)
             )
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
+            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
@@ -493,9 +495,9 @@ class PandasWhen:
             version=self._version,
         )
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
+        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
+            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             value_series = condition.__class__._from_iterable(
@@ -519,7 +521,7 @@ class PandasWhen:
         try:
             otherwise_series = parse_into_expr(
                 self._otherwise_value, namespace=plx
-            )._call(df)[0]
+            )(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [

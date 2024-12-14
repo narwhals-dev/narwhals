@@ -371,8 +371,8 @@ class DaskNamespace(CompliantNamespace[Any]):
         ignore_nulls: bool = False,
     ) -> DaskExpr:
         parsed_exprs: list[DaskExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[call-overload]
-            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[call-overload]
+            *parse_into_exprs(*exprs, namespace=self),  # type: ignore[arg-type, list-item]
+            *parse_into_exprs(*more_exprs, namespace=self),  # type: ignore[arg-type, list-item]
         ]
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:

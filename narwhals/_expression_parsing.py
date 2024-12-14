@@ -162,7 +162,7 @@ def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace[CompliantSeriesT],
     **named_exprs: IntoCompliantExpr,
-) -> Sequence[CompliantSeriesT]:
+) -> list[CompliantExpr[CompliantSeriesT]]:
     """Parse each input as an expression (if it's not already one).
 
     See `parse_into_expr` for more details.

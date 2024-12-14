@@ -21,9 +21,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+    from narwhals.typing import CompliantExpr
 
 
-class PandasLikeExpr:
+class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __init__(
         self: Self,
         call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
