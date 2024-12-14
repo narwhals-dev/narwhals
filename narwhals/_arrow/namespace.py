@@ -472,9 +472,7 @@ class ArrowWhen:
                 )
             ]
         try:
-            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
-                0
-            ]
+            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression.
             # Remark that string values _are_ converted into expressions!
@@ -486,6 +484,7 @@ class ArrowWhen:
                 )
             ]
         else:
+            otherwise_series = otherwise_expr(df)[0]
             condition_native, otherwise_native = broadcast_series(
                 [condition, otherwise_series]
             )
