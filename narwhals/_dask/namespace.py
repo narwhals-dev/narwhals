@@ -452,12 +452,11 @@ class DaskWhen:
         if self._otherwise_value is None:
             return [value_series.where(condition)]
         try:
-            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
-                0
-            ]
+            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]
+        otherwise_series = otherwise_expr(df)[0]
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
 
