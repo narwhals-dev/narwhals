@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskNamespace(CompliantNamespace[Any]):
+class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
