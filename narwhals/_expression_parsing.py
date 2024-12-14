@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 from typing import TypeVar
+from typing import Union
 from typing import cast
+from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
@@ -17,6 +19,8 @@ from narwhals.utils import Implementation
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -28,6 +32,12 @@ if TYPE_CHECKING:
         CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
     )
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr[Any])
+
+    ArrowOrPandasLikeExpr = TypeVar(
+        "ArrowOrPandasLikeExpr", bound=Union[ArrowExpr, PandasLikeExpr]
+    )
+    PandasLikeExprT = TypeVar("PandasLikeExprT", bound=PandasLikeExpr)
+    ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
     T = TypeVar("T")
 
@@ -115,13 +125,33 @@ def parse_into_expr(
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
+@overload
 def reuse_series_implementation(
-    expr: CompliantExprT,
+    expr: PandasLikeExprT,
     attr: str,
     *args: Any,
     returns_scalar: bool = False,
     **kwargs: Any,
-) -> CompliantExprT:
+) -> PandasLikeExprT: ...
+
+
+@overload
+def reuse_series_implementation(
+    expr: ArrowExprT,
+    attr: str,
+    *args: Any,
+    returns_scalar: bool = False,
+    **kwargs: Any,
+) -> ArrowExprT: ...
+
+
+def reuse_series_implementation(
+    expr: ArrowExprT | PandasLikeExprT,
+    attr: str,
+    *args: Any,
+    returns_scalar: bool = False,
+    **kwargs: Any,
+) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
 
     If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
@@ -152,16 +182,14 @@ def reuse_series_implementation(
             else {}
         )
 
-        # TODO(marco): `_create_series_from_scalar` is only defined for pandas-like
-        # and PyArrow. Find a better way to type it? Create another protocol?
         out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(  # type: ignore[attr-defined]
+            plx._create_series_from_scalar(
                 getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
-                reference_series=series,
+                reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
             else getattr(series, attr)(*_args, **_kwargs)
-            for series in expr(df)
+            for series in expr(df)  # type: ignore[arg-type]
         ]
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
@@ -199,8 +227,8 @@ def reuse_series_implementation(
         msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
         raise AssertionError(msg)
 
-    return plx._create_expr_from_callable(  # type: ignore[attr-defined, no-any-return]
-        func,
+    return plx._create_expr_from_callable(  # type: ignore[return-value]
+        func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
@@ -208,16 +236,38 @@ def reuse_series_implementation(
     )
 
 
+@overload
 def reuse_series_namespace_implementation(
-    expr: CompliantExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
-) -> CompliantExprT:
-    # Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    # of `Expr.foo`.
+    expr: ArrowExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
+) -> ArrowExprT: ...
+@overload
+def reuse_series_namespace_implementation(
+    expr: PandasLikeExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
+) -> PandasLikeExprT: ...
+def reuse_series_namespace_implementation(
+    expr: ArrowExprT | PandasLikeExprT,
+    series_namespace: str,
+    attr: str,
+    *args: Any,
+    **kwargs: Any,
+) -> ArrowExprT | PandasLikeExprT:
+    """Reuse Series implementation for expression.
+
+    Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+    of `Expr.foo`.
+
+    Arguments:
+        expr: expression object.
+        series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
+        attr: name of method.
+        args: arguments to pass to function.
+        kwargs: keyword arguments to pass to function.
+    """
     plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[no-any-return, attr-defined]
+    return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(*args, **kwargs)
-            for series in expr(df)
+            for series in expr(df)  # type: ignore[arg-type]
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
