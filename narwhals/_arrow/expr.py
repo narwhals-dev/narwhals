@@ -31,7 +31,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def __init__(
         self: Self,
-        call: Callable[[ArrowDataFrame], list[ArrowSeries]],
+        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
         *,
         depth: int,
         function_name: str,
@@ -59,7 +59,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             f"output_names={self._output_names}"
         )
 
-    def __call__(self, df: ArrowDataFrame) -> list[ArrowSeries]:
+    def __call__(self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
     @classmethod

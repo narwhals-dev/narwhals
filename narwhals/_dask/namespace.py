@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import NoReturn
+from typing import Sequence
 from typing import cast
 
 from narwhals._dask.dataframe import DaskLazyFrame
@@ -336,7 +337,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
 
     def _create_expr_from_callable(  # pragma: no cover
         self,
-        func: Callable[[DaskLazyFrame], list[DaskExpr]],
+        func: Callable[[DaskLazyFrame], Sequence[DaskExpr]],
         *,
         depth: int,
         function_name: str,
@@ -431,7 +432,7 @@ class DaskWhen:
         self._returns_scalar = returns_scalar
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> list[dask_expr.Series]:
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
         from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
 

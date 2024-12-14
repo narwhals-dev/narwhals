@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -43,7 +44,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def _create_expr_from_callable(  # pragma: no cover
         self,
-        func: Callable[[SparkLikeLazyFrame], list[SparkLikeExpr]],
+        func: Callable[[SparkLikeLazyFrame], Sequence[SparkLikeExpr]],
         *,
         depth: int,
         function_name: str,

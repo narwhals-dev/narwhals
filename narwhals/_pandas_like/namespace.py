@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -51,7 +52,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def _create_expr_from_callable(
         self,
-        func: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
+        func: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
@@ -482,7 +483,7 @@ class PandasWhen:
         self._otherwise_value = otherwise_value
         self._version = version
 
-    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+    def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
         from narwhals._pandas_like.utils import broadcast_align_and_extract_native

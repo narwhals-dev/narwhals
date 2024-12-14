@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __init__(
         self: Self,
-        call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
+        call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
@@ -46,7 +46,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._backend_version = backend_version
         self._version = version
 
-    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+    def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)
 
     def __repr__(self) -> str:  # pragma: no cover

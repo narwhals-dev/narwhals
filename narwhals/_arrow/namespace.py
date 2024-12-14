@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def _create_expr_from_callable(
         self: Self,
-        func: Callable[[ArrowDataFrame], list[ArrowSeries]],
+        func: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
         *,
         depth: int,
         function_name: str,
@@ -438,7 +439,7 @@ class ArrowWhen:
         self._otherwise_value = otherwise_value
         self._version = version
 
-    def __call__(self: Self, df: ArrowDataFrame) -> list[ArrowSeries]:
+    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         import pyarrow as pa
         import pyarrow.compute as pc
 

@@ -35,7 +35,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def __init__(
         self,
-        call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
+        call: Callable[[DaskLazyFrame], Sequence[dask_expr.Series]],
         *,
         depth: int,
         function_name: str,
@@ -56,7 +56,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         self._backend_version = backend_version
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> list[dask_expr.Series]:
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
