@@ -157,7 +157,7 @@ class PolarsNamespace(CompliantNamespace[PolarsSeries]):
 
         from narwhals._polars.expr import PolarsExpr
 
-        polars_exprs = cast(list[PolarsExpr], parse_into_exprs(*exprs, namespace=self))
+        polars_exprs = cast("list[PolarsExpr]", parse_into_exprs(*exprs, namespace=self))
 
         if self._backend_version < (0, 20, 8):
             return PolarsExpr(
