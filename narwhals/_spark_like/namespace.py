@@ -3,8 +3,6 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Callable
-from typing import Sequence
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -25,18 +23,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
-
-    def _create_expr_from_callable(  # pragma: no cover
-        self,
-        func: Callable[[SparkLikeLazyFrame], Sequence[SparkLikeExpr]],
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> SparkLikeExpr:
-        msg = "`_create_expr_from_callable` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
 
     def all(self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:

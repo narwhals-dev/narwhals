@@ -199,7 +199,7 @@ def reuse_series_implementation(
         msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
         raise AssertionError(msg)
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore[attr-defined, no-any-return]
         func,
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
@@ -214,7 +214,7 @@ def reuse_series_namespace_implementation(
     # Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
     # of `Expr.foo`.
     plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore[no-any-return, attr-defined]
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(*args, **kwargs)
             for series in expr(df)

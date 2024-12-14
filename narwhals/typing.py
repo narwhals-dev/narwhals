@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Generic
 from typing import Literal
 from typing import Protocol
@@ -84,18 +83,6 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
 
 class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
-    def _create_expr_from_callable(
-        self,
-        # Should be
-        # Callable[[CompliantDataFrame], Sequence[CompliantSeriesT_co]]  # noqa: ERA001
-        # but we can't have that because typing rules require an invariant type here
-        func: Callable[[Any], Sequence[Any]],
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> CompliantExpr[CompliantSeriesT_co]: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
