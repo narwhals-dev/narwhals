@@ -346,6 +346,10 @@ def test_group_by_shift_raises(
         # Polars supports all kinds of crazy group-by aggregations, so
         # we don't check that it errors here.
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # This operation fails completely in cuDF anyway, we just let raise its own
+        # error.
+        request.applymarker(pytest.mark.xfail)
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
     with pytest.raises(
