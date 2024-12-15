@@ -1084,6 +1084,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             index: Row number.
 
+        Returns:
+            A tuple of the values in the selected row.
+
         Notes:
             cuDF doesn't support this method.
 
@@ -1116,6 +1119,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
+
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
+        Returns:
+            Self. The original object with the function applied.
 
         Examples:
             >>> import polars as pl
@@ -1159,11 +1170,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
-        """Drop null values.
+        """Drop rows that contain null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
                 (default), use all columns.
+
+        Returns:
+            Self. The original object with the rows removed that contained the null values.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1204,6 +1218,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+
+        Returns:
+            Self. The original object with the column added.
 
         Examples:
             Construct pandas as polars DataFrames:
@@ -1248,6 +1268,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -1283,6 +1306,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
+
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
             >>> import polars as pl
@@ -1320,6 +1346,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     @property
     def columns(self) -> list[str]:
         """Get column names.
+
+        Returns:
+            The column names stored in a list.
 
         Examples:
             >>> import pandas as pd
@@ -1381,6 +1410,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 in the same order as the frame columns. Setting named=True will
                 return rows of dictionaries instead.
 
+        Returns:
+            The data as a list of rows.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1435,6 +1467,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             buffer_size: Determines the number of rows that are buffered
                 internally while iterating over the data.
                 See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Returns:
+            An iterator over the DataFrame of rows.
 
         Notes:
             cuDF doesn't support this method.
