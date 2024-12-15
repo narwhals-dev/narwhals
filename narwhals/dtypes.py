@@ -47,6 +47,22 @@ class NumericType(DType): ...
 class TemporalType(DType): ...
 
 
+class Decimal(NumericType):
+    """Decimal type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
+        >>> nw.from_native(s, series_only=True).dtype
+        Decimal
+    """
+
+
+class Int128(NumericType):
+    """128-bit signed integer type."""
+
+
 class Int64(NumericType):
     """64-bit signed integer type.
 
@@ -145,6 +161,10 @@ class Int8(NumericType):
        >>> func(ser_pa)
        Int8
     """
+
+
+class UInt128(NumericType):
+    """128-bit unsigned integer type."""
 
 
 class UInt64(NumericType):
@@ -344,11 +364,36 @@ class Boolean(DType):
 
 
 class Object(DType):
-    """Data type for wrapping arbitrary Python objects."""
+    """Data type for wrapping arbitrary Python objects.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> class Foo: ...
+       >>> ser_pd = pd.Series([Foo(), Foo()])
+       >>> ser_pl = pl.Series([Foo(), Foo()])
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Object
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Object
+    """
 
 
 class Unknown(DType):
-    """Type representing DataType values that could not be determined statically."""
+    """Type representing DataType values that could not be determined statically.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import narwhals as nw
+       >>> data = pd.period_range("2000-01", periods=4, freq="M")
+       >>> ser_pd = pd.Series(data)
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Unknown
+    """
 
 
 class Datetime(TemporalType):
@@ -361,6 +406,33 @@ class Datetime(TemporalType):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import pyarrow.compute as pc
+        >>> import narwhals as nw
+        >>> from datetime import datetime, timedelta
+        >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
+        >>> ser_pd = (
+        ...     pd.Series(data)
+        ...     .dt.tz_localize("Africa/Accra")
+        ...     .astype("datetime64[ms, Africa/Accra]")
+        ... )
+        >>> ser_pl = (
+        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ... )
+        >>> ser_pa = pc.assume_timezone(
+        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
+        ... )
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
     def __init__(
@@ -406,6 +478,24 @@ class Duration(TemporalType):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> from datetime import timedelta
+        >>> data = [timedelta(seconds=d) for d in range(1, 4)]
+        >>> ser_pd = pd.Series(data).astype("timedelta64[ms]")
+        >>> ser_pl = pl.Series(data).cast(pl.Duration("ms"))
+        >>> ser_pa = pa.chunked_array([data], type=pa.duration("ms"))
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Duration(time_unit='ms')
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Duration(time_unit='ms')
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Duration(time_unit='ms')
     """
 
     def __init__(
@@ -461,7 +551,19 @@ class Categorical(DType):
 
 
 class Enum(DType):
-    """A fixed categorical encoding of a unique set of strings."""
+    """A fixed categorical encoding of a unique set of strings.
+
+    Polars has an Enum data type, while pandas and PyArrow do not.
+
+    Examples:
+       >>> import polars as pl
+       >>> import narwhals as nw
+       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
+       >>> ser_pl = pl.Series(data, dtype=pl.Enum(data))
+
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Enum
+    """
 
 
 class Field:
@@ -610,6 +712,23 @@ class Array(DType):
     Arguments:
         inner: The datatype of the values within each array.
         width: the length of each array.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [[1, 2], [3, 4], [5, 6]]
+        >>> ser_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.list_(pa.int32(), 2)))
+        >>> ser_pl = pl.Series(data, dtype=pl.Array(pl.Int32, 2))
+        >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Array(Int32, 2)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
@@ -643,4 +762,23 @@ class Array(DType):
 
 
 class Date(TemporalType):
-    """Data type representing a calendar date."""
+    """Data type representing a calendar date.
+
+    Examples:
+       >>> import pandas as pd
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> from datetime import date, timedelta
+       >>> data = [date(2024, 12, 1) + timedelta(days=d) for d in range(4)]
+       >>> ser_pd = pd.Series(data, dtype="date32[pyarrow]")
+       >>> ser_pl = pl.Series(data)
+       >>> ser_pa = pa.chunked_array([data])
+
+       >>> nw.from_native(ser_pd, series_only=True).dtype
+       Date
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Date
+       >>> nw.from_native(ser_pa, series_only=True).dtype
+       Date
+    """

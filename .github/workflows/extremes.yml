@@ -108,6 +108,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
+      - name: install-reqs
+        run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
       - name: install-kaggle
         run: uv pip install kaggle --system
       - name: Download Kaggle notebook artifact
@@ -117,31 +119,28 @@ jobs:
         run: |
           kaggle kernels output "marcogorelli/variable-brink-glacier"
       - name: install-polars
-        run: python -m pip install *.whl
+        run: |
+          uv pip uninstall polars --system
+          python -m pip install *.whl
       - name: install-pandas-nightly
-        run: pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
-      - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
-      - name: uninstall pyarrow
-        run: uv pip uninstall pyarrow --system
-      # - name: install pyarrow nightly
-      #   run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
-      - name: uninstall pandas
-        run: uv pip uninstall pandas --system
+        run: |
+          uv pip uninstall pandas --system
+          pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
       - name: show-deps
         run: uv pip freeze
-      - name: uninstall numpy
-        run: uv pip uninstall numpy --system
       - name: install numpy nightly
-        run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
+        run: |
+          uv pip uninstall numpy --system
+          uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
       - name: install dask
         run: |
+          uv pip uninstall dask dask-expr --system
           python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask git+https://github.com/dask/dask-expr
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
-
-

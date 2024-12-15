@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
@@ -24,6 +25,7 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import scale_bytes
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
 
@@ -370,6 +373,10 @@ class PandasLikeDataFrame:
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
+    def estimated_size(self, unit: SizeUnit) -> int | float:
+        sz = self._native_frame.memory_usage(deep=True).sum()
+        return scale_bytes(sz, unit=unit)
+
     def with_row_index(self, name: str) -> Self:
         row_index = create_compliant_series(
             range(len(self._native_frame)),
@@ -445,7 +452,12 @@ class PandasLikeDataFrame:
 
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(
-            self._native_frame.rename(columns=mapping, copy=False)
+            rename(
+                self._native_frame,
+                columns=mapping,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
         )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -555,19 +567,18 @@ class PandasLikeDataFrame:
                     msg = "`right_on` cannot be `None` in anti-join"
                     raise TypeError(msg)
 
-                other_native = (
+                # rename to avoid creating extra columns in join
+                other_native = rename(
                     select_columns_by_name(
                         other._native_frame,
                         right_on,
                         self._backend_version,
                         self._implementation,
-                    )
-                    .rename(  # rename to avoid creating extra columns in join
-                        columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
-                        copy=False,
-                    )
-                    .drop_duplicates()
-                )
+                    ),
+                    columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                ).drop_duplicates()
                 return self._from_native_frame(
                     self._native_frame.merge(
                         other_native,
@@ -584,18 +595,19 @@ class PandasLikeDataFrame:
             if right_on is None:  # pragma: no cover
                 msg = "`right_on` cannot be `None` in semi-join"
                 raise TypeError(msg)
+            # rename to avoid creating extra columns in join
             other_native = (
-                select_columns_by_name(
-                    other._native_frame,
-                    right_on,
-                    self._backend_version,
-                    self._implementation,
-                )
-                .rename(  # rename to avoid creating extra columns in join
+                rename(
+                    select_columns_by_name(
+                        other._native_frame,
+                        right_on,
+                        self._backend_version,
+                        self._implementation,
+                    ),
                     columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
-                    copy=False,
-                )
-                .drop_duplicates()  # avoids potential rows duplication from inner join
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                ).drop_duplicates()  # avoids potential rows duplication from inner join
             )
             return self._from_native_frame(
                 self._native_frame.merge(
@@ -740,7 +752,7 @@ class PandasLikeDataFrame:
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for col_dtype in df.dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np  # ignore-banned-import
+                import numpy as np
 
                 return np.hstack(
                     [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]

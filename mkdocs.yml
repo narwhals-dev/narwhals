@@ -21,6 +21,7 @@ nav:
   - Supported libraries and extending Narwhals: extending.md
   - How it works: how_it_works.md
   - Ecosystem: ecosystem.md
+  - Security: security.md
   - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
@@ -35,6 +36,7 @@ nav:
     - api-reference/expr.md
     - api-reference/expr_cat.md
     - api-reference/expr_dt.md
+    - api-reference/expr_list.md
     - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
@@ -44,6 +46,7 @@ nav:
     - api-reference/series.md
     - api-reference/series_cat.md
     - api-reference/series_dt.md
+    - api-reference/series_list.md
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md

@@ -15,6 +15,9 @@ from narwhals.dependencies import is_into_dataframe
 from narwhals.dependencies import is_into_series
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_narwhals_dataframe
+from narwhals.dependencies import is_narwhals_lazyframe
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_index
@@ -43,6 +46,9 @@ __all__ = [
     "is_into_series",
     "is_modin_dataframe",
     "is_modin_series",
+    "is_narwhals_dataframe",
+    "is_narwhals_lazyframe",
+    "is_narwhals_series",
     "is_numpy_array",
     "is_pandas_dataframe",
     "is_pandas_index",

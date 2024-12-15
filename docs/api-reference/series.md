@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - clip
@@ -28,6 +30,7 @@
         - filter
         - gather_every
         - head
+        - implementation
         - is_between
         - is_duplicated
         - is_empty
