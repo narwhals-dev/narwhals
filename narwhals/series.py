@@ -931,7 +931,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.max()
 
-    def arg_min(self) -> Self:
+    def arg_min(self) -> int:
         """Returns the index of the minimum value in every sub-array.
 
         Examples:
@@ -957,9 +957,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_arg_min(s_pl)
             0
         """
-        return self._compliant_series.arg_min()
+        return self._compliant_series.arg_min()  # type: ignore[no-any-return]
 
-    def arg_max(self) -> Self:
+    def arg_max(self) -> int:
         """Returns the index of the maximum value in every sub-array.
 
         Examples:
@@ -984,7 +984,7 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_arg_max(s_pl)
             2
         """
-        return self._compliant_series.arg_max()
+        return self._compliant_series.arg_max()  # type: ignore[no-any-return]
 
     def sum(self) -> Any:
         """Reduce this Series to the sum value.

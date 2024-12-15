@@ -286,11 +286,11 @@ class PandasLikeSeries(CompliantSeries):
 
     def arg_min(self) -> int:
         ser = self._native_series
-        return ser.argmin()
+        return ser.argmin()  # type: ignore[no-any-return]
 
     def arg_max(self) -> int:
         ser = self._native_series
-        return ser.argmax()
+        return ser.argmax()  # type: ignore[no-any-return]
 
     # Binary comparisons
 
