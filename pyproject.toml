@@ -149,13 +149,12 @@ omit = [
   'tests/spark_like_test.py',
 ]
 exclude_also = [
-  "> POLARS_VERSION",
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)',
-  'if \w+._backend_version < ',
-  'if backend_version <',
+  '\w+._backend_version < ',
+  'backend_version <',
   'if "cudf" in str\(constructor'
 ]
 
