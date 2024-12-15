@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+from narwhals.typing import CompliantSeries
 
 
 def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
@@ -38,7 +39,7 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries:
+class ArrowSeries(CompliantSeries):
     def __init__(
         self: Self,
         native_series: pa.ChunkedArray,

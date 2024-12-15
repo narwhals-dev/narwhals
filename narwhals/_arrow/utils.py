@@ -338,7 +338,7 @@ def cast_for_truediv(
     return arrow_array, pa_object
 
 
-def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
+def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)

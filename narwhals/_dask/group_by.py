@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -11,11 +12,12 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
+    import dask_expr
     import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.expr import DaskExpr
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals.typing import CompliantExpr
 
 
 def n_unique() -> dd.Aggregation:
@@ -101,7 +103,7 @@ class DaskLazyGroupBy:
 def agg_dask(
     df: DaskLazyFrame,
     grouped: Any,
-    exprs: list[DaskExpr],
+    exprs: Sequence[CompliantExpr[dask_expr.Series]],
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:

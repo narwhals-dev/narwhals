@@ -18,18 +18,20 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+from narwhals._arrow.series import ArrowSeries
+from narwhals.typing import CompliantExpr
 
-class ArrowExpr:
+
+class ArrowExpr(CompliantExpr[ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
         self: Self,
-        call: Callable[[ArrowDataFrame], list[ArrowSeries]],
+        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
         *,
         depth: int,
         function_name: str,
@@ -56,6 +58,9 @@ class ArrowExpr:
             f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
         )
+
+    def __call__(self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+        return self._call(df)
 
     @classmethod
     def from_column_names(
