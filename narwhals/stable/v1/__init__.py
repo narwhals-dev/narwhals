@@ -3080,35 +3080,36 @@ def new_series(
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
+        >>> from narwhals.typing import IntoFrameT, IntoSeriesT
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
         Let's define a dataframe-agnostic function:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     values = [4, 1, 2]
-        ...     native_namespace = nw.get_native_namespace(df)
+        >>> def agnostic_new_series(df_native: IntoFrameT) -> IntoSeriesT:
+        ...     df = nw.from_native(df_native)
+        ...     values = df["a"].to_list()
+        ...     native_namespace = nw.get_native_namespace(df_native)
         ...     return nw.new_series(
-        ...         name="c",
+        ...         name="a",
         ...         values=values,
         ...         dtype=nw.Int32,
         ...         native_namespace=native_namespace,
-        ...     )
+        ...     ).to_native()
 
         Let's see what happens when passing pandas / Polars input:
 
-        >>> func(pd.DataFrame(data))
-        0    4
-        1    1
-        2    2
-        Name: c, dtype: int32
-        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        >>> agnostic_new_series(pd.DataFrame(data))
+        0    1
+        1    2
+        2    3
+        Name: a, dtype: int32
+        >>> agnostic_new_series(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
         shape: (3,)
-        Series: 'c' [i32]
+        Series: 'a' [i32]
         [
-           4
            1
            2
+           3
         ]
     """
     return _stableify(  # type: ignore[no-any-return]
