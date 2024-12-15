@@ -963,7 +963,7 @@ class Expr:
         return self.__class__(lambda plx: self._to_compliant_expr(plx).max())
 
     def arg_min(self) -> Self:
-        """Returns the index of the maximum value.
+        """Returns the index of the minimum value.
 
         Returns:
             A new expression.
