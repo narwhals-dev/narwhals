@@ -287,13 +287,13 @@ class PandasLikeSeries(CompliantSeries):
     def arg_min(self) -> int:
         ser = self._native_series
         if self._backend_version < (1,):
-            return ser.values.argmin  # type: ignore[no-any-return]  # noqa: PD011
+            return ser.values.argmin()  # type: ignore[no-any-return]  # noqa: PD011
         return ser.argmin()  # type: ignore[no-any-return]
 
     def arg_max(self) -> int:
         ser = self._native_series
         if self._backend_version < (1,):
-            return ser.values.argmax  # type: ignore[no-any-return]  # noqa: PD011
+            return ser.values.argmax()  # type: ignore[no-any-return]  # noqa: PD011
         return ser.argmax()  # type: ignore[no-any-return]
 
     # Binary comparisons
