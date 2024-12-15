@@ -284,6 +284,18 @@ class PandasLikeSeries(CompliantSeries):
         result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
         return self._from_native_series(result)
 
+    def arg_min(self) -> int:
+        ser = self._native_series
+        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
+            return ser.values.argmin()  # type: ignore[no-any-return]  # noqa: PD011
+        return ser.argmin()  # type: ignore[no-any-return]
+
+    def arg_max(self) -> int:
+        ser = self._native_series
+        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
+            return ser.values.argmax()  # type: ignore[no-any-return]  # noqa: PD011
+        return ser.argmax()  # type: ignore[no-any-return]
+
     # Binary comparisons
 
     def filter(self, other: Any) -> PandasLikeSeries:

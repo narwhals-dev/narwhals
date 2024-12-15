@@ -288,6 +288,18 @@ class ArrowSeries(CompliantSeries):
 
         return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
+    def arg_min(self: Self, *, _return_py_scalar: bool = True) -> int:
+        import pyarrow.compute as pc
+
+        index_min = pc.index(self._native_series, pc.min(self._native_series))
+        return maybe_extract_py_scalar(index_min, _return_py_scalar)  # type: ignore[no-any-return]
+
+    def arg_max(self: Self, *, _return_py_scalar: bool = True) -> int:
+        import pyarrow.compute as pc
+
+        index_max = pc.index(self._native_series, pc.max(self._native_series))
+        return maybe_extract_py_scalar(index_max, _return_py_scalar)  # type: ignore[no-any-return]
+
     def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc
 

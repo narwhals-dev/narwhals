@@ -272,6 +272,12 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def max(self: Self) -> Self:
         return reuse_series_implementation(self, "max", returns_scalar=True)
 
+    def arg_min(self: Self) -> Self:
+        return reuse_series_implementation(self, "arg_min", returns_scalar=True)
+
+    def arg_max(self: Self) -> Self:
+        return reuse_series_implementation(self, "arg_max", returns_scalar=True)
+
     def all(self: Self) -> Self:
         return reuse_series_implementation(self, "all", returns_scalar=True)
 
