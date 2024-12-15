@@ -112,14 +112,14 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
 )
 def test_group_by_depth_1_agg(
     constructor: Constructor,
-    attr: nw.Expr,
+    attr: str,
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
     if "cudf" in str(constructor) and attr == "n_unique":
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
-    expr = getattr(nw.col("b"), attr)()  # type: ignore[call-overload]
+    expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
