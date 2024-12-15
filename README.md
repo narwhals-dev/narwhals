@@ -120,6 +120,7 @@ Join the party!
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [tabmat](https://github.com/Quantco/tabmat)
+- [tea-tasting](https://github.com/e10v/tea-tasting)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
 - [vegafusion](https://github.com/vega/vegafusion)

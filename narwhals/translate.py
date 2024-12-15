@@ -403,18 +403,6 @@ def _from_native_impl(  # noqa: PLR0915
     allow_series: bool | None = None,
     version: Version,
 ) -> Any:
-    from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
-    from narwhals._ibis.dataframe import IbisInterchangeFrame
-    from narwhals._interchange.dataframe import InterchangeFrame
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.series import PolarsSeries
-    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -475,6 +463,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Polars
     elif is_polars_dataframe(native_object):
+        from narwhals._polars.dataframe import PolarsDataFrame
+
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with polars.DataFrame"
@@ -490,6 +480,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
     elif is_polars_lazyframe(native_object):
+        from narwhals._polars.dataframe import PolarsLazyFrame
+
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with polars.LazyFrame"
@@ -510,6 +502,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="lazy",
         )
     elif is_polars_series(native_object):
+        from narwhals._polars.series import PolarsSeries
+
         pl = get_polars()
         if not allow_series:
             if not pass_through:
@@ -527,6 +521,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # pandas
     elif is_pandas_dataframe(native_object):
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dataframe"
@@ -543,6 +539,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
     elif is_pandas_series(native_object):
+        from narwhals._pandas_like.series import PandasLikeSeries
+
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
@@ -561,6 +559,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Modin
     elif is_modin_dataframe(native_object):  # pragma: no cover
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
         mpd = get_modin()
         if series_only:
             if not pass_through:
@@ -577,6 +577,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
     elif is_modin_series(native_object):  # pragma: no cover
+        from narwhals._pandas_like.series import PandasLikeSeries
+
         mpd = get_modin()
         if not allow_series:
             if not pass_through:
@@ -595,6 +597,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # cuDF
     elif is_cudf_dataframe(native_object):  # pragma: no cover
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
         cudf = get_cudf()
         if series_only:
             if not pass_through:
@@ -611,6 +615,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
     elif is_cudf_series(native_object):  # pragma: no cover
+        from narwhals._pandas_like.series import PandasLikeSeries
+
         cudf = get_cudf()
         if not allow_series:
             if not pass_through:
@@ -629,6 +635,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # PyArrow
     elif is_pyarrow_table(native_object):
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
         pa = get_pyarrow()
         if series_only:
             if not pass_through:
@@ -644,6 +652,8 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
     elif is_pyarrow_chunked_array(native_object):
+        from narwhals._arrow.series import ArrowSeries
+
         pa = get_pyarrow()
         if not allow_series:
             if not pass_through:
@@ -662,6 +672,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Dask
     elif is_dask_dataframe(native_object):
+        from narwhals._dask.dataframe import DaskLazyFrame
+
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dask DataFrame"
@@ -686,6 +698,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
+        from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
                 msg = (
@@ -702,6 +716,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
+        from narwhals._ibis.dataframe import IbisInterchangeFrame
+
         if eager_only or series_only:
             if not pass_through:
                 msg = (
@@ -717,6 +733,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # PySpark
     elif is_pyspark_dataframe(native_object):  # pragma: no cover
+        from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
         if series_only:
             msg = "Cannot only use `series_only` with pyspark DataFrame"
             raise TypeError(msg)
@@ -734,6 +752,8 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
+        from narwhals._interchange.dataframe import InterchangeFrame
+
         if eager_only or series_only:
             if not pass_through:
                 msg = (

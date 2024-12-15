@@ -14,4 +14,4 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
 
-    IntoArrowExpr: TypeAlias = Union[ArrowExpr, str, int, float, ArrowSeries]
+    IntoArrowExpr: TypeAlias = Union[ArrowExpr, str, ArrowSeries]

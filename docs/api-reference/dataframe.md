@@ -11,11 +11,13 @@
         - columns
         - drop
         - drop_nulls
+        - estimated_size
         - filter
         - gather_every
         - get_column
         - group_by
         - head
+        - implementation
         - is_duplicated
         - is_empty
         - is_unique

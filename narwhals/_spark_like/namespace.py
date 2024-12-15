@@ -3,15 +3,13 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import NoReturn
 
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import get_column_name
+from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -21,36 +19,10 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace:
+class SparkLikeNamespace(CompliantNamespace["Column"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
-
-    def _create_expr_from_series(self, _: Any) -> NoReturn:
-        msg = "`_create_expr_from_series` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_compliant_series(self, _: Any) -> NoReturn:
-        msg = "`_create_compliant_series` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_series_from_scalar(
-        self, value: Any, *, reference_series: SparkLikeExpr
-    ) -> NoReturn:
-        msg = "`_create_series_from_scalar` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
-
-    def _create_expr_from_callable(  # pragma: no cover
-        self,
-        func: Callable[[SparkLikeLazyFrame], list[SparkLikeExpr]],
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> SparkLikeExpr:
-        msg = "`_create_expr_from_callable` for PySparkNamespace exists only for compatibility"
-        raise NotImplementedError(msg)
 
     def all(self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:
@@ -58,7 +30,7 @@ class SparkLikeNamespace:
 
             return [F.col(col_name) for col_name in df.columns]
 
-        return SparkLikeExpr(
+        return SparkLikeExpr(  # type: ignore[abstract]
             call=_all,
             depth=0,
             function_name="all",
@@ -73,11 +45,11 @@ class SparkLikeNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr._call(df)]
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
-        return SparkLikeExpr(
+        return SparkLikeExpr(  # type: ignore[abstract]
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
