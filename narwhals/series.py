@@ -964,7 +964,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.arg_min()  # type: ignore[no-any-return]
 
     def arg_max(self) -> int:
-        """Returns the index of the maximum value in every sub-array.
+        """Returns the index of the maximum value.
 
         Examples:
             >>> import pandas as pd
