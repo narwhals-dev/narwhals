@@ -25,8 +25,14 @@ def test_expr_arg_max_expr(
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 1), ("b", 2), ("z", 2)])
 def test_expr_arg_max_series(
-    constructor_eager: ConstructorEager, col: str, expected: float
+    constructor_eager: ConstructorEager,
+    col: str,
+    expected: float,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "modin" in str(constructor_eager):
+        # TODO(unassigned): bug in modin?
+        request.applymarker(pytest.mark.xfail)
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     series = nw.maybe_set_index(series, index=[1, 0, 9])  # type: ignore[arg-type]
     result = series.arg_max()
