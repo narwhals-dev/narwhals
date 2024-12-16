@@ -5137,7 +5137,7 @@ class SeriesListNamespace(Generic[SeriesT]):
             3       0
             dtype: int32[pyarrow]
 
-            >>> agnostic_list_len(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE +SKIP
+            >>> agnostic_list_len(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [u32]
             [

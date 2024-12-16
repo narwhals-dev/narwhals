@@ -218,6 +218,7 @@ def new_series(
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT, IntoSeriesT
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
@@ -225,8 +226,7 @@ def new_series(
         Let's define a dataframe-agnostic function:
 
         >>> def agnostic_new_series(df_native: IntoFrameT) -> IntoSeriesT:
-        ...     df = nw.from_native(df_native)
-        ...     values = df["a"].to_list()
+        ...     values = [4, 1, 2, 3]
         ...     native_namespace = nw.get_native_namespace(df_native)
         ...     return nw.new_series(
         ...         name="a",
@@ -235,20 +235,32 @@ def new_series(
         ...         native_namespace=native_namespace,
         ...     ).to_native()
 
-        Let's see what happens when passing pandas / Polars input:
+        We can then pass any supported eager library, such as pandas / Polars / PyArrow:
 
         >>> agnostic_new_series(pd.DataFrame(data))
-        0    1
-        1    2
-        2    3
+        0    4
+        1    1
+        2    2
+        3    3
         Name: a, dtype: int32
         >>> agnostic_new_series(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
-        shape: (3,)
+        shape: (4,)
         Series: 'a' [i32]
         [
+           4
            1
            2
            3
+        ]
+        >>> agnostic_new_series(pa.table(data))
+        <pyarrow.lib.ChunkedArray object at ...>
+        [
+          [
+            4,
+            1,
+            2,
+            3
+          ]
         ]
     """
     return _new_series_impl(
@@ -354,18 +366,18 @@ def from_dict(
 
         Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
 
-        >>> def agnostic_create_dataframe_from_dict(df_native: IntoFrameT) -> IntoFrameT:
+        >>> def agnostic_from_dict(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df_native)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
-        >>> agnostic_create_dataframe_from_dict(pd.DataFrame(data))
+        >>> agnostic_from_dict(pd.DataFrame(data))
            c  d
         0  5  1
         1  2  4
-        >>> agnostic_create_dataframe_from_dict(pl.DataFrame(data))
+        >>> agnostic_from_dict(pl.DataFrame(data))
         shape: (2, 2)
         ┌─────┬─────┐
         │ c   ┆ d   │
@@ -375,7 +387,7 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-        >>> agnostic_create_dataframe_from_dict(pa.table(data))
+        >>> agnostic_from_dict(pa.table(data))
         pyarrow.Table
         c: int64
         d: int64
@@ -768,20 +780,20 @@ def from_arrow(
         Let's define a dataframe-agnostic function which creates a PyArrow
         Table.
 
-        >>> def agnostic_create_arrow_table(df_native: IntoFrameT) -> IntoFrameT:
+        >>> def agnostic_to_arrow(df_native: IntoFrameT) -> IntoFrameT:
         ...     df = nw.from_native(df_native)
         ...     return nw.from_arrow(df, native_namespace=pa).to_native()
 
         Let's see what happens when passing pandas / Polars input:
 
-        >>> agnostic_create_arrow_table(pd.DataFrame(data))  # doctest: +SKIP
+        >>> agnostic_to_arrow(pd.DataFrame(data))
         pyarrow.Table
         a: int64
         b: int64
         ----
         a: [[1,2,3]]
         b: [[4,5,6]]
-        >>> agnostic_create_arrow_table(pl.DataFrame(data))  # doctest: +SKIP
+        >>> agnostic_to_arrow(pl.DataFrame(data))
         pyarrow.Table
         a: int64
         b: int64
