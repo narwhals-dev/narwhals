@@ -92,7 +92,7 @@ def test_over_cumsum(constructor: Constructor, request: pytest.FixtureRequest) -
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+        if "pandas_pyarrow" in str(constructor) and sys.version_info <= (3, 9):
             request.applymarker(pytest.mark.xfail)
 
     with context:
@@ -181,7 +181,7 @@ def test_over_cummax(constructor: Constructor, request: pytest.FixtureRequest) -
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+        if "pandas_pyarrow" in str(constructor) and sys.version_info <= (3, 9):
             request.applymarker(pytest.mark.xfail)
 
     with context:
@@ -210,7 +210,7 @@ def test_over_cummin(constructor: Constructor, request: pytest.FixtureRequest) -
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+        if "pandas_pyarrow" in str(constructor) and sys.version_info <= (3, 9):
             request.applymarker(pytest.mark.xfail)
 
     with context:
@@ -239,7 +239,7 @@ def test_over_cumprod(constructor: Constructor, request: pytest.FixtureRequest) 
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+        if "pandas_pyarrow" in str(constructor) and sys.version_info <= (3, 9):
             request.applymarker(pytest.mark.xfail)
 
     with context:
