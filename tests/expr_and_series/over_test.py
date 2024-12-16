@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import sys
-from contextlib import nullcontext as does_not_raise
-
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -16,7 +13,10 @@ data = {
 }
 
 
-def test_over_single(constructor: Constructor) -> None:
+def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -25,21 +25,14 @@ def test_over_single(constructor: Constructor) -> None:
         "c_max": [5, 5, 3, 3, 3],
     }
 
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
-
-    with context:
-        result = df.with_columns(c_max=nw.col("c").max().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(c_max=nw.col("c").max().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_multiple(constructor: Constructor) -> None:
+def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -48,18 +41,8 @@ def test_over_multiple(constructor: Constructor) -> None:
         "c_min": [5, 4, 1, 2, 1],
     }
 
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
-
-    with context:
-        result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
+    assert_equal_data(result, expected)
 
 
 def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
@@ -71,7 +54,10 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
         df.with_columns(c_min=nw.all().min().over("a", "b"))
 
 
-def test_over_cumsum(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -80,27 +66,14 @@ def test_over_cumsum(constructor: Constructor, request: pytest.FixtureRequest) -
         "b_cumsum": [1, 3, 3, 8, 11],
     }
 
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 10):
-            request.applymarker(pytest.mark.xfail)
-
-    with context:
-        result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_cumcount(constructor: Constructor) -> None:
+def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -109,25 +82,16 @@ def test_over_cumcount(constructor: Constructor) -> None:
         "b_cumcount": [1, 2, 1, 2, 3],
     }
 
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-
-    with context:
-        result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_cumcount_missing_values(constructor: Constructor) -> None:
+def test_over_cumcount_missing_values(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data_with_missing_value = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, None],
@@ -142,25 +106,14 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
         "b_cumcount": [1, 2, 1, 2, 2],
     }
 
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-
-    with context:
-        result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_cummax(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -168,28 +121,14 @@ def test_over_cummax(constructor: Constructor, request: pytest.FixtureRequest) -
         "c": [5, 4, 3, 2, 1],
         "b_cummax": [1, 2, 3, 5, 5],
     }
-
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 10):
-            request.applymarker(pytest.mark.xfail)
-
-    with context:
-        result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_cummin(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -198,27 +137,14 @@ def test_over_cummin(constructor: Constructor, request: pytest.FixtureRequest) -
         "b_cummin": [1, 1, 3, 3, 3],
     }
 
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 10):
-            request.applymarker(pytest.mark.xfail)
-
-    with context:
-        result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
+    assert_equal_data(result, expected)
 
 
-def test_over_cumprod(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -227,21 +153,5 @@ def test_over_cumprod(constructor: Constructor, request: pytest.FixtureRequest) 
         "b_cumprod": [1, 2, 3, 15, 45],
     }
 
-    if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
-    elif "dask_lazy_p2" in str(constructor):
-        context = pytest.raises(
-            NotImplementedError,  # type: ignore[arg-type]
-            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
-        )
-    else:
-        context = does_not_raise()  # type: ignore[assignment]
-        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 10):
-            request.applymarker(pytest.mark.xfail)
-
-    with context:
-        result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
-        assert_equal_data(result, expected)
+    result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
+    assert_equal_data(result, expected)
