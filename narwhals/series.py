@@ -1056,6 +1056,37 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.std(ddof=ddof)
 
+    def var(self, *, ddof: int = 1) -> Any:
+        """Get the variance of this Series.
+
+        Arguments:
+            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.var()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(s_pd)
+            np.float64(1.0)
+            >>> my_library_agnostic_function(s_pl)
+            1.0
+        """
+        return self._compliant_series.var(ddof=ddof)
+
     def clip(
         self, lower_bound: Any | None = None, upper_bound: Any | None = None
     ) -> Self:

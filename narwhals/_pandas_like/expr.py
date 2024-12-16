@@ -249,6 +249,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def std(self, *, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
+    def var(self, *, ddof: int = 1) -> Self:
+        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
+
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 

@@ -626,6 +626,10 @@ class PandasLikeSeries(CompliantSeries):
         ser = self._native_series
         return ser.std(ddof=ddof)  # type: ignore[no-any-return]
 
+    def var(self: Self, *, ddof: int = 1) -> float:
+        ser = self._native_series
+        return ser.var(ddof=ddof)  # type: ignore[no-any-return]
+
     def skew(self: Self) -> float | None:
         ser = self._native_series
         ser_not_null = ser.dropna()

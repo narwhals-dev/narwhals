@@ -58,5 +58,6 @@
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false
