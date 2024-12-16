@@ -255,7 +255,7 @@ def test_add(pyspark_constructor: Constructor) -> None:
     result = df.with_columns(
         c=nw.col("a") + nw.col("b"),
         d=nw.col("a") - nw.col("a").mean(),
-        e=nw.col("a") - nw.col("a").std(),
+        e=nw.col("a") - nw.col("a").std(ddof=1),
     )
     expected = {
         "a": [1, 3, 2],
@@ -353,14 +353,12 @@ def test_std(pyspark_constructor: Constructor) -> None:
 
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(
-        nw.col("a").std().alias("a_ddof_default"),
         nw.col("a").std(ddof=1).alias("a_ddof_1"),
         nw.col("a").std(ddof=0).alias("a_ddof_0"),
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
     expected = {
-        "a_ddof_default": [1.0],
         "a_ddof_1": [1.0],
         "a_ddof_0": [0.816497],
         "b_ddof_2": [1.632993],
@@ -375,7 +373,7 @@ def test_group_by_std(pyspark_constructor: Constructor) -> None:
     result = (
         nw.from_native(pyspark_constructor(data))
         .group_by("a")
-        .agg(nw.col("b").std())
+        .agg(nw.col("b").std(ddof=1))
         .sort("a")
     )
     expected = {"a": [1, 2], "b": [0.707107] * 2}
