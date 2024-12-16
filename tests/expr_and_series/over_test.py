@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -82,12 +81,12 @@ def test_over_cumsum(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_sum",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
@@ -109,12 +108,12 @@ def test_over_cumcount(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_count",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
@@ -142,12 +141,12 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_count",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
@@ -169,12 +168,12 @@ def test_over_cummax(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_max",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
@@ -196,12 +195,12 @@ def test_over_cummin(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_min",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
@@ -223,12 +222,12 @@ def test_over_cumprod(constructor: Constructor) -> None:
 
     if "pyarrow_table" in str(constructor):
         context = pytest.raises(
-            pa.lib.ArrowKeyError,
-            match="No function registered with name: hash_cum_prod",
+            ValueError,
+            match="Non-trivial complex aggregation found",
         )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
-            NotImplementedError,
+            NotImplementedError,  # type: ignore[arg-type]
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
     else:
