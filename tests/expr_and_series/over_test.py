@@ -92,6 +92,7 @@ def test_over_cumsum(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+
     with context:
         result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
         assert_equal_data(result, expected)
@@ -151,6 +152,7 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+
     with context:
         result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
         assert_equal_data(result, expected)
