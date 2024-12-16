@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._expression_parsing import parse_into_exprs
@@ -143,7 +144,7 @@ class PolarsNamespace:
 
         from narwhals._polars.expr import PolarsExpr
 
-        polars_exprs = parse_into_exprs(*exprs, namespace=self)
+        polars_exprs = cast("list[PolarsExpr]", parse_into_exprs(*exprs, namespace=self))
 
         if self._backend_version < (0, 20, 8):
             return PolarsExpr(
@@ -182,7 +183,7 @@ class PolarsNamespace:
         from narwhals._polars.expr import PolarsExpr
 
         pl_exprs: list[pl.Expr] = [
-            expr._native_expr
+            expr._native_expr  # type: ignore[attr-defined]
             for expr in (
                 *parse_into_exprs(*exprs, namespace=self),
                 *parse_into_exprs(*more_exprs, namespace=self),

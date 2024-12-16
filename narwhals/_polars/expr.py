@@ -60,21 +60,24 @@ class PolarsExpr:
         min_periods: int,
         ignore_nulls: bool,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         expr = self._native_expr
-        return self._from_native_expr(
-            expr.ewm_mean(
-                com=com,
-                span=span,
-                half_life=half_life,
-                alpha=alpha,
-                adjust=adjust,
-                min_periods=min_periods,
-                ignore_nulls=ignore_nulls,
-            )
+
+        native_expr = expr.ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
         )
+        if self._backend_version < (1,):  # pragma: no cover
+            import polars as pl
+
+            return self._from_native_expr(
+                pl.when(~expr.is_null()).then(native_expr).otherwise(None)
+            )
+        return self._from_native_expr(native_expr)
 
     def map_batches(
         self,

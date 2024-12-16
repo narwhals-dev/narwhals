@@ -39,8 +39,11 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
-class ArrowDataFrame:
+
+class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -584,7 +587,7 @@ class ArrowDataFrame:
 
     def write_csv(self: Self, file: Any) -> Any:
         import pyarrow as pa
-        import pyarrow.csv as pa_csv  # ignore-banned-import
+        import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
         if file is None:

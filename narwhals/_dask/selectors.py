@@ -134,7 +134,7 @@ class DaskSelector(DaskExpr):
             def call(df: DaskLazyFrame) -> list[dask_expr.Series]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in {x.name for x in rhs}] + rhs
+                return [*(x for x in lhs if x.name not in {x.name for x in rhs}), *rhs]
 
             return DaskSelector(
                 call,

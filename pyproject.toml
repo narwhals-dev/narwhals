@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.17.0"
+version = "1.18.4"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -142,20 +142,19 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
-  # we can run this in every environment that we measure coverage on due to upper-bound constraits
+  # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
   'tests/spark_like_test.py',
 ]
 exclude_also = [
-  "> POLARS_VERSION",
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)',
-  'if \w+._backend_version < ',
-  'if backend_version <',
+  '\w+._backend_version < ',
+  'backend_version <',
   'if "cudf" in str\(constructor'
 ]
 

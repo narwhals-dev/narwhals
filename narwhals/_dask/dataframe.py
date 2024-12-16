@@ -29,9 +29,10 @@ if TYPE_CHECKING:
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+from narwhals.typing import CompliantLazyFrame
 
 
-class DaskLazyFrame:
+class DaskLazyFrame(CompliantLazyFrame):
     def __init__(
         self,
         native_dataframe: dd.DataFrame,

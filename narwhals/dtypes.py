@@ -47,6 +47,22 @@ class NumericType(DType): ...
 class TemporalType(DType): ...
 
 
+class Decimal(NumericType):
+    """Decimal type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
+        >>> nw.from_native(s, series_only=True).dtype
+        Decimal
+    """
+
+
+class Int128(NumericType):
+    """128-bit signed integer type."""
+
+
 class Int64(NumericType):
     """64-bit signed integer type.
 
@@ -145,6 +161,10 @@ class Int8(NumericType):
        >>> func(ser_pa)
        Int8
     """
+
+
+class UInt128(NumericType):
+    """128-bit unsigned integer type."""
 
 
 class UInt64(NumericType):
@@ -692,6 +712,23 @@ class Array(DType):
     Arguments:
         inner: The datatype of the values within each array.
         width: the length of each array.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [[1, 2], [3, 4], [5, 6]]
+        >>> ser_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.list_(pa.int32(), 2)))
+        >>> ser_pl = pl.Series(data, dtype=pl.Array(pl.Int32, 2))
+        >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Array(Int32, 2)
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Array(Int32, 2)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:

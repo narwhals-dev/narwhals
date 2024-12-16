@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -64,6 +65,7 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     }
 
 
+@lru_cache(maxsize=16)
 def native_to_narwhals_dtype(
     dtype: pl.DataType,
     version: Version,
@@ -76,6 +78,9 @@ def native_to_narwhals_dtype(
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
+    if dtype == getattr(pl, "Int128", None):  # type: ignore[operator]  # pragma: no cover
+        # Not available for Polars pre 1.8.0
+        return dtypes.Int128()
     if dtype == pl.Int64:
         return dtypes.Int64()
     if dtype == pl.Int32:
@@ -84,6 +89,9 @@ def native_to_narwhals_dtype(
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
+    if dtype == getattr(pl, "UInt128", None):  # type: ignore[operator]  # pragma: no cover
+        # Not available for Polars pre 1.8.0
+        return dtypes.UInt128()
     if dtype == pl.UInt64:
         return dtypes.UInt64()
     if dtype == pl.UInt32:
@@ -104,11 +112,11 @@ def native_to_narwhals_dtype(
         return dtypes.Enum()
     if dtype == pl.Date:
         return dtypes.Date()
-    if dtype == pl.Datetime or isinstance(dtype, pl.Datetime):
+    if dtype == pl.Datetime:
         dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
         return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
-    if dtype == pl.Duration or isinstance(dtype, pl.Duration):
+    if dtype == pl.Duration:
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
@@ -136,6 +144,8 @@ def native_to_narwhals_dtype(
                 native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
                 dtype.size,  # type: ignore[attr-defined]
             )
+    if dtype == pl.Decimal:
+        return dtypes.Decimal()
     return dtypes.Unknown()
 
 

@@ -12,6 +12,7 @@ from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
+from narwhals.dtypes import Decimal
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
 from narwhals.dtypes import Field
@@ -21,6 +22,7 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import Int128
 from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
@@ -29,6 +31,7 @@ from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
+from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
 from narwhals.expr import all_ as all
@@ -56,7 +59,9 @@ from narwhals.functions import from_numpy
 from narwhals.functions import get_level
 from narwhals.functions import new_series
 from narwhals.functions import read_csv
+from narwhals.functions import read_parquet
 from narwhals.functions import scan_csv
+from narwhals.functions import scan_parquet
 from narwhals.functions import show_versions
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -74,7 +79,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.17.0"
+__version__ = "1.18.4"
 
 __all__ = [
     "Array",
@@ -83,6 +88,7 @@ __all__ = [
     "DataFrame",
     "Date",
     "Datetime",
+    "Decimal",
     "Duration",
     "Enum",
     "Expr",
@@ -94,6 +100,7 @@ __all__ = [
     "Int16",
     "Int32",
     "Int64",
+    "Int128",
     "LazyFrame",
     "List",
     "Object",
@@ -105,6 +112,7 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "UInt128",
     "Unknown",
     "all",
     "all_horizontal",
@@ -141,7 +149,9 @@ __all__ = [
     "new_series",
     "nth",
     "read_csv",
+    "read_parquet",
     "scan_csv",
+    "scan_parquet",
     "selectors",
     "show_versions",
     "stable",

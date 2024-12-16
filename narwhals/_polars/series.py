@@ -262,21 +262,27 @@ class PolarsSeries:
         min_periods: int,
         ignore_nulls: bool,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`ewm_mean` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
-        expr = self._native_series
-        return self._from_native_series(
-            expr.ewm_mean(
-                com=com,
-                span=span,
-                half_life=half_life,
-                alpha=alpha,
-                adjust=adjust,
-                min_periods=min_periods,
-                ignore_nulls=ignore_nulls,
-            )
+        native_series = self._native_series
+
+        native_result = native_series.ewm_mean(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
         )
+        if self._backend_version < (1,):  # pragma: no cover
+            import polars as pl
+
+            return self._from_native_series(
+                pl.select(
+                    pl.when(~native_series.is_null()).then(native_result).otherwise(None)
+                )[native_series.name]
+            )
+
+        return self._from_native_series(native_result)
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         if self._backend_version < (0, 20, 6):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
+@lru_cache(maxsize=16)
 def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
@@ -50,6 +52,9 @@ def native_to_narwhals_dtype(
     ]
     if any(isinstance(dtype, t) for t in datetime_types):
         return dtypes.Datetime()
+    if isinstance(dtype, pyspark_types.DecimalType):  # pragma: no cover
+        # TODO(unassigned): cover this in dtypes_test.py
+        return dtypes.Decimal()
     return dtypes.Unknown()
 
 

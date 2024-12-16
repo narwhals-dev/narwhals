@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+from narwhals.typing import CompliantSeries
 
 
 def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
@@ -38,7 +39,7 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries:
+class ArrowSeries(CompliantSeries):
     def __init__(
         self: Self,
         native_series: pa.ChunkedArray,
@@ -286,6 +287,18 @@ class ArrowSeries:
         import pyarrow.compute as pc
 
         return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+
+    def arg_min(self: Self, *, _return_py_scalar: bool = True) -> int:
+        import pyarrow.compute as pc
+
+        index_min = pc.index(self._native_series, pc.min(self._native_series))
+        return maybe_extract_py_scalar(index_min, _return_py_scalar)  # type: ignore[no-any-return]
+
+    def arg_max(self: Self, *, _return_py_scalar: bool = True) -> int:
+        import pyarrow.compute as pc
+
+        index_max = pc.index(self._native_series, pc.max(self._native_series))
+        return maybe_extract_py_scalar(index_max, _return_py_scalar)  # type: ignore[no-any-return]
 
     def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc
@@ -1471,8 +1484,8 @@ class ArrowSeriesListNamespace:
         self._arrow_series = series
 
     def len(self: Self) -> ArrowSeries:
-        import pyarrow as pa  # ignore-banned-import()
-        import pyarrow.compute as pc  # ignore-banned-import()
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
         return self._arrow_series._from_native_series(
             pc.cast(pc.list_value_length(self._arrow_series._native_series), pa.uint32())
