@@ -9,6 +9,7 @@ from typing import Sequence
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
@@ -418,17 +419,17 @@ class PandasLikeExpr:
                 if self._function_name == "col->cum_count":
                     df = df.with_columns(~df[self._root_names[0]].is_null())
 
-                res_native = (
-                    df._native_frame.groupby(list(keys), as_index=False)[self._root_names]
-                    .transform(
-                        cumulative_functions_to_pandas_equivalent[self._function_name]
-                    )
-                    .rename(
-                        columns=dict(zip(self._root_names[0], self._output_names[0])),
-                        copy=False,
-                    )
+                res_native = df._native_frame.groupby(list(keys), as_index=False)[
+                    self._root_names
+                ].transform(
+                    cumulative_functions_to_pandas_equivalent[self._function_name]
                 )
-
+                res_native = rename(
+                    res_native,
+                    columns=dict(zip(self._root_names, self._output_names)),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                )
                 return [df._from_native_frame(res_native)[self._output_names[0]]]
 
         else:
