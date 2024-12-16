@@ -548,18 +548,18 @@ def maybe_set_index(
             df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
+        from narwhals._pandas_like.utils import set_axis
+
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
 
-        if (
-            df_any._compliant_series._implementation is Implementation.PANDAS
-            and df_any._compliant_series._backend_version < (1,)
-        ):  # pragma: no cover
-            native_obj = native_obj.set_axis(keys, inplace=False)
-        else:
-            native_obj = native_obj.set_axis(keys)
-
+        native_obj = set_axis(
+            native_obj,
+            keys,
+            implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
+            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
+        )
         return df_any._from_compliant_series(  # type: ignore[no-any-return]
             df_any._compliant_series._from_native_series(native_obj)
         )

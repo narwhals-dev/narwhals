@@ -98,24 +98,28 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize(
-    ("expr", "expected"),
+    ("attr", "expected"),
     [
-        (nw.col("b").sum(), {"a": [1, 2], "b": [3, 3]}),
-        (nw.col("b").mean(), {"a": [1, 2], "b": [1.5, 3]}),
-        (nw.col("b").max(), {"a": [1, 2], "b": [2, 3]}),
-        (nw.col("b").min(), {"a": [1, 2], "b": [1, 3]}),
-        (nw.col("b").std(), {"a": [1, 2], "b": [0.707107, None]}),
-        (nw.col("b").len(), {"a": [1, 2], "b": [3, 1]}),
-        (nw.col("b").n_unique(), {"a": [1, 2], "b": [3, 1]}),
-        (nw.col("b").count(), {"a": [1, 2], "b": [2, 1]}),
+        ("sum", {"a": [1, 2], "b": [3, 3]}),
+        ("mean", {"a": [1, 2], "b": [1.5, 3]}),
+        ("max", {"a": [1, 2], "b": [2, 3]}),
+        ("min", {"a": [1, 2], "b": [1, 3]}),
+        ("std", {"a": [1, 2], "b": [0.707107, None]}),
+        ("len", {"a": [1, 2], "b": [3, 1]}),
+        ("n_unique", {"a": [1, 2], "b": [3, 1]}),
+        ("count", {"a": [1, 2], "b": [2, 1]}),
     ],
 )
 def test_group_by_depth_1_agg(
     constructor: Constructor,
-    expr: nw.Expr,
+    attr: str,
     expected: dict[str, list[int | float]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "cudf" in str(constructor) and attr == "n_unique":
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
+    expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
@@ -345,6 +349,10 @@ def test_group_by_shift_raises(
     if "polars" in str(constructor):
         # Polars supports all kinds of crazy group-by aggregations, so
         # we don't check that it errors here.
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # This operation fails completely in cuDF anyway, we just let raise its own
+        # error.
         request.applymarker(pytest.mark.xfail)
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
