@@ -412,17 +412,14 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         if self._function_name in CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if self._output_names is None:
+                if (
+                    self._output_names is None or self._root_names is None
+                ):  # pragma: no cover
+                    # Technically unreachable, but keep this for safety
                     msg = (
                         "Anonymous expressions are not supported in over.\n"
                         "Instead of `nw.all()`, try using a named expression, such as "
                         "`nw.col('a', 'b')`\n"
-                    )
-                    raise ValueError(msg)
-                if self._root_names is None:  # pragma: no cover
-                    msg = (
-                        "Anonymous expressions are not supported in over with cumulative "
-                        "operations.\n"
                     )
                     raise ValueError(msg)
 
