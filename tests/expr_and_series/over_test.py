@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from contextlib import nullcontext as does_not_raise
 
 import pytest
@@ -80,10 +81,16 @@ def test_over_cumsum(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -107,10 +114,16 @@ def test_over_cumcount(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -140,10 +153,16 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -167,10 +186,16 @@ def test_over_cummax(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -194,10 +219,16 @@ def test_over_cummin(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -221,10 +252,16 @@ def test_over_cumprod(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        context = pytest.raises(
-            ValueError,
-            match="Non-trivial complex aggregation found",
-        )
+        if sys.version_info > (3, 9):
+            context = pytest.raises(
+                ValueError,
+                match="Non-trivial complex aggregation found",
+            )
+        else:
+            context = pytest.raises(
+                NotImplementedError,
+                match="function is not implemented for this dtype: int64[pyarrow]",
+            )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
