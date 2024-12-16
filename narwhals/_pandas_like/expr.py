@@ -419,14 +419,13 @@ class PandasLikeExpr:
                     df = df.with_columns(~df[self._root_names[0]].is_null())
 
                 res_native = (
-                    df._native_frame.groupby(list(keys), as_index=False)[
-                        self._root_names[0]
-                    ]
+                    df._native_frame.groupby(list(keys), as_index=False)[self._root_names]
                     .transform(
                         cumulative_functions_to_pandas_equivalent[self._function_name]
                     )
                     .rename(
-                        columns={self._root_names[0]: self._output_names[0]}, copy=False
+                        columns=dict(zip(self._root_names[0], self._output_names[0])),
+                        copy=False,
                     )
                 )
 

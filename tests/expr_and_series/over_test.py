@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -79,15 +80,18 @@ def test_over_cumsum(constructor: Constructor) -> None:
         "b_cumsum": [1, 3, 3, 8, 11],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_sum",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
-
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
     with context:
         result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
         assert_equal_data(result, expected)
@@ -102,14 +106,18 @@ def test_over_cumcount(constructor: Constructor) -> None:
         "b_cumcount": [1, 2, 1, 2, 3],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_count",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
 
     with context:
         result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
@@ -131,15 +139,18 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
         "b_cumcount": [1, 2, 1, 2, 2],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_count",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
-
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
     with context:
         result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
         assert_equal_data(result, expected)
@@ -154,14 +165,18 @@ def test_over_cummax(constructor: Constructor) -> None:
         "b_cummax": [1, 2, 3, 5, 5],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_max",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
 
     with context:
         result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
@@ -177,14 +192,18 @@ def test_over_cummin(constructor: Constructor) -> None:
         "b_cummin": [1, 1, 3, 3, 3],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_min",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
 
     with context:
         result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
@@ -200,14 +219,18 @@ def test_over_cumprod(constructor: Constructor) -> None:
         "b_cumprod": [1, 2, 3, 15, 45],
     }
 
-    context = (
-        pytest.raises(
+    if "pyarrow_table" in str(constructor):
+        context = pytest.raises(
+            pa.lib.ArrowKeyError,
+            match="No function registered with name: hash_cum_prod",
+        )
+    elif "dask_lazy_p2" in str(constructor):
+        context = pytest.raises(
             NotImplementedError,
             match="`Expr.over` is not supported for Dask backend with multiple partitions.",
         )
-        if "dask_lazy_p2" in str(constructor)
-        else does_not_raise()
-    )
+    else:
+        context = does_not_raise()  # type: ignore[assignment]
 
     with context:
         result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
