@@ -105,6 +105,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
         ("max", {"a": [1, 2], "b": [2, 3]}),
         ("min", {"a": [1, 2], "b": [1, 3]}),
         ("std", {"a": [1, 2], "b": [0.707107, None]}),
+        ("var", {"a": [1, 2], "b": [0.5, None]}),
         ("len", {"a": [1, 2], "b": [3, 1]}),
         ("n_unique", {"a": [1, 2], "b": [3, 1]}),
         ("count", {"a": [1, 2], "b": [2, 1]}),
@@ -118,21 +119,23 @@ def test_group_by_depth_1_agg(
 ) -> None:
     if "cudf" in str(constructor) and attr == "n_unique":
         request.applymarker(pytest.mark.xfail)
+    if (
+        "pandas" in str(constructor)
+        and attr == "var"
+        and PANDAS_VERSION < (2, 0, 9)
+        and "pyarrow" in str(constructor)
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
+            )
+        )
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
-    expr = getattr(nw.col("b"), attr)()
+    if attr in ["var", "std"]:
+        expr = getattr(nw.col("b"), attr)(ddof=1)
+    else:
+        expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
-    assert_equal_data(result, expected)
-
-
-def test_group_by_var(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
-    result = (
-        nw.from_native(constructor(data))
-        .group_by("a")
-        .agg(nw.col("b").var(ddof=1))
-        .sort("a")
-    )
-    expected = {"a": [1, 2], "b": [0.5] * 2}
     assert_equal_data(result, expected)
 
 

@@ -1025,7 +1025,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.sum()
 
-    def std(self, *, ddof: int = 1) -> Any:
+    def std(self, *, ddof: int) -> Any:
         """Get the standard deviation of this Series.
 
         Arguments:
@@ -1045,7 +1045,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def my_library_agnostic_function(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.std()
+            ...     return s.std(ddof=1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1056,7 +1056,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.std(ddof=ddof)
 
-    def var(self, *, ddof: int = 1) -> Any:
+    def var(self, *, ddof: int) -> Any:
         """Get the variance of this Series.
 
         Arguments:
@@ -1076,7 +1076,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def agnostic_var(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.var()
+            ...     return s.var(ddof=1)
 
             We can then pass either pandas or Polars to `func`:
 

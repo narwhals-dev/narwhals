@@ -11,7 +11,7 @@ def test_add(constructor: Constructor) -> None:
     result = df.with_columns(
         c=nw.col("a") + nw.col("b"),
         d=nw.col("a") - nw.col("a").mean(),
-        e=nw.col("a") - nw.col("a").std(),
+        e=nw.col("a") - nw.col("a").std(ddof=1),
     )
     expected = {
         "a": [1, 3, 2],
