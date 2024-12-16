@@ -402,14 +402,14 @@ class PandasLikeExpr:
         if self._function_name in cumulative_functions_to_pandas_equivalent:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if self._output_names is None:
+                if self._output_names is None:  # pragma: no cover
                     msg = (
                         "Anonymous expressions are not supported in over.\n"
                         "Instead of `nw.all()`, try using a named expression, such as "
                         "`nw.col('a', 'b')`\n"
                     )
                     raise ValueError(msg)
-                if self._root_names is None:
+                if self._root_names is None:  # pragma: no cover
                     msg = (
                         "Anonymous expressions are not supported in over with cumulative "
                         "operations.\n"
@@ -417,22 +417,23 @@ class PandasLikeExpr:
                     raise ValueError(msg)
 
                 if self._function_name == "col->cum_count":
-                    df = df.with_columns(
-                        *[~df[name].is_null() for name in self._root_names]
-                    )
+                    plx = self.__narwhals_namespace__()
+                    df = df.with_columns(~plx.col(*self._root_names).is_null())
 
                 res_native = df._native_frame.groupby(list(keys), as_index=False)[
                     self._root_names
                 ].transform(
                     cumulative_functions_to_pandas_equivalent[self._function_name]
                 )
-                res_native = rename(
-                    res_native,
-                    columns=dict(zip(self._root_names, self._output_names)),
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
+                result_frame = df._from_native_frame(
+                    rename(
+                        res_native,
+                        columns=dict(zip(self._root_names, self._output_names)),
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    )
                 )
-                return [df._from_native_frame(res_native)[self._output_names[0]]]
+                return [result_frame[name] for name in self._output_names]
 
         else:
 
