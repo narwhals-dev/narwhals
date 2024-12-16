@@ -3164,14 +3164,14 @@ def from_arrow(
 
         Let's see what happens when passing pandas / Polars input:
 
-        >>> agnostic_to_arrow(pd.DataFrame(data))  # doctest: +SKIP
+        >>> agnostic_to_arrow(pd.DataFrame(data))
         pyarrow.Table
         a: int64
         b: int64
         ----
         a: [[1,2,3]]
         b: [[4,5,6]]
-        >>> agnostic_to_arrow(pl.DataFrame(data))  # doctest: +SKIP
+        >>> agnostic_to_arrow(pl.DataFrame(data))
         pyarrow.Table
         a: int64
         b: int64
