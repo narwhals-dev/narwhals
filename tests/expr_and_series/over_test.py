@@ -71,7 +71,7 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
         df.with_columns(c_min=nw.all().min().over("a", "b"))
 
 
-def test_over_cumsum(constructor: Constructor) -> None:
+def test_over_cumsum(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -81,16 +81,10 @@ def test_over_cumsum(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -98,6 +92,8 @@ def test_over_cumsum(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+            request.applymarker(pytest.mark.xfail)
 
     with context:
         result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
@@ -114,16 +110,10 @@ def test_over_cumcount(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -153,16 +143,10 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -176,7 +160,7 @@ def test_over_cumcount_missing_values(constructor: Constructor) -> None:
         assert_equal_data(result, expected)
 
 
-def test_over_cummax(constructor: Constructor) -> None:
+def test_over_cummax(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -186,16 +170,10 @@ def test_over_cummax(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -203,13 +181,15 @@ def test_over_cummax(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+            request.applymarker(pytest.mark.xfail)
 
     with context:
         result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
         assert_equal_data(result, expected)
 
 
-def test_over_cummin(constructor: Constructor) -> None:
+def test_over_cummin(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -219,16 +199,10 @@ def test_over_cummin(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -236,13 +210,15 @@ def test_over_cummin(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+            request.applymarker(pytest.mark.xfail)
 
     with context:
         result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
         assert_equal_data(result, expected)
 
 
-def test_over_cumprod(constructor: Constructor) -> None:
+def test_over_cumprod(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -252,16 +228,10 @@ def test_over_cumprod(constructor: Constructor) -> None:
     }
 
     if "pyarrow_table" in str(constructor):
-        if sys.version_info > (3, 9):
-            context = pytest.raises(
-                ValueError,
-                match="Non-trivial complex aggregation found",
-            )
-        else:
-            context = pytest.raises(
-                NotImplementedError,
-                match="function is not implemented for this dtype: int64[pyarrow]",
-            )
+        context = pytest.raises(
+            ValueError,
+            match="Non-trivial complex aggregation found",
+        )
     elif "dask_lazy_p2" in str(constructor):
         context = pytest.raises(
             NotImplementedError,  # type: ignore[arg-type]
@@ -269,6 +239,8 @@ def test_over_cumprod(constructor: Constructor) -> None:
         )
     else:
         context = does_not_raise()  # type: ignore[assignment]
+        if "pandas_pyarrow" in str(constructor) and sys.version_info < (3, 9):
+            request.applymarker(pytest.mark.xfail)
 
     with context:
         result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
