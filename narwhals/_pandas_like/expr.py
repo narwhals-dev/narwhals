@@ -24,6 +24,17 @@ if TYPE_CHECKING:
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
+CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
+    "col->cum_sum": "cumsum",
+    "col->cum_min": "cummin",
+    "col->cum_max": "cummax",
+    "col->cum_prod": "cumprod",
+    # Pandas cumcount starts counting from 0 while Polars starts from 1
+    # Pandas cumcount counts nulls while Polars does not
+    # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
+    "col->cum_count": "cumsum",
+}
+
 
 class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __init__(
@@ -398,21 +409,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def over(self, keys: list[str]) -> Self:
-        cumulative_functions_to_pandas_equivalent = {
-            "col->cum_sum": "cumsum",
-            "col->cum_min": "cummin",
-            "col->cum_max": "cummax",
-            "col->cum_prod": "cumprod",
-            # Pandas cumcount starts counting from 0 while Polars starts from 1
-            # Pandas cumcount counts nulls while Polars does not
-            # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
-            "col->cum_count": "cumsum",
-        }
-
-        if self._function_name in cumulative_functions_to_pandas_equivalent:
+        if self._function_name in CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if self._output_names is None:  # pragma: no cover
+                if self._output_names is None:
                     msg = (
                         "Anonymous expressions are not supported in over.\n"
                         "Instead of `nw.all()`, try using a named expression, such as "
@@ -433,7 +433,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                 res_native = df._native_frame.groupby(list(keys), as_index=False)[
                     self._root_names
                 ].transform(
-                    cumulative_functions_to_pandas_equivalent[self._function_name]
+                    CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name]
                 )
                 result_frame = df._from_native_frame(
                     rename(

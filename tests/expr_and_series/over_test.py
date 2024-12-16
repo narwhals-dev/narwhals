@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import pyarrow as pa
 import pytest
 
@@ -181,3 +182,9 @@ def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) 
 
     result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
     assert_equal_data(result, expected)
+
+
+def test_over_anonymous() -> None:
+    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
+    with pytest.raises(ValueError, match="Anonymous expressions"):
+        nw.from_native(df).select(nw.all().cum_max().over("a"))
