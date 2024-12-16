@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PY_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -63,7 +63,7 @@ def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -
         if (
             "pandas_pyarrow" in str(constructor)
             and PY_VERSION < (3, 10)
-            and pa.__version__ < "15.0.0"
+            and PYARROW_VERSION < (15,)
         ):
             request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -124,7 +124,7 @@ def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -
         if (
             "pandas_pyarrow" in str(constructor)
             and PY_VERSION < (3, 10)
-            and pa.__version__ < "15.0.0"
+            and PYARROW_VERSION < (15,)
         ):
             request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -145,7 +145,7 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
         if (
             "pandas_pyarrow" in str(constructor)
             and PY_VERSION < (3, 10)
-            and pa.__version__ < "15.0.0"
+            and PYARROW_VERSION < (15,)
         ):
             request.applymarker(pytest.mark.xfail)
 
@@ -168,7 +168,7 @@ def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) 
         if (
             "pandas_pyarrow" in str(constructor)
             and PY_VERSION < (3, 10)
-            and pa.__version__ < "15.0.0"
+            and PYARROW_VERSION < (15,)
         ):
             request.applymarker(pytest.mark.xfail)
 
