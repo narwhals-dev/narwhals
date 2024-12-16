@@ -581,7 +581,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.to_pandas()
 
-    def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> str | None:
         r"""Write dataframe to comma-separated values (CSV) file.
 
         Arguments:
@@ -621,7 +621,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
         """
-        return self._compliant_frame.write_csv(file)
+        csv_str = self._compliant_frame.write_csv(file)
+        return csv_str if file is None else None
 
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         """Write dataframe to parquet file.
