@@ -105,6 +105,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
         ("max", {"a": [1, 2], "b": [2, 3]}),
         ("min", {"a": [1, 2], "b": [1, 3]}),
         ("std", {"a": [1, 2], "b": [0.707107, None]}),
+        ("var", {"a": [1, 2], "b": [0.5, None]}),
         ("len", {"a": [1, 2], "b": [3, 1]}),
         ("n_unique", {"a": [1, 2], "b": [3, 1]}),
         ("count", {"a": [1, 2], "b": [2, 1]}),
@@ -133,24 +134,6 @@ def test_group_by_median(constructor: Constructor) -> None:
         .sort("a")
     )
     expected = {"a": [1, 2], "b": [5, 3]}
-    assert_equal_data(result, expected)
-
-
-def test_group_by_std(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
-    result = (
-        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
-    )
-    expected = {"a": [1, 2], "b": [0.707107] * 2}
-    assert_equal_data(result, expected)
-
-
-def test_group_by_var(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
-    result = (
-        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").var()).sort("a")
-    )
-    expected = {"a": [1, 2], "b": [0.5] * 2}
     assert_equal_data(result, expected)
 
 

@@ -1074,15 +1074,15 @@ class Series(Generic[IntoSeriesT]):
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            >>> def agnostic_var(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.var()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_var(s_pd)
             np.float64(1.0)
-            >>> my_library_agnostic_function(s_pl)
+            >>> agnostic_var(s_pl)
             1.0
         """
         return self._compliant_series.var(ddof=ddof)

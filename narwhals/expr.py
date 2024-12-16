@@ -709,6 +709,10 @@ class Expr:
     def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
 
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements. By default ddof is 1.
+
         Returns:
             A new expression.
 
@@ -724,16 +728,16 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_var(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("a", "b").var(ddof=0)).to_native()
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_var(df_pd)
                         a         b
             0  316.666667  1.602222
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_var(df_pl)
             shape: (1, 2)
             ┌────────────┬──────────┐
             │ a          ┆ b        │
@@ -742,7 +746,7 @@ class Expr:
             ╞════════════╪══════════╡
             │ 316.666667 ┆ 1.602222 │
             └────────────┴──────────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_var(df_pa)
             pyarrow.Table
             a: double
             b: double

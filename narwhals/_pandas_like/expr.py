@@ -246,10 +246,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def median(self) -> Self:
         return reuse_series_implementation(self, "median", returns_scalar=True)
 
-    def std(self, *, ddof: int = 1) -> Self:
+    def std(self, *, ddof: int) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
-    def var(self, *, ddof: int = 1) -> Self:
+    def var(self, *, ddof: int) -> Self:
         return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
