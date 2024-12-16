@@ -28,6 +28,7 @@ def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
         return (0, 0, 0)
 
 
+PY_VERSION = sys.version_info
 IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
 NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
 PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
