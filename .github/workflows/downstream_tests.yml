@@ -140,8 +140,6 @@ jobs:
         run: |
             cd scikit-lego
             uv pip install -e ".[test]" --system
-            # temporary pin to get ci green
-            uv pip install "scikit-learn<1.6" --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
