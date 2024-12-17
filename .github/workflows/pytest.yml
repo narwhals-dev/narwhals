@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e .[dev] --system
+        run: uv pip install -e ".[dev]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -50,7 +50,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e .[dev] --system
+        run: uv pip install -e ".[dev]" --system
       - name: install-dask
         run: uv pip install --upgrade dask[dataframe] --system
       - name: install-modin
@@ -79,7 +79,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e .[dev] --system
+        run: uv pip install -e ".[dev]" --system
       - name: install-modin
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps

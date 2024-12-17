@@ -97,6 +97,12 @@ Here's how you can set up your local development environment to contribute.
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 2. Install Narwhals: `uv pip install -e ".[dev, docs]"`
+3. Install a fork of griffe:
+   ```
+   uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
+   ```
+   This is hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+   is addressed.
 
 You should also install pre-commit:
 ```

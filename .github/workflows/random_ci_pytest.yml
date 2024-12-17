@@ -27,7 +27,7 @@ jobs:
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
       - name: install-reqs
-        run: uv pip install -e .[dev] --system
+        run: uv pip install -e ".[dev]" --system
       - name: uninstall scipy/sklearn
         run: uv pip uninstall scipy scikit-learn --system
       - name: install-random-verions

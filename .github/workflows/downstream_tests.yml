@@ -260,7 +260,7 @@ jobs:
       - name: install-tubular-dev
         run: |
             cd tubular
-            uv pip install -e .[dev] --system
+            uv pip install -e ".[dev]" --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system

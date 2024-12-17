@@ -27,6 +27,9 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
+      - name: griffe
+        # hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+        run: pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
       - run: pip install -e .[docs]
 
       - run: mkdocs gh-deploy --force

@@ -44,7 +44,6 @@ dev = [
   "duckdb",
   "pandas",
   "polars",
-  "pre-commit",
   "pyarrow",
   "pyspark; python_version < '3.12'",
   "pyarrow-stubs",
@@ -61,9 +60,7 @@ dev = [
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
-  "duckdb",
-  # Hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
-  "git+https://github.com/MarcoGorelli/griffe.git@no-overloads",
+  "duckdb", # Hopefully temporary https://github.com/mkdocstrings/mkdocstrings/issues/716
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
