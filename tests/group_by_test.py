@@ -131,10 +131,7 @@ def test_group_by_depth_1_agg(
             )
         )
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
-    if attr in ["var", "std"]:
-        expr = getattr(nw.col("b"), attr)(ddof=1)
-    else:
-        expr = getattr(nw.col("b"), attr)()
+    expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 

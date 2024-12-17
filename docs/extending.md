@@ -43,7 +43,7 @@ For example:
             .group_by("a")
             .agg(
                 b_mean=nw.col("b").mean(),
-                b_std=nw.col("b").std(ddof=1),
+                b_std=nw.col("b").std(),
             )
             .to_native()
         )
@@ -59,7 +59,7 @@ For example:
     def func(df: FrameT) -> FrameT:
         return df.group_by("a").agg(
             b_mean=nw.col("b").mean(),
-            b_std=nw.col("b").std(ddof=1),
+            b_std=nw.col("b").std(),
         )
     ```
 

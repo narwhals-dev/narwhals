@@ -655,12 +655,12 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).median())
 
-    def std(self, *, ddof: int) -> Self:
+    def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements.
+                     where N represents the number of elements. By default ddof is 1.
 
         Returns:
             A new expression.
