@@ -138,6 +138,22 @@ nox
 
 Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
 
+#### Hypothesis tests
+
+We use Hypothesis to generate some random tests, to check for robustness.
+To keep local test suite times down, not all of these run by default - you can
+run them by passing the `--runslow` flag to PyTest.
+
+#### Testing Dask and Modin
+
+To keep local development test times down, Dask and Modin are excluded from dev
+dependencies, and their tests only run in CI. If you install them with
+
+```
+uv pip install -U dask[dataframe] modin
+```
+then their tests will run too.
+
 #### Testing cuDF
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
