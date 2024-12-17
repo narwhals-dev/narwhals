@@ -204,7 +204,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_min, "min", returns_scalar=True)
 
-    def std(self, ddof: int = 1) -> Self:
+    def std(self, ddof: int) -> Self:
         import numpy as np  # ignore-banned-import
 
         def _std(_input: Column) -> Column:  # pragma: no cover

@@ -706,6 +706,56 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).std(ddof=ddof))
 
+    def var(self, *, ddof: int = 1) -> Self:
+        """Get variance.
+
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements. By default ddof is 1.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pa = pa.table({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_var(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(nw.col("a", "b").var(ddof=0)).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_var(df_pd)
+                        a         b
+            0  316.666667  1.602222
+            >>> agnostic_var(df_pl)
+            shape: (1, 2)
+            ┌────────────┬──────────┐
+            │ a          ┆ b        │
+            │ ---        ┆ ---      │
+            │ f64        ┆ f64      │
+            ╞════════════╪══════════╡
+            │ 316.666667 ┆ 1.602222 │
+            └────────────┴──────────┘
+            >>> agnostic_var(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[316.6666666666667]]
+            b: [[1.6022222222222222]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).var(ddof=ddof))
+
     def map_batches(
         self,
         function: Callable[[Any], Self],

@@ -1029,7 +1029,7 @@ class Series(Generic[IntoSeriesT]):
         """Get the standard deviation of this Series.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements.
 
         Examples:
@@ -1055,6 +1055,37 @@ class Series(Generic[IntoSeriesT]):
             1.0
         """
         return self._compliant_series.std(ddof=ddof)
+
+    def var(self, *, ddof: int = 1) -> Any:
+        """Get the variance of this Series.
+
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_var(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.var()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> agnostic_var(s_pd)
+            np.float64(1.0)
+            >>> agnostic_var(s_pl)
+            1.0
+        """
+        return self._compliant_series.var(ddof=ddof)
 
     def clip(
         self, lower_bound: Any | None = None, upper_bound: Any | None = None

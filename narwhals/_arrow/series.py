@@ -330,6 +330,13 @@ class ArrowSeries(CompliantSeries):
             pc.stddev(self._native_series, ddof=ddof), _return_py_scalar
         )
 
+    def var(self: Self, ddof: int, *, _return_py_scalar: bool = True) -> float:
+        import pyarrow.compute as pc
+
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.variance(self._native_series, ddof=ddof), _return_py_scalar
+        )
+
     def skew(self: Self, *, _return_py_scalar: bool = True) -> float | None:
         import pyarrow.compute as pc
 

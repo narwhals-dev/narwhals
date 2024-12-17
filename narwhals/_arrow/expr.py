@@ -242,8 +242,11 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def n_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
-    def std(self: Self, ddof: int = 1) -> Self:
+    def std(self: Self, ddof: int) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
+
+    def var(self: Self, ddof: int) -> Self:
+        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
