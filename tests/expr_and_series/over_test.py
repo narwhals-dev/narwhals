@@ -4,8 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import PY_VERSION
-from tests.utils import PYARROW_VERSION
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -60,12 +59,9 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
 def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-        if (
-            "pandas_pyarrow" in str(constructor)
-            and PY_VERSION < (3, 10)
-            and PYARROW_VERSION < (15,)
-        ):
-            request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -121,12 +117,8 @@ def test_over_cumcount_missing_values(
 def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-        if (
-            "pandas_pyarrow" in str(constructor)
-            and PY_VERSION < (3, 10)
-            and PYARROW_VERSION < (15,)
-        ):
-            request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -142,12 +134,8 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-        if (
-            "pandas_pyarrow" in str(constructor)
-            and PY_VERSION < (3, 10)
-            and PYARROW_VERSION < (15,)
-        ):
-            request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
@@ -165,12 +153,8 @@ def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) 
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-        if (
-            "pandas_pyarrow" in str(constructor)
-            and PY_VERSION < (3, 10)
-            and PYARROW_VERSION < (15,)
-        ):
-            request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
