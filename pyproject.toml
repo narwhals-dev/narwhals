@@ -60,7 +60,7 @@ dev = [
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
-  "duckdb", # Hopefully temporary https://github.com/mkdocstrings/mkdocstrings/issues/716
+  "duckdb",
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
