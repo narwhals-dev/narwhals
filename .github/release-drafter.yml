@@ -2,55 +2,11 @@ exclude-labels:
   - ignore
   - release
   - dependencies
-name-template: 'Narwhals v$RESOLVED_VERSION'
+name-template: 'Narwhals unreleased'
+version-template: unreleased
 
 change-template: '- $TITLE (#$NUMBER)' 
-    
-autolabeler:
-  - label: breaking
-    title:
-      # Example: feat!: ...
-      - '/^([Bb]uild|[Cc]hore|CI|ci|[Dd]epr|[Dd]oc|DOC|[Ff]eat|[Ff]ix|[Pp]erf|[Rr]efactor|[Rr]elease|[Tt]est)\! /'
-  - label: build
-    title:
-      - '/^([Bb]uild)/'
-  - label: internal
-    title:
-      - '/^(chore|ci|refactor|test|template|bench|Chore|CI|Refactor|Test|Template|Bench)/'
-  - label: deprecation
-    title:
-      - '/^([Dd]epr)/'
-  - label: documentation
-    title:
-      - '/^([Dd]oc|DOC)/'
-  - label: enhancement
-    title:
-      - '/^(feat|enh|Feat|ENH|Enh)/'
-  - label: fix
-    title:
-      - '/^([Ff]ix)/'
-  - label: performance
-    title:
-      - '/^([Pp]erf)/'
-  - label: release
-    title:
-      - '/^([Rr]elease)/'
-  - label: ignore
-    title:
-      - '/^\[pre-commit.ci\]/'
-      
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
-  
+
 categories:
   - title: 🏆 Highlights
     labels: highlight

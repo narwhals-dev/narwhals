@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
 
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+    from narwhals.series import Series
     from narwhals.typing import IntoSeries
 
 # We silently allow these but - given that they claim
@@ -220,6 +223,11 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     return (np := get_numpy()) is not None and isinstance(arr, np.ndarray)
 
 
+def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
+    """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
+    return (np := get_numpy()) is not None and np.isscalar(scalar)
+
+
 def is_pandas_like_dataframe(df: Any) -> bool:
     """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
@@ -320,6 +328,42 @@ def is_into_dataframe(native_dataframe: Any) -> bool:
     )
 
 
+def is_narwhals_dataframe(df: Any) -> TypeGuard[DataFrame[Any]]:
+    """Check whether `df` is a Narwhals DataFrame.
+
+    This is useful if you expect a user to pass in a Narwhals
+    DataFrame directly, and you want to catch both ``narwhals.DataFrame``
+    and ``narwhals.stable.v1.DataFrame`.
+    """
+    from narwhals.dataframe import DataFrame
+
+    return isinstance(df, DataFrame)
+
+
+def is_narwhals_lazyframe(lf: Any) -> TypeGuard[LazyFrame[Any]]:
+    """Check whether `lf` is a Narwhals LazyFrame.
+
+    This is useful if you expect a user to pass in a Narwhals
+    LazyFrame directly, and you want to catch both ``narwhals.LazyFrame``
+    and ``narwhals.stable.v1.LazyFrame`.
+    """
+    from narwhals.dataframe import LazyFrame
+
+    return isinstance(lf, LazyFrame)
+
+
+def is_narwhals_series(ser: Any) -> TypeGuard[Series[Any]]:
+    """Check whether `ser` is a Narwhals Series.
+
+    This is useful if you expect a user to pass in a Narwhals
+    Series directly, and you want to catch both ``narwhals.Series``
+    and ``narwhals.stable.v1.Series`.
+    """
+    from narwhals.series import Series
+
+    return isinstance(ser, Series)
+
+
 __all__ = [
     "get_cudf",
     "get_ibis",
@@ -336,6 +380,9 @@ __all__ = [
     "is_into_series",
     "is_modin_dataframe",
     "is_modin_series",
+    "is_narwhals_dataframe",
+    "is_narwhals_lazyframe",
+    "is_narwhals_series",
     "is_numpy_array",
     "is_pandas_dataframe",
     "is_pandas_index",

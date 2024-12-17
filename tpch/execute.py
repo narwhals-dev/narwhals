@@ -7,7 +7,9 @@ from pathlib import Path
 import dask.dataframe as dd
 import pandas as pd
 import polars as pl
-import pyarrow.parquet as pq
+import pyarrow as pa
+
+import narwhals as nw
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
@@ -22,15 +24,11 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-BACKEND_READ_FUNC_MAP = {
-    # "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"), # noqa: ERA001
-    "pandas[pyarrow]": lambda x: pd.read_parquet(
-        x, engine="pyarrow", dtype_backend="pyarrow"
-    ),
-    # "polars[eager]": lambda x: pl.read_parquet(x),
-    "polars[lazy]": lambda x: pl.scan_parquet(x),
-    "pyarrow": lambda x: pq.read_table(x),
-    "dask": lambda x: dd.read_parquet(x, engine="pyarrow", dtype_backend="pyarrow"),
+BACKEND_NAMESPACE_KWARGS_MAP = {
+    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "polars[lazy]": (pl, {}),
+    "pyarrow": (pa, {}),
+    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
@@ -90,9 +88,14 @@ def execute_query(query_id: str) -> None:
     query_module = import_module(f"tpch.queries.{query_id}")
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
-    for backend, read_func in BACKEND_READ_FUNC_MAP.items():
+    for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result = query_module.query(*(read_func(path) for path in data_paths))
+        result = query_module.query(
+            *(
+                nw.scan_parquet(path, native_namespace=native_namespace, **kwargs)
+                for path in data_paths
+            )
+        )
         if collect_func := BACKEND_COLLECT_FUNC_MAP.get(backend):
             result = collect_func(result)
         print(result)  # noqa: T201

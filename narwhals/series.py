@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
@@ -95,7 +96,74 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
-        if isinstance(idx, int):
+        """Retrieve elements from the object using integer indexing or slicing.
+
+        Arguments:
+            idx: The index, slice, or sequence of indices to retrieve.
+
+                - If `idx` is an integer, a single element is returned.
+                - If `idx` is a slice or a sequence of integers,
+                  a subset of the Series is returned.
+
+        Returns:
+            A single element if `idx` is an integer, else a subset of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> from typing import Any
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_get_first_item(s_native: IntoSeriesT) -> Any:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[0]
+
+            We can then pass either pandas, Polars, or any supported library:
+
+            >>> agnostic_get_first_item(s_pd)
+            np.int64(1)
+            >>> agnostic_get_first_item(s_pl)
+            1
+            >>> agnostic_get_first_item(s_pa)
+            1
+
+            We can also make a function to slice the Series:
+
+            >>> def agnostic_slice(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s[:2].to_native()
+
+            >>> agnostic_slice(s_pd)
+            0    1
+            1    2
+            dtype: int64
+            >>> agnostic_slice(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                1
+                2
+            ]
+            >>> agnostic_slice(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2
+              ]
+            ]
+        """
+        if isinstance(idx, int) or (
+            is_numpy_scalar(idx) and idx.dtype.kind in ("i", "u")
+        ):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 
@@ -866,6 +934,70 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.max()
 
+    def arg_min(self) -> int:
+        """Returns the index of the minimum value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_arg_min(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_min()
+
+            We can then pass either any supported library such as pandas, Polars,
+            or PyArrow:
+
+            >>> agnostic_arg_min(s_pd)
+            np.int64(0)
+            >>> agnostic_arg_min(s_pl)
+            0
+            >>> agnostic_arg_min(s_pa)
+            0
+        """
+        return self._compliant_series.arg_min()  # type: ignore[no-any-return]
+
+    def arg_max(self) -> int:
+        """Returns the index of the maximum value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_arg_max(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.arg_max()
+
+            We can then pass either any supported library such as pandas, Polars,
+            or PyArrow:
+
+            >>> agnostic_arg_max(s_pd)
+            np.int64(2)
+            >>> agnostic_arg_max(s_pl)
+            2
+            >>> agnostic_arg_max(s_pa)
+            2
+        """
+        return self._compliant_series.arg_max()  # type: ignore[no-any-return]
+
     def sum(self) -> Any:
         """Reduce this Series to the sum value.
 
@@ -897,7 +1029,7 @@ class Series(Generic[IntoSeriesT]):
         """Get the standard deviation of this Series.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements.
 
         Examples:
@@ -923,6 +1055,37 @@ class Series(Generic[IntoSeriesT]):
             1.0
         """
         return self._compliant_series.std(ddof=ddof)
+
+    def var(self, *, ddof: int = 1) -> Any:
+        """Get the variance of this Series.
+
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_var(s_native: IntoSeries):
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.var()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> agnostic_var(s_pd)
+            np.float64(1.0)
+            >>> agnostic_var(s_pl)
+            1.0
+        """
+        return self._compliant_series.var(ddof=ddof)
 
     def clip(
         self, lower_bound: Any | None = None, upper_bound: Any | None = None

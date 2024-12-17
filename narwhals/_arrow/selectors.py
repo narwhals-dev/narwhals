@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
+from typing import Sequence
 
 from narwhals._arrow.expr import ArrowExpr
 from narwhals.utils import Implementation
@@ -127,10 +128,10 @@ class ArrowSelector(ArrowExpr):
     def __or__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
-                lhs = self._call(df)
-                rhs = other._call(df)
-                return [x for x in lhs if x.name not in {x.name for x in rhs}] + rhs
+            def call(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+                lhs = self(df)
+                rhs = other(df)
+                return [*(x for x in lhs if x.name not in {x.name for x in rhs}), *rhs]
 
             return ArrowSelector(
                 call,

@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import SizeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -547,18 +548,18 @@ def maybe_set_index(
             df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
+        from narwhals._pandas_like.utils import set_axis
+
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
 
-        if (
-            df_any._compliant_series._implementation is Implementation.PANDAS
-            and df_any._compliant_series._backend_version < (1,)
-        ):  # pragma: no cover
-            native_obj = native_obj.set_axis(keys, inplace=False)
-        else:
-            native_obj = native_obj.set_axis(keys)
-
+        native_obj = set_axis(
+            native_obj,
+            keys,
+            implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
+            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
+        )
         return df_any._from_compliant_series(  # type: ignore[no-any-return]
             df_any._compliant_series._from_native_series(native_obj)
         )
@@ -679,6 +680,31 @@ def maybe_convert_dtypes(
             )
         )
     return obj_any  # type: ignore[no-any-return]
+
+
+def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
+    """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb").
+
+    Arguments:
+        sz: original size in bytes
+        unit: size unit to convert into
+
+    Returns:
+        Integer or float.
+    """
+    if unit in {"b", "bytes"}:
+        return sz
+    elif unit in {"kb", "kilobytes"}:
+        return sz / 1024
+    elif unit in {"mb", "megabytes"}:
+        return sz / 1024**2
+    elif unit in {"gb", "gigabytes"}:
+        return sz / 1024**3
+    elif unit in {"tb", "terabytes"}:
+        return sz / 1024**4
+    else:
+        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+        raise ValueError(msg)
 
 
 def is_ordered_categorical(series: Series[Any]) -> bool:

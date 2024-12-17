@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import SizeUnit
     from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
@@ -535,6 +536,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_pandas(self) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
 
+        Returns:
+            A pandas DataFrame.
+
         Examples:
             Construct pandas, Polars (eager) and PyArrow DataFrames:
 
@@ -580,8 +584,15 @@ class DataFrame(BaseFrame[DataFrameT]):
     def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
         r"""Write dataframe to comma-separated values (CSV) file.
 
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written. If None, the resulting csv format is returned as a string.
+
+        Returns:
+            String or None.
+
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars (eager) and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
@@ -612,8 +623,15 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.write_csv(file)
 
-    def write_parquet(self, file: str | Path | BytesIO) -> Any:
+    def write_parquet(self, file: str | Path | BytesIO) -> None:
         """Write dataframe to parquet file.
+
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written.
+
+        Returns:
+            None.
 
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
@@ -643,6 +661,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def to_numpy(self) -> np.ndarray:
         """Convert this DataFrame to a NumPy ndarray.
+
+        Returns:
+            A NumPy ndarray array.
 
         Examples:
             Construct pandas and polars DataFrames:
@@ -686,6 +707,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def shape(self) -> tuple[int, int]:
         """Get the shape of the DataFrame.
 
+        Returns:
+            The shape of the dataframe as a tuple.
+
         Examples:
             Construct pandas and polars DataFrames:
 
@@ -719,6 +743,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def get_column(self, name: str) -> Series[Any]:
         """Get a single column by name.
+
+        Arguments:
+            name: The column name as a string.
+
+        Returns:
+            A Narwhals Series, backed by a native series.
 
         Notes:
             Although `name` is typed as `str`, pandas does allow non-string column
@@ -763,6 +793,50 @@ class DataFrame(BaseFrame[DataFrameT]):
             self._compliant_frame.get_column(name),
             level=self._level,
         )
+
+    def estimated_size(self, unit: SizeUnit = "b") -> int | float:
+        """Return an estimation of the total (heap) allocated size of the `DataFrame`.
+
+        Estimated size is given in the specified unit (bytes by default).
+
+        Arguments:
+            unit: 'b', 'kb', 'mb', 'gb', 'tb', 'bytes', 'kilobytes', 'megabytes',
+                    'gigabytes', or 'terabytes'.
+
+        Returns:
+            Integer or Float.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrameT
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_estimated_size(df_native: IntoDataFrameT) -> int | float:
+            ...     df = nw.from_native(df_native)
+            ...     return df.estimated_size()
+
+            We can then pass either pandas, Polars or PyArrow to `agnostic_estimated_size`:
+
+            >>> agnostic_estimated_size(df_pd)
+            np.int64(330)
+            >>> agnostic_estimated_size(df_pl)
+            51
+            >>> agnostic_estimated_size(df_pa)
+            63
+        """
+        return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
@@ -837,6 +911,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
                     _inclusive_ and returns a `DataFrame`. For example, if the columns are
                     `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
+
+        Returns:
+            A Narwhals Series, backed by a native series.
 
         Notes:
             - Integers are always interpreted as positions

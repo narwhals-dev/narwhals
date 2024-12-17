@@ -44,10 +44,10 @@ def test_invalid_group_by_dask() -> None:
 
     df_dask = dd.from_pandas(df_pandas)
 
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
 
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="Non-trivial complex aggregation"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     with pytest.raises(
@@ -56,9 +56,10 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
 
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
-    with pytest.raises(RuntimeError, match="does your"):
+    with pytest.raises(ValueError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
@@ -68,7 +69,7 @@ def test_invalid_group_by() -> None:
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
     ):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
             nw.col("b").mean().min()
         )
@@ -96,11 +97,34 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(constructor: Constructor) -> None:
-    result = (
-        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
-    )
-    expected = {"a": [1, 3], "b": [2, 1]}
+@pytest.mark.parametrize(
+    ("attr", "expected"),
+    [
+        ("sum", {"a": [1, 2], "b": [3, 3]}),
+        ("mean", {"a": [1, 2], "b": [1.5, 3]}),
+        ("max", {"a": [1, 2], "b": [2, 3]}),
+        ("min", {"a": [1, 2], "b": [1, 3]}),
+        ("std", {"a": [1, 2], "b": [0.707107, None]}),
+        ("var", {"a": [1, 2], "b": [0.5, None]}),
+        ("len", {"a": [1, 2], "b": [3, 1]}),
+        ("n_unique", {"a": [1, 2], "b": [3, 1]}),
+        ("count", {"a": [1, 2], "b": [2, 1]}),
+    ],
+)
+def test_group_by_depth_1_agg(
+    constructor: Constructor,
+    attr: str,
+    expected: dict[str, list[int | float]],
+    request: pytest.FixtureRequest,
+) -> None:
+    if "cudf" in str(constructor) and attr == "n_unique":
+        request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
+        # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
+    expr = getattr(nw.col("b"), attr)()
+    result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
 
@@ -113,26 +137,6 @@ def test_group_by_median(constructor: Constructor) -> None:
         .sort("a")
     )
     expected = {"a": [1, 2], "b": [5, 3]}
-    assert_equal_data(result, expected)
-
-
-def test_group_by_n_unique(constructor: Constructor) -> None:
-    result = (
-        nw.from_native(constructor(data))
-        .group_by("a")
-        .agg(nw.col("b").n_unique())
-        .sort("a")
-    )
-    expected = {"a": [1, 3], "b": [1, 1]}
-    assert_equal_data(result, expected)
-
-
-def test_group_by_std(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
-    result = (
-        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
-    )
-    expected = {"a": [1, 2], "b": [0.707107] * 2}
     assert_equal_data(result, expected)
 
 
@@ -340,3 +344,23 @@ def test_group_by_categorical(
         .sort("x")
     )
     assert_equal_data(result, data)
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+def test_group_by_shift_raises(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor):
+        # Polars supports all kinds of crazy group-by aggregations, so
+        # we don't check that it errors here.
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # This operation fails completely in cuDF anyway, we just let raise its own
+        # error.
+        request.applymarker(pytest.mark.xfail)
+    df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
+    df = nw.from_native(constructor(df_native))
+    with pytest.raises(
+        ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
+    ):
+        df.group_by("b").agg(nw.col("a").shift(1))

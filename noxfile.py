@@ -14,7 +14,7 @@ PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 
 def run_common(session: Session, coverage_threshold: float) -> None:
-    session.install("-e.", "-r", "requirements-dev.txt")
+    session.install('-e ".[dev]"')
 
     if session.python != "3.8":
         session.install("ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix")

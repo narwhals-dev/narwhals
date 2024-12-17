@@ -23,11 +23,9 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
-      - name: install-reqs
-        run: uv pip install --upgrade -r requirements-dev.txt --system
+          cache-dependency-glob: "pyproject.toml"
       - name: local-install
-        run: uv pip install -e . --system
+        run: uv pip install -e ".[dev]" --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 

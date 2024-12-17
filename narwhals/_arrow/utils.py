@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
+@lru_cache(maxsize=16)
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     import pyarrow as pa
 
@@ -76,6 +78,8 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
+    if pa.types.is_decimal(dtype):
+        return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -334,7 +338,7 @@ def cast_for_truediv(
     return arrow_array, pa_object
 
 
-def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
+def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
