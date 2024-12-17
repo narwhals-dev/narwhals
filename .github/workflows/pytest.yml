@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e .[dev] --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -50,9 +50,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e .[dev] --system
+      - name: install-dask
+        run: uv pip install --upgrade dask[dataframe] --system
       - name: install-modin
-        run: uv pip install --upgrade modin[dask] --system
+        run: uv pip install --upgrade modin --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -77,7 +79,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e .[dev] --system
       - name: install-modin
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
