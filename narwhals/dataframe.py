@@ -544,6 +544,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_pandas(self) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
 
+        Returns:
+            A pandas DataFrame.
+
         Examples:
             Construct pandas, Polars (eager) and PyArrow DataFrames:
 
@@ -587,8 +590,15 @@ class DataFrame(BaseFrame[DataFrameT]):
     def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
         r"""Write dataframe to comma-separated values (CSV) file.
 
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written. If None, the resulting csv format is returned as a string.
+
+        Returns:
+            String or None.
+
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars (eager) and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
@@ -619,8 +629,15 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.write_csv(file)
 
-    def write_parquet(self, file: str | Path | BytesIO) -> Any:
+    def write_parquet(self, file: str | Path | BytesIO) -> None:
         """Write dataframe to parquet file.
+
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written.
+
+        Returns:
+            None.
 
         Examples:
             Construct pandas, Polars and PyArrow DataFrames:
@@ -650,6 +667,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def to_numpy(self) -> np.ndarray:
         """Convert this DataFrame to a NumPy ndarray.
+
+        Returns:
+            A NumPy ndarray array.
 
         Examples:
             Construct pandas and polars DataFrames:
@@ -693,6 +713,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def shape(self) -> tuple[int, int]:
         """Get the shape of the DataFrame.
 
+        Returns:
+            The shape of the dataframe as a tuple.
+
         Examples:
             Construct pandas and polars DataFrames:
 
@@ -726,6 +749,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def get_column(self, name: str) -> Series[Any]:
         """Get a single column by name.
+
+        Arguments:
+            name: The column name as a string.
+
+        Returns:
+            A Narwhals Series, backed by a native series.
 
         Notes:
             Although `name` is typed as `str`, pandas does allow non-string column
@@ -888,6 +917,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
                     _inclusive_ and returns a `DataFrame`. For example, if the columns are
                     `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
+
+        Returns:
+            A Narwhals Series, backed by a native series.
 
         Notes:
             - Integers are always interpreted as positions

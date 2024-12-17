@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -29,12 +30,12 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr:
+class DaskExpr(CompliantExpr["dask_expr.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
         self,
-        call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
+        call: Callable[[DaskLazyFrame], Sequence[dask_expr.Series]],
         *,
         depth: int,
         function_name: str,
@@ -54,6 +55,9 @@ class DaskExpr:
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
+
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
+        return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -428,10 +432,18 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def std(self, ddof: int = 1) -> Self:
+    def std(self, ddof: int) -> Self:
         return self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
+            ddof,
+            returns_scalar=True,
+        )
+
+    def var(self, ddof: int) -> Self:
+        return self._from_call(
+            lambda _input, ddof: _input.var(ddof=ddof),
+            "var",
             ddof,
             returns_scalar=True,
         )

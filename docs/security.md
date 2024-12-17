@@ -5,8 +5,8 @@ good security practices. Here are some practices we follow:
 
 - We publish to PyPI via trusted publishing and are PEP740-compliant.
 - We don't use `pull_request_target` in any CI job.
-- We sanitise the (potentially unsafe) `github.ref_name` variable when publishing
-  releases.
+- The release CI job can only be triggered for tag pushes, and only
+  Narwhals members with release permissions (see below) can push tags.
 - All members of `narwhals-dev` are required to have two-factor authentication
   enabled.
 - There are no binary or opaque files in the Narwhals repository.

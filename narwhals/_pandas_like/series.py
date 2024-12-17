@@ -19,6 +19,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
+from narwhals.dependencies import is_numpy_scalar
+from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
@@ -77,7 +79,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries:
+class PandasLikeSeries(CompliantSeries):
     def __init__(
         self,
         native_series: Any,
@@ -113,7 +115,7 @@ class PandasLikeSeries:
     def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
 
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
-        if isinstance(idx, int):
+        if isinstance(idx, int) or is_numpy_scalar(idx):
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
 
@@ -282,6 +284,18 @@ class PandasLikeSeries:
         ser = self._native_series
         result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
         return self._from_native_series(result)
+
+    def arg_min(self) -> int:
+        ser = self._native_series
+        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
+            return ser.values.argmin()  # type: ignore[no-any-return]  # noqa: PD011
+        return ser.argmin()  # type: ignore[no-any-return]
+
+    def arg_max(self) -> int:
+        ser = self._native_series
+        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
+            return ser.values.argmax()  # type: ignore[no-any-return]  # noqa: PD011
+        return ser.argmax()  # type: ignore[no-any-return]
 
     # Binary comparisons
 
@@ -608,9 +622,13 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.median()
 
-    def std(self: Self, *, ddof: int = 1) -> float:
+    def std(self: Self, *, ddof: int) -> float:
         ser = self._native_series
         return ser.std(ddof=ddof)  # type: ignore[no-any-return]
+
+    def var(self: Self, *, ddof: int) -> float:
+        ser = self._native_series
+        return ser.var(ddof=ddof)  # type: ignore[no-any-return]
 
     def skew(self: Self) -> float | None:
         ser = self._native_series

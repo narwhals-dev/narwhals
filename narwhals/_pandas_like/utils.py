@@ -399,6 +399,8 @@ def non_object_native_to_narwhals_dtype(
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
+    if dtype.startswith("decimal") and dtype.endswith("[pyarrow]"):
+        return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -628,7 +630,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
+def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
     native_namespace = series[0].__native_namespace__()
 
     lengths = [len(s) for s in series]

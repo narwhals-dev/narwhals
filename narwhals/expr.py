@@ -706,6 +706,56 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).std(ddof=ddof))
 
+    def var(self, *, ddof: int = 1) -> Self:
+        """Get variance.
+
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements. By default ddof is 1.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pa = pa.table({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_var(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(nw.col("a", "b").var(ddof=0)).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_var(df_pd)
+                        a         b
+            0  316.666667  1.602222
+            >>> agnostic_var(df_pl)
+            shape: (1, 2)
+            ┌────────────┬──────────┐
+            │ a          ┆ b        │
+            │ ---        ┆ ---      │
+            │ f64        ┆ f64      │
+            ╞════════════╪══════════╡
+            │ 316.666667 ┆ 1.602222 │
+            └────────────┴──────────┘
+            >>> agnostic_var(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[316.6666666666667]]
+            b: [[1.6022222222222222]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).var(ddof=ddof))
+
     def map_batches(
         self,
         function: Callable[[Any], Self],
@@ -961,6 +1011,102 @@ class Expr:
             b: [[100]]
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).max())
+
+    def arg_min(self) -> Self:
+        """Returns the index of the minimum value.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df_pa = pa.table({"a": [10, 20], "b": [150, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_arg_min(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(
+            ...         nw.col("a", "b").arg_min().name.suffix("_arg_min")
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow:
+
+            >>> agnostic_arg_min(df_pd)
+               a_arg_min  b_arg_min
+            0          0          1
+            >>> agnostic_arg_min(df_pl)
+            shape: (1, 2)
+            ┌───────────┬───────────┐
+            │ a_arg_min ┆ b_arg_min │
+            │ ---       ┆ ---       │
+            │ u32       ┆ u32       │
+            ╞═══════════╪═══════════╡
+            │ 0         ┆ 1         │
+            └───────────┴───────────┘
+            >>> agnostic_arg_min(df_pa)
+            pyarrow.Table
+            a_arg_min: int64
+            b_arg_min: int64
+            ----
+            a_arg_min: [[0]]
+            b_arg_min: [[1]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_min())
+
+    def arg_max(self) -> Self:
+        """Returns the index of the maximum value.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df_pa = pa.table({"a": [10, 20], "b": [150, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_arg_max(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(
+            ...         nw.col("a", "b").arg_max().name.suffix("_arg_max")
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow:
+
+            >>> agnostic_arg_max(df_pd)
+               a_arg_max  b_arg_max
+            0          1          0
+            >>> agnostic_arg_max(df_pl)
+            shape: (1, 2)
+            ┌───────────┬───────────┐
+            │ a_arg_max ┆ b_arg_max │
+            │ ---       ┆ ---       │
+            │ u32       ┆ u32       │
+            ╞═══════════╪═══════════╡
+            │ 1         ┆ 0         │
+            └───────────┴───────────┘
+            >>> agnostic_arg_max(df_pa)
+            pyarrow.Table
+            a_arg_max: int64
+            b_arg_max: int64
+            ----
+            a_arg_max: [[1]]
+            b_arg_max: [[0]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_max())
 
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
@@ -2116,7 +2262,7 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_min_over_b(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         a_min_per_group=nw.col("a").min().over("b")
@@ -2124,12 +2270,12 @@ class Expr:
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_min_over_b(df_pd)
                a  b  a_min_per_group
             0  1  1                1
             1  2  1                1
             2  3  2                3
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_min_over_b(df_pl)
             shape: (3, 3)
             ┌─────┬─────┬─────────────────┐
             │ a   ┆ b   ┆ a_min_per_group │
@@ -2140,7 +2286,7 @@ class Expr:
             │ 2   ┆ 1   ┆ 1               │
             │ 3   ┆ 2   ┆ 3               │
             └─────┴─────┴─────────────────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_min_over_b(df_pa)
             pyarrow.Table
             a: int64
             b: int64
@@ -2149,6 +2295,30 @@ class Expr:
             a: [[1,2,3]]
             b: [[1,1,2]]
             a_min_per_group: [[1,1,3]]
+
+            Cumulative operations are also supported, but (currently) only for
+            pandas and Polars:
+
+            >>> def agnostic_cum_sum(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(c=nw.col("a").cum_sum().over("b")).to_native()
+
+            >>> agnostic_cum_sum(df_pd)
+               a  b  c
+            0  1  1  1
+            1  2  1  3
+            2  3  2  3
+            >>> agnostic_cum_sum(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 1   ┆ 1   │
+            │ 2   ┆ 1   ┆ 3   │
+            │ 3   ┆ 2   ┆ 3   │
+            └─────┴─────┴─────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(flatten(keys))

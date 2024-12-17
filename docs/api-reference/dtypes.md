@@ -5,6 +5,7 @@
     options:
       members:
         - Array
+        - Decimal
         - List
         - Int128
         - Int64

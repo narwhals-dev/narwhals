@@ -96,3 +96,6 @@ repos:
   hooks:
   -   id: name-tests-test
       exclude: ^tests/utils\.py
+  -   id: no-commit-to-branch
+  -   id: end-of-file-fixer
+      exclude: .svg$

@@ -8,6 +8,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - count
@@ -56,5 +58,6 @@
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false

@@ -96,9 +96,13 @@ Here's how you can set up your local development environment to contribute.
       uv venv -p 3.12 --seed
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
-2. Install Narwhals: `uv pip install -e .`
-3. Install test requirements: `uv pip install -r requirements-dev.txt`
-4. Install docs requirements: `uv pip install -r docs/requirements-docs.txt`
+2. Install Narwhals: `uv pip install -e ".[dev, docs]"`
+3. Install a fork of griffe:
+   ```
+   uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
+   ```
+   This is hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+   is addressed.
 
 You should also install pre-commit:
 ```
@@ -137,6 +141,22 @@ nox
 ```
 
 Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
+
+#### Hypothesis tests
+
+We use Hypothesis to generate some random tests, to check for robustness.
+To keep local test suite times down, not all of these run by default - you can
+run them by passing the `--runslow` flag to PyTest.
+
+#### Testing Dask and Modin
+
+To keep local development test times down, Dask and Modin are excluded from dev
+dependencies, and their tests only run in CI. If you install them with
+
+```
+uv pip install -U dask[dataframe] modin
+```
+then their tests will run too.
 
 #### Testing cuDF
 

@@ -9,9 +9,11 @@ from typing import Sequence
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -22,11 +24,22 @@ if TYPE_CHECKING:
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
+CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
+    "col->cum_sum": "cumsum",
+    "col->cum_min": "cummin",
+    "col->cum_max": "cummax",
+    "col->cum_prod": "cumprod",
+    # Pandas cumcount starts counting from 0 while Polars starts from 1
+    # Pandas cumcount counts nulls while Polars does not
+    # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
+    "col->cum_count": "cumsum",
+}
 
-class PandasLikeExpr:
+
+class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __init__(
         self: Self,
-        call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
+        call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
@@ -40,11 +53,13 @@ class PandasLikeExpr:
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
-        self._depth = depth
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+
+    def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+        return self._call(df)
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -53,6 +68,7 @@ class PandasLikeExpr:
             f"function_name={self._function_name}, "
             f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
+            ")"
         )
 
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
@@ -242,8 +258,11 @@ class PandasLikeExpr:
     def median(self) -> Self:
         return reuse_series_implementation(self, "median", returns_scalar=True)
 
-    def std(self, *, ddof: int = 1) -> Self:
+    def std(self, *, ddof: int) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
+
+    def var(self, *, ddof: int) -> Self:
+        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
@@ -259,6 +278,12 @@ class PandasLikeExpr:
 
     def min(self) -> Self:
         return reuse_series_implementation(self, "min", returns_scalar=True)
+
+    def arg_min(self) -> Self:
+        return reuse_series_implementation(self, "arg_min", returns_scalar=True)
+
+    def arg_max(self) -> Self:
+        return reuse_series_implementation(self, "arg_max", returns_scalar=True)
 
     # Other
 
@@ -387,19 +412,54 @@ class PandasLikeExpr:
         )
 
     def over(self, keys: list[str]) -> Self:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            if self._output_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in over.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
+        if self._function_name in CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT:
+
+            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+                if (
+                    self._output_names is None or self._root_names is None
+                ):  # pragma: no cover
+                    # Technically unreachable, but keep this for safety
+                    msg = (
+                        "Anonymous expressions are not supported in over.\n"
+                        "Instead of `nw.all()`, try using a named expression, such as "
+                        "`nw.col('a', 'b')`\n"
+                    )
+                    raise ValueError(msg)
+
+                if self._function_name == "col->cum_count":
+                    plx = self.__narwhals_namespace__()
+                    df = df.with_columns(~plx.col(*self._root_names).is_null())
+
+                res_native = df._native_frame.groupby(list(keys), as_index=False)[
+                    self._root_names
+                ].transform(
+                    CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name]
                 )
-                raise ValueError(msg)
-            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-            tmp = df.select(*keys).join(
-                tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
-            )
-            return [tmp[name] for name in self._output_names]
+                result_frame = df._from_native_frame(
+                    rename(
+                        res_native,
+                        columns=dict(zip(self._root_names, self._output_names)),
+                        implementation=self._implementation,
+                        backend_version=self._backend_version,
+                    )
+                )
+                return [result_frame[name] for name in self._output_names]
+
+        else:
+
+            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+                if self._output_names is None:
+                    msg = (
+                        "Anonymous expressions are not supported in over.\n"
+                        "Instead of `nw.all()`, try using a named expression, such as "
+                        "`nw.col('a', 'b')`\n"
+                    )
+                    raise ValueError(msg)
+                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                tmp = df.select(*keys).join(
+                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                )
+                return [tmp[name] for name in self._output_names]
 
         return self.__class__(
             func,

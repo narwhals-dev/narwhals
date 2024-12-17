@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - clip
@@ -74,6 +76,7 @@
         - to_native
         - unique
         - value_counts
+        - var
         - zip_with
       show_source: false
       show_bases: false
