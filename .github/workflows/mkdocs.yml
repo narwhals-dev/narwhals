@@ -27,6 +27,6 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install -r docs/requirements-docs.txt -e . pandas polars pyarrow
+      - run: pip install -e .[docs]
 
       - run: mkdocs gh-deploy --force

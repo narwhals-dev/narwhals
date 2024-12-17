@@ -28,7 +28,6 @@ exclude = [
   "CONTRIBUTING.md",
   "mkdocs.yml",
   "noxfile.py",
-  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
@@ -58,6 +57,21 @@ dev = [
   "scikit-learn",
   "typing_extensions",
   "dask[dataframe]; python_version >= '3.9'",
+]
+docs = [
+  "black",  # required by mkdocstrings_handlers
+  "jinja2",
+  "duckdb",
+  # Hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+  "git+https://github.com/MarcoGorelli/griffe.git@no-overloads",
+  "markdown-exec[ansi]",
+  "mkdocs",
+  "mkdocs-autorefs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "pandas",
+  "polars>=1.0.0",
+  "pyarrow",
 ]
 
 [project.urls]

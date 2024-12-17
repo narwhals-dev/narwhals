@@ -96,9 +96,7 @@ Here's how you can set up your local development environment to contribute.
       uv venv -p 3.12 --seed
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
-2. Install Narwhals: `uv pip install -e .`
-3. Install test requirements: `uv pip install -r requirements-dev.txt`
-4. Install docs requirements: `uv pip install -r docs/requirements-docs.txt`
+2. Install Narwhals: `uv pip install -e ".[dev, docs]"`
 
 You should also install pre-commit:
 ```
