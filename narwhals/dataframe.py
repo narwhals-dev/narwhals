@@ -3070,8 +3070,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> agnostic_explode(pa.table(data))
             pyarrow.Table
             a: string
-            lst1: int64
-            lst2: int64
+            lst1: int32
+            lst2: int32
             ----
             a: [["x","x","y","z","w"]]
             lst1: [[1,2,null,null,null]]
