@@ -119,17 +119,9 @@ def test_group_by_depth_1_agg(
 ) -> None:
     if "cudf" in str(constructor) and attr == "n_unique":
         request.applymarker(pytest.mark.xfail)
-    if (
-        "pandas" in str(constructor)
-        and attr == "var"
-        and PANDAS_VERSION < (2, 0, 9)
-        and "pyarrow" in str(constructor)
-    ):
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
-            )
-        )
+    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
+        msg = "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
+        request.applymarker(pytest.mark.xfail(reason=msg))
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
