@@ -795,6 +795,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         if fast_path:
             indices = pc.list_parent_indices(native_frame[to_explode[0]])
             flatten_func = pc.list_flatten
+
         else:
             indices = pa.array(
                 [
@@ -803,17 +804,18 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     for _ in range(max(count or 1, 1))
                 ]
             )
+            parent_indices = pc.list_parent_indices(native_frame[to_explode[0]])
+            is_valid_index = pc.is_in(indices, value_set=parent_indices)
+            exploded_size = len(is_valid_index)
 
-            def explode_null_array(array: pa.ChunkedArray) -> pa.ChunkedArray:
-                exploded_values = []  # type: ignore[var-annotated]
-                for lst_element in array.to_pylist():
-                    if lst_element is None or len(lst_element) == 0:
-                        exploded_values.append(None)
-                    else:  # Non-empty list)
-                        exploded_values.extend(lst_element)
-                return pa.chunked_array([exploded_values])
+            def flatten_func(array: pa.ChunkedArray) -> pa.ChunkedArray:
+                dtype = array.type.value_type
 
-            flatten_func = explode_null_array
+                return pc.replace_with_mask(
+                    pa.array([None] * exploded_size, type=dtype),
+                    is_valid_index,
+                    pc.list_flatten(array).combine_chunks(),
+                )
 
         arrays = [
             native_frame[col_name].take(indices)
