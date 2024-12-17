@@ -1029,7 +1029,7 @@ class Series(Generic[IntoSeriesT]):
         """Get the standard deviation of this Series.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements.
 
         Examples:
@@ -1060,7 +1060,7 @@ class Series(Generic[IntoSeriesT]):
         """Get the variance of this Series.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements.
 
         Examples:
@@ -1076,7 +1076,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def agnostic_var(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.var(ddof=1)
+            ...     return s.var()
 
             We can then pass either pandas or Polars to `func`:
 
