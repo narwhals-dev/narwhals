@@ -33,7 +33,7 @@ the argument will be propagated to `nw.from_native`.
         def fit(self: Self, df: IntoDataFrameT) -> Self:
             df_nw = nw.from_native(df, eager_only=True)
             self._means = {col: df_nw[col].mean() for col in df_nw.columns}
-            self._std_devs = {col: df_nw[col].std() for col in df_nw.columns}
+            self._std_devs = {col: df_nw[col].std(ddof=1) for col in df_nw.columns}
             self._columns = df_nw.columns
             return self
     ```
@@ -49,7 +49,7 @@ the argument will be propagated to `nw.from_native`.
         @nw.narwhalify(eager_only=True)
         def fit(self: Self, df: DataFrameT) -> Self:
             self._means = {col: df[col].mean() for col in df.columns}
-            self._std_devs = {col: df[col].std() for col in df.columns}
+            self._std_devs = {col: df[col].std(ddof=1) for col in df.columns}
             self._columns = df.columns
             return self
     ```
@@ -114,7 +114,7 @@ Here is our dataframe-agnostic standard scaler:
         def fit(self: Self, df: IntoDataFrameT) -> Self:
             df_nw = nw.from_native(df, eager_only=True)
             self._means = {col: df_nw[col].mean() for col in df_nw.columns}
-            self._std_devs = {col: df_nw[col].std() for col in df_nw.columns}
+            self._std_devs = {col: df_nw[col].std(ddof=1) for col in df_nw.columns}
             self._columns = df_nw.columns
             return self
 
@@ -138,7 +138,7 @@ Here is our dataframe-agnostic standard scaler:
         @nw.narwhalify(eager_only=True)
         def fit(self: Self, df: DataFrameT) -> Self:
             self._means = {col: df[col].mean() for col in df.columns}
-            self._std_devs = {col: df[col].std() for col in df.columns}
+            self._std_devs = {col: df[col].std(ddof=1) for col in df.columns}
             self._columns = df.columns
             return self
 

@@ -33,7 +33,7 @@ Make a Python file with the following content:
             .select(
                 a_sum=nw.col("a").sum(),
                 a_mean=nw.col("a").mean(),
-                a_std=nw.col("a").std(),
+                a_std=nw.col("a").std(ddof=1),
             )
             .to_native()
         )
@@ -50,7 +50,7 @@ Make a Python file with the following content:
         return df.select(
             a_sum=nw.col("a").sum(),
             a_mean=nw.col("a").mean(),
-            a_std=nw.col("a").std(),
+            a_std=nw.col("a").std(ddof=1),
         )
     ```
 
