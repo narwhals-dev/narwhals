@@ -25,7 +25,7 @@ jobs:
           with:
             enable-cache: "true"
             cache-suffix: ${{ matrix.python-version }}
-            cache-dependency-glob: "**requirements*.txt"
+            cache-dependency-glob: "pyproject.toml"
         - name: clone-vegafusion
           run: |
               git clone --single-branch -b v2 https://github.com/vega/vegafusion.git

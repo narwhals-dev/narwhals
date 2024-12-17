@@ -247,6 +247,7 @@ def test_get_trivial_version_with_uninstalled_module() -> None:
 
 
 @given(n_bytes=st.integers(1, 100))  # type: ignore[misc]
+@pytest.mark.slow
 def test_generate_temporary_column_name(n_bytes: int) -> None:
     columns = ["abc", "XYZ"]
 

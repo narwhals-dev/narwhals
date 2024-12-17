@@ -23,7 +23,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-altair
         run: |
             git clone https://github.com/vega/altair.git --depth=1
@@ -70,7 +70,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
             git clone https://github.com/marimo-team/marimo.git --depth=1
@@ -131,7 +131,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-scikit-lego
         run: git clone https://github.com/koaning/scikit-lego.git --depth 1
       - name: install-basics
@@ -170,7 +170,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-shiny
         run: |
             git clone https://github.com/posit-dev/py-shiny.git
@@ -249,7 +249,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-tubular
         run: |
             git clone https://github.com/lvgig/tubular --depth=1
@@ -260,7 +260,7 @@ jobs:
       - name: install-tubular-dev
         run: |
             cd tubular
-            uv pip install -e .[dev] --system
+            uv pip install -e ".[dev]" --system
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
@@ -289,7 +289,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-plotly
         run: |
             git clone https://github.com/plotly/plotly.py --depth=1
@@ -329,7 +329,7 @@ jobs:
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: clone-hierarchicalforecast
         run: |
             git clone https://github.com/Nixtla/hierarchicalforecast --depth=1
