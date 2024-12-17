@@ -195,6 +195,43 @@ jobs:
             cd py-shiny
             make narwhals-test-integration
   
+  tea-tasting:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: clone-tea-tasting
+        run: |
+            git clone https://github.com/e10v/tea-tasting.git --depth=1
+            cd tea-tasting
+            git log
+      - name: install-pdm
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: true
+          cache-dependency-path: tea-tasting/pdm.lock
+      - name: install-tea-tasting-test
+        run: |
+            cd tea-tasting
+            pdm sync -G test
+      - name: install-narwhals-dev
+        run: |
+            cd tea-tasting
+            pdm remove narwhals
+            pdm add ./..
+      - name: show-deps
+        run: |
+            cd tea-tasting
+            pdm list
+      - name: run-pytest
+        run: |
+            cd tea-tasting
+            pdm run test
+  
   tubular:
     strategy:
       matrix:
