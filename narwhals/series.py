@@ -1056,7 +1056,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.std(ddof=ddof)
 
-    def var(self, *, ddof: int) -> Any:
+    def var(self, *, ddof: int = 1) -> Any:
         """Get the variance of this Series.
 
         Arguments:
