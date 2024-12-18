@@ -374,6 +374,8 @@ def test_double_same_aggregation(
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # At least cudf gets it right
         request.applymarker(pytest.mark.xfail)
+    if "panadas" in str(constructor) and PANDAS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
     expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
