@@ -35,3 +35,13 @@ def test_is_in_other(constructor: Constructor) -> None:
         ),
     ):
         nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))
+
+
+data_other = {"a": [1, 4, 2, 5], "b": [1, 0, 2, 0]}
+
+
+def test_filter_is_in(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data_other), eager_only=True)
+    result = df.filter(nw.col("a").is_in(df["b"]))
+    expected = {"a": [1, 2], "b": [1, 2]}
+    assert_equal_data(result, expected)
