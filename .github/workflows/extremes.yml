@@ -31,6 +31,23 @@ jobs:
           uv pip install -e ".[dev]" --system
       - name: show-deps
         run: uv pip freeze
+      - name: Check required packages
+        run: |
+          uv pip freeze > installed.txt
+          REQUIRED_PACKAGES=(
+            "pandas==0.25.3"
+            "polars==0.20.3"
+            "numpy==1.17.5"
+            "pyarrow==11"
+            "scipy==1.5.0"
+            "scikit-learn==1.1.0"
+          )
+          for PACKAGE in "${REQUIRED_PACKAGES[@]}"; do
+            if ! grep -q "$PACKAGE" installed.txt; then
+              echo "Error: '$PACKAGE' not found in installed.txt"
+              exit 1
+            fi
+          done
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
 
