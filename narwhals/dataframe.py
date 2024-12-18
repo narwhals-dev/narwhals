@@ -1126,7 +1126,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             kwargs: Keyword arguments to pass to function.
 
         Returns:
-            Self. The original object with the function applied.
+            The original object with the function applied.
 
         Examples:
             >>> import polars as pl
@@ -1177,7 +1177,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 (default), use all columns.
 
         Returns:
-            Self. The original object with the rows removed that contained the null values.
+            The original object with the rows removed that contained the null values.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1223,7 +1223,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             name: The name of the column as a string. The default is "index".
 
         Returns:
-            Self. The original object with the column added.
+            The original object with the column added.
 
         Examples:
             Construct pandas as polars DataFrames:
