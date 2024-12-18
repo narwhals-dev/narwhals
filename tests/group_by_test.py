@@ -364,3 +364,10 @@ def test_group_by_shift_raises(
         ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
     ):
         df.group_by("b").agg(nw.col("a").shift(1))
+
+
+def test_double_same_aggregation(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
+    expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
+    assert_equal_data(result, expected)
