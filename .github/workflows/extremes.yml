@@ -55,7 +55,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install tox virtualenv setuptools dask==2024.7 pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 pyspark==3.3.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
+        run: uv pip install tox virtualenv setuptools dask[dataframe]==2024.7 pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 pyspark==3.3.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
       - name: install-reqs
         run: uv pip install -e ".[dev]" --system
       - name: show-deps
