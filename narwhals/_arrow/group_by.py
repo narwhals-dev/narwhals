@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -184,8 +185,22 @@ def agg_arrow(
             new_column_names.append(output_name)
 
         result_simple = grouped.aggregate(aggs)
-        if (
-            result_simple.column_names != expected_pyarrow_column_names
+
+        # Rename columns, being very careful
+        expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
+        for idx, item in enumerate(expected_pyarrow_column_names):
+            expected_old_names_indices[item].append(idx)
+        index_map: list[int] = []
+        for item in result_simple.column_names:
+            # ruff false-positive here?
+            index_map.append(  # noqa: PERF401
+                expected_old_names_indices[item].pop(0)
+            )  # Use and remove the first occurrence
+        new_column_names = [new_column_names[i] for i in index_map]
+
+        if not (
+            set(result_simple.column_names) == set(expected_pyarrow_column_names)
+            and len(result_simple.column_names) == len(expected_pyarrow_column_names)
         ):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, expected {expected_pyarrow_column_names} "
