@@ -5,7 +5,6 @@ from datetime import datetime
 from datetime import timedelta
 
 import duckdb
-import pandas as pd
 import polars as pl
 import pytest
 
@@ -243,10 +242,3 @@ def test_get_level() -> None:
         nw.get_level(nw.from_native(df.__dataframe__(), eager_or_interchange_only=True))
         == "interchange"
     )
-
-
-def test_unknown_dtype() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3]})
-    rel = duckdb.from_df(df).select("cast(a as int128) as a")
-    result = nw.from_native(rel).schema
-    assert result == {"a": nw.Unknown}

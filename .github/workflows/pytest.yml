@@ -19,13 +19,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e ".[dev]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -44,15 +44,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e ".[dev]" --system
+      - name: install-dask
+        run: uv pip install --upgrade dask[dataframe] --system
       - name: install-modin
-        run: uv pip install --upgrade modin[dask] --system
+        run: uv pip install --upgrade modin --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -71,24 +73,24 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install -e ".[dev]" --system
       - name: install-modin
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
         run: uv pip freeze
       - name: install ibis
-        run: uv pip install ibis-framework[duckdb]>=6.0.0 --system
+        run: uv pip install ibis-framework>=6.0.0 rich packaging pyarrow_hotfix --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.11'
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.13'
         run: pytest narwhals --doctest-modules

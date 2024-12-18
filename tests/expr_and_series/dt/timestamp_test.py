@@ -199,6 +199,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
 @pytest.mark.skipif(POLARS_VERSION < (0, 20, 7), reason="bug in old Polars")
+@pytest.mark.slow
 def test_timestamp_hypothesis(
     inputs: datetime,
     time_unit: Literal["ms", "us", "ns"],

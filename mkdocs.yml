@@ -12,14 +12,17 @@ nav:
     - basics/complete_example.md
     - basics/dataframe_conversion.md
   - Pandas-like concepts:
-    - other/pandas_index.md
-    - other/user_warning.md
-    - other/column_names.md
-  - overhead.md
-  - backcompat.md
-  - extending.md
-  - how_it_works.md
-  - Roadmap and related projects: roadmap_and_related.md
+    - pandas_like_concepts/pandas_index.md
+    - pandas_like_concepts/user_warning.md
+    - pandas_like_concepts/column_names.md
+    - pandas_like_concepts/boolean.md
+  - Overhead: overhead.md
+  - Perfect backwards compatibility policy: backcompat.md
+  - Supported libraries and extending Narwhals: extending.md
+  - How it works: how_it_works.md
+  - Ecosystem: ecosystem.md
+  - Security: security.md
+  - Resources: resources.md
   - API Completeness:
     - api-completeness/index.md
     - Supported DataFrame methods: api-completeness/dataframe.md
@@ -33,17 +36,21 @@ nav:
     - api-reference/expr.md
     - api-reference/expr_cat.md
     - api-reference/expr_dt.md
+    - api-reference/expr_list.md
     - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
+    - api-reference/lazy_group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
     - api-reference/series.md
     - api-reference/series_cat.md
     - api-reference/series_dt.md
+    - api-reference/series_list.md
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
+    - api-reference/exceptions.md
     - api-reference/selectors.md
     - api-reference/typing.md
   - This: this.md
@@ -93,7 +100,6 @@ plugins:
           members_order: alphabetical
     enable_inventory: true
 
-
 hooks:
 - utils/generate_backend_completeness.py
 - utils/generate_zen_content.py
@@ -114,3 +120,15 @@ markdown_extensions:
 - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.arithmatex:
+      generic: true
+extra_javascript:
+  - javascripts/katex.js
+  - javascripts/extra.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/extra.css

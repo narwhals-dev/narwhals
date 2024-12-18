@@ -47,15 +47,26 @@ and deprecate the old one? The answer is...no!
 Narwhals offers a `stable` namespace, which allows you to write your code once and forget about
 it. That is to say, if you write your code like this:
 
-```python
-import narwhals.stable.v1 as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.with_columns(nw.col("a").cum_sum())
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return nw.from_native(df).with_columns(nw.col("a").cum_sum()).to_native()
+    ```
+
+=== "@narwhalify"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.with_columns(nw.col("a").cum_sum())
+    ```
 
 then we, in Narwhals, promise that your code will keep working, even in newer versions of Polars
 after they have renamed their method.
@@ -99,6 +110,20 @@ before making any change.
 
 ### After `stable.v1`
 
+- Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
+  write:
+  ```python
+  import narwhals as nw
+  import polars as pl
+
+  s_pl = pl.Series([1, 2, 3])
+  s = nw.from_native(s, series_only=True)
+  # mypy infers `s.to_native()` to be `polars.Series`
+  reveal_type(s.to_native())
+  ```
+  Previously, `Series` was not generic, so in the above example
+  `s.to_native()` would have been inferred as `Any`.
+
 - Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
     has been deprecated in favour of `pass_through`. This is because several users expressed
     confusion/surprise over what `strict=False` did.
@@ -134,7 +159,7 @@ before making any change.
     ```
 
     To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
-    we recommend using `==` instead, as that works consistenty
+    we recommend using `==` instead, as that works consistently
     across namespaces:
 
     ```python exec="1" source="above" session="backcompat"

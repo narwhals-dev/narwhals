@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_duckdb
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -16,11 +18,14 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
 
 
-def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DType:
-    duckdb_dtype = str(duckdb_dtype)
+@lru_cache(maxsize=16)
+def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
+    dtypes = import_dtypes_module(version)
+    if duckdb_dtype == "HUGEINT":
+        return dtypes.Int128()
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -29,6 +34,8 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
         return dtypes.Int16()
     if duckdb_dtype == "TINYINT":
         return dtypes.Int8()
+    if duckdb_dtype == "UHUGEINT":
+        return dtypes.UInt128()
     if duckdb_dtype == "UBIGINT":
         return dtypes.UInt64()
     if duckdb_dtype == "UINTEGER":
@@ -57,25 +64,27 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
             [
                 dtypes.Field(
                     matchstruc_[i][0],
-                    map_duckdb_dtype_to_narwhals_dtype(matchstruc_[i][1], dtypes),
+                    native_to_narwhals_dtype(matchstruc_[i][1], version),
                 )
                 for i in range(len(matchstruc_))
             ]
         )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
-        return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
+        return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
     if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
         return dtypes.Array(
-            map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes),
+            native_to_narwhals_dtype(match_.group(1), version),
             int(match_.group(2)),
         )
-    return dtypes.Unknown()
+    if duckdb_dtype.startswith("DECIMAL("):
+        return dtypes.Decimal()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
-        self._dtypes = dtypes
+        self._version = version
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -87,7 +96,7 @@ class DuckDBInterchangeFrame:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
         return DuckDBInterchangeSeries(
-            self._native_frame.select(item), dtypes=self._dtypes
+            self._native_frame.select(item), version=self._version
         )
 
     def select(
@@ -109,9 +118,7 @@ class DuckDBInterchangeFrame:
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
-                column_name: map_duckdb_dtype_to_narwhals_dtype(
-                    duckdb_dtype, self._dtypes
-                )
+                column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
                 for column_name, duckdb_dtype in zip(
                     self._native_frame.columns, self._native_frame.types
                 )
@@ -139,5 +146,8 @@ class DuckDBInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.arrow()
 
+    def _change_version(self: Self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
+
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, dtypes=self._dtypes)
+        return self.__class__(df, version=self._version)

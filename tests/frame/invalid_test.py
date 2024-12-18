@@ -19,7 +19,7 @@ def test_invalid() -> None:
         df.select(nw.all() + nw.all())
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
-    with pytest.raises(TypeError, match="Perhaps you:"):
+    with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]
 
 
@@ -37,12 +37,13 @@ def test_native_vs_non_native() -> None:
 def test_validate_laziness() -> None:
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
-        NotImplementedError,
+        TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
         nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")

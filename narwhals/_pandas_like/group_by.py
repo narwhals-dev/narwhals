@@ -7,22 +7,35 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import rename
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
+from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals.typing import CompliantExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "median",
+    "max": "max",
+    "min": "min",
+    "std": "std",
+    "var": "var",
     "len": "size",
     "n_unique": "nunique",
+    "count": "count",
 }
 
 
@@ -38,7 +51,15 @@ class PandasLikeGroupBy:
         ):  # pragma: no cover
             if (
                 not drop_null_keys
-                and self._df._native_frame.loc[:, self._keys].isna().any().any()
+                and select_columns_by_name(
+                    self._df._native_frame,
+                    self._keys,
+                    self._df._backend_version,
+                    self._df._implementation,
+                )
+                .isna()
+                .any()
+                .any()
             ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
@@ -98,7 +119,7 @@ class PandasLikeGroupBy:
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
-            dtypes=self._df._dtypes,
+            version=self._df._version,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
@@ -117,7 +138,7 @@ class PandasLikeGroupBy:
 
 def agg_pandas(  # noqa: PLR0915
     grouped: Any,
-    exprs: list[PandasLikeExpr],
+    exprs: Sequence[CompliantExpr[PandasLikeSeries]],
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasLikeDataFrame],
@@ -127,15 +148,18 @@ def agg_pandas(  # noqa: PLR0915
     dataframe_is_empty: bool,
     native_namespace: Any,
 ) -> PandasLikeDataFrame:
-    """
-    This should be the fastpath, but cuDF is too far behind to use it.
+    """This should be the fastpath, but cuDF is too far behind to use it.
 
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
     all_aggs_are_simple = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->")
+            in POLARS_TO_PANDAS_AGGREGATIONS
+        ):
             all_aggs_are_simple = False
             break
 
@@ -184,16 +208,15 @@ def agg_pandas(  # noqa: PLR0915
             simple_aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         if simple_aggs:
-            try:
-                result_simple_aggs = grouped.agg(simple_aggs)
-            except AttributeError as exc:
-                msg = "Failed to aggregated - does your aggregation function return a scalar?"
-                raise RuntimeError(msg) from exc
+            result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
-            result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping, copy=False
+            result_simple_aggs = rename(
+                result_simple_aggs,
+                columns=name_mapping,
+                implementation=implementation,
+                backend_version=backend_version,
             )
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
@@ -227,7 +250,11 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = native_namespace.DataFrame(
                 list(grouped.groups.keys()), columns=keys
             )
-        return from_dataframe(result_aggs.loc[:, output_names])
+        return from_dataframe(
+            select_columns_by_name(
+                result_aggs, output_names, backend_version, implementation
+            )
+        )
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -248,14 +275,17 @@ def agg_pandas(  # noqa: PLR0915
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...).",
         UserWarning,
-        stacklevel=2,
+        stacklevel=find_stacklevel(),
     )
 
     def func(df: Any) -> Any:
         out_group = []
         out_names = []
         for expr in exprs:
-            results_keys = expr._call(from_dataframe(df))
+            results_keys = expr(from_dataframe(df))
+            if not all(len(x) == 1 for x in results_keys):
+                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
+                raise ValueError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)
@@ -275,4 +305,8 @@ def agg_pandas(  # noqa: PLR0915
     # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
     result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result_complex.loc[:, output_names])
+    return from_dataframe(
+        select_columns_by_name(
+            result_complex, output_names, backend_version, implementation
+        )
+    )

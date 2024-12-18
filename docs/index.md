@@ -1,12 +1,16 @@
 # Narwhals
 
-![](assets/image.png)
+-![](assets/image.png)
+
+[![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
+[![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
+[![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
 - **Lazy-only support**: Dask
-- **Interchange-level support**: Ibis, DuckDB, Vaex, anything else which implements the DataFrame Interchange Protocol
+- **Interchange-level support**: DuckDB, Ibis, Vaex, anything which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
@@ -28,3 +32,8 @@ Anyone wishing to write a library/application/service which consumes dataframes,
 completely dataframe-agnostic.
 
 Let's get started!
+
+## Roadmap
+
+See [roadmap discussion on GitHub](https://github.com/narwhals-dev/narwhals/discussions/1370)
+for an up-to-date plan of future work.

@@ -5,12 +5,12 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.selectors import all
-from narwhals.selectors import boolean
-from narwhals.selectors import by_dtype
-from narwhals.selectors import categorical
-from narwhals.selectors import numeric
-from narwhals.selectors import string
+from narwhals.stable.v1.selectors import all
+from narwhals.stable.v1.selectors import boolean
+from narwhals.stable.v1.selectors import by_dtype
+from narwhals.stable.v1.selectors import categorical
+from narwhals.stable.v1.selectors import numeric
+from narwhals.stable.v1.selectors import string
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data

@@ -1,8 +1,8 @@
-# Extending Narwhals, levels of support
+# Supported libraries and extending Narwhals
 
 ## List of supported libraries (and how to add yours!)
 
-Currently, Narwhals has full API support for the following libraries:
+Currently, Narwhals has **full API** support for the following libraries:
 
 | Library  | 🔗 Link 🔗 |
 | ------------- | ------------- |
@@ -12,31 +12,56 @@ Currently, Narwhals has full API support for the following libraries:
 | Modin | [github.com/modin-project/modin](https://github.com/modin-project/modin) |
 | PyArrow ⇶ | [arrow.apache.org/docs/python](https://arrow.apache.org/docs/python/index.html) |
 
-It also has lazy-only support for [Dask](https://github.com/dask/dask), and interchange-only support
+It also has **lazy-only** support for [Dask](https://github.com/dask/dask), and **interchange** support
 for [DuckDB](https://github.com/duckdb/duckdb) and [Ibis](https://github.com/ibis-project/ibis).
 
-### Levels
+### Levels of support
 
-Narwhals comes with two levels of support ("full" and "interchange"), and we are working on defining
-a "lazy-only" level too.
+Narwhals comes with three levels of support:
+
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Lazy-only support**: Dask
+- **Interchange-level support**: DuckDB, Ibis, Vaex, anything which implements the DataFrame Interchange Protocol
+
+The lazy-only layer is a major item on our 2025 roadmap, and hope to be able to bring libraries currently in
+the "interchange" level into that one.
 
 Libraries for which we have full support can benefit from the whole
 [Narwhals API](https://narwhals-dev.github.io/narwhals/api-reference/).
 
 For example:
 
-```python exec="1" source="above"
-import narwhals as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python exec="1" source="above"
+    import narwhals as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.group_by("a").agg(
-        b_mean=nw.col("b").mean(),
-        b_std=nw.col("b").std(),
-    )
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return (
+            nw.from_native(df)
+            .group_by("a")
+            .agg(
+                b_mean=nw.col("b").mean(),
+                b_std=nw.col("b").std(),
+            )
+            .to_native()
+        )
+    ```
+
+=== "@narwhalify"
+    ```python exec="1" source="above"
+    import narwhals as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.group_by("a").agg(
+            b_mean=nw.col("b").mean(),
+            b_std=nw.col("b").std(),
+        )
+    ```
 
 will work for any of pandas, Polars, cuDF, Modin, and PyArrow.
 
@@ -74,7 +99,7 @@ converting to Narwhals DataFrame:
 - `.select(names)` (Ibis and DuckDB), where `names` is a list of (string) column names. This is useful for
   selecting columns before converting to another library.
 
-### Extending Narwhals
+## Extending Narwhals
 
 If you want your own library to be recognised too, you're welcome open a PR (with tests)!.
 Alternatively, if you can't do that (for example, if you library is closed-source), see

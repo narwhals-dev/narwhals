@@ -14,10 +14,10 @@ PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 
 def run_common(session: Session, coverage_threshold: float) -> None:
-    session.install("-e.", "-r", "requirements-dev.txt")
+    session.install('-e ".[dev]"')
 
     if session.python != "3.8":
-        session.install("ibis-framework[duckdb]>=6.0.0")
+        session.install("ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix")
 
     session.run(
         "pytest",
@@ -55,6 +55,8 @@ def min_and_old_versions(session: Session, pandas_version: str) -> None:
         "scikit-learn==1.1.0",
         "tzdata",
     )
+    if pandas_version == "1.1.5":
+        session.install("pyspark==3.3.0")
     run_common(session, coverage_threshold=50)
 
 

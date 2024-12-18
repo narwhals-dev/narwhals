@@ -8,12 +8,19 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - count
+        - cum_count
+        - cum_max
+        - cum_min
+        - cum_prod
         - cum_sum
         - diff
         - drop_nulls
+        - ewm_mean
         - fill_null
         - filter
         - gather_every
@@ -21,12 +28,14 @@
         - clip
         - is_between
         - is_duplicated
+        - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
         - is_null
         - is_unique
         - len
+        - map_batches
         - max
         - mean
         - median
@@ -39,13 +48,19 @@
         - quantile
         - rank
         - replace_strict
+        - rolling_mean
+        - rolling_std
+        - rolling_sum
+        - rolling_var
         - round
         - sample
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false

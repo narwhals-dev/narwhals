@@ -9,16 +9,17 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import Union
 from typing import cast
 from warnings import warn
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -27,7 +28,8 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
-from narwhals.translate import to_native
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -36,48 +38,226 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeGuard
 
-    from narwhals.dataframe import BaseFrame
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
+    from narwhals.typing import IntoSeriesT
+    from narwhals.typing import SizeUnit
 
-T = TypeVar("T")
+    FrameOrSeriesT = TypeVar(
+        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
+    )
+
+
+class Version(Enum):
+    V1 = auto()
+    MAIN = auto()
 
 
 class Implementation(Enum):
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
     PANDAS = auto()
+    """Pandas implementation."""
     MODIN = auto()
+    """Modin implementation."""
     CUDF = auto()
+    """cuDF implementation."""
     PYARROW = auto()
+    """PyArrow implementation."""
+    PYSPARK = auto()
+    """PySpark implementation."""
     POLARS = auto()
+    """Polars implementation."""
     DASK = auto()
+    """Dask implementation."""
 
     UNKNOWN = auto()
+    """Unknown implementation."""
 
     @classmethod
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
     ) -> Implementation:  # pragma: no cover
-        """Instantiate Implementation object from a native namespace module."""
+        """Instantiate Implementation object from a native namespace module.
+
+        Arguments:
+            native_namespace: Native namespace.
+
+        Returns:
+            Implementation.
+        """
         mapping = {
             get_pandas(): Implementation.PANDAS,
             get_modin(): Implementation.MODIN,
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
+            get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
     def to_native_namespace(self: Self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation."""
+        """Return the native namespace module corresponding to Implementation.
+
+        Returns:
+            Native module.
+        """
         mapping = {
             Implementation.PANDAS: get_pandas(),
             Implementation.MODIN: get_modin(),
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
+            Implementation.PYSPARK: get_pyspark_sql(),
             Implementation.POLARS: get_polars(),
             Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
+
+    def is_pandas(self) -> bool:
+        """Return whether implementation is pandas.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas()
+            True
+        """
+        return self is Implementation.PANDAS
+
+    def is_pandas_like(self) -> bool:
+        """Return whether implementation is pandas, Modin, or cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pandas_like()
+            True
+        """
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+
+    def is_polars(self) -> bool:
+        """Return whether implementation is Polars.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_polars()
+            True
+        """
+        return self is Implementation.POLARS
+
+    def is_cudf(self) -> bool:
+        """Return whether implementation is cuDF.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_cudf()
+            False
+        """
+        return self is Implementation.CUDF  # pragma: no cover
+
+    def is_modin(self) -> bool:
+        """Return whether implementation is Modin.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_modin()
+            False
+        """
+        return self is Implementation.MODIN  # pragma: no cover
+
+    def is_pyspark(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark()
+            False
+        """
+        return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyarrow(self) -> bool:
+        """Return whether implementation is PyArrow.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyarrow()
+            False
+        """
+        return self is Implementation.PYARROW  # pragma: no cover
+
+    def is_dask(self) -> bool:
+        """Return whether implementation is Dask.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_dask()
+            False
+        """
+        return self is Implementation.DASK  # pragma: no cover
+
+
+def import_dtypes_module(version: Version) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes
+    elif version is Version.MAIN:
+        from narwhals import dtypes  # type: ignore[no-redef]
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
+    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -127,7 +307,14 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
 
 
 def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
-    """Simple version parser; split into a tuple of ints for comparison."""
+    """Simple version parser; split into a tuple of ints for comparison.
+
+    Arguments:
+        version: Version string to parse.
+
+    Returns:
+        Parsed version number.
+    """
     # lifted from Polars
     if isinstance(version, str):  # pragma: no cover
         version = version.split(".")
@@ -139,7 +326,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
     if isinstance(obj, DType):
         return isinstance(obj, cls)
-    return isinstance(obj, cls) or issubclass(obj, cls)
+    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -150,13 +337,21 @@ def validate_laziness(items: Iterable[Any]) -> None:
         all(isinstance(item, LazyFrame) for item in items)
     ):
         return
-    msg = "The items to concatenate should either all be eager, or all lazy"
-    raise NotImplementedError(msg)
+    msg = f"The items to concatenate should either all be eager, or all lazy, got: {[type(item) for item in items]}"
+    raise TypeError(msg)
 
 
-def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
-    """
-    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+def maybe_align_index(
+    lhs: FrameOrSeriesT, rhs: Series[Any] | DataFrame[Any] | LazyFrame[Any]
+) -> FrameOrSeriesT:
+    """Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+
+    Arguments:
+        lhs: Dataframe or Series.
+        rhs: Dataframe or Series to align with.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -243,9 +438,14 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     return lhs
 
 
-def maybe_get_index(obj: T) -> Any | None:
-    """
-    Get the index of a DataFrame or a Series, if it's pandas-like.
+def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any | None:
+    """Get the index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -268,21 +468,45 @@ def maybe_get_index(obj: T) -> Any | None:
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
     return None
 
 
-def maybe_set_index(df: T, column_names: str | list[str]) -> T:
-    """
-    Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+def maybe_set_index(
+    obj: FrameOrSeriesT,
+    column_names: str | list[str] | None = None,
+    *,
+    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
+) -> FrameOrSeriesT:
+    """Set the index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: object for which maybe set the index (can be either a Narwhals `DataFrame`
+            or `Series`).
+        column_names: name or list of names of the columns to set as index.
+            For dataframes, only one of `column_names` and `index` can be specified but
+            not both. If `column_names` is passed and `df` is a Series, then a
+            `ValueError` is raised.
+        index: series or list of series to set as index.
+
+    Returns:
+        Same type as input.
+
+    Raises:
+        ValueError: If one of the following condition happens:
+
+            - none of `column_names` and `index` are provided
+            - both `column_names` and `index` are provided
+            - `column_names` is provided and `df` is a Series
 
     Notes:
-        This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        This is only really intended for backwards-compatibility purposes, for example if
+        your library already aligns indices for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
+
         For non-pandas-like inputs, this is a no-op.
 
     Examples:
@@ -297,20 +521,60 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    df_any = cast(Any, df)
-    native_frame = to_native(df_any)
-    if is_pandas_like_dataframe(native_frame):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_frame(
-                native_frame.set_index(column_names)
-            )
+    from narwhals.translate import to_native
+
+    df_any = cast(Any, obj)
+    native_obj = df_any.to_native()
+
+    if column_names is not None and index is not None:
+        msg = "Only one of `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if not column_names and not index:
+        msg = "Either `column_names` or `index` should be provided"
+        raise ValueError(msg)
+
+    if index is not None:
+        keys = (
+            [to_native(idx, pass_through=True) for idx in index]
+            if _is_iterable(index)
+            else to_native(index, pass_through=True)
         )
-    return df_any  # type: ignore[no-any-return]
+    else:
+        keys = column_names
+
+    if is_pandas_like_dataframe(native_obj):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        )
+    elif is_pandas_like_series(native_obj):
+        from narwhals._pandas_like.utils import set_axis
+
+        if column_names:
+            msg = "Cannot set index using column names on a Series"
+            raise ValueError(msg)
+
+        native_obj = set_axis(
+            native_obj,
+            keys,
+            implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
+            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
+        )
+        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+            df_any._compliant_series._from_native_series(native_obj)
+        )
+    else:
+        return df_any  # type: ignore[no-any-return]
 
 
-def maybe_reset_index(obj: T) -> T:
-    """
-    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
+    """Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -335,7 +599,7 @@ def maybe_reset_index(obj: T) -> T:
         RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
@@ -367,14 +631,18 @@ def _has_default_index(
     )
 
 
-def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
-    """
-    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+def maybe_convert_dtypes(
+    obj: FrameOrSeriesT, *args: bool, **kwargs: bool | str
+) -> FrameOrSeriesT:
+    """Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
         obj: DataFrame or Series.
         *args: Additional arguments which gets passed through.
         **kwargs: Additional arguments which gets passed through.
+
+    Returns:
+        Same type as input.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -398,7 +666,7 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
         dtype: object
     """
     obj_any = cast(Any, obj)
-    native_obj = to_native(obj_any)
+    native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             obj_any._compliant_frame._from_native_frame(
@@ -414,9 +682,33 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
+    """Scale size in bytes to other size units (eg: "kb", "mb", "gb", "tb").
+
+    Arguments:
+        sz: original size in bytes
+        unit: size unit to convert into
+
+    Returns:
+        Integer or float.
     """
-    Return whether indices of categories are semantically meaningful.
+    if unit in {"b", "bytes"}:
+        return sz
+    elif unit in {"kb", "kilobytes"}:
+        return sz / 1024
+    elif unit in {"mb", "megabytes"}:
+        return sz / 1024**2
+    elif unit in {"gb", "gigabytes"}:
+        return sz / 1024**3
+    elif unit in {"tb", "terabytes"}:
+        return sz / 1024**4
+    else:
+        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+        raise ValueError(msg)
+
+
+def is_ordered_categorical(series: Series[Any]) -> bool:
+    """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
     the `is_ordered` property from the DataFrame Interchange Protocol,
@@ -429,6 +721,12 @@ def is_ordered_categorical(series: Series) -> bool:
       - Categoricals are ordered if `dtype.cat.ordered == True`.
     - For PyArrow table:
       - Categoricals are ordered if `dtype.type.ordered == True`.
+
+    Arguments:
+        series: Input Series.
+
+    Returns:
+        Whether the Series is an ordered categorical.
 
     Examples:
         >>> import narwhals as nw
@@ -453,7 +751,7 @@ def is_ordered_categorical(series: Series) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = series._compliant_series._dtypes
+    dtypes = import_dtypes_module(series._compliant_series._version)
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
@@ -466,7 +764,7 @@ def is_ordered_categorical(series: Series) -> bool:
         return True
     if series.dtype != dtypes.Categorical:
         return False
-    native_series = to_native(series)
+    native_series = series.to_native()
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):
@@ -482,18 +780,16 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    warn(
+    msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
-        "deprecated and it will be removed in future versions",
-        DeprecationWarning,
-        stacklevel=2,
+        "deprecated and it will be removed in future versions"
     )
+    issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
 def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
-    """Generates a unique token of specified `n_bytes` that is not present in the given
-    list of columns.
+    """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
     function to return a string nbytes random bytes.
@@ -534,16 +830,16 @@ def parse_columns_to_drop(
     columns: Iterable[str],
     strict: bool,  # noqa: FBT001
 ) -> list[str]:
-    cols = set(compliant_frame.columns)
+    cols = compliant_frame.columns
     to_drop = list(columns)
-
     if strict:
-        for d in to_drop:
-            if d not in cols:
-                msg = f'"{d}" not found'
-                raise ColumnNotFoundError(msg)
+        missing_columns = [x for x in to_drop if x not in cols]
+        if missing_columns:
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns=missing_columns, available_columns=cols
+            )
     else:
-        to_drop = list(cols.intersection(set(to_drop)))
+        to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
 
 
@@ -552,8 +848,10 @@ def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
 
 
 def find_stacklevel() -> int:
-    """
-    Find the first place in the stack that is not inside narwhals.
+    """Find the first place in the stack that is not inside narwhals.
+
+    Returns:
+        Stacklevel.
 
     Taken from:
     https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
@@ -592,16 +890,12 @@ def find_stacklevel() -> int:
 
 
 def issue_deprecation_warning(message: str, _version: str) -> None:
-    """
-    Issue a deprecation warning.
+    """Issue a deprecation warning.
 
-    Parameters
-    ----------
-    message
-        The message associated with the warning.
-    version
-        Narwhals version when the warning was introduced. Just used for internal
-        bookkeeping.
+    Arguments:
+        message: The message associated with the warning.
+        _version: Narwhals version when the warning was introduced. Just used for internal
+            bookkeeping.
     """
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 
@@ -630,3 +924,39 @@ def validate_strict_and_pass_though(
         msg = "Cannot pass both `strict` and `pass_through`"
         raise ValueError(msg)
     return pass_through
+
+
+def _validate_rolling_arguments(
+    window_size: int, min_periods: int | None
+) -> tuple[int, int]:
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
+
+    if not isinstance(window_size, int):
+        _type = window_size.__class__.__name__
+        msg = (
+            f"argument 'window_size': '{_type}' object cannot be "
+            "interpreted as an integer"
+        )
+        raise TypeError(msg)
+
+    if min_periods is not None:
+        if min_periods < 1:
+            msg = "min_periods must be greater or equal than 1"
+            raise ValueError(msg)
+
+        if not isinstance(min_periods, int):
+            _type = min_periods.__class__.__name__
+            msg = (
+                f"argument 'min_periods': '{_type}' object cannot be "
+                "interpreted as an integer"
+            )
+            raise TypeError(msg)
+        if min_periods > window_size:
+            msg = "`min_periods` must be less or equal than `window_size`"
+            raise InvalidOperationError(msg)
+    else:
+        min_periods = window_size
+
+    return window_size, min_periods

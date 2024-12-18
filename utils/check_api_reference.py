@@ -11,10 +11,11 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
-NAMESPACES = {"dt", "str", "cat", "name"}
-EXPR_ONLY_METHODS = {"over"}
+NAMESPACES = {"dt", "str", "cat", "name", "list"}
+EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
+    "implementation",
     "is_empty",
     "is_sorted",
     "item",
@@ -32,6 +33,7 @@ SERIES_ONLY_METHODS = {
     "value_counts",
     "zip_with",
     "__iter__",
+    "__contains__",
 }
 BASE_DTYPES = {
     "NumericType",
@@ -130,7 +132,7 @@ if extra := set(documented).difference(series_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Series.{cat, dt, str} methods
+# Series.{cat, dt, list, str} methods
 for namespace in NAMESPACES.difference({"name"}):
     series_methods = [
         i
@@ -175,7 +177,7 @@ if extra := set(documented).difference(expr_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Expr.{cat, dt, name, str} methods
+# Expr.{cat, dt, list, name, str} methods
 for namespace in NAMESPACES:
     expr_methods = [
         i

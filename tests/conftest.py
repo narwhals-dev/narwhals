@@ -3,15 +3,16 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generator
 
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_modin
+from narwhals.stable.v1.dependencies import get_cudf
+from narwhals.stable.v1.dependencies import get_modin
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -26,6 +27,15 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
+with contextlib.suppress(ImportError):
+    from pyspark.sql import SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+
+    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -90,6 +100,37 @@ def dask_lazy_p2_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
 
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
+
+
+@pytest.fixture(scope="session")
+def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
+    try:
+        from pyspark.sql import SparkSession
+    except ImportError:  # pragma: no cover
+        pytest.skip("pyspark is not installed")
+        return
+
+    import os
+    import warnings
+
+    os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
+    with warnings.catch_warnings():
+        # The spark session seems to trigger a polars warning.
+        # Polars is imported in the tests, but not used in the spark operations
+        warnings.filterwarnings(
+            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
+        )
+        session = (
+            SparkSession.builder.appName("unit-tests")
+            .master("local[1]")
+            .config("spark.ui.enabled", "false")
+            # executing one task at a time makes the tests faster
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            .getOrCreate()
+        )
+        yield session
+    session.stop()
 
 
 if PANDAS_VERSION >= (2, 0, 0):
