@@ -52,6 +52,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def col(self, *column_names: str) -> DaskExpr:
@@ -87,6 +89,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def min(self, *column_names: str) -> DaskExpr:
@@ -138,6 +142,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -156,6 +162,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -174,6 +182,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -192,6 +202,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def concat(
@@ -273,6 +285,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -294,6 +308,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -315,6 +331,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def when(
@@ -379,6 +397,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
 
@@ -441,6 +461,8 @@ class DaskWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
 
@@ -456,6 +478,8 @@ class DaskThen(DaskExpr):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any] | None,
+        kwargs: dict[str, Any] | None,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -465,6 +489,8 @@ class DaskThen(DaskExpr):
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._args = args
+        self._kwargs = kwargs
 
     def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a

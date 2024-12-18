@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 from copy import copy
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 from typing import Sequence
 
@@ -37,6 +38,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any, ...] | None,
+        kwargs: dict[str, Any] | None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -46,6 +49,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
+        self._args = args
+        self._kwargs = kwargs
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -81,6 +86,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
+            args=None,
+            kwargs=None,
         )
 
     def _from_call(
@@ -138,6 +145,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            args=args,
+            kwargs=kwargs,
         )
 
     def __add__(self, other: SparkLikeExpr) -> Self:
@@ -170,6 +179,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"name": name},
         )
 
     def count(self) -> Self:

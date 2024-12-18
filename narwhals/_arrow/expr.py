@@ -39,6 +39,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -49,6 +51,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        self._args = args
+        self._kwargs = kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return (
@@ -304,6 +308,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=[name],
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"name": name},
         )
 
     def null_count(self: Self) -> Self:
@@ -423,6 +429,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"keys": keys},
         )
 
     def mode(self: Self) -> Self:
@@ -464,6 +472,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:
@@ -795,6 +805,8 @@ class ArrowExprNameNamespace:
             output_names=root_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
@@ -821,6 +833,8 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"function": function},
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
@@ -845,6 +859,8 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
@@ -870,6 +886,8 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
@@ -895,6 +913,8 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -920,6 +940,8 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
 

@@ -233,6 +233,8 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=output_names,
+        args=args,
+        kwargs=kwargs,
     )
 
 
@@ -273,6 +275,8 @@ def reuse_series_namespace_implementation(
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
+        args=args,
+        kwargs=kwargs,
     )
 
 

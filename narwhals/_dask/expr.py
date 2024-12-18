@@ -46,6 +46,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any] | None,
+        kwargs: dict[str, Any] | None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -55,6 +57,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
+        self._args = args
+        self._kwargs = kwargs
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
         return self._call(df)
@@ -93,6 +97,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
+            args=None,
+            kwargs=None,
         )
 
     @classmethod
@@ -116,6 +122,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
+            args=None,
+            kwargs=None,
         )
 
     def _from_call(
@@ -174,6 +182,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            args=args,
+            kwargs=kwargs,
         )
 
     def alias(self, name: str) -> Self:
@@ -190,6 +200,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"name": name},
         )
 
     def __add__(self, other: Any) -> Self:
@@ -834,6 +846,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"keys": keys},
         )
 
     def mode(self: Self) -> Self:
@@ -1317,6 +1331,8 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
@@ -1344,6 +1360,8 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"function": function},
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
@@ -1369,6 +1387,8 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
@@ -1395,6 +1415,8 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
@@ -1421,6 +1443,8 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
@@ -1447,4 +1471,6 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )

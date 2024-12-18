@@ -48,6 +48,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -57,6 +59,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+        self._args = args
+        self._kwargs = kwargs
 
     def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)
@@ -409,6 +413,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"name": name},
         )
 
     def over(self, keys: list[str]) -> Self:
@@ -426,15 +432,27 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                     raise ValueError(msg)
 
+                reverse = (
+                    self._kwargs.pop("reverse") if self._kwargs is not None else False
+                )
+                if reverse:
+                    msg = (
+                        "Cumulative operation with `reverse=True` is not supported in "
+                        "over context for pandas-like backend."
+                    )
+                    raise NotImplementedError(msg)
+
                 if self._function_name == "col->cum_count":
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*self._root_names).is_null())
 
-                res_native = df._native_frame.groupby(list(keys), as_index=False)[
-                    self._root_names
-                ].transform(
-                    CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name]
-                )
+                res_native = getattr(
+                    df._native_frame.groupby(list(keys), as_index=False)[
+                        self._root_names
+                    ],
+                    CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
+                )(skipna=True)
+
                 result_frame = df._from_native_frame(
                     rename(
                         res_native,
@@ -470,6 +488,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"keys": keys},
         )
 
     def is_duplicated(self) -> Self:
@@ -542,6 +562,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs={"function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:
@@ -869,6 +891,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
@@ -896,6 +920,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"function": function},
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
@@ -921,6 +947,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
@@ -947,6 +975,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs={"suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
@@ -973,6 +1003,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
@@ -999,6 +1031,8 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            args=None,
+            kwargs=None,
         )
 
 

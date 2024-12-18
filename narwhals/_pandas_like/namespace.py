@@ -58,6 +58,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> PandasLikeExpr:
         return PandasLikeExpr(
             func,
@@ -68,6 +70,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=args,
+            kwargs=kwargs,
         )
 
     def _create_series_from_scalar(
@@ -92,6 +96,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
@@ -137,6 +143,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     def lit(self, value: Any, dtype: DType | None) -> PandasLikeExpr:
@@ -162,6 +170,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     # --- reduction ---
@@ -224,6 +234,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
     # --- horizontal ---
@@ -462,6 +474,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            args=None,
+            kwargs={"separator": separator, "ignore_nulls": ignore_nulls},
         )
 
 
@@ -542,6 +556,8 @@ class PandasWhen:
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            args=None,
+            kwargs=None,
         )
 
 
@@ -557,6 +573,8 @@ class PandasThen(PandasLikeExpr):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        args: tuple[Any, ...] | None,
+        kwargs: dict[str, Any] | None,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
@@ -566,6 +584,8 @@ class PandasThen(PandasLikeExpr):
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._args = args
+        self._kwargs = kwargs
 
     def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
