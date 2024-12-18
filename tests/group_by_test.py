@@ -364,3 +364,15 @@ def test_group_by_shift_raises(
         ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
     ):
         df.group_by("b").agg(nw.col("a").shift(1))
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+def test_std_var_ddof_0(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = (
+        df.group_by("a")
+        .agg(c=nw.col("b").std(ddof=0), d=nw.col("b").std(ddof=1))
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "c": [0.5, 0], "d": [0.7071067811865476, float("nan")]}
+    assert_equal_data(result, expected)

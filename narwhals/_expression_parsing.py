@@ -125,6 +125,18 @@ def parse_into_expr(
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
+def format_function_name(function_name: str, attr: str, **kwargs: Any) -> str:
+    """Format function_name so it can be understood when parsing expressions in group_by.
+
+    If the function requires extra parameters (such as 'std' or 'var'), then we record
+    those too.
+    """
+    if attr in {"std", "var"}:
+        ddof = kwargs.get("ddof", 1)
+        attr = f"{attr}-ddof-{ddof}"
+    return f"{function_name}->{attr}"
+
+
 @overload
 def reuse_series_implementation(
     expr: PandasLikeExprT,
@@ -227,10 +239,11 @@ def reuse_series_implementation(
         msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
         raise AssertionError(msg)
 
+    function_name = format_function_name(expr._function_name, attr, **kwargs)
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{attr}",
+        function_name=function_name,
         root_names=root_names,
         output_names=output_names,
     )

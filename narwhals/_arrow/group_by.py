@@ -35,11 +35,10 @@ def polars_to_arrow_aggregations() -> (
         "median": ("approximate_median", None),
         "max": ("max", None),
         "min": ("min", None),
-        "std": ("stddev", pc.VarianceOptions(ddof=1)),
-        "var": (
-            "variance",
-            pc.VarianceOptions(ddof=1),
-        ),  # currently unused, we don't have `var` yet
+        "std-ddof-0": ("stddev", pc.VarianceOptions(ddof=0)),
+        "std-ddof-1": ("stddev", pc.VarianceOptions(ddof=1)),
+        "var-ddof-0": ("variance", pc.VarianceOptions(ddof=0)),
+        "var-ddof-1": ("variance", pc.VarianceOptions(ddof=1)),
         "len": ("count", pc.CountOptions(mode="all")),
         "n_unique": ("count_distinct", pc.CountOptions(mode="all")),
         "count": ("count", pc.CountOptions(mode="only_valid")),
@@ -178,17 +177,28 @@ def agg_arrow(
                 )
 
         aggs: list[Any] = []
-        name_mapping = {}
+        name_mapping = []
         for output_name, (
             aggregation_args,
             pyarrow_output_name,
         ) in simple_aggregations.items():
             aggs.append(aggregation_args)
-            name_mapping[pyarrow_output_name] = output_name
+            name_mapping.append((pyarrow_output_name, output_name))
         result_simple = grouped.aggregate(aggs)
-        result_simple = result_simple.rename_columns(
-            [name_mapping.get(col, col) for col in result_simple.column_names]
-        ).select(output_names)
+
+        new_column_names = keys.copy()
+        for col, (new_name, (_aggregation_args, pyarrow_output_name)) in zip(
+            (x for x in result_simple.column_names if x not in keys),
+            simple_aggregations.items(),
+        ):
+            if col != pyarrow_output_name:
+                msg = "report bug"
+                raise AssertionError(msg)
+            new_column_names.append(new_name)
+
+        result_simple = result_simple.rename_columns(new_column_names).select(
+            output_names
+        )
         return from_dataframe(result_simple)
 
     msg = (
