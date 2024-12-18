@@ -28,7 +28,6 @@ exclude = [
   "CONTRIBUTING.md",
   "mkdocs.yml",
   "noxfile.py",
-  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +38,38 @@ polars = ["polars>=0.20.3"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
 pyspark = ["pyspark>=3.3.0"]
+dev = [
+  "tqdm",
+  "covdefaults",
+  "duckdb",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pyspark; python_version < '3.12'",
+  "pyarrow-stubs",
+  "pytest",
+  "pytest-cov",
+  "pytest-randomly",
+  "pytest-env",
+  "hypothesis",
+  "hypothesis[numpy]",
+  "scikit-learn",
+  "typing_extensions",
+  "dask[dataframe]; python_version >= '3.9'",
+]
+docs = [
+  "black",  # required by mkdocstrings_handlers
+  "jinja2",
+  "duckdb",
+  "markdown-exec[ansi]",
+  "mkdocs",
+  "mkdocs-autorefs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "pandas",
+  "polars>=1.0.0",
+  "pyarrow",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -152,7 +183,7 @@ exclude_also = [
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)',
+  'request.applymarker\(pytest.mark.xfail',
   '\w+._backend_version < ',
   'backend_version <',
   'if "cudf" in str\(constructor'

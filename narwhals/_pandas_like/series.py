@@ -622,9 +622,13 @@ class PandasLikeSeries(CompliantSeries):
         ser = self._native_series
         return ser.median()
 
-    def std(self: Self, *, ddof: int = 1) -> float:
+    def std(self: Self, *, ddof: int) -> float:
         ser = self._native_series
         return ser.std(ddof=ddof)  # type: ignore[no-any-return]
+
+    def var(self: Self, *, ddof: int) -> float:
+        ser = self._native_series
+        return ser.var(ddof=ddof)  # type: ignore[no-any-return]
 
     def skew(self: Self) -> float | None:
         ser = self._native_series
@@ -1053,6 +1057,32 @@ class PandasLikeSeries(CompliantSeries):
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
         ).mean()
+        return self._from_native_series(result)
+
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).var(ddof=ddof)
+        return self._from_native_series(result)
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).std(ddof=ddof)
         return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:

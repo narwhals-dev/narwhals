@@ -56,7 +56,9 @@
         - rename
         - replace_strict
         - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - scatter
@@ -76,6 +78,7 @@
         - to_native
         - unique
         - value_counts
+        - var
         - zip_with
       show_source: false
       show_bases: false

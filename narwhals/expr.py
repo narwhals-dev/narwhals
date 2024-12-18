@@ -706,6 +706,56 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).std(ddof=ddof))
 
+    def var(self, *, ddof: int = 1) -> Self:
+        """Get variance.
+
+        Arguments:
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements. By default ddof is 1.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pa = pa.table({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_var(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.select(nw.col("a", "b").var(ddof=0)).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_var(df_pd)
+                        a         b
+            0  316.666667  1.602222
+            >>> agnostic_var(df_pl)
+            shape: (1, 2)
+            ┌────────────┬──────────┐
+            │ a          ┆ b        │
+            │ ---        ┆ ---      │
+            │ f64        ┆ f64      │
+            ╞════════════╪══════════╡
+            │ 316.666667 ┆ 1.602222 │
+            └────────────┴──────────┘
+            >>> agnostic_var(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[316.6666666666667]]
+            b: [[1.6022222222222222]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).var(ddof=ddof))
+
     def map_batches(
         self,
         function: Callable[[Any], Self],
@@ -2212,7 +2262,7 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_min_over_b(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         a_min_per_group=nw.col("a").min().over("b")
@@ -2220,12 +2270,12 @@ class Expr:
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_min_over_b(df_pd)
                a  b  a_min_per_group
             0  1  1                1
             1  2  1                1
             2  3  2                3
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_min_over_b(df_pl)
             shape: (3, 3)
             ┌─────┬─────┬─────────────────┐
             │ a   ┆ b   ┆ a_min_per_group │
@@ -2236,7 +2286,7 @@ class Expr:
             │ 2   ┆ 1   ┆ 1               │
             │ 3   ┆ 2   ┆ 3               │
             └─────┴─────┴─────────────────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_min_over_b(df_pa)
             pyarrow.Table
             a: int64
             b: int64
@@ -2245,6 +2295,30 @@ class Expr:
             a: [[1,2,3]]
             b: [[1,1,2]]
             a_min_per_group: [[1,1,3]]
+
+            Cumulative operations are also supported, but (currently) only for
+            pandas and Polars:
+
+            >>> def agnostic_cum_sum(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(c=nw.col("a").cum_sum().over("b")).to_native()
+
+            >>> agnostic_cum_sum(df_pd)
+               a  b  c
+            0  1  1  1
+            1  2  1  3
+            2  3  2  3
+            >>> agnostic_cum_sum(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 1   ┆ 1   │
+            │ 2   ┆ 1   ┆ 3   │
+            │ 3   ┆ 2   ┆ 3   │
+            └─────┴─────┴─────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(flatten(keys))
@@ -3524,6 +3598,193 @@ class Expr:
                 window_size=window_size,
                 min_periods=min_periods,
                 center=center,
+            )
+        )
+
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        """Apply a rolling variance (moving variance) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their variance.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`.
+            center: Set the labels at the center of the window.
+            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_var(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_var(window_size=3, min_periods=1)
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_var(df_pd)
+                 a    b
+            0  1.0  NaN
+            1  2.0  0.5
+            2  NaN  0.5
+            3  4.0  2.0
+
+            >>> agnostic_rolling_var(df_pl)  #  doctest:+SKIP
+            shape: (4, 2)
+            ┌──────┬──────┐
+            │ a    ┆ b    │
+            │ ---  ┆ ---  │
+            │ f64  ┆ f64  │
+            ╞══════╪══════╡
+            │ 1.0  ┆ null │
+            │ 2.0  ┆ 0.5  │
+            │ null ┆ 0.5  │
+            │ 4.0  ┆ 2.0  │
+            └──────┴──────┘
+
+            >>> agnostic_rolling_var(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[nan,0.5,0.5,2]]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).rolling_var(
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+            )
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        """Apply a rolling standard deviation (moving standard deviation) over the values.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        A window of length `window_size` will traverse the values. The resulting values
+        will be aggregated to their standard deviation.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements. It must be a
+                strictly positive integer.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`. If provided, it must be a strictly positive integer, and
+                less than or equal to `window_size`.
+            center: Set the labels at the center of the window.
+            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [1.0, 2.0, None, 4.0]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_rolling_std(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         b=nw.col("a").rolling_std(window_size=3, min_periods=1)
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> agnostic_rolling_std(df_pd)
+                 a         b
+            0  1.0       NaN
+            1  2.0  0.707107
+            2  NaN  0.707107
+            3  4.0  1.414214
+
+            >>> agnostic_rolling_std(df_pl)  #  doctest:+SKIP
+            shape: (4, 2)
+            ┌──────┬──────────┐
+            │ a    ┆ b        │
+            │ ---  ┆ ---      │
+            │ f64  ┆ f64      │
+            ╞══════╪══════════╡
+            │ 1.0  ┆ null     │
+            │ 2.0  ┆ 0.707107 │
+            │ null ┆ 0.707107 │
+            │ 4.0  ┆ 1.414214 │
+            └──────┴──────────┘
+
+            >>> agnostic_rolling_std(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[1,2,null,4]]
+            b: [[nan,0.7071067811865476,0.7071067811865476,1.4142135623730951]]
+        """
+        window_size, min_periods = _validate_rolling_arguments(
+            window_size=window_size, min_periods=min_periods
+        )
+
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).rolling_std(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+                ddof=ddof,
             )
         )
 

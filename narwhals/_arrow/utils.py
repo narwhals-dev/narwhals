@@ -502,3 +502,39 @@ def _parse_time_format(arr: pa.Array) -> str:
         if pc.all(matches.is_valid()).as_py():
             return time_fmt
     return ""
+
+
+def pad_series(
+    series: ArrowSeries, *, window_size: int, center: bool
+) -> tuple[ArrowSeries, int]:
+    """Pad series with None values on the left and/or right side, depending on the specified parameters.
+
+    Arguments:
+        series: The input ArrowSeries to be padded.
+        window_size: The desired size of the window.
+        center: Specifies whether to center the padding or not.
+
+    Returns:
+        A tuple containing the padded ArrowSeries and the offset value.
+    """
+    import pyarrow as pa  # ignore-banned-import
+
+    if center:
+        offset_left = window_size // 2
+        offset_right = offset_left - (
+            window_size % 2 == 0
+        )  # subtract one if window_size is even
+
+        native_series = series._native_series
+
+        pad_left = pa.array([None] * offset_left, type=native_series.type)
+        pad_right = pa.array([None] * offset_right, type=native_series.type)
+        padded_arr = series._from_native_series(
+            pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+        )
+        offset = offset_left + offset_right
+    else:
+        padded_arr = series
+        offset = 0
+
+    return padded_arr, offset

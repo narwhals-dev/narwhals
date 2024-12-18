@@ -82,6 +82,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
     values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
 )
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
+@pytest.mark.slow
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
     s = pd.Series(values)

@@ -105,6 +105,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
         ("max", {"a": [1, 2], "b": [2, 3]}),
         ("min", {"a": [1, 2], "b": [1, 3]}),
         ("std", {"a": [1, 2], "b": [0.707107, None]}),
+        ("var", {"a": [1, 2], "b": [0.5, None]}),
         ("len", {"a": [1, 2], "b": [3, 1]}),
         ("n_unique", {"a": [1, 2], "b": [3, 1]}),
         ("count", {"a": [1, 2], "b": [2, 1]}),
@@ -117,6 +118,9 @@ def test_group_by_depth_1_agg(
     request: pytest.FixtureRequest,
 ) -> None:
     if "cudf" in str(constructor) and attr == "n_unique":
+        request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
+        # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()

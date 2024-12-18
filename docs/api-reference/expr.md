@@ -48,7 +48,9 @@
         - quantile
         - replace_strict
         - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - shift
@@ -58,5 +60,6 @@
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false

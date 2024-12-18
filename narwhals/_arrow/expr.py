@@ -242,8 +242,11 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def n_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
-    def std(self: Self, ddof: int = 1) -> Self:
+    def std(self: Self, ddof: int) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
+
+    def var(self: Self, ddof: int) -> Self:
+        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
@@ -506,6 +509,40 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             window_size=window_size,
             min_periods=min_periods,
             center=center,
+        )
+
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_var",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+            ddof=ddof,
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_std",
+            window_size=window_size,
+            min_periods=min_periods,
+            center=center,
+            ddof=ddof,
         )
 
     @property

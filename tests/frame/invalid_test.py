@@ -43,6 +43,7 @@ def test_validate_laziness() -> None:
         nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")
