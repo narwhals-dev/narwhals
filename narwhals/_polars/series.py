@@ -284,6 +284,48 @@ class PolarsSeries:
 
         return self._from_native_series(native_result)
 
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`rolling_var` not implemented for polars older than 1.0"
+            raise NotImplementedError(msg)
+
+        return self._from_native_series(
+            self._native_series.rolling_var(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        if self._backend_version < (1,):  # pragma: no cover
+            msg = "`rolling_std` not implemented for polars older than 1.0"
+            raise NotImplementedError(msg)
+
+        return self._from_native_series(
+            self._native_series.rolling_std(
+                window_size=window_size,
+                min_periods=min_periods,
+                center=center,
+                ddof=ddof,
+            )
+        )
+
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         if self._backend_version < (0, 20, 6):
             result = self._native_series.sort(descending=descending)

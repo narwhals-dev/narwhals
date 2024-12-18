@@ -928,6 +928,64 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
         )
 
+    def rolling_var(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+            _ddof: int,
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).var(ddof=ddof)
+
+        return self._from_call(
+            func,
+            "rolling_var",
+            window_size,
+            min_periods,
+            center,
+            ddof,
+            returns_scalar=False,
+        )
+
+    def rolling_std(
+        self: Self,
+        window_size: int,
+        *,
+        min_periods: int | None,
+        center: bool,
+        ddof: int,
+    ) -> Self:
+        def func(
+            _input: dask_expr.Series,
+            _window: int,
+            _min_periods: int | None,
+            _center: bool,  # noqa: FBT001
+            _ddof: int,
+        ) -> dask_expr.Series:
+            return _input.rolling(
+                window=_window, min_periods=_min_periods, center=_center
+            ).std(ddof=ddof)
+
+        return self._from_call(
+            func,
+            "rolling_std",
+            window_size,
+            min_periods,
+            center,
+            ddof,
+            returns_scalar=False,
+        )
+
 
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
