@@ -213,16 +213,32 @@ def agg_pandas(  # noqa: PLR0915
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
-            if not (  # type: ignore[attr-defined]
-                result_simple_aggs.columns == expected_old_names
-            ).all():  # pragma: no cover
+            if not (
+                set(result_simple_aggs.columns) == set(expected_old_names)
+                and len(result_simple_aggs.columns) == len(expected_old_names)
+            ):  # pragma: no cover
                 msg = (
                     f"Safety assertion failed, expected {expected_old_names} "
                     f"got {result_simple_aggs.columns}, "
                     "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
                 )
                 raise AssertionError(msg)
+
+            # Rename columns, being very careful
+            expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(
+                list
+            )
+            for idx, item in enumerate(expected_old_names):
+                expected_old_names_indices[item].append(idx)
+            index_map: list[int] = []
+            for item in result_simple_aggs.columns:
+                # ruff false-positive here?
+                index_map.append(  # noqa: PERF401
+                    expected_old_names_indices[item].pop(0)
+                )  # Use and remove the first occurrence
+            new_names = [new_names[i] for i in index_map]
             result_simple_aggs.columns = new_names
+
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
