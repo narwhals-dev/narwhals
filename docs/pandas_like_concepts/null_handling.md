@@ -40,6 +40,6 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
     ```python exec="true" source="material-block" result="python" session="null_handling"
     import pyarrow as pa
 
-    table = pa.table(data)
-    print(check_null_behavior(table))
+    df = pa.table(data)
+    print(check_null_behavior(df))
     ```
