@@ -4,7 +4,7 @@ pandas doesn't distinguish between Null and NaN values as Polars and PyArrow do.
 
 Depending on the data type of the underlying data structure, `np.nan`, `pd.NaT`, `None` and `pd.NA` all encode missing data in pandas.
 
-Polars and PyArrow, instead, treat `NaN` as a valid floating point value which is rare to encounter and might more often come out as the result of a computation than from data initialization; they treat `null` as the missing data indicator, regardless of the data type.
+Polars and PyArrow, instead, treat `NaN` as a valid floating point value which is rare to encounter and more often produced as the result of a computation than explicitly set during data initialization; they treat `null` as the missing data indicator, regardless of the data type.
 
 In Narwhals, then, `is_null` behaves differently across backends (and so do `drop_nulls`, `fill_null` and `null_count`):
 
