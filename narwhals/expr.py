@@ -1783,6 +1783,7 @@ class Expr:
             b: [[true,true,false,false]]
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            other = extract_compliant(self, other)
             return self.__class__(lambda plx: self._to_compliant_expr(plx).is_in(other))
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
