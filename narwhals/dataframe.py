@@ -3333,14 +3333,12 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> lf_pl = pl.LazyFrame(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -3353,7 +3351,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
             0  1.0  1.0
-            >>> agnostic_drop_nulls(df_pl)
+            >>> agnostic_drop_nulls(lf_pl).collect()
             shape: (1, 2)
             ┌─────┬─────┐
             │ a   ┆ ba  │
@@ -3362,13 +3360,6 @@ class LazyFrame(BaseFrame[FrameT]):
             ╞═════╪═════╡
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
-            >>> agnostic_drop_nulls(df_pa)
-            pyarrow.Table
-            a: double
-            ba: double
-            ----
-            a: [[1]]
-            ba: [[1]]
         """
         return super().drop_nulls(subset=subset)
 
