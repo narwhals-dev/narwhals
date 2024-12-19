@@ -137,85 +137,78 @@ def agg_arrow(
             all_simple_aggs = False
             break
 
-    if all_simple_aggs:
-        # Mapping from output name to
-        # (aggregation_args, pyarrow_output_name)  # noqa: ERA001
-        simple_aggregations: dict[str, tuple[tuple[Any, ...], str]] = {}
-        for expr in exprs:
-            if expr._depth == 0:
-                # e.g. agg(nw.len()) # noqa: ERA001
-                if (
-                    expr._output_names is None or expr._function_name != "len"
-                ):  # pragma: no cover
-                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                    raise AssertionError(msg)
-                simple_aggregations[expr._output_names[0]] = (
-                    (keys[0], "count", pc.CountOptions(mode="all")),
-                    f"{keys[0]}_count",
-                )
-                continue
+    if not all_simple_aggs:
+        msg = (
+            "Non-trivial complex aggregation found.\n\n"
+            "Hint: you were probably trying to apply a non-elementary aggregation with a "
+            "pyarrow table.\n"
+            "Please rewrite your query such that group-by aggregations "
+            "are elementary. For example, instead of:\n\n"
+            "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+            "use:\n\n"
+            "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+        )
+        raise ValueError(msg)
 
-            # e.g. agg(nw.mean('a')) # noqa: ERA001
+    aggs: list[tuple[str, str, pc.FunctionOptions | None]] = []
+    expected_pyarrow_column_names: list[str] = keys.copy()
+    new_column_names: list[str] = keys.copy()
+
+    for expr in exprs:
+        if expr._depth == 0:
+            # e.g. agg(nw.len()) # noqa: ERA001
             if (
-                expr._depth != 1 or expr._root_names is None or expr._output_names is None
+                expr._output_names is None or expr._function_name != "len"
             ):  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
 
-            function_name = remove_prefix(expr._function_name, "col->")
-            function_name, option = polars_to_arrow_aggregations().get(
-                function_name, (function_name, None)
-            )
+            new_column_names.append(expr._output_names[0])
+            expected_pyarrow_column_names.append(f"{keys[0]}_count")
+            aggs.append((keys[0], "count", pc.CountOptions(mode="all")))
 
-            for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (
-                    (root_name, function_name, option),
-                    f"{root_name}_{function_name}",
-                )
+            continue
 
-        aggs: list[Any] = []
-        expected_pyarrow_column_names = keys.copy()
-        new_column_names = keys.copy()
-        for output_name, (
-            aggregation_args,
-            pyarrow_output_name,
-        ) in simple_aggregations.items():
-            aggs.append(aggregation_args)
-            expected_pyarrow_column_names.append(pyarrow_output_name)
-            new_column_names.append(output_name)
-
-        result_simple = grouped.aggregate(aggs)
-
-        # Rename columns, being very careful
-        expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
-        for idx, item in enumerate(expected_pyarrow_column_names):
-            expected_old_names_indices[item].append(idx)
-        if not (
-            set(result_simple.column_names) == set(expected_pyarrow_column_names)
-            and len(result_simple.column_names) == len(expected_pyarrow_column_names)
+        # e.g. agg(nw.mean('a')) # noqa: ERA001
+        if (
+            expr._depth != 1 or expr._root_names is None or expr._output_names is None
         ):  # pragma: no cover
-            msg = (
-                f"Safety assertion failed, expected {expected_pyarrow_column_names} "
-                f"got {result_simple.column_names}, "
-                "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
-            )
+            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
             raise AssertionError(msg)
-        index_map: list[int] = [
-            expected_old_names_indices[item].pop(0) for item in result_simple.column_names
-        ]
-        new_column_names = [new_column_names[i] for i in index_map]
 
-        result_simple = result_simple.rename_columns(new_column_names)
-        return from_dataframe(result_simple)
+        function_name = remove_prefix(expr._function_name, "col->")
+        function_name, option = polars_to_arrow_aggregations().get(
+            function_name, (function_name, None)
+        )
 
-    msg = (
-        "Non-trivial complex aggregation found.\n\n"
-        "Hint: you were probably trying to apply a non-elementary aggregation with a "
-        "pyarrow table.\n"
-        "Please rewrite your query such that group-by aggregations "
-        "are elementary. For example, instead of:\n\n"
-        "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-        "use:\n\n"
-        "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-    )
-    raise ValueError(msg)
+        new_column_names.extend(expr._output_names)
+        expected_pyarrow_column_names.extend(
+            [f"{root_name}_{function_name}" for root_name in expr._root_names]
+        )
+        aggs.extend(
+            [(root_name, function_name, option) for root_name in expr._root_names]
+        )
+
+    result_simple = grouped.aggregate(aggs)
+
+    # Rename columns, being very careful
+    expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
+    for idx, item in enumerate(expected_pyarrow_column_names):
+        expected_old_names_indices[item].append(idx)
+    if not (
+        set(result_simple.column_names) == set(expected_pyarrow_column_names)
+        and len(result_simple.column_names) == len(expected_pyarrow_column_names)
+    ):  # pragma: no cover
+        msg = (
+            f"Safety assertion failed, expected {expected_pyarrow_column_names} "
+            f"got {result_simple.column_names}, "
+            "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
+        )
+        raise AssertionError(msg)
+    index_map: list[int] = [
+        expected_old_names_indices[item].pop(0) for item in result_simple.column_names
+    ]
+    new_column_names = [new_column_names[i] for i in index_map]
+
+    result_simple = result_simple.rename_columns(new_column_names)
+    return from_dataframe(result_simple)

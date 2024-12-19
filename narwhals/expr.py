@@ -1783,6 +1783,7 @@ class Expr:
             b: [[true,true,false,false]]
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            other = extract_compliant(self, other)
             return self.__class__(lambda plx: self._to_compliant_expr(plx).is_in(other))
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
@@ -6086,7 +6087,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 
     Notes:
-        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+        `nth` is not supported for Polars version<1.0.0. Please use
+        [`col`](../narwhals/#narwhals.col) instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.

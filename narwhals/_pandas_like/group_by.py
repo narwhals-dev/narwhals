@@ -166,9 +166,11 @@ def agg_pandas(  # noqa: PLR0915
     # We need to do this separately from the rest so that we
     # can pass the `dropna` kwargs.
     nunique_aggs: dict[str, str] = {}
+    simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
+    expected_old_names: list[str] = []
+    new_names: list[str] = []
 
     if all_aggs_are_simple:
-        simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
@@ -180,7 +182,9 @@ def agg_pandas(  # noqa: PLR0915
                     expr._function_name, expr._function_name
                 )
                 for output_name in expr._output_names:
-                    simple_aggregations[output_name] = (keys[0], function_name)
+                    new_names.append(output_name)
+                    expected_old_names.append(f"{keys[0]}_{function_name}")
+                    simple_aggs[keys[0]].append(function_name)
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
@@ -199,15 +203,10 @@ def agg_pandas(  # noqa: PLR0915
                 if is_n_unique:
                     nunique_aggs[output_name] = root_name
                 else:
-                    simple_aggregations[output_name] = (root_name, function_name)
+                    new_names.append(output_name)
+                    expected_old_names.append(f"{root_name}_{function_name}")
+                    simple_aggs[root_name].append(function_name)
 
-        simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
-        expected_old_names: list[str] = []
-        new_names: list[str] = []
-        for output_name, (col_name, function) in simple_aggregations.items():
-            simple_aggs[col_name].append(function)
-            new_names.append(output_name)
-            expected_old_names.append(f"{col_name}_{function}")
         if simple_aggs:
             result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
