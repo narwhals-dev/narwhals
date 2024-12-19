@@ -16,6 +16,7 @@ nav:
     - pandas_like_concepts/user_warning.md
     - pandas_like_concepts/column_names.md
     - pandas_like_concepts/boolean.md
+    - pandas_like_concepts/null_handling.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
   - Supported libraries and extending Narwhals: extending.md
