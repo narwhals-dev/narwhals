@@ -3346,7 +3346,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
+            We can then pass any supported library such as Pandas or Polars to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
