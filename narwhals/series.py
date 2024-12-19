@@ -1915,6 +1915,46 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
+    def is_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are null.
+
+        Notes:
+            pandas and Polars handle NaN values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> s = [1.0, 2.0, float("nan")]
+            >>> s_pd = pd.Series(s, dtype="float64")
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.is_nan().to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(s_pd)
+            0    False
+            1    False
+            2     True
+            dtype: bool
+            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_nan())
+
     def fill_null(
         self,
         value: Any | None = None,

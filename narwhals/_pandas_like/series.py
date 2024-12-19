@@ -654,6 +654,17 @@ class PandasLikeSeries(CompliantSeries):
         ser = self._native_series
         return self._from_native_series(ser.isna())
 
+    def is_nan(self) -> PandasLikeSeries:
+        ser = self._native_series
+        dtypes = import_dtypes_module(self._version)
+        if self.dtype == dtypes.Float64:
+            return self._from_native_series(ser != ser)  # noqa: PLR0124
+        return self._from_native_series(
+            self._implementation.to_native_namespace().Series(
+                data=False, index=ser.index, name=ser.name
+            )
+        )
+
     def fill_null(
         self,
         value: Any | None = None,

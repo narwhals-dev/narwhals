@@ -514,6 +514,12 @@ class ArrowSeries(CompliantSeries):
         ser = self._native_series
         return self._from_native_series(ser.is_null())
 
+    def is_nan(self: Self) -> Self:
+        import pyarrow.compute as pc
+
+        ser = self._native_series
+        return self._from_native_series(pc.is_nan(ser))
+
     def cast(self: Self, dtype: DType) -> Self:
         import pyarrow.compute as pc
 

@@ -689,6 +689,25 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
         )
 
+    def is_nan(self: Self) -> Self:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(_input, self._version, Implementation.DASK)
+            dtypes = import_dtypes_module(self._version)
+            if dtype == dtypes.Float64:
+                return _input != _input  # noqa: PLR0124
+
+            import dask_expr as dx
+
+            return dx.new_collection(
+                dx.expr.ScalarToSeries(frame=False, index=_input.index)
+            )
+
+        return self._from_call(
+            func,
+            "is_null",
+            returns_scalar=False,
+        )
+
     def len(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.size,
