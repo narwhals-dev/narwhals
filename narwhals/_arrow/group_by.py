@@ -150,9 +150,10 @@ def agg_arrow(
         )
         raise ValueError(msg)
 
-    # Mapping from output name to
-    # (aggregation_args, pyarrow_output_name)  # noqa: ERA001
-    simple_aggregations: dict[str, tuple[tuple[Any, ...], str]] = {}
+    aggs: list[tuple[str, str, pc.FunctionOptions | None]] = []
+    expected_pyarrow_column_names: list[str] = keys.copy()
+    new_column_names: list[str] = keys.copy()
+
     for expr in exprs:
         if expr._depth == 0:
             # e.g. agg(nw.len()) # noqa: ERA001
@@ -161,10 +162,11 @@ def agg_arrow(
             ):  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
-            simple_aggregations[expr._output_names[0]] = (
-                (keys[0], "count", pc.CountOptions(mode="all")),
-                f"{keys[0]}_count",
-            )
+
+            new_column_names.append(expr._output_names[0])
+            expected_pyarrow_column_names.append(f"{keys[0]}_count")
+            aggs.append((keys[0], "count", pc.CountOptions(mode="all")))
+
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
@@ -179,22 +181,13 @@ def agg_arrow(
             function_name, (function_name, None)
         )
 
-        for root_name, output_name in zip(expr._root_names, expr._output_names):
-            simple_aggregations[output_name] = (
-                (root_name, function_name, option),
-                f"{root_name}_{function_name}",
-            )
-
-    aggs: list[Any] = []
-    expected_pyarrow_column_names = keys.copy()
-    new_column_names = keys.copy()
-    for output_name, (
-        aggregation_args,
-        pyarrow_output_name,
-    ) in simple_aggregations.items():
-        aggs.append(aggregation_args)
-        expected_pyarrow_column_names.append(pyarrow_output_name)
-        new_column_names.append(output_name)
+        new_column_names.extend(expr._output_names)
+        expected_pyarrow_column_names.extend(
+            [f"{root_name}_{function_name}" for root_name in expr._root_names]
+        )
+        aggs.extend(
+            [(root_name, function_name, option) for root_name in expr._root_names]
+        )
 
     result_simple = grouped.aggregate(aggs)
 
