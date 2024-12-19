@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -93,7 +92,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **kwargs: SparkLikeExpr,
+        **kwargs: Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             results = []
@@ -145,19 +144,44 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def __add__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(operator.add, "__add__", other=other, returns_scalar=False)
+        return self._from_call(
+            lambda _input, other: _input + other,
+            "__add__",
+            other=other,
+            returns_scalar=False,
+        )
 
     def __sub__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(operator.sub, "__sub__", other=other, returns_scalar=False)
+        return self._from_call(
+            lambda _input, other: _input - other,
+            "__sub__",
+            other=other,
+            returns_scalar=False,
+        )
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(operator.mul, "__mul__", other=other, returns_scalar=False)
+        return self._from_call(
+            lambda _input, other: _input * other,
+            "__mul__",
+            other=other,
+            returns_scalar=False,
+        )
 
     def __lt__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(operator.lt, "__lt__", other=other, returns_scalar=False)
+        return self._from_call(
+            lambda _input, other: _input < other,
+            "__lt__",
+            other=other,
+            returns_scalar=False,
+        )
 
     def __gt__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(operator.gt, "__gt__", other=other, returns_scalar=False)
+        return self._from_call(
+            lambda _input, other: _input > other,
+            "__gt__",
+            other=other,
+            returns_scalar=False,
+        )
 
     def alias(self, name: str) -> Self:
         def _alias(df: SparkLikeLazyFrame) -> list[Column]:
@@ -212,7 +236,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def std(self, ddof: int) -> Self:
         import numpy as np  # ignore-banned-import
 
-        def _std(_input: Column) -> Column:  # pragma: no cover
+        def _std(_input: Column, ddof: int) -> Column:  # pragma: no cover
             if self._backend_version < (3, 5) or parse_version(np.__version__) > (2, 0):
                 from pyspark.sql import functions as F  # noqa: N812
 
@@ -226,4 +250,4 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             return stddev(_input, ddof=ddof)
 
-        return self._from_call(_std, "std", returns_scalar=True)
+        return self._from_call(_std, "std", returns_scalar=True, ddof=ddof)
