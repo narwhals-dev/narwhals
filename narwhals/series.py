@@ -33,11 +33,26 @@ if TYPE_CHECKING:
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
-    The native series might be pandas.Series, polars.Series, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`, making sure to pass `allow_series=True` or
-    `series_only=True`.
+        - If the native object is a series from one of the supported backend (e.g.
+            pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
+            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            ```py
+            narwhals.from_native(native_series, allow_series=True)
+            narwhals.from_native(native_series, series_only=True)
+            ```
+
+        - If the object is a generic sequence (e.g. a list or a tuple of values), you can
+            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            ```py
+            narwhals.new_series(
+                name=name,
+                values=values,
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     @property
