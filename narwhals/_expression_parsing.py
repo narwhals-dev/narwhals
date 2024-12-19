@@ -129,7 +129,7 @@ def parse_into_expr(
 def reuse_series_implementation(
     expr: PandasLikeExprT,
     attr: str,
-    *args: Any,
+    *,
     returns_scalar: bool = False,
     **kwargs: Any,
 ) -> PandasLikeExprT: ...
@@ -139,7 +139,7 @@ def reuse_series_implementation(
 def reuse_series_implementation(
     expr: ArrowExprT,
     attr: str,
-    *args: Any,
+    *,
     returns_scalar: bool = False,
     **kwargs: Any,
 ) -> ArrowExprT: ...
@@ -148,7 +148,7 @@ def reuse_series_implementation(
 def reuse_series_implementation(
     expr: ArrowExprT | PandasLikeExprT,
     attr: str,
-    *args: Any,
+    *,
     returns_scalar: bool = False,
     **kwargs: Any,
 ) -> ArrowExprT | PandasLikeExprT:
@@ -168,7 +168,6 @@ def reuse_series_implementation(
     plx = expr.__narwhals_namespace__()
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
-        _args = [maybe_evaluate_expr(df, arg) for arg in args]  # type: ignore[var-annotated]
         _kwargs = {  # type: ignore[var-annotated]
             arg_name: maybe_evaluate_expr(df, arg_value)
             for arg_name, arg_value in kwargs.items()
@@ -184,11 +183,11 @@ def reuse_series_implementation(
 
         out: list[CompliantSeries] = [
             plx._create_series_from_scalar(
-                getattr(series, attr)(*_args, **extra_kwargs, **_kwargs),
+                getattr(series, attr)(**extra_kwargs, **_kwargs),
                 reference_series=series,  # type: ignore[arg-type]
             )
             if returns_scalar
-            else getattr(series, attr)(*_args, **_kwargs)
+            else getattr(series, attr)(**_kwargs)
             for series in expr(df)  # type: ignore[arg-type]
         ]
         if expr._output_names is not None and (
@@ -208,7 +207,7 @@ def reuse_series_implementation(
     # and just set it to None.
     root_names = copy(expr._root_names)
     output_names = expr._output_names
-    for arg in list(args) + list(kwargs.values()):
+    for arg in list(kwargs.values()):
         if root_names is not None and isinstance(arg, expr.__class__):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
@@ -233,24 +232,22 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=output_names,
-        args=args,
         kwargs=kwargs,
     )
 
 
 @overload
 def reuse_series_namespace_implementation(
-    expr: ArrowExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
+    expr: ArrowExprT, series_namespace: str, attr: str, **kwargs: Any
 ) -> ArrowExprT: ...
 @overload
 def reuse_series_namespace_implementation(
-    expr: PandasLikeExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
+    expr: PandasLikeExprT, series_namespace: str, attr: str, **kwargs: Any
 ) -> PandasLikeExprT: ...
 def reuse_series_namespace_implementation(
     expr: ArrowExprT | PandasLikeExprT,
     series_namespace: str,
     attr: str,
-    *args: Any,
     **kwargs: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
@@ -268,14 +265,13 @@ def reuse_series_namespace_implementation(
     plx = expr.__narwhals_namespace__()
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
-            getattr(getattr(series, series_namespace), attr)(*args, **kwargs)
+            getattr(getattr(series, series_namespace), attr)(**kwargs)
             for series in expr(df)  # type: ignore[arg-type]
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
-        args=args,
         kwargs=kwargs,
     )
 

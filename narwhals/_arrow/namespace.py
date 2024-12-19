@@ -41,7 +41,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
@@ -54,7 +53,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=output_names,
             backend_version=self._backend_version,
             version=self._version,
-            args=args,
             kwargs=kwargs,
         )
 
@@ -69,7 +67,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -161,7 +158,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -185,7 +181,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=["literal"],
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -430,7 +425,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
-            args=None,
             kwargs={"separator": separator, "ignore_nulls": ignore_nulls},
         )
 
@@ -518,7 +512,6 @@ class ArrowWhen:
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -534,7 +527,6 @@ class ArrowThen(ArrowExpr):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        args: tuple[Any, ...] | None,
         kwargs: dict[str, Any] | None,
     ) -> None:
         self._backend_version = backend_version
@@ -544,7 +536,6 @@ class ArrowThen(ArrowExpr):
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
-        self._args = args
         self._kwargs = kwargs
 
     def otherwise(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowExpr:

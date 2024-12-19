@@ -52,7 +52,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -89,7 +88,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -142,7 +140,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -162,7 +159,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -182,7 +178,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -202,7 +197,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -285,7 +279,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -308,7 +301,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -331,7 +323,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -397,7 +388,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -461,7 +451,6 @@ class DaskWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -478,7 +467,6 @@ class DaskThen(DaskExpr):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        args: tuple[Any] | None,
         kwargs: dict[str, Any] | None,
     ) -> None:
         self._backend_version = backend_version
@@ -489,7 +477,6 @@ class DaskThen(DaskExpr):
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
-        self._args = args
         self._kwargs = kwargs
 
     def otherwise(self, value: DaskExpr | Any) -> DaskExpr:

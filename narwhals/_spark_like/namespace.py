@@ -39,7 +39,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 
@@ -60,7 +59,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs=None,
         )
 

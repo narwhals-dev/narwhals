@@ -39,7 +39,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
@@ -51,7 +50,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
-        self._args = args
         self._kwargs = kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
@@ -175,49 +173,49 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return other.__or__(self)  # type: ignore[return-value]
 
     def __add__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__add__", other)
+        return reuse_series_implementation(self, "__add__", other=other)
 
     def __radd__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__add__(self)  # type: ignore[return-value]
 
     def __sub__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__sub__", other)
+        return reuse_series_implementation(self, "__sub__", other=other)
 
     def __rsub__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__sub__(self)  # type: ignore[return-value]
 
     def __mul__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__mul__", other)
+        return reuse_series_implementation(self, "__mul__", other=other)
 
     def __rmul__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__mul__(self)  # type: ignore[return-value]
 
     def __pow__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__pow__", other)
+        return reuse_series_implementation(self, "__pow__", other=other)
 
     def __rpow__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__pow__(self)  # type: ignore[return-value]
 
     def __floordiv__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__floordiv__", other)
+        return reuse_series_implementation(self, "__floordiv__", other=other)
 
     def __rfloordiv__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__floordiv__(self)  # type: ignore[return-value]
 
     def __truediv__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__truediv__", other)
+        return reuse_series_implementation(self, "__truediv__", other=other)
 
     def __rtruediv__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
         return other.__truediv__(self)  # type: ignore[return-value]
 
     def __mod__(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__mod__", other)
+        return reuse_series_implementation(self, "__mod__", other=other)
 
     def __rmod__(self: Self, other: ArrowExpr | Any) -> Self:
         other = self.__narwhals_namespace__().lit(other, dtype=None)
@@ -256,7 +254,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 
     def cast(self: Self, dtype: DType) -> Self:
-        return reuse_series_implementation(self, "cast", dtype)
+        return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def abs(self: Self) -> Self:
         return reuse_series_implementation(self, "abs")
@@ -268,7 +266,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
     def round(self: Self, decimals: int) -> Self:
-        return reuse_series_implementation(self, "round", decimals)
+        return reuse_series_implementation(self, "round", decimals=decimals)
 
     def any(self: Self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
@@ -295,7 +293,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "drop_nulls")
 
     def shift(self: Self, n: int) -> Self:
-        return reuse_series_implementation(self, "shift", n)
+        return reuse_series_implementation(self, "shift", n=n)
 
     def alias(self: Self, name: str) -> Self:
         # Define this one manually, so that we can
@@ -308,7 +306,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=[name],
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs={"name": name},
         )
 
@@ -320,17 +317,21 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         return reuse_series_implementation(
-            self, "is_between", lower_bound, upper_bound, closed
+            self,
+            "is_between",
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            closed=closed,
         )
 
     def head(self: Self, n: int) -> Self:
-        return reuse_series_implementation(self, "head", n)
+        return reuse_series_implementation(self, "head", n=n)
 
     def tail(self: Self, n: int) -> Self:
-        return reuse_series_implementation(self, "tail", n)
+        return reuse_series_implementation(self, "tail", n=n)
 
     def is_in(self: Self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "is_in", other)
+        return reuse_series_implementation(self, "is_in", other=other)
 
     def arg_true(self: Self) -> Self:
         return reuse_series_implementation(self, "arg_true")
@@ -381,7 +382,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         return reuse_series_implementation(
-            self, "replace_strict", old, new, return_dtype=return_dtype
+            self, "replace_strict", old=old, new=new, return_dtype=return_dtype
         )
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
@@ -395,7 +396,11 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
         return reuse_series_implementation(
-            self, "quantile", quantile, interpolation, returns_scalar=True
+            self,
+            "quantile",
+            returns_scalar=True,
+            quantile=quantile,
+            interpolation=interpolation,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -429,7 +434,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs={"keys": keys},
         )
 
@@ -472,7 +476,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
-            args=None,
             kwargs={"function": function, "return_dtype": return_dtype},
         )
 
@@ -594,22 +597,22 @@ class ArrowExprDateTimeNamespace:
 
     def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "dt", "to_string", format
+            self._compliant_expr, "dt", "to_string", format=format
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "dt", "replace_time_zone", time_zone
+            self._compliant_expr, "dt", "replace_time_zone", time_zone=time_zone
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "dt", "convert_time_zone", time_zone
+            self._compliant_expr, "dt", "convert_time_zone", time_zone=time_zone
         )
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "dt", "timestamp", time_unit
+            self._compliant_expr, "dt", "timestamp", time_unit=time_unit
         )
 
     def date(self: Self) -> ArrowExpr:
@@ -700,8 +703,8 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "replace",
-            pattern,
-            value,
+            pattern=pattern,
+            value=value,
             literal=literal,
             n=n,
         )
@@ -717,8 +720,8 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "replace_all",
-            pattern,
-            value,
+            pattern=pattern,
+            value=value,
             literal=literal,
         )
 
@@ -727,7 +730,7 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "strip_chars",
-            characters,
+            characters=characters,
         )
 
     def starts_with(self: Self, prefix: str) -> ArrowExpr:
@@ -735,7 +738,7 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "starts_with",
-            prefix,
+            prefix=prefix,
         )
 
     def ends_with(self: Self, suffix: str) -> ArrowExpr:
@@ -743,17 +746,17 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "ends_with",
-            suffix,
+            suffix=suffix,
         )
 
     def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "str", "contains", pattern, literal=literal
+            self._compliant_expr, "str", "contains", pattern=pattern, literal=literal
         )
 
     def slice(self: Self, offset: int, length: int | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "str", "slice", offset, length
+            self._compliant_expr, "str", "slice", offset=offset, length=length
         )
 
     def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
@@ -761,7 +764,7 @@ class ArrowExprStringNamespace:
             self._compliant_expr,
             "str",
             "to_datetime",
-            format,
+            format=format,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -805,7 +808,6 @@ class ArrowExprNameNamespace:
             output_names=root_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs=None,
         )
 
@@ -833,7 +835,6 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs={"function": function},
         )
 
@@ -859,7 +860,6 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs={"prefix": prefix},
         )
 
@@ -886,7 +886,6 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs={"suffix": suffix},
         )
 
@@ -913,7 +912,6 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs=None,
         )
 
@@ -940,7 +938,6 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            args=None,
             kwargs=None,
         )
 
