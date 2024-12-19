@@ -230,18 +230,17 @@ def agg_pandas(  # noqa: PLR0915
             )
             for idx, item in enumerate(expected_old_names):
                 expected_old_names_indices[item].append(idx)
-            index_map: list[int] = []
-            for item in result_simple_aggs.columns:
-                # ruff false-positive here?
-                index_map.append(  # noqa: PERF401
-                    expected_old_names_indices[item].pop(0)
-                )  # Use and remove the first occurrence
+            index_map: list[int] = [
+                expected_old_names_indices[item].pop(0)
+                for item in result_simple_aggs.columns
+            ]
             new_names = [new_names[i] for i in index_map]
             result_simple_aggs.columns = new_names
 
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
+
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False

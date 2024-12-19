@@ -190,14 +190,6 @@ def agg_arrow(
         expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
         for idx, item in enumerate(expected_pyarrow_column_names):
             expected_old_names_indices[item].append(idx)
-        index_map: list[int] = []
-        for item in result_simple.column_names:
-            # ruff false-positive here?
-            index_map.append(  # noqa: PERF401
-                expected_old_names_indices[item].pop(0)
-            )  # Use and remove the first occurrence
-        new_column_names = [new_column_names[i] for i in index_map]
-
         if not (
             set(result_simple.column_names) == set(expected_pyarrow_column_names)
             and len(result_simple.column_names) == len(expected_pyarrow_column_names)
@@ -208,6 +200,10 @@ def agg_arrow(
                 "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
             )
             raise AssertionError(msg)
+        index_map: list[int] = [
+            expected_old_names_indices[item].pop(0) for item in result_simple.column_names
+        ]
+        new_column_names = [new_column_names[i] for i in index_map]
 
         result_simple = result_simple.rename_columns(new_column_names)
         return from_dataframe(result_simple)
