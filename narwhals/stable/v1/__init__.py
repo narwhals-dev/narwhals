@@ -92,12 +92,28 @@ T = TypeVar("T")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native eager dataframe.
 
-    The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+        - If the native object is a eager dataframe from one of the supported
+            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
+            you can use [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            ```py
+            narwhals.from_native(native_dataframe)
+            narwhals.from_native(native_dataframe, eager_only=True)
+            ```
+
+        - If the object is a dictionary of column names and generic sequences mapping
+            (e.g. `dict[str, list]`), you can create a DataFrame via
+            [`narwhals.from_dict`](../narwhals/#narwhals.from_dict):
+            ```py
+            narwhals.from_dict(
+                data={"a": [1, 2, 3]},
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     # We need to override any method which don't return Self so that type
@@ -364,12 +380,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals LazyFrame, backed by a native lazyframe.
 
-    The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
-
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+    !!! warning
+        This class is not meant to be instantiated directly - instead use
+        [`narwhals.from_native`](../narwhals/#narwhals.from_native) with a native
+        object that is a lazy dataframe from one of the supported
+        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
+        ```py
+        narwhals.from_native(native_lazyframe)
+        ```
     """
 
     @property
@@ -425,11 +445,26 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
 
-    The native series might be pandas.Series, polars.Series, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`, making sure to pass `allow_series=True` or
-    `series_only=True`.
+        - If the native object is a series from one of the supported backend (e.g.
+            pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
+            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            ```py
+            narwhals.from_native(native_series, allow_series=True)
+            narwhals.from_native(native_series, series_only=True)
+            ```
+
+        - If the object is a generic sequence (e.g. a list or a tuple of values), you can
+            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            ```py
+            narwhals.new_series(
+                name=name,
+                values=values,
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     # We need to override any method which don't return Self so that type
@@ -2334,7 +2369,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 
     Notes:
-        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+        `nth` is not supported for Polars version<1.0.0. Please use
+        [`col`](../narwhals/#narwhals.col) instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.

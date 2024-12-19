@@ -337,12 +337,28 @@ class BaseFrame(Generic[FrameT]):
 
 
 class DataFrame(BaseFrame[DataFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native eager dataframe.
 
-    The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+        - If the native object is a eager dataframe from one of the supported
+            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
+            you can use [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            ```py
+            narwhals.from_native(native_dataframe)
+            narwhals.from_native(native_dataframe, eager_only=True)
+            ```
+
+        - If the object is a dictionary of column names and generic sequences mapping
+            (e.g. `dict[str, list]`), you can create a DataFrame via
+            [`narwhals.from_dict`](../narwhals/#narwhals.from_dict):
+            ```py
+            narwhals.from_dict(
+                data={"a": [1, 2, 3]},
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     @property
@@ -3004,12 +3020,16 @@ class DataFrame(BaseFrame[DataFrameT]):
 
 
 class LazyFrame(BaseFrame[FrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals LazyFrame, backed by a native lazyframe.
 
-    The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
-
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+    !!! warning
+        This class is not meant to be instantiated directly - instead use
+        [`narwhals.from_native`](../narwhals/#narwhals.from_native) with a native
+        object that is a lazy dataframe from one of the supported
+        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
+        ```py
+        narwhals.from_native(native_lazyframe)
+        ```
     """
 
     @property
