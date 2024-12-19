@@ -32,6 +32,8 @@ jobs:
           : # pyspark >= 3.3.0 is not compatible with pandas==0.25.3
           uv pip uninstall pyspark --system
       - name: show-deps
+        run: uv pip freeze
+      - name: Assert dependencies
         run: |
           DEPS=$(uv pip freeze)
           echo "$DEPS" | grep 'pandas==0.25.3'
