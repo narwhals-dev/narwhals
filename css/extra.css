@@ -1,0 +1,4 @@
+.md-typeset ol li,
+.md-typeset ul li {
+  margin-bottom: 0.1em !important;
+}
