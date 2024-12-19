@@ -12,7 +12,6 @@ from typing import Sequence
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
@@ -202,25 +201,46 @@ def agg_pandas(  # noqa: PLR0915
                 else:
                     simple_aggregations[output_name] = (root_name, function_name)
 
-        simple_aggs = collections.defaultdict(list)
-        name_mapping = {}
-        for output_name, named_agg in simple_aggregations.items():
-            simple_aggs[named_agg[0]].append(named_agg[1])
-            name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
+        simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
+        expected_old_names: list[str] = []
+        new_names: list[str] = []
+        for output_name, (col_name, function) in simple_aggregations.items():
+            simple_aggs[col_name].append(function)
+            new_names.append(output_name)
+            expected_old_names.append(f"{col_name}_{function}")
         if simple_aggs:
             result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
-            result_simple_aggs = rename(
-                result_simple_aggs,
-                columns=name_mapping,
-                implementation=implementation,
-                backend_version=backend_version,
+            if not (
+                set(result_simple_aggs.columns) == set(expected_old_names)
+                and len(result_simple_aggs.columns) == len(expected_old_names)
+            ):  # pragma: no cover
+                msg = (
+                    f"Safety assertion failed, expected {expected_old_names} "
+                    f"got {result_simple_aggs.columns}, "
+                    "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
+                )
+                raise AssertionError(msg)
+
+            # Rename columns, being very careful
+            expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(
+                list
             )
+            for idx, item in enumerate(expected_old_names):
+                expected_old_names_indices[item].append(idx)
+            index_map: list[int] = [
+                expected_old_names_indices[item].pop(0)
+                for item in result_simple_aggs.columns
+            ]
+            new_names = [new_names[i] for i in index_map]
+            result_simple_aggs.columns = new_names
+
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
+
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
