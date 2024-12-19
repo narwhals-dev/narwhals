@@ -39,6 +39,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
+        function_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -49,6 +50,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        self._function_kwargs = function_kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return (

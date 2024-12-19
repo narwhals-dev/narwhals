@@ -233,6 +233,7 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=output_names,
+        function_kwargs=kwargs,
     )
 
 
