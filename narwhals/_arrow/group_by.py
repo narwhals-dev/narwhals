@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from copy import copy
+import collections
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -69,7 +69,6 @@ class ArrowGroupBy:
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
         )
-        output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
                 msg = (
@@ -78,13 +77,11 @@ class ArrowGroupBy:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            output_names.extend(expr._output_names)
 
         return agg_arrow(
             self._grouped,
             exprs,
             self._keys,
-            output_names,
             self._df._from_native_frame,
         )
 
@@ -126,7 +123,6 @@ def agg_arrow(
     grouped: pa.TableGroupBy,
     exprs: Sequence[CompliantExpr[ArrowSeries]],
     keys: list[str],
-    output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
     import pyarrow.compute as pc
@@ -178,17 +174,38 @@ def agg_arrow(
                 )
 
         aggs: list[Any] = []
-        name_mapping = {}
+        expected_pyarrow_column_names = keys.copy()
+        new_column_names = keys.copy()
         for output_name, (
             aggregation_args,
             pyarrow_output_name,
         ) in simple_aggregations.items():
             aggs.append(aggregation_args)
-            name_mapping[pyarrow_output_name] = output_name
+            expected_pyarrow_column_names.append(pyarrow_output_name)
+            new_column_names.append(output_name)
+
         result_simple = grouped.aggregate(aggs)
-        result_simple = result_simple.rename_columns(
-            [name_mapping.get(col, col) for col in result_simple.column_names]
-        ).select(output_names)
+
+        # Rename columns, being very careful
+        expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
+        for idx, item in enumerate(expected_pyarrow_column_names):
+            expected_old_names_indices[item].append(idx)
+        if not (
+            set(result_simple.column_names) == set(expected_pyarrow_column_names)
+            and len(result_simple.column_names) == len(expected_pyarrow_column_names)
+        ):  # pragma: no cover
+            msg = (
+                f"Safety assertion failed, expected {expected_pyarrow_column_names} "
+                f"got {result_simple.column_names}, "
+                "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
+            )
+            raise AssertionError(msg)
+        index_map: list[int] = [
+            expected_old_names_indices[item].pop(0) for item in result_simple.column_names
+        ]
+        new_column_names = [new_column_names[i] for i in index_map]
+
+        result_simple = result_simple.rename_columns(new_column_names)
         return from_dataframe(result_simple)
 
     msg = (

@@ -25,12 +25,10 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
       - name: install-reqs
         run: |
           uv pip install -e ".[dev]" --system
-          : # pyspark >= 3.3.0 is not compatible with pandas==0.25.3
-          uv pip uninstall pyspark --system
       - name: show-deps
         run: uv pip freeze
       - name: Assert dependencies
@@ -64,11 +62,13 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 pyspark==3.3.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" pyspark==3.3.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
       - name: install-reqs
         run: uv pip install -e ".[dev]" --system
       - name: show-deps
         run: uv pip freeze
+      - name: show-deptree
+        run: pipdeptree
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
 
