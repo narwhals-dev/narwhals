@@ -39,6 +39,7 @@
         - is_in
         - is_last_distinct
         - is_null
+        - is_nan
         - is_sorted
         - is_unique
         - item

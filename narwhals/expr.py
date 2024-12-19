@@ -1921,6 +1921,78 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
+    def is_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are NaN.
+
+        Returns:
+            A new expression.
+
+        Notes:
+            pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
+            distinguish between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> df_pd = pd.DataFrame(
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ... ).astype({"a": "Int64"})
+            >>> df_pl = pl.DataFrame(
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ... )
+            >>> df_pa = pa.table(
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan()
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> my_library_agnostic_function(df_pd)
+                  a    b  a_is_nan  b_is_nan
+            0     2  2.0     False     False
+            1     4  4.0     False     False
+            2  <NA>  NaN     False      True
+            3     3  3.0     False     False
+            4     5  5.0     False     False
+
+            >>> my_library_agnostic_function(df_pl)  # nan != null for polars
+            shape: (5, 4)
+            ┌──────┬─────┬──────────┬──────────┐
+            │ a    ┆ b   ┆ a_is_nan ┆ b_is_nan │
+            │ ---  ┆ --- ┆ ---      ┆ ---      │
+            │ i64  ┆ f64 ┆ bool     ┆ bool     │
+            ╞══════╪═════╪══════════╪══════════╡
+            │ 2    ┆ 2.0 ┆ false    ┆ false    │
+            │ 4    ┆ 4.0 ┆ false    ┆ false    │
+            │ null ┆ NaN ┆ false    ┆ true     │
+            │ 3    ┆ 3.0 ┆ false    ┆ false    │
+            │ 5    ┆ 5.0 ┆ false    ┆ false    │
+            └──────┴─────┴──────────┴──────────┘
+
+            >>> my_library_agnostic_function(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: int64
+            b: double
+            a_is_nan: bool
+            b_is_nan: bool
+            ----
+            a: [[2,4,null,3,5]]
+            b: [[2,4,nan,3,5]]
+            a_is_nan: [[false,false,null,false,false]]
+            b_is_nan: [[false,false,true,false,false]]
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_nan())
+
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
