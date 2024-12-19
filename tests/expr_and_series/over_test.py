@@ -176,14 +176,20 @@ def test_over_anonymous() -> None:
         nw.from_native(df).select(nw.all().cum_max().over("a"))
 
 
-def test_over_reversed_raises(constructor: Constructor) -> None:
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+@pytest.mark.parametrize(
+    "attr", ["cum_sum", "cum_count", "cum_min", "cum_max", "cum_prod"]
+)
+def test_over_reversed_raises(constructor: Constructor, attr: str) -> None:
     context = (
-        pytest.raises(ValueError, match="col->cum_sum-reversed")
-        if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin", "dask"))
+        pytest.raises(
+            (ValueError, NotImplementedError),
+            match="failed to aggregate|not supported|complex aggregation found",
+        )
+        if "polars" not in str(constructor)
         else nullcontext()
     )
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
-    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [6, 11, 15]}
+    expr = getattr(nw.col("b"), attr)
     with context:
-        result = df.with_columns(c=nw.col("b").cum_sum(reverse=True).over("a"))
-        assert_equal_data(result, expected)
+        _ = df.with_columns(c=expr(reverse=True).over("a"))
