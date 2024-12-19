@@ -32,7 +32,14 @@ jobs:
           : # pyspark >= 3.3.0 is not compatible with pandas==0.25.3
           uv pip uninstall pyspark --system
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          DEPS=$(uv pip freeze)
+          echo "$DEPS" | grep 'pandas==0.25.3'
+          echo "$DEPS" | grep 'polars==0.20.3'
+          echo "$DEPS" | grep 'numpy==1.17.5'
+          echo "$DEPS" | grep 'pyarrow==11.0.0'
+          echo "$DEPS" | grep 'scipy==1.5.0'
+          echo "$DEPS" | grep 'scikit-learn==1.1.0'
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
 
