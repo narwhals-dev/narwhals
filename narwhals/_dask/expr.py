@@ -435,7 +435,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def std(self, ddof: int) -> Self:
         return self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
-            "std",
+            f"std-ddof-{ddof}",
             ddof,
             returns_scalar=True,
         )
@@ -443,7 +443,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def var(self, ddof: int) -> Self:
         return self._from_call(
             lambda _input, ddof: _input.var(ddof=ddof),
-            "var",
+            f"var-ddof-{ddof}",
             ddof,
             returns_scalar=True,
         )

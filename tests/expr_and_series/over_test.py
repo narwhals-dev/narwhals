@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import pandas as pd
 import pytest
 
@@ -172,3 +174,16 @@ def test_over_anonymous() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Anonymous expressions"):
         nw.from_native(df).select(nw.all().cum_max().over("a"))
+
+
+def test_over_reversed_raises(constructor: Constructor) -> None:
+    context = (
+        pytest.raises(ValueError, match="col->cum_sum-reversed")
+        if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin", "dask"))
+        else nullcontext()
+    )
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    expected = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [6, 11, 15]}
+    with context:
+        result = df.with_columns(c=nw.col("b").cum_sum(reverse=True).over("a"))
+        assert_equal_data(result, expected)

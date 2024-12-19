@@ -125,48 +125,48 @@ def agg_dask(
             all_simple_aggs = False
             break
 
-    if all_simple_aggs:
-        simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
-        for expr in exprs:
-            if expr._depth == 0:
-                # e.g. agg(nw.len()) # noqa: ERA001
-                if expr._output_names is None:  # pragma: no cover
-                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                    raise AssertionError(msg)
+    if not all_simple_aggs:
+        msg = (
+            "Non-trivial complex aggregation found.\n\n"
+            "Hint: you were probably trying to apply a non-elementary aggregation with a "
+            "dask dataframe.\n"
+            "Please rewrite your query such that group-by aggregations "
+            "are elementary. For example, instead of:\n\n"
+            "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+            "use:\n\n"
+            "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+        )
+        raise ValueError(msg)
 
-                function_name = POLARS_TO_DASK_AGGREGATIONS.get(
-                    expr._function_name, expr._function_name
-                )
-                for output_name in expr._output_names:
-                    simple_aggregations[output_name] = (keys[0], function_name)
-                continue
-
-            # e.g. agg(nw.mean('a')) # noqa: ERA001
-            if (
-                expr._depth != 1 or expr._root_names is None or expr._output_names is None
-            ):  # pragma: no cover
+    simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
+    for expr in exprs:
+        if expr._depth == 0:
+            # e.g. agg(nw.len()) # noqa: ERA001
+            if expr._output_names is None:  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
 
-            function_name = remove_prefix(expr._function_name, "col->")
-            function_name = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
+            function_name = POLARS_TO_DASK_AGGREGATIONS.get(
+                expr._function_name, expr._function_name
+            )
+            for output_name in expr._output_names:
+                simple_aggregations[output_name] = (keys[0], function_name)
+            continue
 
-            # deal with n_unique case in a "lazy" mode to not depend on dask globally
-            function_name = function_name() if callable(function_name) else function_name
+        # e.g. agg(nw.mean('a')) # noqa: ERA001
+        if (
+            expr._depth != 1 or expr._root_names is None or expr._output_names is None
+        ):  # pragma: no cover
+            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            raise AssertionError(msg)
 
-            for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (root_name, function_name)
-        result_simple = grouped.agg(**simple_aggregations)
-        return from_dataframe(result_simple.reset_index())
+        function_name = remove_prefix(expr._function_name, "col->")
+        function_name = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
 
-    msg = (
-        "Non-trivial complex aggregation found.\n\n"
-        "Hint: you were probably trying to apply a non-elementary aggregation with a "
-        "dask dataframe.\n"
-        "Please rewrite your query such that group-by aggregations "
-        "are elementary. For example, instead of:\n\n"
-        "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-        "use:\n\n"
-        "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-    )
-    raise ValueError(msg)
+        # deal with n_unique case in a "lazy" mode to not depend on dask globally
+        function_name = function_name() if callable(function_name) else function_name
+
+        for root_name, output_name in zip(expr._root_names, expr._output_names):
+            simple_aggregations[output_name] = (root_name, function_name)
+    result_simple = grouped.agg(**simple_aggregations)
+    return from_dataframe(result_simple.reset_index())

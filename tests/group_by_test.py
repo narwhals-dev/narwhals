@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from contextlib import nullcontext
 
 import pandas as pd
@@ -367,7 +368,14 @@ def test_group_by_shift_raises(
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_std_var_ddof_0(constructor: Constructor) -> None:
+def test_std_var_ddof_0(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "modin" in str(constructor):
+        # modin emits `DataFrameGroupBy.apply operated on the grouping columns`
+        # from pandas which we can't do anything about.
+        warnings.simplefilter("ignore", DeprecationWarning)
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = (
         df.group_by("a")
