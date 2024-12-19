@@ -364,3 +364,19 @@ def test_group_by_shift_raises(
         ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
     ):
         df.group_by("b").agg(nw.col("a").shift(1))
+
+
+def test_double_same_aggregation(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor) or "modin" in str(constructor):
+        # bugged in dask https://github.com/dask/dask/issues/11612
+        # and modin lol https://github.com/modin-project/modin/issues/7414
+        # At least cudf gets it right
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
+    expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
+    assert_equal_data(result, expected)
