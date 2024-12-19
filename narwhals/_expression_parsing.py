@@ -132,10 +132,10 @@ def format_function_name(function_name: str, attr: str, **kwargs: Any) -> str:
     those too.
     """
     if attr in {"std", "var"}:
-        ddof = kwargs.get("ddof", 1)
+        ddof = kwargs["ddof"]
         attr = f"{attr}-ddof-{ddof}"
     elif attr in {"cum_sum", "cum_count", "cum_min", "cum_max", "cum_prod"}:
-        reverse = kwargs.get("reverse", False)
+        reverse = kwargs["reverse"]
         attr = f"{attr}-reversed" if reverse else attr
     return f"{function_name}->{attr}"
 
