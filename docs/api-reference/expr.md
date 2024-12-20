@@ -32,8 +32,8 @@
         - is_first_distinct
         - is_in
         - is_last_distinct
-        - is_null
         - is_nan
+        - is_null
         - is_unique
         - len
         - map_batches
