@@ -3264,6 +3264,14 @@ class LazyFrame(BaseFrame[FrameT]):
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
 
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
+        Returns:
+            The original object with the function applied.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -3302,11 +3310,14 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
-        """Drop null values.
+        """Drop rows that contain null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
                 (default), use all columns.
+
+        Returns:
+            The original object with the rows removed that contained the null values.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -3347,6 +3358,12 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+
+        Returns:
+            The original object with the column added.
 
         Examples:
             >>> import polars as pl
@@ -3389,6 +3406,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -3407,6 +3427,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
+
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
             >>> import polars as pl
@@ -3427,6 +3450,9 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def columns(self) -> list[str]:
         r"""Get column names.
+
+        Returns:
+            The column names stored in a list.
 
         Examples:
             >>> import pandas as pd
@@ -3544,6 +3570,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
                 The columns will be renamed to the keyword used.
+
+        Returns:
+            The LazyFrame containing only the selected columns.
 
         Notes:
             If you'd like to select a column whose name isn't a string (for example,
@@ -3716,6 +3745,9 @@ class LazyFrame(BaseFrame[FrameT]):
                       function that takes the old name as input and returns the
                       new name.
 
+        Returns:
+            The LazyFrame with the specified columns renamed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3758,6 +3790,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3816,6 +3851,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3876,6 +3914,9 @@ class LazyFrame(BaseFrame[FrameT]):
             *columns: Names of the columns that should be removed from the dataframe.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
+
+        Returns:
+            The LazyFrame with the specified columns removed.
 
         Warning:
             `strict` argument is ignored for `polars<1.0.0`.
@@ -4019,6 +4060,9 @@ class LazyFrame(BaseFrame[FrameT]):
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
+
+        Returns:
+            The filtered LazyFrame.
 
         Examples:
             >>> import pandas as pd
@@ -4203,6 +4247,9 @@ class LazyFrame(BaseFrame[FrameT]):
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
+        Returns:
+            LazyGroupBy: Object which can be used to perform aggregations.
+
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
             another column.
@@ -4318,6 +4365,9 @@ class LazyFrame(BaseFrame[FrameT]):
             nulls_last: Place null values last; can specify a single boolean applying to
                 all columns or a sequence of booleans for per-column control.
 
+        Returns:
+            The sorted LazyFrame.
+
         Warning:
             Unlike Polars, it is not possible to specify a sequence of booleans for
             `nulls_last` in order to control per-column behaviour. Instead a single
@@ -4393,7 +4443,7 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
-            A new joined LazyFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> import narwhals as nw
@@ -4489,7 +4539,7 @@ class LazyFrame(BaseFrame[FrameT]):
                   * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
 
         Returns:
-            A new joined DataFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> from datetime import datetime
@@ -4652,6 +4702,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def clone(self) -> Self:
         r"""Create a copy of this DataFrame.
 
+        Returns:
+            An identical copy of the original LazyFrame.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -4691,6 +4744,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A LazyFrame.
+
         Examples:
             Construct pandas and Polars objects:
 
@@ -4727,6 +4783,9 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
+
+        Returns:
+            The LazyFrame containing only the selected rows.
 
         Examples:
             >>> import narwhals as nw
@@ -4786,6 +4845,9 @@ class LazyFrame(BaseFrame[FrameT]):
             index: Column(s) to use as identifier variables.
             variable_name: Name to give to the `variable` column. Defaults to "variable".
             value_name: Name to give to the `value` column. Defaults to "value".
+
+        Returns:
+            The unpivoted LazyFrame.
 
         Notes:
             If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
