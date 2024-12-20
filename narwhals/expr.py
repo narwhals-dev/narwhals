@@ -1857,7 +1857,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1985,7 +1985,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -2123,7 +2123,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -2439,7 +2439,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -6089,7 +6089,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Notes:
         `nth` is not supported for Polars version<1.0.0. Please use
-        [`col`](../narwhals/#narwhals.col) instead.
+        [`narwhals.col`][] instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
