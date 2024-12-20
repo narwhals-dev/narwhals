@@ -344,7 +344,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         - If the native object is a eager dataframe from one of the supported
             backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
-            you can use [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            you can use [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_dataframe)
             narwhals.from_native(native_dataframe, eager_only=True)
@@ -352,7 +352,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         - If the object is a dictionary of column names and generic sequences mapping
             (e.g. `dict[str, list]`), you can create a DataFrame via
-            [`narwhals.from_dict`](../narwhals/#narwhals.from_dict):
+            [`narwhals.from_dict`][]:
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
@@ -1197,7 +1197,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md)
             for reference.
 
         Examples:
@@ -2677,7 +2677,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -3131,7 +3131,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     !!! warning
         This class is not meant to be instantiated directly - instead use
-        [`narwhals.from_native`](../narwhals/#narwhals.from_native) with a native
+        [`narwhals.from_native`][] with a native
         object that is a lazy dataframe from one of the supported
         backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
         ```py
@@ -3338,7 +3338,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:

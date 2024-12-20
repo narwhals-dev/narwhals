@@ -99,7 +99,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
         - If the native object is a eager dataframe from one of the supported
             backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
-            you can use [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            you can use [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_dataframe)
             narwhals.from_native(native_dataframe, eager_only=True)
@@ -107,7 +107,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
         - If the object is a dictionary of column names and generic sequences mapping
             (e.g. `dict[str, list]`), you can create a DataFrame via
-            [`narwhals.from_dict`](../narwhals/#narwhals.from_dict):
+            [`narwhals.from_dict`][]:
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
@@ -384,7 +384,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
     !!! warning
         This class is not meant to be instantiated directly - instead use
-        [`narwhals.from_native`](../narwhals/#narwhals.from_native) with a native
+        [`narwhals.from_native`][] with a native
         object that is a lazy dataframe from one of the supported
         backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
         ```py
@@ -450,14 +450,14 @@ class Series(NwSeries[Any]):
 
         - If the native object is a series from one of the supported backend (e.g.
             pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_series, allow_series=True)
             narwhals.from_native(native_series, series_only=True)
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            create a series via [`narwhals.new_series`][]:
             ```py
             narwhals.new_series(
                 name=name,
@@ -2370,7 +2370,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Notes:
         `nth` is not supported for Polars version<1.0.0. Please use
-        [`col`](../narwhals/#narwhals.col) instead.
+        [`col`][] instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.

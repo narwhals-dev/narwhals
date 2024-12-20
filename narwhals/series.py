@@ -38,14 +38,14 @@ class Series(Generic[IntoSeriesT]):
 
         - If the native object is a series from one of the supported backend (e.g.
             pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_series, allow_series=True)
             narwhals.from_native(native_series, series_only=True)
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            create a series via [`narwhals.new_series`][]:
             ```py
             narwhals.new_series(
                 name=name,
@@ -1282,7 +1282,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1892,7 +1892,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1954,7 +1954,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -2459,7 +2459,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
