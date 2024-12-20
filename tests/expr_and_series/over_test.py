@@ -172,3 +172,20 @@ def test_over_anonymous() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Anonymous expressions"):
         nw.from_native(df).select(nw.all().cum_max().over("a"))
+
+
+def test_over_shift(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyarrow_table_constructor" in str(
+        constructor
+    ) or "dask_lazy_p2_constructor" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_shift": [None, None, None, None, 3],
+    }
+    result = df.with_columns(b_shift=nw.col("b").shift(2).over("a"))
+    assert_equal_data(result, expected)
