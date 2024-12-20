@@ -1857,7 +1857,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling/
+            See [null_handling](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling)
             for reference.
 
         Examples:
@@ -1985,7 +1985,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling/
+            See [null_handling](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling)
             for reference.
 
         Examples:
@@ -2123,7 +2123,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling/
+            See [null_handling](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling)
             for reference.
 
         Examples:
@@ -2439,7 +2439,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling/
+            See [null_handling](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/null_handling)
             for reference.
 
         Examples:
