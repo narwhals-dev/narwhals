@@ -169,9 +169,7 @@ def agg_arrow(
         function_name = remove_prefix(expr._function_name, "col->")
 
         if function_name in {"std", "var"}:
-            option = pc.VarianceOptions(
-                ddof=expr._kwargs.get("ddof", 1) if expr._kwargs else 1
-            )
+            option = pc.VarianceOptions(ddof=expr._kwargs.get("ddof", 1))
         elif function_name in {"len", "n_unique"}:
             option = pc.CountOptions(mode="all")
         elif function_name == "count":

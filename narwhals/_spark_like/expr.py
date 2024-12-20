@@ -37,7 +37,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None,
+        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -83,7 +83,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs=None,
+            kwargs={},
         )
 
     def _from_call(

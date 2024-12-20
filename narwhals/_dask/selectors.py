@@ -38,7 +38,7 @@ class DaskSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def numeric(self: Self) -> DaskSelector:
@@ -83,7 +83,7 @@ class DaskSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs=None,
+            kwargs={},
         )
 
 
@@ -107,7 +107,7 @@ class DaskSelector(DaskExpr):
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
             version=self._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def __sub__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
@@ -127,7 +127,7 @@ class DaskSelector(DaskExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs=None,
+                kwargs={},
             )
         else:
             return self._to_expr() - other
@@ -149,7 +149,7 @@ class DaskSelector(DaskExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs=None,
+                kwargs={},
             )
         else:
             return self._to_expr() | other
@@ -171,7 +171,7 @@ class DaskSelector(DaskExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs=None,
+                kwargs={},
             )
         else:
             return self._to_expr() & other

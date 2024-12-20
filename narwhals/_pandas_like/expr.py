@@ -48,7 +48,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -117,6 +117,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
+            kwargs={},
         )
 
     @classmethod
@@ -147,6 +148,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
+            kwargs={},
         )
 
     def cast(
@@ -429,9 +431,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                     raise ValueError(msg)
 
-                reverse = (
-                    self._kwargs.pop("reverse") if self._kwargs is not None else False
-                )
+                reverse = self._kwargs.get("reverse", False)
                 if reverse:
                     msg = (
                         "Cumulative operation with `reverse=True` is not supported in "
@@ -901,7 +901,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
@@ -1009,7 +1009,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
@@ -1036,7 +1036,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
 

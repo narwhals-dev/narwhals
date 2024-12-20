@@ -39,7 +39,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -99,6 +99,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=list(column_names),
             backend_version=backend_version,
             version=version,
+            kwargs={},
         )
 
     @classmethod
@@ -129,6 +130,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             output_names=None,
             backend_version=backend_version,
             version=version,
+            kwargs={},
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
@@ -808,7 +810,7 @@ class ArrowExprNameNamespace:
             output_names=root_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
@@ -912,7 +914,7 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -938,7 +940,7 @@ class ArrowExprNameNamespace:
             output_names=output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
 

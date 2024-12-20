@@ -46,7 +46,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None,
+        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -95,7 +95,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs=None,
+            kwargs={},
         )
 
     @classmethod
@@ -119,7 +119,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs=None,
+            kwargs={},
         )
 
     def _from_call(
@@ -1328,7 +1328,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
@@ -1436,7 +1436,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
@@ -1463,5 +1463,5 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=None,
+            kwargs={},
         )
