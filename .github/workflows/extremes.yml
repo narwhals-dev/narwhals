@@ -177,8 +177,8 @@ jobs:
         run: |
           DEPS=$(uv pip freeze)
           echo "$DEPS" | grep 'polars'
-          echo "$DEPS" | grep 'pandas'
-          echo "$DEPS" | grep 'pyarrow'
+          echo "$DEPS" | grep 'pandas.*dev'
+          echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy'
           echo "$DEPS" | grep 'dask'
       - name: Run pytest
