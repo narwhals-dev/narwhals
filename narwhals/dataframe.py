@@ -1196,18 +1196,21 @@ class DataFrame(BaseFrame[DataFrameT]):
             The original object with the rows removed that contained the null values.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../../pandas_like_concepts/null_handling)
+            for reference.
 
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1215,7 +1218,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
@@ -1229,6 +1232,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╡
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
+            >>> agnostic_drop_nulls(df_pa)
+            pyarrow.Table
+            a: double
+            ba: double
+            ----
+            a: [[1]]
+            ba: [[1]]
         """
         return super().drop_nulls(subset=subset)
 
@@ -2666,42 +2676,39 @@ class DataFrame(BaseFrame[DataFrameT]):
             A dataframe of shape (1, n_columns).
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../../pandas_like_concepts/null_handling)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "foo": [1, None, 3],
+            ...     "bar": [6, 7, None],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that returns the null count of
             each columns:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.null_count()
+            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.null_count().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_null_count`:
 
-            >>> func(df_pd)
+            >>> agnostic_null_count(df_pd)
                foo  bar  ham
             0    1    1    0
 
-            >>> func(df_pl)
+            >>> agnostic_null_count(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2710,6 +2717,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 1   ┆ 0   │
             └─────┴─────┴─────┘
+
+            >>> agnostic_null_count(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: int64
+            ham: int64
+            ----
+            foo: [[1]]
+            bar: [[1]]
+            ham: [[0]]
         """
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
@@ -3320,8 +3337,9 @@ class LazyFrame(BaseFrame[FrameT]):
             The original object with the rows removed that contained the null values.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../../pandas_like_concepts/null_handling)
+            for reference.
 
         Examples:
             >>> import polars as pl
@@ -3339,7 +3357,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas or Polars to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
