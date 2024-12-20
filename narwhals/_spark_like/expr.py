@@ -250,4 +250,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             return stddev(_input, ddof=ddof)
 
-        return self._from_call(_std, "std", returns_scalar=True, ddof=ddof)
+        expr = self._from_call(_std, "std", returns_scalar=True, ddof=ddof)
+        if ddof != 1:
+            expr._depth += 1
+        return expr

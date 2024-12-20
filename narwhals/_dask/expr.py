@@ -438,20 +438,26 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def std(self, ddof: int) -> Self:
-        return self._from_call(
+        expr = self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
             ddof=ddof,
             returns_scalar=True,
         )
+        if ddof != 1:
+            expr._depth += 1
+        return expr
 
     def var(self, ddof: int) -> Self:
-        return self._from_call(
+        expr = self._from_call(
             lambda _input, ddof: _input.var(ddof=ddof),
             "var",
             ddof=ddof,
             returns_scalar=True,
         )
+        if ddof != 1:
+            expr._depth += 1
+        return expr
 
     def skew(self: Self) -> Self:
         return self._from_call(
