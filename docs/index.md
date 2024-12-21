@@ -14,17 +14,17 @@ Extremely lightweight and extensible compatibility layer between dataframe libra
 
 Seamlessly support all, without depending on any!
 
-- ✅ **Just use** [a subset of **the Polars API**](https://narwhals-dev.github.io/narwhals/api-reference/), no need to learn anything new
+- ✅ **Just use** [a subset of **the Polars API**](./api-reference/index.md), no need to learn anything new
 - ✅ **Zero dependencies**, Narwhals only uses what
   the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**
 - ✅ Support pandas' complicated type system and index, without
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
-- ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
-- ✅ Let your IDE help you thanks to **full static typing**, see [typing](https://narwhals-dev.github.io/narwhals/api-reference/typing/)
+- ✅ **Negligible overhead**, see [overhead](./overhead.md/)
+- ✅ Let your IDE help you thanks to **full static typing**, see [`narwhals.typing`][]
 - ✅ **Perfect backwards compatibility policy**,
-  see [stable api](https://narwhals-dev.github.io/narwhals/backcompat/) for how to opt-in
+  see [stable api](./backcompat.md#perfect-backwards-compatibility-policy) for how to opt-in
 
 ## Who's this for?
 

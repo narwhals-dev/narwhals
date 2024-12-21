@@ -361,7 +361,7 @@ def from_native(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 
@@ -869,7 +869,7 @@ def narwhalify(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 
