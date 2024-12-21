@@ -443,18 +443,6 @@ def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-# copied from tests/frame/with_row_index.py
-def test_with_row_index(pyspark_constructor: Constructor) -> None:
-    data = {
-        "a": ["foo", "bars"],
-        "ab": ["foo", "bars"],
-    }
-    df = nw.from_native(pyspark_constructor(data)).lazy()
-    result = df.with_row_index()
-    expected = {"a": ["foo", "bars"], "ab": ["foo", "bars"], "index": [0, 1]}
-    assert_equal_data(result, expected)
-
-
 # copied from tests/frame/drop_nulls_test.py
 def test_drop_nulls(pyspark_constructor: Constructor) -> None:
     data = {

@@ -190,13 +190,6 @@ class SparkLikeLazyFrame:
         sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
-    def with_row_index(self: Self, name: str) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
-
-        return self._from_native_frame(
-            self._native_frame.withColumn(name, F.monotonically_increasing_id())
-        )
-
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
