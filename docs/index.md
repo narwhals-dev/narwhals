@@ -24,7 +24,7 @@ Seamlessly support all, without depending on any!
 - ✅ **Negligible overhead**, see [overhead](./overhead.md/)
 - ✅ Let your IDE help you thanks to **full static typing**, see [`narwhals.typing`][]
 - ✅ **Perfect backwards compatibility policy**,
-  see [stable api](./backcompat.md#perfect-backwards-compatibility-policy) for how to opt-in
+  see [stable api](./backcompat.md/) for how to opt-in
 
 ## Who's this for?
 
