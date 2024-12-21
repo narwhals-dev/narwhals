@@ -264,6 +264,11 @@ def test_pivot_no_index(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
+    ):
+        # not implemented
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
     result = df.pivot(on="col", values="foo").sort("ix", "bar")
     expected = {
