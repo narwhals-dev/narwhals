@@ -39,6 +39,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def all_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
@@ -58,6 +59,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def col(self, *column_names: str) -> SparkLikeExpr:

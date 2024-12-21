@@ -22,28 +22,18 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.typing import CompliantExpr
 
-
-def polars_to_arrow_aggregations() -> (
-    dict[str, tuple[str, pc.VarianceOptions | pc.CountOptions | None]]
-):
-    """Map polars compute functions to their pyarrow counterparts and options that help match polars behaviour."""
-    import pyarrow.compute as pc
-
-    return {
-        "sum": ("sum", None),
-        "mean": ("mean", None),
-        "median": ("approximate_median", None),
-        "max": ("max", None),
-        "min": ("min", None),
-        "std": ("stddev", pc.VarianceOptions(ddof=1)),
-        "var": (
-            "variance",
-            pc.VarianceOptions(ddof=1),
-        ),  # currently unused, we don't have `var` yet
-        "len": ("count", pc.CountOptions(mode="all")),
-        "n_unique": ("count_distinct", pc.CountOptions(mode="all")),
-        "count": ("count", pc.CountOptions(mode="only_valid")),
-    }
+POLARS_TO_ARROW_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "approximate_median",
+    "max": "max",
+    "min": "min",
+    "std": "stddev",
+    "var": "variance",
+    "len": "count",
+    "n_unique": "count_distinct",
+    "count": "count",
+}
 
 
 class ArrowGroupBy:
@@ -132,7 +122,7 @@ def agg_arrow(
         if not (
             is_simple_aggregation(expr)
             and remove_prefix(expr._function_name, "col->")
-            in polars_to_arrow_aggregations()
+            in POLARS_TO_ARROW_AGGREGATIONS
         ):
             all_simple_aggs = False
             break
@@ -150,9 +140,10 @@ def agg_arrow(
         )
         raise ValueError(msg)
 
-    # Mapping from output name to
-    # (aggregation_args, pyarrow_output_name)  # noqa: ERA001
-    simple_aggregations: dict[str, tuple[tuple[Any, ...], str]] = {}
+    aggs: list[tuple[str, str, pc.FunctionOptions | None]] = []
+    expected_pyarrow_column_names: list[str] = keys.copy()
+    new_column_names: list[str] = keys.copy()
+
     for expr in exprs:
         if expr._depth == 0:
             # e.g. agg(nw.len()) # noqa: ERA001
@@ -161,10 +152,11 @@ def agg_arrow(
             ):  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
-            simple_aggregations[expr._output_names[0]] = (
-                (keys[0], "count", pc.CountOptions(mode="all")),
-                f"{keys[0]}_count",
-            )
+
+            new_column_names.append(expr._output_names[0])
+            expected_pyarrow_column_names.append(f"{keys[0]}_count")
+            aggs.append((keys[0], "count", pc.CountOptions(mode="all")))
+
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
@@ -175,26 +167,25 @@ def agg_arrow(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        function_name, option = polars_to_arrow_aggregations().get(
-            function_name, (function_name, None)
+
+        if function_name in {"std", "var"}:
+            option = pc.VarianceOptions(ddof=expr._kwargs.get("ddof", 1))
+        elif function_name in {"len", "n_unique"}:
+            option = pc.CountOptions(mode="all")
+        elif function_name == "count":
+            option = pc.CountOptions(mode="only_valid")
+        else:
+            option = None
+
+        function_name = POLARS_TO_ARROW_AGGREGATIONS[function_name]
+
+        new_column_names.extend(expr._output_names)
+        expected_pyarrow_column_names.extend(
+            [f"{root_name}_{function_name}" for root_name in expr._root_names]
         )
-
-        for root_name, output_name in zip(expr._root_names, expr._output_names):
-            simple_aggregations[output_name] = (
-                (root_name, function_name, option),
-                f"{root_name}_{function_name}",
-            )
-
-    aggs: list[Any] = []
-    expected_pyarrow_column_names = keys.copy()
-    new_column_names = keys.copy()
-    for output_name, (
-        aggregation_args,
-        pyarrow_output_name,
-    ) in simple_aggregations.items():
-        aggs.append(aggregation_args)
-        expected_pyarrow_column_names.append(pyarrow_output_name)
-        new_column_names.append(output_name)
+        aggs.extend(
+            [(root_name, function_name, option) for root_name in expr._root_names]
+        )
 
     result_simple = grouped.aggregate(aggs)
 

@@ -345,12 +345,28 @@ class BaseFrame(Generic[FrameT]):
 
 
 class DataFrame(BaseFrame[DataFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native eager dataframe.
 
-    The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+        - If the native object is a eager dataframe from one of the supported
+            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
+            you can use [`narwhals.from_native`][]:
+            ```py
+            narwhals.from_native(native_dataframe)
+            narwhals.from_native(native_dataframe, eager_only=True)
+            ```
+
+        - If the object is a dictionary of column names and generic sequences mapping
+            (e.g. `dict[str, list]`), you can create a DataFrame via
+            [`narwhals.from_dict`][]:
+            ```py
+            narwhals.from_dict(
+                data={"a": [1, 2, 3]},
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     @property
@@ -1090,6 +1106,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             index: Row number.
 
+        Returns:
+            A tuple of the values in the selected row.
+
         Notes:
             cuDF doesn't support this method.
 
@@ -1122,6 +1141,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
+
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
+        Returns:
+            The original object with the function applied.
 
         Examples:
             >>> import polars as pl
@@ -1165,25 +1192,31 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
-        """Drop null values.
+        """Drop rows that contain null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
                 (default), use all columns.
 
+        Returns:
+            The original object with the rows removed that contained the null values.
+
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md)
+            for reference.
 
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1191,7 +1224,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
@@ -1205,11 +1238,24 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╡
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
+            >>> agnostic_drop_nulls(df_pa)
+            pyarrow.Table
+            a: double
+            ba: double
+            ----
+            a: [[1]]
+            ba: [[1]]
         """
         return super().drop_nulls(subset=subset)
 
     def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+
+        Returns:
+            The original object with the column added.
 
         Examples:
             Construct pandas as polars DataFrames:
@@ -1254,6 +1300,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -1289,6 +1338,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
+
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
             >>> import polars as pl
@@ -1326,6 +1378,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     @property
     def columns(self) -> list[str]:
         """Get column names.
+
+        Returns:
+            The column names stored in a list.
 
         Examples:
             >>> import pandas as pd
@@ -1387,6 +1442,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 in the same order as the frame columns. Setting named=True will
                 return rows of dictionaries instead.
 
+        Returns:
+            The data as a list of rows.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1441,6 +1499,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             buffer_size: Determines the number of rows that are buffered
                 internally while iterating over the data.
                 See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Returns:
+            An iterator over the DataFrame of rows.
 
         Notes:
             cuDF doesn't support this method.
@@ -1550,6 +1611,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             **named_exprs: Additional columns to select, specified as keyword arguments.
                             The columns will be renamed to the keyword used.
+
+        Returns:
+            The dataframe containing only the selected columns.
 
         Examples:
             >>> import pandas as pd
@@ -1664,6 +1728,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             mapping: Key value pairs that map from old name to new name.
 
+        Returns:
+            The dataframe with the specified columns renamed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1705,6 +1772,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             n: Number of rows to return. If a negative value is passed, return all rows
                 except the last `abs(n)`.
+
+        Returns:
+            A subset of the dataframe of shape (n, n_columns).
 
         Examples:
             >>> import pandas as pd
@@ -1752,6 +1822,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             n: Number of rows to return. If a negative value is passed, return all rows
                 except the first `abs(n)`.
 
+        Returns:
+            A subset of the dataframe of shape (n, n_columns).
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1793,6 +1866,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         """Remove columns from the dataframe.
+
+        Returns:
+            The dataframe with the specified columns removed.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
@@ -1880,6 +1956,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 expensive to compute. Settings this to `True` blocks the possibility
                 to run on the streaming engine for Polars.
 
+        Returns:
+            The dataframe with the duplicate rows removed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1928,6 +2007,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
+
+        Returns:
+            The filtered dataframe.
 
         Examples:
             >>> import pandas as pd
@@ -2142,6 +2224,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             descending: Sort in descending order. When sorting by multiple columns, can be
                 specified per column by passing a sequence of booleans.
             nulls_last: Place null values last.
+
+        Returns:
+            The sorted dataframe.
 
         Warning:
             Unlike Polars, it is not possible to specify a sequence of booleans for
@@ -2508,6 +2593,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def is_empty(self: Self) -> bool:
         r"""Check if the dataframe is empty.
 
+        Returns:
+            A boolean indicating whether the dataframe is empty (True) or not (False).
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2590,43 +2678,43 @@ class DataFrame(BaseFrame[DataFrameT]):
     def null_count(self: Self) -> Self:
         r"""Create a new DataFrame that shows the null counts per column.
 
+        Returns:
+            A dataframe of shape (1, n_columns).
+
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "foo": [1, None, 3],
+            ...     "bar": [6, 7, None],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that returns the null count of
             each columns:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.null_count()
+            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.null_count().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_null_count`:
 
-            >>> func(df_pd)
+            >>> agnostic_null_count(df_pd)
                foo  bar  ham
             0    1    1    0
 
-            >>> func(df_pl)
+            >>> agnostic_null_count(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2635,11 +2723,28 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 1   ┆ 0   │
             └─────┴─────┴─────┘
+
+            >>> agnostic_null_count(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: int64
+            ham: int64
+            ----
+            foo: [[1]]
+            bar: [[1]]
+            ham: [[0]]
         """
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""Return the DataFrame as a scalar, or return the element at the given row/column.
+
+        Arguments:
+            row: The *n*-th row.
+            column: The column selected via an integer or a string (column name).
+
+        Returns:
+            A scalar or the specified element in the dataframe.
 
         Notes:
             If row/col not provided, this is equivalent to df[0,0], with a check that the shape is (1,1).
@@ -2671,6 +2776,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def clone(self) -> Self:
         r"""Create a copy of this DataFrame.
+
+        Returns:
+            An identical copy of the original dataframe.
 
         Examples:
             >>> import narwhals as nw
@@ -2710,6 +2818,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
+
+        Returns:
+            The dataframe containing only the selected rows.
 
         Examples:
             >>> import narwhals as nw
@@ -2780,6 +2891,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             separator: Used as separator/delimiter in generated column names in case of
                 multiple `values` columns.
 
+        Returns:
+            A new dataframe.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2831,6 +2945,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_arrow(self: Self) -> pa.Table:
         r"""Convert to arrow table.
 
+        Returns:
+            A new PyArrow table.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -2879,6 +2996,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             with_replacement: Allow values to be sampled more than once.
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
+
+        Returns:
+            A new dataframe.
 
         Notes:
             The results may not be consistent across libraries.
@@ -2945,6 +3065,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             index: Column(s) to use as identifier variables.
             variable_name: Name to give to the `variable` column. Defaults to "variable".
             value_name: Name to give to the `value` column. Defaults to "value".
+
+        Returns:
+            The unpivoted dataframe.
 
         Notes:
             If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
@@ -3081,12 +3204,16 @@ class DataFrame(BaseFrame[DataFrameT]):
 
 
 class LazyFrame(BaseFrame[FrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals LazyFrame, backed by a native lazyframe.
 
-    The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
-
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+    !!! warning
+        This class is not meant to be instantiated directly - instead use
+        [`narwhals.from_native`][] with a native
+        object that is a lazy dataframe from one of the supported
+        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
+        ```py
+        narwhals.from_native(native_lazyframe)
+        ```
     """
 
     @property
@@ -3231,6 +3358,14 @@ class LazyFrame(BaseFrame[FrameT]):
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
 
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
+        Returns:
+            The original object with the function applied.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -3269,15 +3404,19 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
-        """Drop null values.
+        """Drop rows that contain null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
                 (default), use all columns.
 
+        Returns:
+            The original object with the rows removed that contained the null values.
+
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import polars as pl
@@ -3295,7 +3434,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas or Polars to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
@@ -3314,6 +3453,12 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+
+        Returns:
+            The original object with the column added.
 
         Examples:
             >>> import polars as pl
@@ -3356,6 +3501,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -3374,6 +3522,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
+
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
             >>> import polars as pl
@@ -3394,6 +3545,9 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def columns(self) -> list[str]:
         r"""Get column names.
+
+        Returns:
+            The column names stored in a list.
 
         Examples:
             >>> import pandas as pd
@@ -3511,6 +3665,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
                 The columns will be renamed to the keyword used.
+
+        Returns:
+            The LazyFrame containing only the selected columns.
 
         Notes:
             If you'd like to select a column whose name isn't a string (for example,
@@ -3683,6 +3840,9 @@ class LazyFrame(BaseFrame[FrameT]):
                       function that takes the old name as input and returns the
                       new name.
 
+        Returns:
+            The LazyFrame with the specified columns renamed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3725,6 +3885,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3783,6 +3946,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3843,6 +4009,9 @@ class LazyFrame(BaseFrame[FrameT]):
             *columns: Names of the columns that should be removed from the dataframe.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
+
+        Returns:
+            The LazyFrame with the specified columns removed.
 
         Warning:
             `strict` argument is ignored for `polars<1.0.0`.
@@ -3986,6 +4155,9 @@ class LazyFrame(BaseFrame[FrameT]):
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
+
+        Returns:
+            The filtered LazyFrame.
 
         Examples:
             >>> import pandas as pd
@@ -4170,6 +4342,9 @@ class LazyFrame(BaseFrame[FrameT]):
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
+        Returns:
+            LazyGroupBy: Object which can be used to perform aggregations.
+
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
             another column.
@@ -4285,6 +4460,9 @@ class LazyFrame(BaseFrame[FrameT]):
             nulls_last: Place null values last; can specify a single boolean applying to
                 all columns or a sequence of booleans for per-column control.
 
+        Returns:
+            The sorted LazyFrame.
+
         Warning:
             Unlike Polars, it is not possible to specify a sequence of booleans for
             `nulls_last` in order to control per-column behaviour. Instead a single
@@ -4360,7 +4538,7 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
-            A new joined LazyFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> import narwhals as nw
@@ -4456,7 +4634,7 @@ class LazyFrame(BaseFrame[FrameT]):
                   * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
 
         Returns:
-            A new joined DataFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> from datetime import datetime
@@ -4619,6 +4797,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def clone(self) -> Self:
         r"""Create a copy of this DataFrame.
 
+        Returns:
+            An identical copy of the original LazyFrame.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -4658,6 +4839,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A LazyFrame.
+
         Examples:
             Construct pandas and Polars objects:
 
@@ -4694,6 +4878,9 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
+
+        Returns:
+            The LazyFrame containing only the selected rows.
 
         Examples:
             >>> import narwhals as nw
@@ -4753,6 +4940,9 @@ class LazyFrame(BaseFrame[FrameT]):
             index: Column(s) to use as identifier variables.
             variable_name: Name to give to the `variable` column. Defaults to "variable".
             value_name: Name to give to the `value` column. Defaults to "value".
+
+        Returns:
+            The unpivoted LazyFrame.
 
         Notes:
             If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
