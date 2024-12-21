@@ -21,11 +21,12 @@ data = {
     "l1": [[1, 2], None, [None], []],
     "l2": [[3, None], None, [42], []],
     "l3": [[1, 2], [3], [None], [1]],
+    "l4": [[1, 2], [3], [123], [456]],
 }
 
 
 @pytest.mark.parametrize(
-    ("columns", "expected_values"),
+    ("column", "expected_values"),
     [
         ("l2", [3, None, None, 42, None]),
         ("l3", [1, 2, 3, None, 1]),  # fast path for arrow
@@ -34,7 +35,7 @@ data = {
 def test_explode_single_col(
     request: pytest.FixtureRequest,
     constructor: Constructor,
-    columns: str,
+    column: str,
     expected_values: list[int | None],
 ) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
@@ -43,21 +44,40 @@ def test_explode_single_col(
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
+    if "pyarrow_table" in str(constructor) and column == "l2":
+        request.applymarker(pytest.mark.xfail)
+
     result = (
         nw.from_native(constructor(data))
-        .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
-        .explode(columns)
-        .select("a", columns)
+        .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
+        .explode(column)
+        .select("a", column)
     )
-    expected = {"a": ["x", "x", "y", "z", "w"], columns: expected_values}
+    expected = {"a": ["x", "x", "y", "z", "w"], column: expected_values}
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
-    ("columns", "more_columns"),
+    ("columns", "more_columns", "expected"),
     [
-        ("l1", ["l2"]),
-        (["l1", "l2"], []),
+        (
+            "l1",
+            ["l2"],
+            {
+                "a": ["x", "x", "y", "z", "w"],
+                "l1": [1, 2, None, None, None],
+                "l2": [3, None, None, 42, None],
+            },
+        ),
+        (
+            "l3",
+            ["l4"],
+            {
+                "a": ["x", "x", "y", "z", "w"],
+                "l3": [1, 2, 3, None, 1],
+                "l4": [1, 2, 3, 123, 456],
+            },
+        ),
     ],
 )
 def test_explode_multiple_cols(
@@ -65,6 +85,7 @@ def test_explode_multiple_cols(
     constructor: Constructor,
     columns: str | Sequence[str],
     more_columns: Sequence[str],
+    expected: dict[str, list[str | int | None]],
 ) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
@@ -72,17 +93,15 @@ def test_explode_multiple_cols(
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
+    if "pyarrow_table" in str(constructor) and columns == "l1":
+        request.applymarker(pytest.mark.xfail)
+
     result = (
         nw.from_native(constructor(data))
-        .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
+        .with_columns(nw.col(columns, *more_columns).cast(nw.List(nw.Int32())))
         .explode(columns, *more_columns)
-        .select("a", "l1", "l2")
+        .select("a", columns, *more_columns)
     )
-    expected = {
-        "a": ["x", "x", "y", "z", "w"],
-        "l1": [1, 2, None, None, None],
-        "l2": [3, None, None, 42, None],
-    }
     assert_equal_data(result, expected)
 
 

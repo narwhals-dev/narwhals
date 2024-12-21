@@ -773,7 +773,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
-                msg = f"`explode` operation not supported for dtype `{dtype}`"
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+
                 raise InvalidOperationError(msg)
 
         native_frame = self._native_frame
@@ -797,25 +801,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             flatten_func = pc.list_flatten
 
         else:
-            indices = pa.array(
-                [
-                    i
-                    for i, count in enumerate(counts.to_pylist())
-                    for _ in range(max(count or 1, 1))
-                ]
+            msg = (
+                "`DataFrame.explode` is not supported for pyarrow backend and column"
+                "containing null's or empty list elements"
             )
-            parent_indices = pc.list_parent_indices(native_frame[to_explode[0]])
-            is_valid_index = pc.is_in(indices, value_set=parent_indices)
-            exploded_size = len(is_valid_index)
-
-            def flatten_func(array: pa.ChunkedArray) -> pa.ChunkedArray:
-                dtype = array.type.value_type
-
-                return pc.replace_with_mask(
-                    pa.array([None] * exploded_size, type=dtype),
-                    is_valid_index,
-                    pc.list_flatten(array).combine_chunks(),
-                )
+            raise NotImplementedError(msg)
 
         arrays = [
             native_frame[col_name].take(indices)

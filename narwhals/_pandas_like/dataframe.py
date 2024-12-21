@@ -965,7 +965,10 @@ class PandasLikeDataFrame:
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
-                msg = f"`explode` operation not supported for dtype `{dtype}`"
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
                 raise InvalidOperationError(msg)
 
         if len(to_explode) == 1:
