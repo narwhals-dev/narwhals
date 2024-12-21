@@ -361,10 +361,10 @@ def test_group_by_shift_raises(
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor) or "modin" in str(constructor):
+    if any(x in str(constructor) for x in ("dask", "modin", "cudf")):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
-        # At least cudf gets it right
+        # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
         request.applymarker(pytest.mark.xfail)
