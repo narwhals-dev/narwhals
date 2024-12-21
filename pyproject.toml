@@ -45,7 +45,7 @@ dev = [
   "pandas",
   "polars",
   "pyarrow",
-  "pyspark; python_version < '3.12'",
+  "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "pyarrow-stubs",
   "pytest",
   "pytest-cov",
