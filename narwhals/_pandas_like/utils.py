@@ -615,7 +615,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                     )
                 )
             )
-        else:
+        else:  # pragma: no cover
             msg = (
                 "Converting to List dtype is not supported for implementation "
                 f"{implementation} and version {version}."
@@ -776,13 +776,16 @@ def select_columns_by_name(
 def pivot_table(
     df: PandasLikeDataFrame,
     values: list[str],
-    index: str | list[str] | None,
+    index: list[str],
     columns: list[str],
     aggregate_function: str | None,
 ) -> Any:
     dtypes = import_dtypes_module(df._version)
     if df._implementation is Implementation.CUDF:
-        if any(x == dtypes.Categorical for x in df.schema.values()):
+        if any(
+            x == dtypes.Categorical
+            for x in df.select(*[*values, *index, *columns]).schema.values()
+        ):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
         # cuDF doesn't support `observed` argument
