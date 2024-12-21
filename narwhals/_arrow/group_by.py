@@ -22,28 +22,18 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.typing import CompliantExpr
 
-
-def polars_to_arrow_aggregations() -> (
-    dict[str, tuple[str, pc.VarianceOptions | pc.CountOptions | None]]
-):
-    """Map polars compute functions to their pyarrow counterparts and options that help match polars behaviour."""
-    import pyarrow.compute as pc
-
-    return {
-        "sum": ("sum", None),
-        "mean": ("mean", None),
-        "median": ("approximate_median", None),
-        "max": ("max", None),
-        "min": ("min", None),
-        "std": ("stddev", pc.VarianceOptions(ddof=1)),
-        "var": (
-            "variance",
-            pc.VarianceOptions(ddof=1),
-        ),  # currently unused, we don't have `var` yet
-        "len": ("count", pc.CountOptions(mode="all")),
-        "n_unique": ("count_distinct", pc.CountOptions(mode="all")),
-        "count": ("count", pc.CountOptions(mode="only_valid")),
-    }
+POLARS_TO_ARROW_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "approximate_median",
+    "max": "max",
+    "min": "min",
+    "std": "stddev",
+    "var": "variance",
+    "len": "count",
+    "n_unique": "count_distinct",
+    "count": "count",
+}
 
 
 class ArrowGroupBy:
@@ -132,7 +122,7 @@ def agg_arrow(
         if not (
             is_simple_aggregation(expr)
             and remove_prefix(expr._function_name, "col->")
-            in polars_to_arrow_aggregations()
+            in POLARS_TO_ARROW_AGGREGATIONS
         ):
             all_simple_aggs = False
             break
@@ -177,9 +167,17 @@ def agg_arrow(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        function_name, option = polars_to_arrow_aggregations().get(
-            function_name, (function_name, None)
-        )
+
+        if function_name in {"std", "var"}:
+            option = pc.VarianceOptions(ddof=expr._kwargs.get("ddof", 1))
+        elif function_name in {"len", "n_unique"}:
+            option = pc.CountOptions(mode="all")
+        elif function_name == "count":
+            option = pc.CountOptions(mode="only_valid")
+        else:
+            option = None
+
+        function_name = POLARS_TO_ARROW_AGGREGATIONS[function_name]
 
         new_column_names.extend(expr._output_names)
         expected_pyarrow_column_names.extend(
