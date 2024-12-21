@@ -249,11 +249,7 @@ def test_pivot_names_out(
     assert result == expected
 
 
-def test_pivot_no_index_no_values(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "modin" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
+def test_pivot_no_index_no_values(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
     with pytest.raises(ValueError, match="At least one of `values` and `index` must"):
         df.pivot(on="col")
