@@ -122,7 +122,7 @@ def test_pivot(
     index: str | list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
@@ -179,7 +179,7 @@ def test_pivot_no_agg(
 def test_pivot_sort_columns(
     request: Any, constructor_eager: Any, sort_columns: Any, expected: list[str]
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
@@ -229,7 +229,7 @@ def test_pivot_sort_columns(
 def test_pivot_names_out(
     request: Any, constructor_eager: Any, kwargs: Any, expected: list[str]
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
