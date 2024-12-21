@@ -866,7 +866,6 @@ class PandasLikeDataFrame:
 
         if aggregate_function is None:
             result = frame.pivot(columns=on, index=index, values=values_)
-
         elif aggregate_function == "len":
             result = (
                 frame.groupby([*on, *index])  # type: ignore[misc]
@@ -882,11 +881,9 @@ class PandasLikeDataFrame:
                 columns=on,
                 aggregate_function=aggregate_function,
             )
+
         # Put columns in the right order
-        if (
-            sort_columns
-            and self._implementation is Implementation.CUDF  # pragma: no cover
-        ):
+        if sort_columns and self._implementation is Implementation.CUDF:
             uniques = {
                 col: sorted(self._native_frame[col].unique().to_arrow().to_pylist())
                 for col in on
