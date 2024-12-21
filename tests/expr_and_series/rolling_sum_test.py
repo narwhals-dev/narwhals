@@ -200,6 +200,7 @@ def test_rolling_sum_series_invalid_params(
 )
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
+@pytest.mark.slow
 def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
     s = pd.Series(values)
     n_missing = random.randint(0, len(s) - 1)  # noqa: S311

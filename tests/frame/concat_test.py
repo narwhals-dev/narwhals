@@ -46,3 +46,25 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     with pytest.raises((Exception, TypeError), match="unable to vstack"):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
+    with pytest.raises((Exception, TypeError), match="unable to vstack|unable to append"):
+        nw.concat([df_left, df_left.select("d")], how="vertical").collect()
+
+
+def test_concat_diagonal(constructor: Constructor) -> None:
+    data_1 = {"a": [1, 3], "b": [4, 6]}
+    data_2 = {"a": [100, 200], "z": ["x", "y"]}
+    expected = {
+        "a": [1, 3, 100, 200],
+        "b": [4, 6, None, None],
+        "z": [None, None, "x", "y"],
+    }
+
+    df_1 = nw.from_native(constructor(data_1)).lazy()
+    df_2 = nw.from_native(constructor(data_2)).lazy()
+
+    result = nw.concat([df_1, df_2], how="diagonal")
+
+    assert_equal_data(result, expected)
+
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([], how="diagonal")

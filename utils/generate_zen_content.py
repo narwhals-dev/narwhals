@@ -10,7 +10,7 @@ DESTINATION_PATH: Final[Path] = Path("docs") / "this.md"
 content = f"""
 # The Zen of Narwhals
 
-The well famous Python easter egg `import this` will reveal The Zen of Python, by Tim Peters.
+The well famous Python easter egg `import this` will reveal The Zen of Python (PEP 20).
 
 Narwhals took inspiration from _this_ and created its own Zen.
 

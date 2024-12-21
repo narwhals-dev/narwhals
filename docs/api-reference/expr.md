@@ -8,6 +8,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - count
@@ -18,6 +20,7 @@
         - cum_sum
         - diff
         - drop_nulls
+        - ewm_mean
         - fill_null
         - filter
         - gather_every
@@ -44,14 +47,19 @@
         - pipe
         - quantile
         - replace_strict
+        - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false

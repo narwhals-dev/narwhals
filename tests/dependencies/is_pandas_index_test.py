@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from narwhals.dependencies import is_pandas_index
+from narwhals.stable.v1.dependencies import is_pandas_index
 
 
 def test_is_pandas_index() -> None:

@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - clip
@@ -23,10 +25,12 @@
         - diff
         - drop_nulls
         - dtype
+        - ewm_mean
         - fill_null
         - filter
         - gather_every
         - head
+        - implementation
         - is_between
         - is_duplicated
         - is_empty
@@ -51,13 +55,17 @@
         - quantile
         - rename
         - replace_strict
+        - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - scatter
         - shape
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail
@@ -70,6 +78,7 @@
         - to_native
         - unique
         - value_counts
+        - var
         - zip_with
       show_source: false
       show_bases: false

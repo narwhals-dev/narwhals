@@ -268,3 +268,13 @@ def all() -> Expr:
         └─────┴─────┴───────┘
     """
     return Selector(lambda plx: plx.selectors.all())
+
+
+__all__ = [
+    "all",
+    "boolean",
+    "by_dtype",
+    "categorical",
+    "numeric",
+    "string",
+]

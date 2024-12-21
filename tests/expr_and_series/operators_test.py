@@ -68,6 +68,25 @@ def test_logic_operators_expr(
 @pytest.mark.parametrize(
     ("operator", "expected"),
     [
+        ("__and__", [False, False, False, False]),
+        ("__rand__", [False, False, False, False]),
+        ("__or__", [True, True, False, False]),
+        ("__ror__", [True, True, False, False]),
+    ],
+)
+def test_logic_operators_expr_scalar(
+    constructor: Constructor, operator: str, expected: list[bool]
+) -> None:
+    data = {"a": [True, True, False, False]}
+    df = nw.from_native(constructor(data))
+
+    result = df.select(a=getattr(nw.col("a"), operator)(False))  # noqa: FBT003
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("operator", "expected"),
+    [
         ("__eq__", [False, True, False]),
         ("__ne__", [True, False, True]),
         ("__le__", [True, True, False]),
@@ -110,7 +129,9 @@ def test_comparand_operators_series(
     ("operator", "expected"),
     [
         ("__and__", [True, False, False, False]),
+        ("__rand__", [True, False, False, False]),
         ("__or__", [True, True, True, False]),
+        ("__ror__", [True, True, True, False]),
     ],
 )
 def test_logic_operators_series(

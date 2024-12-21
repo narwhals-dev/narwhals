@@ -17,17 +17,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install package
         run: uv pip install -e . --system
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools --system && uv pip install -r requirements-dev.txt --system
+        run: uv pip install -e ".[dev]" --system
       - name: uninstall scipy/sklearn
         run: uv pip uninstall scipy scikit-learn --system
       - name: install-random-verions

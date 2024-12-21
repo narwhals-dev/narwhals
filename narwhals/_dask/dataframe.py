@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -27,21 +28,22 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
+    from narwhals.utils import Version
+from narwhals.typing import CompliantLazyFrame
 
 
-class DaskLazyFrame:
+class DaskLazyFrame(CompliantLazyFrame):
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
         *,
         backend_version: tuple[int, ...],
-        dtypes: DTypes,
+        version: Version,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
-        self._dtypes = dtypes
+        self._version = version
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
@@ -53,14 +55,19 @@ class DaskLazyFrame:
     def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
+        return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def _change_version(self, version: Version) -> Self:
+        return self.__class__(
+            self._native_frame, backend_version=self._backend_version, version=version
+        )
+
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, dtypes=self._dtypes
+            df, backend_version=self._backend_version, version=self._version
         )
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
@@ -70,7 +77,7 @@ class DaskLazyFrame:
         return self._from_native_frame(df)
 
     def collect(self) -> Any:
-        import pandas as pd  # ignore-banned-import()
+        import pandas as pd
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
@@ -79,21 +86,19 @@ class DaskLazyFrame:
             result,
             implementation=Implementation.PANDAS,
             backend_version=parse_version(pd.__version__),
-            dtypes=self._dtypes,
+            version=self._version,
         )
 
     @property
     def columns(self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
-    def filter(
-        self,
-        *predicates: DaskExpr,
-    ) -> Self:
+    def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
         if (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
         ):
             msg = (
                 "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
@@ -102,8 +107,10 @@ class DaskLazyFrame:
 
         from narwhals._dask.namespace import DaskNamespace
 
-        plx = DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
-        expr = plx.all_horizontal(*predicates)
+        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
+        expr = plx.all_horizontal(
+            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
+        )
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
@@ -113,7 +120,7 @@ class DaskLazyFrame:
         *exprs: IntoDaskExpr,
         **named_exprs: IntoDaskExpr,
     ) -> Self:
-        import dask.dataframe as dd  # ignore-banned-import
+        import dask.dataframe as dd
 
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
@@ -130,7 +137,7 @@ class DaskLazyFrame:
 
         if not new_series:
             # return empty dataframe, like Polars does
-            import pandas as pd  # ignore-banned-import
+            import pandas as pd
 
             return self._from_native_frame(
                 dd.from_pandas(pd.DataFrame(), npartitions=self._native_frame.npartitions)
@@ -163,7 +170,7 @@ class DaskLazyFrame:
     def schema(self) -> dict[str, DType]:
         return {
             col: native_to_narwhals_dtype(
-                self._native_frame[col], self._dtypes, self._implementation
+                self._native_frame[col], self._version, self._implementation
             )
             for col in self._native_frame.columns
         }

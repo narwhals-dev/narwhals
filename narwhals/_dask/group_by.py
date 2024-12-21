@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -11,15 +12,16 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
+    import dask_expr
     import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.expr import DaskExpr
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals.typing import CompliantExpr
 
 
 def n_unique() -> dd.Aggregation:
-    import dask.dataframe as dd  # ignore-banned-import
+    import dask.dataframe as dd
 
     def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
         return s.nunique(dropna=False)  # type: ignore[no-any-return]
@@ -35,8 +37,16 @@ def n_unique() -> dd.Aggregation:
 
 
 POLARS_TO_DASK_AGGREGATIONS = {
+    "sum": "sum",
+    "mean": "mean",
+    "median": "median",
+    "max": "max",
+    "min": "min",
+    "std": "std",
+    "var": "var",
     "len": "size",
     "n_unique": n_unique,
+    "count": "count",
 }
 
 
@@ -86,14 +96,14 @@ class DaskLazyGroupBy:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
-            df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
+            df, backend_version=self._df._backend_version, version=self._df._version
         )
 
 
 def agg_dask(
     df: DaskLazyFrame,
     grouped: Any,
-    exprs: list[DaskExpr],
+    exprs: Sequence[CompliantExpr[dask_expr.Series]],
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
@@ -108,7 +118,10 @@ def agg_dask(
 
     all_simple_aggs = True
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not (
+            is_simple_aggregation(expr)
+            and remove_prefix(expr._function_name, "col->") in POLARS_TO_DASK_AGGREGATIONS
+        ):
             all_simple_aggs = False
             break
 
@@ -143,15 +156,11 @@ def agg_dask(
 
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
-        try:
-            result_simple = grouped.agg(**simple_aggregations)
-        except ValueError as exc:
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
+        result_simple = grouped.agg(**simple_aggregations)
         return from_dataframe(result_simple.reset_index())
 
     msg = (
-        "Non-trivial complex found.\n\n"
+        "Non-trivial complex aggregation found.\n\n"
         "Hint: you were probably trying to apply a non-elementary aggregation with a "
         "dask dataframe.\n"
         "Please rewrite your query such that group-by aggregations "

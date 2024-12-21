@@ -18,7 +18,7 @@ data = {"a": ["2020-01-01T12:34:56"]}
 
 
 def test_to_datetime(constructor: Constructor) -> None:
-    if "cudf" in str(constructor):  # pragma: no cover
+    if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
         expected = "2020-01-01 12:34:56"
@@ -34,7 +34,7 @@ def test_to_datetime(constructor: Constructor) -> None:
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
-    if "cudf" in str(constructor_eager):  # pragma: no cover
+    if "cudf" in str(constructor_eager):
         expected = "2020-01-01T12:34:56.000000000"
     else:
         expected = "2020-01-01 12:34:56"
@@ -76,7 +76,7 @@ def test_to_datetime_infer_fmt(
 ) -> None:
     if "polars" in str(constructor) and str(data["a"][0]).isdigit():
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):  # pragma: no cover
+    if "cudf" in str(constructor):
         expected = expected_cudf
     result = (
         nw.from_native(constructor(data))
@@ -117,7 +117,7 @@ def test_to_datetime_series_infer_fmt(
 ) -> None:
     if "polars" in str(constructor_eager) and str(data["a"][0]).isdigit():
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):  # pragma: no cover
+    if "cudf" in str(constructor_eager):
         expected = expected_cudf
 
     result = (

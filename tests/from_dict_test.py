@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+
+import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -61,14 +64,28 @@ def test_from_dict_one_native_one_narwhals(
 def test_from_dict_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, native_namespace=native_namespace)
-    expected = {"c": [1, 2], "d": [5, 6]}
+    df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    native_namespace = nw_v1.get_native_namespace(df)
+    result = nw_v1.from_dict(
+        {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]},
+        native_namespace=native_namespace,
+    )
+    expected = {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}
     assert_equal_data(result, expected)
-    assert isinstance(result, nw.DataFrame)
+    assert isinstance(result, nw_v1.DataFrame)
+    assert isinstance(result.schema["d"], nw_v1.dtypes.Datetime)
 
 
 def test_from_dict_empty() -> None:
     with pytest.raises(ValueError, match="empty"):
         nw.from_dict({})
+
+
+def test_alignment() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/1474
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = nw.from_dict(
+        {"a": df["a"], "b": df["a"].sort_values(ascending=False)}, native_namespace=pd
+    ).to_native()
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]})
+    pd.testing.assert_frame_equal(result, expected)

@@ -4,17 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.14.0"
+version = "1.19.0"
 authors = [
-  { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
+  { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
 [tool.hatch.build]
@@ -28,7 +28,6 @@ exclude = [
   "CONTRIBUTING.md",
   "mkdocs.yml",
   "noxfile.py",
-  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +37,39 @@ pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
+pyspark = ["pyspark>=3.3.0"]
+dev = [
+  "tqdm",
+  "covdefaults",
+  "duckdb",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pyspark; python_version >= '3.9' and python_version < '3.12'",
+  "pyarrow-stubs",
+  "pytest",
+  "pytest-cov",
+  "pytest-randomly",
+  "pytest-env",
+  "hypothesis",
+  "hypothesis[numpy]",
+  "scikit-learn",
+  "typing_extensions",
+  "dask[dataframe]; python_version >= '3.9'",
+]
+docs = [
+  "black",  # required by mkdocstrings_handlers
+  "jinja2",
+  "duckdb",
+  "markdown-exec[ansi]",
+  "mkdocs",
+  "mkdocs-autorefs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "pandas",
+  "polars>=1.0.0",
+  "pyarrow",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -53,8 +85,8 @@ lint.select = [
 ]
 lint.ignore = [
   "A001",
+  "A004",
   "ARG002",
-  "ANN101",
   "ANN401",
   "C901",
   "COM812",
@@ -112,7 +144,6 @@ filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
   'ignore:In the future `np.bool`',
-  'ignore:The copy keyword is deprecated and will be removed',
   'ignore:make_block is deprecated and will be removed',
   'ignore:np.find_common_type is deprecated',
   'ignore:is_sparse is deprecated and will be removed',
@@ -124,11 +155,14 @@ filterwarnings = [
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
   'ignore:.*The default coalesce behavior',
+  'ignore:is_datetime64tz_dtype is deprecated',
+  'ignore: unclosed <socket.socket',
+  'ignore:The distutils package is deprecated and slated for removal',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
-    "MODIN_ENGINE=python",
+  "MODIN_ENGINE=python",
 ]
 
 [tool.coverage.run]
@@ -139,16 +173,20 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
-  # we can run this in every environment that we measure coverage on due to upper-bound constraits
+  # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
+  # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
+  'narwhals/_spark_like/*',
+  'tests/spark_like_test.py',
 ]
 exclude_also = [
-  "> POLARS_VERSION",
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
   "if (:?self._)?implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)',
-  'if self._backend_version < '
+  'request.applymarker\(pytest.mark.xfail',
+  '\w+._backend_version < ',
+  'backend_version <',
+  'if "cudf" in str\(constructor'
 ]
 
 [tool.mypy]
@@ -157,8 +195,8 @@ strict = true
 [[tool.mypy.overrides]]
 # the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-    "pandas.*",
-    "cudf.*",
-    "modin.*",
+  "pandas.*",
+  "cudf.*",
+  "modin.*",
 ]
 ignore_missing_imports = true
