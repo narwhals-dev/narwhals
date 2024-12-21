@@ -50,8 +50,13 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
         module_ = importlib.import_module(f"narwhals.{backend}.{module_name}")
         class_ = inspect.getmembers(
             module_,
-            predicate=lambda c: inspect.isclass(c) and c.__name__.endswith(nw_class_name),
+            predicate=lambda c: (
+                inspect.isclass(c)
+                and c.__name__.endswith(nw_class_name)
+                and not c.__name__.startswith("Compliant")  # Exclude protocols
+            ),
         )
+
         methods_ = (
             get_class_methods(class_[0][1]) + DIRECTLY_IMPLEMENTED_METHODS
             if class_
