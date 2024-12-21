@@ -182,7 +182,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
-  "if (:?\\w+._)?implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail',
   '\w+._backend_version < ',
   'backend_version <',

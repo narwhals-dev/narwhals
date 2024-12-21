@@ -781,8 +781,8 @@ def pivot_table(
     aggregate_function: str | None,
 ) -> Any:
     dtypes = import_dtypes_module(df._version)
-    if df._implementation is Implementation.CUDF:
-        if any(x == dtypes.Categorical for x in df.schema.values()):  # pragma: no cover
+    if df._implementation is Implementation.CUDF:  # pragma: no cover
+        if any(x == dtypes.Categorical for x in df.schema.values()):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
         # cuDF doesn't support `observed` argument
