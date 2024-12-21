@@ -38,13 +38,13 @@ def test_explode_single_col(
     column: str,
     expected_values: list[int | None],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow_table")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_table" in str(constructor) and column == "l2":
         request.applymarker(pytest.mark.xfail)
 
     result = (
@@ -87,13 +87,13 @@ def test_explode_multiple_cols(
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow_table")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_table" in str(constructor) and columns == "l1":
         request.applymarker(pytest.mark.xfail)
 
     result = (
@@ -108,7 +108,10 @@ def test_explode_multiple_cols(
 def test_explode_shape_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow_table")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -130,7 +133,7 @@ def test_explode_shape_error(
 def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):

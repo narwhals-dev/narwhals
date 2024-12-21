@@ -19,7 +19,6 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import scale_bytes
@@ -753,70 +752,3 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
-
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
-        from narwhals.exceptions import InvalidOperationError
-
-        dtypes = import_dtypes_module(self._version)
-
-        to_explode = (
-            [columns, *more_columns]
-            if isinstance(columns, str)
-            else [*columns, *more_columns]
-        )
-
-        schema = self.collect_schema()
-        for col_to_explode in to_explode:
-            dtype = schema[col_to_explode]
-
-            if dtype != dtypes.List:
-                msg = (
-                    f"`explode` operation not supported for dtype `{dtype}`, "
-                    "expected List type"
-                )
-
-                raise InvalidOperationError(msg)
-
-        native_frame = self._native_frame
-        counts = pc.list_value_length(native_frame[to_explode[0]])
-
-        if not all(
-            pc.all(pc.equal(pc.list_value_length(native_frame[col_name]), counts)).as_py()
-            for col_name in to_explode[1:]
-        ):
-            from narwhals.exceptions import ShapeError
-
-            msg = "exploded columns must have matching element counts"
-            raise ShapeError(msg)
-
-        original_columns = self.columns
-        other_columns = [c for c in original_columns if c not in to_explode]
-        fast_path = pc.all(pc.greater_equal(counts, 1)).as_py()
-
-        if fast_path:
-            indices = pc.list_parent_indices(native_frame[to_explode[0]])
-            flatten_func = pc.list_flatten
-
-        else:
-            msg = (
-                "`DataFrame.explode` is not supported for pyarrow backend and column"
-                "containing null's or empty list elements"
-            )
-            raise NotImplementedError(msg)
-
-        arrays = [
-            native_frame[col_name].take(indices)
-            if col_name in other_columns
-            else flatten_func(native_frame[col_name])
-            for col_name in original_columns
-        ]
-
-        return self._from_native_frame(
-            pa.Table.from_arrays(
-                arrays=arrays,
-                names=original_columns,
-            )
-        )
