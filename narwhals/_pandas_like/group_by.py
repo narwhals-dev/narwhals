@@ -126,7 +126,7 @@ class PandasLikeGroupBy:
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (2, 2)
-        ) or (self._df._implementation is Implementation.CUDF):  # pragma: no cover
+        ):  # pragma: no cover
             for key in indices:
                 yield (key, self._from_native_frame(self._grouped.get_group(key)))
         else:

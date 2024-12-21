@@ -23,6 +23,7 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -614,7 +615,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                     )
                 )
             )
-        else:
+        else:  # pragma: no cover
             msg = (
                 "Converting to List dtype is not supported for implementation "
                 f"{implementation} and version {version}."
@@ -770,3 +771,38 @@ def select_columns_by_name(
         raise ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns, available_columns
         ) from e
+
+
+def pivot_table(
+    df: PandasLikeDataFrame,
+    values: list[str],
+    index: list[str],
+    columns: list[str],
+    aggregate_function: str | None,
+) -> Any:
+    dtypes = import_dtypes_module(df._version)
+    if df._implementation is Implementation.CUDF:
+        if any(
+            x == dtypes.Categorical
+            for x in df.select(*[*values, *index, *columns]).schema.values()
+        ):
+            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+            raise NotImplementedError(msg)
+        # cuDF doesn't support `observed` argument
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+        )
+    else:
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+            observed=True,
+        )
+    return result
