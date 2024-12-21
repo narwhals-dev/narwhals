@@ -3152,9 +3152,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> data = {
-            ...     "a": ["x", "y", "z", "w"],
-            ...     "lst1": [[1, 2], None, [None], []],
-            ...     "lst2": [[3, None], None, [42], []],
+            ...     "a": ["x", "y", "z"],
+            ...     "lst1": [[1, 2], [None, 3], [None]],
+            ...     "lst2": [["foo", None], ["bar", None], ["baz"]],
             ... }
 
             We define a library agnostic function:
@@ -3162,7 +3162,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> def agnostic_explode(df_native: IntoDataFrameT) -> IntoDataFrameT:
             ...     return (
             ...         nw.from_native(df_native)
-            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
+            ...         .with_columns(
+            ...             nw.col("lst1").cast(nw.List(nw.Int32())),
+            ...             nw.col("lst2").cast(nw.List(nw.String())),
+            ...         )
             ...         .explode("lst1", "lst2")
             ...         .to_native()
             ...     )
@@ -3172,33 +3175,33 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             >>> agnostic_explode(pd.DataFrame(data))
                a  lst1  lst2
-            0  x     1     3
+            0  x     1   foo
             0  x     2  <NA>
-            1  y  <NA>  <NA>
-            2  z  <NA>    42
-            3  w  <NA>  <NA>
+            1  y  <NA>   bar
+            1  y     3  <NA>
+            2  z  <NA>   baz
             >>> agnostic_explode(pl.DataFrame(data))
             shape: (5, 3)
             ┌─────┬──────┬──────┐
             │ a   ┆ lst1 ┆ lst2 │
             │ --- ┆ ---  ┆ ---  │
-            │ str ┆ i32  ┆ i32  │
+            │ str ┆ i32  ┆ str  │
             ╞═════╪══════╪══════╡
-            │ x   ┆ 1    ┆ 3    │
+            │ x   ┆ 1    ┆ foo  │
             │ x   ┆ 2    ┆ null │
-            │ y   ┆ null ┆ null │
-            │ z   ┆ null ┆ 42   │
-            │ w   ┆ null ┆ null │
+            │ y   ┆ null ┆ bar  │
+            │ y   ┆ 3    ┆ null │
+            │ z   ┆ null ┆ baz  │
             └─────┴──────┴──────┘
             >>> agnostic_explode(pa.table(data))
             pyarrow.Table
             a: string
             lst1: int32
-            lst2: int32
+            lst2: string
             ----
-            a: [["x","x","y","z","w"]]
-            lst1: [[1,2,null,null,null]]
-            lst2: [[3,null,null,42,null]]
+            a: [["x","x","y","y","z"]]
+            lst1: [[1,2,null,3,null]]
+            lst2: [["foo",null,"bar",null,"baz"]]
         """
         return super().explode(columns, *more_columns)
 
