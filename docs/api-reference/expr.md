@@ -33,6 +33,7 @@
         - is_in
         - is_last_distinct
         - is_null
+        - is_nan
         - is_unique
         - len
         - map_batches
