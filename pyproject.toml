@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=23.08.00"]
+cudf = ["cudf>=24.12.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
@@ -188,7 +188,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
-  "if (:?self._)?implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail',
   '\w+._backend_version < ',
   'backend_version <',

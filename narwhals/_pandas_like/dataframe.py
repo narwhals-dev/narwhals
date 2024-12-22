@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
@@ -853,44 +854,53 @@ class PandasLikeDataFrame:
 
         if isinstance(on, str):
             on = [on]
+
+        if isinstance(values, str):
+            values = [values]
         if isinstance(index, str):
             index = [index]
 
+        if index is None:
+            index = [c for c in self.columns if c not in {*on, *values}]  # type: ignore[misc]
+
         if values is None:
-            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
-        elif isinstance(values, str):  # pragma: no cover
-            values_ = [values]
-        else:
-            values_ = values
+            values = [c for c in self.columns if c not in {*on, *index}]
 
         if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index, values=values_)
-
+            result = frame.pivot(columns=on, index=index, values=values)
         elif aggregate_function == "len":
             result = (
-                frame.groupby([*on, *index])  # type: ignore[misc]
-                .agg({v: "size" for v in values_})
+                frame.groupby([*on, *index])
+                .agg({v: "size" for v in values})
                 .reset_index()
-                .pivot(columns=on, index=index, values=values_)
+                .pivot(columns=on, index=index, values=values)
             )
         else:
-            result = frame.pivot_table(
-                values=values_,
+            result = pivot_table(
+                df=self,
+                values=values,
                 index=index,
                 columns=on,
-                aggfunc=aggregate_function,
-                margins=False,
-                observed=True,
+                aggregate_function=aggregate_function,
             )
 
         # Put columns in the right order
-        if sort_columns:
+        if sort_columns and self._implementation is Implementation.CUDF:
+            uniques = {
+                col: sorted(self._native_frame[col].unique().to_arrow().to_pylist())
+                for col in on
+            }
+        elif sort_columns:
             uniques = {
                 col: sorted(self._native_frame[col].unique().tolist()) for col in on
             }
+        elif self._implementation is Implementation.CUDF:
+            uniques = {
+                col: self._native_frame[col].unique().to_arrow().to_pylist() for col in on
+            }
         else:
             uniques = {col: self._native_frame[col].unique().tolist() for col in on}
-        all_lists = [values_, *list(uniques.values())]
+        all_lists = [values, *list(uniques.values())]
         ordered_cols = list(product(*all_lists))
         result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
@@ -898,13 +908,13 @@ class PandasLikeDataFrame:
         n_on = len(on)
         if n_on == 1:
             new_columns = [
-                separator.join(col).strip() if len(values_) > 1 else col[-1]
+                separator.join(col).strip() if len(values) > 1 else col[-1]
                 for col in columns
             ]
         else:
             new_columns = [
                 separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
-                if len(values_) > 1
+                if len(values) > 1
                 else '{"' + '","'.join(col[-n_on:]) + '"}'
                 for col in columns
             ]
