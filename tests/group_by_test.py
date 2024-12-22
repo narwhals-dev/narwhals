@@ -203,7 +203,7 @@ def test_group_by_same_name_twice() -> None:
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="two aggregations with the same"):
+    with pytest.raises(ValueError, match="Expected unique output names"):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
 
 
