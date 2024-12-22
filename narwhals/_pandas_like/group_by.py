@@ -13,7 +13,6 @@ from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
@@ -169,8 +168,14 @@ def agg_pandas(  # noqa: PLR0915
     # can pass the `dropna` kwargs.
     nunique_aggs: dict[str, str] = {}
     simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
-    std_aggs: dict[int, dict[str, str]] = collections.defaultdict(dict)
-    var_aggs: dict[int, dict[str, str]] = collections.defaultdict(dict)
+
+    # ddof to (root_names, output_names) mapping
+    std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
+        lambda: ([], [])
+    )
+    var_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
+        lambda: ([], [])
+    )
 
     expected_old_names: list[str] = []
     new_names: list[str] = []
@@ -212,15 +217,18 @@ def agg_pandas(  # noqa: PLR0915
                 if is_n_unique:
                     nunique_aggs[output_name] = root_name
                 elif is_std and ddof != 1:
-                    std_aggs[ddof].update({output_name: root_name})
+                    std_aggs[ddof][0].append(root_name)
+                    std_aggs[ddof][1].append(output_name)
                 elif is_var and ddof != 1:
-                    var_aggs[ddof].update({output_name: root_name})
+                    var_aggs[ddof][0].append(root_name)
+                    var_aggs[ddof][1].append(output_name)
                 else:
                     new_names.append(output_name)
                     expected_old_names.append(f"{root_name}_{function_name}")
                     simple_aggs[root_name].append(function_name)
 
         result_aggs = []
+
         if simple_aggs:
             result_simple_aggs = grouped.agg(simple_aggs)
             result_simple_aggs.columns = [
@@ -263,33 +271,19 @@ def agg_pandas(  # noqa: PLR0915
         if std_aggs:
             result_aggs.extend(
                 [
-                    rename(
-                        grouped[list(output_to_root_name_mapping.values())].std(
-                            ddof=ddof
-                        ),
-                        # Invert the dict to have root_name: output_name
-                        # TODO(FBruzzesi): Account for duplicates
-                        columns={v: k for k, v in output_to_root_name_mapping.items()},
-                        implementation=implementation,
-                        backend_version=backend_version,
-                    )
-                    for ddof, output_to_root_name_mapping in std_aggs.items()
+                    grouped[std_root_names]
+                    .std(ddof=ddof)
+                    .set_axis(std_output_names, axis="columns", copy=False)
+                    for ddof, (std_root_names, std_output_names) in std_aggs.items()
                 ]
             )
         if var_aggs:
             result_aggs.extend(
                 [
-                    rename(
-                        grouped[list(output_to_root_name_mapping.values())].var(
-                            ddof=ddof
-                        ),
-                        # Invert the dict to have root_name: output_name
-                        # TODO(FBruzzesi): Account for duplicates
-                        columns={v: k for k, v in output_to_root_name_mapping.items()},
-                        implementation=implementation,
-                        backend_version=backend_version,
-                    )
-                    for ddof, output_to_root_name_mapping in var_aggs.items()
+                    grouped[var_root_names]
+                    .var(ddof=ddof)
+                    .set_axis(var_output_names, axis="columns", copy=False)
+                    for ddof, (var_root_names, var_output_names) in var_aggs.items()
                 ]
             )
 
