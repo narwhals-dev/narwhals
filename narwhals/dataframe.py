@@ -11,11 +11,13 @@ from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
+from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.translate import to_native
+from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
@@ -2865,7 +2867,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]
         | None = None,
-        maintain_order: bool = True,
+        maintain_order: bool | None = None,
         sort_columns: bool = False,
         separator: str = "_",
     ) -> Self:
@@ -2881,11 +2883,12 @@ class DataFrame(BaseFrame[DataFrameT]):
                 specified on `on` and `index` will be used. At least one of `index` and
                 `values` must be specified.
             aggregate_function: Choose from:
+
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
                 - A predefined aggregate function string, one of
                     {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
-            maintain_order: Sort the grouped keys so that the output order is predictable.
+            maintain_order: Has no effect and is kept around only for backwards-compatibility.
             sort_columns: Sort the transposed columns by name. Default is by order of
                 discovery.
             separator: Used as separator/delimiter in generated column names in case of
@@ -2933,6 +2936,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
             raise ValueError(msg)
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
 
         return self._from_compliant_dataframe(
             self._compliant_frame.pivot(
@@ -2940,7 +2949,6 @@ class DataFrame(BaseFrame[DataFrameT]):
                 index=index,
                 values=values,
                 aggregate_function=aggregate_function,
-                maintain_order=maintain_order,
                 sort_columns=sort_columns,
                 separator=separator,
             )

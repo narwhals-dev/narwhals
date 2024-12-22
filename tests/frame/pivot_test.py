@@ -266,7 +266,8 @@ def test_pivot_no_index(
         # not implemented
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
-    result = df.pivot(on="col", values="foo").sort("ix", "bar")
+    with pytest.warns(UserWarning, match="has no effect"):
+        result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
     expected = {
         "ix": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
