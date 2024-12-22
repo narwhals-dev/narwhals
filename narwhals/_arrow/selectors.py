@@ -124,7 +124,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
-                kwargs={"other": other},
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() - other
@@ -145,7 +145,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
-                kwargs={"other": other},
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() | other
@@ -166,7 +166,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
-                kwargs={"other": other},
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() & other

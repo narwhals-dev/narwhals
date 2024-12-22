@@ -474,7 +474,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
-            kwargs={"separator": separator, "ignore_nulls": ignore_nulls},
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 

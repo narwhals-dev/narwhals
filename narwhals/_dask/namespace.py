@@ -159,7 +159,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -178,7 +178,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -197,7 +197,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -279,7 +279,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -301,7 +301,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -323,7 +323,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"exprs": exprs},
         )
 
     def when(
@@ -388,7 +388,12 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 
@@ -451,7 +456,7 @@ class DaskWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
+            kwargs={"value": value},
         )
 
 

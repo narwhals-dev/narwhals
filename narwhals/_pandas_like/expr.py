@@ -263,16 +263,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         return reuse_series_implementation(self, "median", returns_scalar=True)
 
     def std(self, *, ddof: int) -> Self:
-        expr = reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
-        if ddof != 1:
-            expr._depth += 1
-        return expr
+        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
     def var(self, *, ddof: int) -> Self:
-        expr = reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
-        if ddof != 1:
-            expr._depth += 1
-        return expr
+        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
@@ -419,7 +413,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"name": name},
+            kwargs={**self._kwargs, "name": name},
         )
 
     def over(self, keys: list[str]) -> Self:
@@ -491,7 +485,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"keys": keys},
+            kwargs={**self._kwargs, "keys": keys},
         )
 
     def is_duplicated(self) -> Self:
@@ -568,7 +562,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"function": function, "return_dtype": return_dtype},
+            kwargs={**self._kwargs, "function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:
@@ -907,7 +901,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
@@ -935,7 +929,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"function": function},
+            kwargs={**self._compliant_expr._kwargs, "function": function},
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
@@ -961,7 +955,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"prefix": prefix},
+            kwargs={**self._compliant_expr._kwargs, "prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
@@ -988,7 +982,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"suffix": suffix},
+            kwargs={**self._compliant_expr._kwargs, "suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
@@ -1015,7 +1009,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
@@ -1042,7 +1036,7 @@ class PandasLikeExprNameNamespace:
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )
 
 

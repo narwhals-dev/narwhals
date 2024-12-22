@@ -198,7 +198,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"name": name},
+            kwargs={**self._kwargs, "name": name},
         )
 
     def count(self) -> Self:
