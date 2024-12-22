@@ -1,3 +1,4 @@
+# Reference: https://packaging.python.org/en/latest/guides/writing-pyproject-toml
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -5,33 +6,22 @@ build-backend = "hatchling.build"
 [project]
 name = "narwhals"
 version = "1.19.0"
+dependencies = []
+requires-python = ">=3.8"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
-requires-python = ">=3.8"
+keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
+license = {file = "LICENSE.md"}
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
   "Operating System :: OS Independent",
 ]
 
-[tool.hatch.build]
-exclude = [
-  "/.*",
-  "/docs",
-  "/tests",
-  "/tpch",
-  "/utils",
-  ".gitignore",
-  "CONTRIBUTING.md",
-  "mkdocs.yml",
-  "noxfile.py",
-]
-
 [project.optional-dependencies]
-cudf = ["cudf>=23.08.00"]
+cudf = ["cudf>=24.12.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
@@ -72,8 +62,24 @@ docs = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/narwhals-dev/narwhals"
-"Bug Tracker" = "https://github.com/narwhals-dev/narwhals"
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Documentation = "https://narwhals-dev.github.io/narwhals/"
+Repository = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
+
+[tool.hatch.build]
+exclude = [
+  "/.*",
+  "/docs",
+  "/tests",
+  "/tpch",
+  "/utils",
+  ".gitignore",
+  "CONTRIBUTING.md",
+  "mkdocs.yml",
+  "noxfile.py",
+]
+
 
 [tool.ruff]
 line-length = 90
@@ -182,7 +188,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if (:?self._)?implementation is Implementation.MODIN",
-  "if (:?self._)?implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail',
   '\w+._backend_version < ',
   'backend_version <',

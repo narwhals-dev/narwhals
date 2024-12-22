@@ -138,7 +138,7 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
 
 
 def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):

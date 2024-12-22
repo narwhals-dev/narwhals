@@ -2930,6 +2930,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
             └─────┴───────┴───────┴───────┴───────┘
         """
+        if values is None and index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+
         return self._from_compliant_dataframe(
             self._compliant_frame.pivot(
                 on=on,

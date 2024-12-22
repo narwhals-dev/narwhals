@@ -58,12 +58,7 @@ def test_unpivot_var_value_names(
     constructor: Constructor,
     variable_name: str | None,
     value_name: str | None,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if variable_name == "" and "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/16972
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
     result = df.unpivot(
         on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
