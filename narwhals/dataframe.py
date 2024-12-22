@@ -2930,8 +2930,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
             raise ValueError(msg)
-        if maintain_order is not None:  # pragma: no cover
-            msg = "`maintain_order` has no effect and is only kept around for backwards-compatibility"
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
 
         return self._from_compliant_dataframe(
