@@ -423,7 +423,8 @@ def test_all_kind_of_aggs(
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
+        # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
