@@ -303,6 +303,10 @@ def agg_pandas(  # noqa: PLR0915
                     "Got two aggregations with the same output name. Please make sure "
                     "that aggregations have unique output names."
                 )
+                for key, value in output_names_counter.items():
+                    if value > 1:
+                        msg += f"\n- '{key}' {value} times"
+                msg = f"Expected unique output names, got:{msg}"
                 raise ValueError(msg)
             result = horizontal_concat(
                 dfs=result_aggs,

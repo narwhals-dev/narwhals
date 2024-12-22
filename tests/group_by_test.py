@@ -146,10 +146,6 @@ def test_group_by_depth_1_std_var(
     ddof: int,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
-        # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
-        request.applymarker(pytest.mark.xfail)
-
     if "dask" in str(constructor):
         # Complex aggregation for dask
         request.applymarker(pytest.mark.xfail)
