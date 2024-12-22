@@ -14,6 +14,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
@@ -271,18 +272,24 @@ def agg_pandas(  # noqa: PLR0915
         if std_aggs:
             result_aggs.extend(
                 [
-                    grouped[std_root_names]
-                    .std(ddof=ddof)
-                    .set_axis(std_output_names, axis="columns", copy=False)
+                    set_columns(
+                        grouped[std_root_names].std(ddof=ddof),
+                        columns=std_output_names,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
                     for ddof, (std_root_names, std_output_names) in std_aggs.items()
                 ]
             )
         if var_aggs:
             result_aggs.extend(
                 [
-                    grouped[var_root_names]
-                    .var(ddof=ddof)
-                    .set_axis(var_output_names, axis="columns", copy=False)
+                    set_columns(
+                        grouped[var_root_names].var(ddof=ddof),
+                        columns=var_output_names,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
                     for ddof, (var_root_names, var_output_names) in var_aggs.items()
                 ]
             )
