@@ -225,14 +225,13 @@ def reuse_series_implementation(
     ):  # pragma: no cover
         msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
         raise AssertionError(msg)
-
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=output_names,
-        kwargs=kwargs,
+        kwargs={**expr._kwargs, **kwargs},
     )
 
 
@@ -272,7 +271,7 @@ def reuse_series_namespace_implementation(
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
-        kwargs=kwargs,
+        kwargs={**expr._kwargs, **kwargs},
     )
 
 

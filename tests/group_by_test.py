@@ -380,3 +380,42 @@ def test_double_same_aggregation(
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
     expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
     assert_equal_data(result, expected)
+
+
+def test_all_kind_of_aggs(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    from math import sqrt
+
+    if any(x in str(constructor) for x in ("dask", "cudf")):
+        # bugged in dask https://github.com/dask/dask/issues/11612
+        # and modin lol https://github.com/modin-project/modin/issues/7414
+        # and cudf https://github.com/rapidsai/cudf/issues/17649
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
+    result = (
+        df.group_by("a")
+        .agg(
+            c=nw.col("b").mean(),
+            d=nw.col("b").mean(),
+            e=nw.col("b").std(ddof=1),
+            f=nw.col("b").std(ddof=2),
+            g=nw.col("b").var(ddof=2),
+            h=nw.col("b").n_unique(),
+        )
+        .sort("a")
+    )
+
+    variance_num = sum((v - 10 / 3) ** 2 for v in [0, 5, 5])
+    expected = {
+        "a": [1, 2],
+        "c": [5, 10 / 3],
+        "d": [5, 10 / 3],
+        "e": [1, sqrt(variance_num / (3 - 1))],
+        "f": [sqrt(2), sqrt(variance_num)],  # denominator is 1 (=3-2)
+        "g": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "h": [3, 2],
+    }
+    assert_equal_data(result, expected)
