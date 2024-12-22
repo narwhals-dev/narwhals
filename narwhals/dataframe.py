@@ -2877,6 +2877,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 specified on `on` and `index` will be used. At least one of `index` and
                 `values` must be specified.
             aggregate_function: Choose from:
+
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
                 - A predefined aggregate function string, one of
