@@ -131,7 +131,6 @@ class IbisInterchangeFrame:
         return self.__class__(df, version=self._version)
 
     def collect_schema(self) -> dict[str, DType]:
-        """Return the schema of the Ibis table."""
         return {
             column_name: native_to_narwhals_dtype(ibis_dtype, self._version)
             for column_name, ibis_dtype in self._native_frame.schema().items()
