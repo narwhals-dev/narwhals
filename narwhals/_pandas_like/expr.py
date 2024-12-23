@@ -445,9 +445,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     df = df.with_columns(~plx.col(*self._root_names).is_null())
 
                 if self._function_name == "col->shift":
-                    kwargs = {
-                        "periods": (self._kwargs.get("n", 1) if self._kwargs else 1)
-                    }
+                    kwargs = {"periods": self._kwargs.get("n", 1)}
                 else:
                     # Cumulative operation
                     kwargs = {"skipna": True}
