@@ -131,6 +131,39 @@ def test_group_by_depth_1_agg(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("attr", "ddof"),
+    [
+        ("std", 0),
+        ("var", 0),
+        ("std", 2),
+        ("var", 2),
+    ],
+)
+def test_group_by_depth_1_std_var(
+    constructor: Constructor,
+    attr: str,
+    ddof: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "dask" in str(constructor):
+        # Complex aggregation for dask
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
+    _pow = 0.5 if attr == "std" else 1
+    expected = {
+        "a": [1, 2],
+        "b": [
+            (sum((v - 5) ** 2 for v in [4, 5, 6]) / (3 - ddof)) ** _pow,
+            (sum((v - 10 / 3) ** 2 for v in [0, 5, 5]) / (3 - ddof)) ** _pow,
+        ],
+    }
+    expr = getattr(nw.col("b"), attr)(ddof=ddof)
+    result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
+    assert_equal_data(result, expected)
+
+
 def test_group_by_median(constructor: Constructor) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
     result = (
@@ -170,7 +203,7 @@ def test_group_by_same_name_twice() -> None:
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="two aggregations with the same"):
+    with pytest.raises(ValueError, match="Expected unique output names"):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
 
 
@@ -379,4 +412,44 @@ def test_double_same_aggregation(
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
     expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
+    assert_equal_data(result, expected)
+
+
+def test_all_kind_of_aggs(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "cudf", "modin_constructor")):
+        # bugged in dask https://github.com/dask/dask/issues/11612
+        # and modin lol https://github.com/modin-project/modin/issues/7414
+        # and cudf https://github.com/rapidsai/cudf/issues/17649
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
+        # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
+    result = (
+        df.group_by("a")
+        .agg(
+            c=nw.col("b").mean(),
+            d=nw.col("b").mean(),
+            e=nw.col("b").std(ddof=1),
+            f=nw.col("b").std(ddof=2),
+            g=nw.col("b").var(ddof=2),
+            h=nw.col("b").var(ddof=2),
+            i=nw.col("b").n_unique(),
+        )
+        .sort("a")
+    )
+
+    variance_num = sum((v - 10 / 3) ** 2 for v in [0, 5, 5])
+    expected = {
+        "a": [1, 2],
+        "c": [5, 10 / 3],
+        "d": [5, 10 / 3],
+        "e": [1, (variance_num / (3 - 1)) ** 0.5],
+        "f": [2**0.5, (variance_num) ** 0.5],  # denominator is 1 (=3-2)
+        "g": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "h": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "i": [3, 2],
+    }
     assert_equal_data(result, expected)

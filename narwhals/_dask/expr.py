@@ -177,7 +177,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            kwargs={**self._kwargs, **kwargs},
         )
 
     def alias(self, name: str) -> Self:
@@ -194,7 +194,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"name": name},
+            kwargs={**self._kwargs, "name": name},
         )
 
     def __add__(self, other: Any) -> Self:
@@ -847,7 +847,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"keys": keys},
+            kwargs={**self._kwargs, "keys": keys},
         )
 
     def mode(self: Self) -> Self:
@@ -1334,7 +1334,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
@@ -1362,7 +1362,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"function": function},
+            kwargs={**self._compliant_expr._kwargs, "function": function},
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
@@ -1388,7 +1388,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"prefix": prefix},
+            kwargs={**self._compliant_expr._kwargs, "prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
@@ -1415,7 +1415,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={"suffix": suffix},
+            kwargs={**self._compliant_expr._kwargs, "suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
@@ -1442,7 +1442,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
@@ -1469,5 +1469,5 @@ class DaskExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={},
+            kwargs=self._compliant_expr._kwargs,
         )

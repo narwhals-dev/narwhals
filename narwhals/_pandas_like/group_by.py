@@ -14,6 +14,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
@@ -168,6 +169,15 @@ def agg_pandas(  # noqa: PLR0915
     # can pass the `dropna` kwargs.
     nunique_aggs: dict[str, str] = {}
     simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
+
+    # ddof to (root_names, output_names) mapping
+    std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
+        lambda: ([], [])
+    )
+    var_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
+        lambda: ([], [])
+    )
+
     expected_old_names: list[str] = []
     new_names: list[str] = []
 
@@ -199,14 +209,26 @@ def agg_pandas(  # noqa: PLR0915
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                 function_name, function_name
             )
+
             is_n_unique = function_name == "nunique"
+            is_std = function_name == "std"
+            is_var = function_name == "var"
+            ddof = expr._kwargs.get("ddof", 1)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 if is_n_unique:
                     nunique_aggs[output_name] = root_name
+                elif is_std and ddof != 1:
+                    std_aggs[ddof][0].append(root_name)
+                    std_aggs[ddof][1].append(output_name)
+                elif is_var and ddof != 1:
+                    var_aggs[ddof][0].append(root_name)
+                    var_aggs[ddof][1].append(output_name)
                 else:
                     new_names.append(output_name)
                     expected_old_names.append(f"{root_name}_{function_name}")
                     simple_aggs[root_name].append(function_name)
+
+        result_aggs = []
 
         if simple_aggs:
             result_simple_aggs = grouped.agg(simple_aggs)
@@ -237,43 +259,67 @@ def agg_pandas(  # noqa: PLR0915
             new_names = [new_names[i] for i in index_map]
             result_simple_aggs.columns = new_names
 
+            result_aggs.append(result_simple_aggs)
+
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-        if simple_aggs and nunique_aggs:
-            if (
-                set(result_simple_aggs.columns)
-                .difference(keys)
-                .intersection(result_nunique_aggs.columns)
-            ):
-                msg = (
-                    "Got two aggregations with the same output name. Please make sure "
-                    "that aggregations have unique output names."
-                )
+
+            result_aggs.append(result_nunique_aggs)
+
+        if std_aggs:
+            result_aggs.extend(
+                [
+                    set_columns(
+                        grouped[std_root_names].std(ddof=ddof),
+                        columns=std_output_names,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
+                    for ddof, (std_root_names, std_output_names) in std_aggs.items()
+                ]
+            )
+        if var_aggs:
+            result_aggs.extend(
+                [
+                    set_columns(
+                        grouped[var_root_names].var(ddof=ddof),
+                        columns=var_output_names,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
+                    for ddof, (var_root_names, var_output_names) in var_aggs.items()
+                ]
+            )
+
+        if result_aggs:
+            output_names_counter = collections.Counter(
+                [c for frame in result_aggs for c in frame]
+            )
+            if any(v > 1 for v in output_names_counter.values()):
+                msg = ""
+                for key, value in output_names_counter.items():
+                    if value > 1:
+                        msg += f"\n- '{key}' {value} times"
+                    else:  # pragma: no cover
+                        pass
+                msg = f"Expected unique output names, got:{msg}"
                 raise ValueError(msg)
-            result_aggs = horizontal_concat(
-                [result_simple_aggs, result_nunique_aggs],
+            result = horizontal_concat(
+                dfs=result_aggs,
                 implementation=implementation,
                 backend_version=backend_version,
             )
-        elif nunique_aggs and not simple_aggs:
-            result_aggs = result_nunique_aggs
-        elif simple_aggs and not nunique_aggs:
-            result_aggs = result_simple_aggs
         else:
             # No aggregation provided
-            result_aggs = native_namespace.DataFrame(
-                list(grouped.groups.keys()), columns=keys
-            )
+            result = native_namespace.DataFrame(list(grouped.groups.keys()), columns=keys)
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_aggs.reset_index(inplace=True)  # noqa: PD002
+        result.reset_index(inplace=True)  # noqa: PD002
         return from_dataframe(
-            select_columns_by_name(
-                result_aggs, output_names, backend_version, implementation
-            )
+            select_columns_by_name(result, output_names, backend_version, implementation)
         )
 
     if dataframe_is_empty:

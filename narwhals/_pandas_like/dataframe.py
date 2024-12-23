@@ -836,7 +836,6 @@ class PandasLikeDataFrame:
         index: str | list[str] | None,
         values: str | list[str] | None,
         aggregate_function: Any | None,
-        maintain_order: bool,
         sort_columns: bool,
         separator: str = "_",
     ) -> Self:

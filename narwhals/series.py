@@ -845,6 +845,9 @@ class Series(Generic[IntoSeriesT]):
         Notes:
           Only works on Series of data type Boolean.
 
+        Returns:
+            A boolean indicating if any values in the Series are True.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -871,6 +874,9 @@ class Series(Generic[IntoSeriesT]):
 
     def all(self) -> Any:
         """Return whether all values in the Series are True.
+
+        Returns:
+            A boolean indicating if all values in the Series are True.
 
         Examples:
             >>> import pandas as pd
@@ -1336,6 +1342,9 @@ class Series(Generic[IntoSeriesT]):
     def abs(self) -> Self:
         """Calculate the absolute value of each element.
 
+        Returns:
+            A new Series with the absolute values of the original elements.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1632,6 +1641,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             name: The new name.
+
+        Returns:
+            A new Series with the updated name.
 
         Examples:
             >>> import pandas as pd
