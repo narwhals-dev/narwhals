@@ -448,10 +448,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     kwargs = {
                         "periods": (self._kwargs.get("n", 1) if self._kwargs else 1)
                     }
-                elif self._function_name.startswith("col->cum_"):
-                    kwargs = {"skipna": True}
                 else:
-                    kwargs = {}
+                    # Cumulative operation
+                    kwargs = {"skipna": True}
 
                 res_native = getattr(
                     df._native_frame.groupby(list(keys), as_index=False)[
