@@ -156,6 +156,7 @@ def test_interchange_schema_ibis(
     assert result == expected
     assert df["a"].dtype == nw.Int64
     assert df.columns == list(expected.keys())
+    assert df.collect_schema() == expected
 
 
 def test_interchange_schema_duckdb() -> None:
@@ -221,6 +222,7 @@ def test_interchange_schema_duckdb() -> None:
     assert result == expected
     assert df["a"].dtype == nw.Int64
     assert df.columns == list(expected.keys())
+    assert df.collect_schema() == expected
 
 
 def test_invalid() -> None:
