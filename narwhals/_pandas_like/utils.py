@@ -23,6 +23,7 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -137,7 +138,7 @@ def broadcast_align_and_extract_native(
         if rhs._native_series.index is not lhs_index:
             return (
                 lhs._native_series,
-                set_axis(
+                set_index(
                     rhs._native_series,
                     lhs_index,
                     implementation=rhs._implementation,
@@ -167,7 +168,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             s = other._native_series
             return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
         if other._native_series.index is not index:
-            return set_axis(
+            return set_index(
                 other._native_series,
                 index,
                 implementation=other._implementation,
@@ -301,14 +302,17 @@ def native_series_from_iterable(
         raise TypeError(msg)
 
 
-def set_axis(
+def set_index(
     obj: T,
     index: Any,
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> T:
-    """Wrapper around pandas' set_axis so that we can set `copy` / `inplace` based on implementation/version."""
+    """Wrapper around pandas' set_axis to set object index.
+
+    We can set `copy` / `inplace` based on implementation/version.
+    """
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
@@ -326,6 +330,36 @@ def set_axis(
     else:  # pragma: no cover
         pass
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
+
+
+def set_columns(
+    obj: T,
+    columns: list[str],
+    *,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
+) -> T:
+    """Wrapper around pandas' set_axis to set object columns.
+
+    We can set `copy` / `inplace` based on implementation/version.
+    """
+    if implementation is Implementation.CUDF:  # pragma: no cover
+        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
+        obj.columns = columns  # type: ignore[attr-defined]
+        return obj
+    if implementation is Implementation.PANDAS and (
+        backend_version < (1,)
+    ):  # pragma: no cover
+        kwargs = {"inplace": False}
+    else:
+        kwargs = {}
+    if implementation is Implementation.PANDAS and (
+        (1, 5) <= backend_version < (3,)
+    ):  # pragma: no cover
+        kwargs["copy"] = False
+    else:  # pragma: no cover
+        pass
+    return obj.set_axis(columns, axis=1, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
 def rename(
@@ -614,7 +648,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                     )
                 )
             )
-        else:
+        else:  # pragma: no cover
             msg = (
                 "Converting to List dtype is not supported for implementation "
                 f"{implementation} and version {version}."
@@ -653,7 +687,7 @@ def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
 
         elif s_native.index is not idx:
             reindexed.append(
-                set_axis(
+                set_index(
                     s_native,
                     idx,
                     implementation=s._implementation,
@@ -770,3 +804,38 @@ def select_columns_by_name(
         raise ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns, available_columns
         ) from e
+
+
+def pivot_table(
+    df: PandasLikeDataFrame,
+    values: list[str],
+    index: list[str],
+    columns: list[str],
+    aggregate_function: str | None,
+) -> Any:
+    dtypes = import_dtypes_module(df._version)
+    if df._implementation is Implementation.CUDF:
+        if any(
+            x == dtypes.Categorical
+            for x in df.select(*[*values, *index, *columns]).schema.values()
+        ):
+            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+            raise NotImplementedError(msg)
+        # cuDF doesn't support `observed` argument
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+        )
+    else:
+        result = df._native_frame.pivot_table(
+            values=values,
+            index=index,
+            columns=columns,
+            aggfunc=aggregate_function,
+            margins=False,
+            observed=True,
+        )
+    return result

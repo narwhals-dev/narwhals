@@ -96,7 +96,7 @@ def to_native(
             **Deprecated** (v1.13.0):
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+                see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class:
 
             - `False` (default): raise an error
@@ -344,7 +344,7 @@ def from_native(
             **Deprecated** (v1.13.0):
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+                see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals:
 
             - `False` or `None` (default): raise an error
@@ -361,7 +361,7 @@ def from_native(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 
@@ -847,7 +847,7 @@ def narwhalify(
         strict: **Deprecated** (v1.13.0):
             Please use `pass_through` instead. Note that `strict` is still available
             (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
             Determine what happens if the object can't be converted to Narwhals:
 
@@ -869,7 +869,7 @@ def narwhalify(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 

@@ -27,7 +27,7 @@ The lazy-only layer is a major item on our 2025 roadmap, and hope to be able to 
 the "interchange" level into that one.
 
 Libraries for which we have full support can benefit from the whole
-[Narwhals API](https://narwhals-dev.github.io/narwhals/api-reference/).
+[Narwhals API](./api-reference/index.md).
 
 For example:
 

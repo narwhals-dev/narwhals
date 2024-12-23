@@ -11,11 +11,13 @@ from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
+from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.translate import to_native
+from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
@@ -335,6 +337,14 @@ class BaseFrame(Generic[FrameT]):
         )
         raise NotImplementedError(msg)
 
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.explode(
+                columns,
+                *more_columns,
+            )
+        )
+
 
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
@@ -344,7 +354,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         - If the native object is a eager dataframe from one of the supported
             backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
-            you can use [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            you can use [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_dataframe)
             narwhals.from_native(native_dataframe, eager_only=True)
@@ -352,7 +362,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         - If the object is a dictionary of column names and generic sequences mapping
             (e.g. `dict[str, list]`), you can create a DataFrame via
-            [`narwhals.from_dict`](../narwhals/#narwhals.from_dict):
+            [`narwhals.from_dict`][]:
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
@@ -592,8 +602,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-
-
         """
         return self._compliant_frame.to_pandas()
 
@@ -1196,18 +1204,21 @@ class DataFrame(BaseFrame[DataFrameT]):
             The original object with the rows removed that contained the null values.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md)
+            for reference.
 
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1215,7 +1226,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
@@ -1229,6 +1240,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╡
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
+            >>> agnostic_drop_nulls(df_pa)
+            pyarrow.Table
+            a: double
+            ba: double
+            ----
+            a: [[1]]
+            ba: [[1]]
         """
         return super().drop_nulls(subset=subset)
 
@@ -2666,42 +2684,39 @@ class DataFrame(BaseFrame[DataFrameT]):
             A dataframe of shape (1, n_columns).
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, None, 3],
-            ...         "bar": [6, 7, None],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "foo": [1, None, 3],
+            ...     "bar": [6, 7, None],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that returns the null count of
             each columns:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.null_count()
+            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.null_count().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_null_count`:
 
-            >>> func(df_pd)
+            >>> agnostic_null_count(df_pd)
                foo  bar  ham
             0    1    1    0
 
-            >>> func(df_pl)
+            >>> agnostic_null_count(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2710,6 +2725,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             ╞═════╪═════╪═════╡
             │ 1   ┆ 1   ┆ 0   │
             └─────┴─────┴─────┘
+
+            >>> agnostic_null_count(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: int64
+            ham: int64
+            ----
+            foo: [[1]]
+            bar: [[1]]
+            ham: [[0]]
         """
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
@@ -2842,7 +2867,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]
         | None = None,
-        maintain_order: bool = True,
+        maintain_order: bool | None = None,
         sort_columns: bool = False,
         separator: str = "_",
     ) -> Self:
@@ -2858,11 +2883,12 @@ class DataFrame(BaseFrame[DataFrameT]):
                 specified on `on` and `index` will be used. At least one of `index` and
                 `values` must be specified.
             aggregate_function: Choose from:
+
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
                 - A predefined aggregate function string, one of
                     {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
-            maintain_order: Sort the grouped keys so that the output order is predictable.
+            maintain_order: Has no effect and is kept around only for backwards-compatibility.
             sort_columns: Sort the transposed columns by name. Default is by order of
                 discovery.
             separator: Used as separator/delimiter in generated column names in case of
@@ -2907,13 +2933,22 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
             └─────┴───────┴───────┴───────┴───────┘
         """
+        if values is None and index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+
         return self._from_compliant_dataframe(
             self._compliant_frame.pivot(
                 on=on,
                 index=index,
                 values=values,
                 aggregate_function=aggregate_function,
-                maintain_order=maintain_order,
                 sort_columns=sort_columns,
                 separator=separator,
             )
@@ -3108,13 +3143,75 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        """Explode the dataframe to long format by exploding the given columns.
+
+        Notes:
+            It is possible to explode multiple columns only if these columns must have
+            matching element counts.
+
+        Arguments:
+            columns: Column names. The underlying columns being exploded must be of the `List` data type.
+            *more_columns: Additional names of columns to explode, specified as positional arguments.
+
+        Returns:
+            New DataFrame
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrameT
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": ["x", "y", "z", "w"],
+            ...     "lst1": [[1, 2], None, [None], []],
+            ...     "lst2": [[3, None], None, [42], []],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> def agnostic_explode(df_native: IntoDataFrameT) -> IntoDataFrameT:
+            ...     return (
+            ...         nw.from_native(df_native)
+            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
+            ...         .explode("lst1", "lst2")
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `agnostic_explode`:
+
+            >>> agnostic_explode(pd.DataFrame(data))
+               a  lst1  lst2
+            0  x     1     3
+            0  x     2  <NA>
+            1  y  <NA>  <NA>
+            2  z  <NA>    42
+            3  w  <NA>  <NA>
+            >>> agnostic_explode(pl.DataFrame(data))
+            shape: (5, 3)
+            ┌─────┬──────┬──────┐
+            │ a   ┆ lst1 ┆ lst2 │
+            │ --- ┆ ---  ┆ ---  │
+            │ str ┆ i32  ┆ i32  │
+            ╞═════╪══════╪══════╡
+            │ x   ┆ 1    ┆ 3    │
+            │ x   ┆ 2    ┆ null │
+            │ y   ┆ null ┆ null │
+            │ z   ┆ null ┆ 42   │
+            │ w   ┆ null ┆ null │
+            └─────┴──────┴──────┘
+        """
+        return super().explode(columns, *more_columns)
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
     !!! warning
         This class is not meant to be instantiated directly - instead use
-        [`narwhals.from_native`](../narwhals/#narwhals.from_native) with a native
+        [`narwhals.from_native`][] with a native
         object that is a lazy dataframe from one of the supported
         backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
         ```py
@@ -3264,6 +3361,14 @@ class LazyFrame(BaseFrame[FrameT]):
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
 
+        Arguments:
+            function: Function to apply.
+            args: Positional arguments to pass to function.
+            kwargs: Keyword arguments to pass to function.
+
+        Returns:
+            The original object with the function applied.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -3302,15 +3407,19 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
-        """Drop null values.
+        """Drop rows that contain null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
                 (default), use all columns.
 
+        Returns:
+            The original object with the rows removed that contained the null values.
+
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import polars as pl
@@ -3328,7 +3437,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.drop_nulls().to_native()
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas or Polars to `agnostic_drop_nulls`:
 
             >>> agnostic_drop_nulls(df_pd)
                  a   ba
@@ -3347,6 +3456,12 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+
+        Returns:
+            The original object with the column added.
 
         Examples:
             >>> import polars as pl
@@ -3389,6 +3504,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -3407,6 +3525,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
+
+        Returns:
+            A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
             >>> import polars as pl
@@ -3427,6 +3548,9 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def columns(self) -> list[str]:
         r"""Get column names.
+
+        Returns:
+            The column names stored in a list.
 
         Examples:
             >>> import pandas as pd
@@ -3544,6 +3668,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
                 The columns will be renamed to the keyword used.
+
+        Returns:
+            The LazyFrame containing only the selected columns.
 
         Notes:
             If you'd like to select a column whose name isn't a string (for example,
@@ -3716,6 +3843,9 @@ class LazyFrame(BaseFrame[FrameT]):
                       function that takes the old name as input and returns the
                       new name.
 
+        Returns:
+            The LazyFrame with the specified columns renamed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3758,6 +3888,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3816,6 +3949,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
             >>> import narwhals as nw
@@ -3876,6 +4012,9 @@ class LazyFrame(BaseFrame[FrameT]):
             *columns: Names of the columns that should be removed from the dataframe.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
+
+        Returns:
+            The LazyFrame with the specified columns removed.
 
         Warning:
             `strict` argument is ignored for `polars<1.0.0`.
@@ -4019,6 +4158,9 @@ class LazyFrame(BaseFrame[FrameT]):
             **constraints: Column filters; use `name = value` to filter columns by the supplied value.
                 Each constraint will behave the same as `nw.col(name).eq(value)`, and will be implicitly
                 joined with the other filter conditions using &.
+
+        Returns:
+            The filtered LazyFrame.
 
         Examples:
             >>> import pandas as pd
@@ -4203,6 +4345,9 @@ class LazyFrame(BaseFrame[FrameT]):
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
+        Returns:
+            LazyGroupBy: Object which can be used to perform aggregations.
+
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
             another column.
@@ -4318,6 +4463,9 @@ class LazyFrame(BaseFrame[FrameT]):
             nulls_last: Place null values last; can specify a single boolean applying to
                 all columns or a sequence of booleans for per-column control.
 
+        Returns:
+            The sorted LazyFrame.
+
         Warning:
             Unlike Polars, it is not possible to specify a sequence of booleans for
             `nulls_last` in order to control per-column behaviour. Instead a single
@@ -4393,7 +4541,7 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
-            A new joined LazyFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> import narwhals as nw
@@ -4489,7 +4637,7 @@ class LazyFrame(BaseFrame[FrameT]):
                   * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
 
         Returns:
-            A new joined DataFrame
+            A new joined LazyFrame.
 
         Examples:
             >>> from datetime import datetime
@@ -4652,6 +4800,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def clone(self) -> Self:
         r"""Create a copy of this DataFrame.
 
+        Returns:
+            An identical copy of the original LazyFrame.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -4691,6 +4842,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        Returns:
+            A LazyFrame.
+
         Examples:
             Construct pandas and Polars objects:
 
@@ -4727,6 +4881,9 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
+
+        Returns:
+            The LazyFrame containing only the selected rows.
 
         Examples:
             >>> import narwhals as nw
@@ -4787,6 +4944,9 @@ class LazyFrame(BaseFrame[FrameT]):
             variable_name: Name to give to the `variable` column. Defaults to "variable".
             value_name: Name to give to the `value` column. Defaults to "value".
 
+        Returns:
+            The unpivoted LazyFrame.
+
         Notes:
             If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
             but with `index` replacing `id_vars` and `on` replacing `value_vars`.
@@ -4830,3 +4990,56 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().unpivot(
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        """Explode the dataframe to long format by exploding the given columns.
+
+        Notes:
+            It is possible to explode multiple columns only if these columns must have
+            matching element counts.
+
+        Arguments:
+            columns: Column names. The underlying columns being exploded must be of the `List` data type.
+            *more_columns: Additional names of columns to explode, specified as positional arguments.
+
+        Returns:
+            New LazyFrame
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": ["x", "y", "z", "w"],
+            ...     "lst1": [[1, 2], None, [None], []],
+            ...     "lst2": [[3, None], None, [42], []],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> def agnostic_explode(df_native: IntoFrameT) -> IntoFrameT:
+            ...     return (
+            ...         nw.from_native(df_native)
+            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
+            ...         .explode("lst1", "lst2")
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `agnostic_explode`:
+
+            >>> agnostic_explode(pl.LazyFrame(data)).collect()
+            shape: (5, 3)
+            ┌─────┬──────┬──────┐
+            │ a   ┆ lst1 ┆ lst2 │
+            │ --- ┆ ---  ┆ ---  │
+            │ str ┆ i32  ┆ i32  │
+            ╞═════╪══════╪══════╡
+            │ x   ┆ 1    ┆ 3    │
+            │ x   ┆ 2    ┆ null │
+            │ y   ┆ null ┆ null │
+            │ z   ┆ null ┆ 42   │
+            │ w   ┆ null ┆ null │
+            └─────┴──────┴──────┘
+        """
+        return super().explode(columns, *more_columns)

@@ -14,6 +14,12 @@ data = {
     "c": [5, 4, 3, 2, 1],
 }
 
+data_cum = {
+    "a": ["a", "a", "b", "b", "b"],
+    "b": [1, 2, None, 5, 3],
+    "c": [5, 4, 3, 2, 1],
+}
+
 
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
@@ -62,15 +68,16 @@ def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
+        "b": [1, 2, None, 5, 3],
         "c": [5, 4, 3, 2, 1],
-        "b_cumsum": [1, 3, 3, 8, 11],
+        "b_cumsum": [1, 3, None, 5, 8],
+        "c_cumsum": [5, 9, 3, 5, 6],
     }
 
-    result = df.with_columns(b_cumsum=nw.col("b").cum_sum().over("a"))
+    result = df.with_columns(nw.col("b", "c").cum_sum().over("a").name.suffix("_cumsum"))
     assert_equal_data(result, expected)
 
 
@@ -78,39 +85,18 @@ def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor)
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
+        "b": [1, 2, None, 5, 3],
         "c": [5, 4, 3, 2, 1],
-        "b_cumcount": [1, 2, 1, 2, 3],
+        "b_cumcount": [1, 2, 0, 1, 2],
+        "c_cumcount": [1, 2, 1, 2, 3],
     }
 
-    result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
-    assert_equal_data(result, expected)
-
-
-def test_over_cumcount_missing_values(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    data_with_missing_value = {
-        "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, None],
-        "c": [5, 4, 3, 2, 1],
-    }
-
-    df = nw.from_native(constructor(data_with_missing_value))
-    expected = {
-        "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, None],
-        "c": [5, 4, 3, 2, 1],
-        "b_cumcount": [1, 2, 1, 2, 2],
-    }
-
-    result = df.with_columns(b_cumcount=nw.col("b").cum_count().over("a"))
+    result = df.with_columns(
+        nw.col("b", "c").cum_count().over("a").name.suffix("_cumcount")
+    )
     assert_equal_data(result, expected)
 
 
@@ -119,14 +105,15 @@ def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
+        "b": [1, 2, None, 5, 3],
         "c": [5, 4, 3, 2, 1],
-        "b_cummax": [1, 2, 3, 5, 5],
+        "b_cummax": [1, 2, None, 5, 5],
+        "c_cummax": [5, 5, 3, 3, 3],
     }
-    result = df.with_columns(b_cummax=nw.col("b").cum_max().over("a"))
+    result = df.with_columns(nw.col("b", "c").cum_max().over("a").name.suffix("_cummax"))
     assert_equal_data(result, expected)
 
 
@@ -137,34 +124,38 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
+        "b": [1, 2, None, 5, 3],
         "c": [5, 4, 3, 2, 1],
-        "b_cummin": [1, 1, 3, 3, 3],
+        "b_cummin": [1, 1, None, 5, 3],
+        "c_cummin": [5, 4, 3, 2, 1],
     }
 
-    result = df.with_columns(b_cummin=nw.col("b").cum_min().over("a"))
+    result = df.with_columns(nw.col("b", "c").cum_min().over("a").name.suffix("_cummin"))
     assert_equal_data(result, expected)
 
 
 def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
+        "b": [1, 2, None, 5, 3],
         "c": [5, 4, 3, 2, 1],
-        "b_cumprod": [1, 2, 3, 15, 45],
+        "b_cumprod": [1, 2, None, 5, 15],
+        "c_cumprod": [5, 20, 3, 6, 6],
     }
 
-    result = df.with_columns(b_cumprod=nw.col("b").cum_prod().over("a"))
+    result = df.with_columns(
+        nw.col("b", "c").cum_prod().over("a").name.suffix("_cumprod")
+    )
     assert_equal_data(result, expected)
 
 
@@ -189,3 +180,13 @@ def test_over_shift(request: pytest.FixtureRequest, constructor: Constructor) ->
     }
     result = df.with_columns(b_shift=nw.col("b").shift(2).over("a"))
     assert_equal_data(result, expected)
+
+
+def test_over_cum_reverse() -> None:
+    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Cumulative operation with `reverse=True` is not supported",
+    ):
+        nw.from_native(df).select(nw.col("b").cum_max(reverse=True).over("a"))

@@ -41,7 +41,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        function_kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any],
     ) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
@@ -53,7 +53,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=output_names,
             backend_version=self._backend_version,
             version=self._version,
-            function_kwargs=function_kwargs,
+            kwargs=kwargs,
         )
 
     def _create_expr_from_series(self: Self, series: ArrowSeries) -> ArrowExpr:
@@ -67,6 +67,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def _create_series_from_scalar(
@@ -135,6 +136,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=["len"],
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def all(self: Self) -> ArrowExpr:
@@ -157,6 +159,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> ArrowExpr:
@@ -179,6 +182,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=["literal"],
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def all_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -194,6 +198,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -209,6 +214,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -228,6 +234,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
@@ -255,6 +262,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="mean_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -283,6 +291,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="min_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -311,6 +320,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="max_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -422,6 +432,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 
@@ -508,6 +524,7 @@ class ArrowWhen:
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"value": value},
         )
 
 
@@ -522,6 +539,7 @@ class ArrowThen(ArrowExpr):
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
         version: Version,
+        kwargs: dict[str, Any],
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -530,6 +548,7 @@ class ArrowThen(ArrowExpr):
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._kwargs = kwargs
 
     def otherwise(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowExpr:
         # type ignore because we are setting the `_call` attribute to a

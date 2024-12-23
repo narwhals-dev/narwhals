@@ -1856,8 +1856,9 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
-            distinguish between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1869,23 +1870,21 @@ class Expr:
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
             >>> df_pl = pl.DataFrame(
-            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, None, 3.0, 5.0]}
             ... )
-            >>> df_pa = pa.table(
-            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
-            ... )
+            >>> df_pa = pa.table({"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, None, 3.0, 5.0]})
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_is_null(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
             ...     ).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_is_null`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_is_null(df_pd)
                  a    b  a_is_null  b_is_null
             0  2.0  2.0      False      False
             1  4.0  4.0      False      False
@@ -1893,21 +1892,21 @@ class Expr:
             3  3.0  3.0      False      False
             4  5.0  5.0      False      False
 
-            >>> my_library_agnostic_function(df_pl)  # nan != null for polars
+            >>> agnostic_is_null(df_pl)
             shape: (5, 4)
-            ┌──────┬─────┬───────────┬───────────┐
-            │ a    ┆ b   ┆ a_is_null ┆ b_is_null │
-            │ ---  ┆ --- ┆ ---       ┆ ---       │
-            │ i64  ┆ f64 ┆ bool      ┆ bool      │
-            ╞══════╪═════╪═══════════╪═══════════╡
-            │ 2    ┆ 2.0 ┆ false     ┆ false     │
-            │ 4    ┆ 4.0 ┆ false     ┆ false     │
-            │ null ┆ NaN ┆ true      ┆ false     │
-            │ 3    ┆ 3.0 ┆ false     ┆ false     │
-            │ 5    ┆ 5.0 ┆ false     ┆ false     │
-            └──────┴─────┴───────────┴───────────┘
+            ┌──────┬──────┬───────────┬───────────┐
+            │ a    ┆ b    ┆ a_is_null ┆ b_is_null │
+            │ ---  ┆ ---  ┆ ---       ┆ ---       │
+            │ i64  ┆ f64  ┆ bool      ┆ bool      │
+            ╞══════╪══════╪═══════════╪═══════════╡
+            │ 2    ┆ 2.0  ┆ false     ┆ false     │
+            │ 4    ┆ 4.0  ┆ false     ┆ false     │
+            │ null ┆ null ┆ true      ┆ true      │
+            │ 3    ┆ 3.0  ┆ false     ┆ false     │
+            │ 5    ┆ 5.0  ┆ false     ┆ false     │
+            └──────┴──────┴───────────┴───────────┘
 
-            >>> my_library_agnostic_function(df_pa)  # nan != null for pyarrow
+            >>> agnostic_is_null(df_pa)
             pyarrow.Table
             a: int64
             b: double
@@ -1915,9 +1914,9 @@ class Expr:
             b_is_null: bool
             ----
             a: [[2,4,null,3,5]]
-            b: [[2,4,nan,3,5]]
+            b: [[2,4,null,3,5]]
             a_is_null: [[false,false,true,false,false]]
-            b_is_null: [[false,false,false,false,false]]
+            b_is_null: [[false,false,true,false,false]]
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
@@ -1985,8 +1984,9 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd
@@ -2003,25 +2003,25 @@ class Expr:
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "a": [2, 4, None, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...         "b": [2.0, 4.0, None, None, 3.0, 5.0],
             ...     }
             ... )
             >>> df_pa = pa.table(
             ...     {
             ...         "a": [2, 4, None, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...         "b": [2.0, 4.0, None, None, 3.0, 5.0],
             ...     }
             ... )
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_fill_null(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(nw.col("a", "b").fill_null(0)).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_fill_null`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_fill_null(df_pd)
                  a    b
             0  2.0  2.0
             1  4.0  4.0
@@ -2030,7 +2030,7 @@ class Expr:
             4  3.0  3.0
             5  5.0  5.0
 
-            >>> my_library_agnostic_function(df_pl)  # nan != null for polars
+            >>> agnostic_fill_null(df_pl)
             shape: (6, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -2039,23 +2039,23 @@ class Expr:
             ╞═════╪═════╡
             │ 2   ┆ 2.0 │
             │ 4   ┆ 4.0 │
-            │ 0   ┆ NaN │
-            │ 0   ┆ NaN │
+            │ 0   ┆ 0.0 │
+            │ 0   ┆ 0.0 │
             │ 3   ┆ 3.0 │
             │ 5   ┆ 5.0 │
             └─────┴─────┘
 
-            >>> my_library_agnostic_function(df_pa)  # nan != null for pyarrow
+            >>> agnostic_fill_null(df_pa)
             pyarrow.Table
             a: int64
             b: double
             ----
             a: [[2,4,0,0,3,5]]
-            b: [[2,4,nan,nan,3,5]]
+            b: [[2,4,0,0,3,5]]
 
             Using a strategy:
 
-            >>> def func_strategies(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_fill_null_with_strategy(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         nw.col("a", "b")
@@ -2063,7 +2063,7 @@ class Expr:
             ...         .name.suffix("_filled")
             ...     ).to_native()
 
-            >>> func_strategies(df_pd)
+            >>> agnostic_fill_null_with_strategy(df_pd)
                  a    b  a_filled  b_filled
             0  2.0  2.0       2.0       2.0
             1  4.0  4.0       4.0       4.0
@@ -2072,22 +2072,22 @@ class Expr:
             4  3.0  3.0       3.0       3.0
             5  5.0  5.0       5.0       5.0
 
-            >>> func_strategies(df_pl)  # nan != null for polars
+            >>> agnostic_fill_null_with_strategy(df_pl)
             shape: (6, 4)
-            ┌──────┬─────┬──────────┬──────────┐
-            │ a    ┆ b   ┆ a_filled ┆ b_filled │
-            │ ---  ┆ --- ┆ ---      ┆ ---      │
-            │ i64  ┆ f64 ┆ i64      ┆ f64      │
-            ╞══════╪═════╪══════════╪══════════╡
-            │ 2    ┆ 2.0 ┆ 2        ┆ 2.0      │
-            │ 4    ┆ 4.0 ┆ 4        ┆ 4.0      │
-            │ null ┆ NaN ┆ 4        ┆ NaN      │
-            │ null ┆ NaN ┆ null     ┆ NaN      │
-            │ 3    ┆ 3.0 ┆ 3        ┆ 3.0      │
-            │ 5    ┆ 5.0 ┆ 5        ┆ 5.0      │
-            └──────┴─────┴──────────┴──────────┘
+            ┌──────┬──────┬──────────┬──────────┐
+            │ a    ┆ b    ┆ a_filled ┆ b_filled │
+            │ ---  ┆ ---  ┆ ---      ┆ ---      │
+            │ i64  ┆ f64  ┆ i64      ┆ f64      │
+            ╞══════╪══════╪══════════╪══════════╡
+            │ 2    ┆ 2.0  ┆ 2        ┆ 2.0      │
+            │ 4    ┆ 4.0  ┆ 4        ┆ 4.0      │
+            │ null ┆ null ┆ 4        ┆ 4.0      │
+            │ null ┆ null ┆ null     ┆ null     │
+            │ 3    ┆ 3.0  ┆ 3        ┆ 3.0      │
+            │ 5    ┆ 5.0  ┆ 5        ┆ 5.0      │
+            └──────┴──────┴──────────┴──────────┘
 
-            >>> func_strategies(df_pa)  # nan != null for pyarrow
+            >>> agnostic_fill_null_with_strategy(df_pa)
             pyarrow.Table
             a: int64
             b: double
@@ -2095,9 +2095,9 @@ class Expr:
             b_filled: double
             ----
             a: [[2,4,null,null,3,5]]
-            b: [[2,4,nan,nan,3,5]]
+            b: [[2,4,null,null,3,5]]
             a_filled: [[2,4,4,null,3,5]]
-            b_filled: [[2,4,nan,nan,3,5]]
+            b_filled: [[2,4,4,null,3,5]]
         """
         if value is not None and strategy is not None:
             msg = "cannot specify both `value` and `strategy`"
@@ -2116,14 +2116,15 @@ class Expr:
 
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
-        """Remove missing values.
+        """Drop null values.
 
         Returns:
             A new expression.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
@@ -2133,25 +2134,25 @@ class Expr:
             >>> import pyarrow as pa
 
             >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
-            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
-            >>> df_pa = pa.table({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
+            >>> df_pa = pa.table({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_drop_nulls(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("a").drop_nulls()).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_drop_nulls(df_pd)
                  a
             0  2.0
             1  4.0
             3  3.0
             5  5.0
-            >>> my_library_agnostic_function(df_pl)  # nan != null for polars
-            shape: (5, 1)
+            >>> agnostic_drop_nulls(df_pl)
+            shape: (4, 1)
             ┌─────┐
             │ a   │
             │ --- │
@@ -2159,15 +2160,14 @@ class Expr:
             ╞═════╡
             │ 2.0 │
             │ 4.0 │
-            │ NaN │
             │ 3.0 │
             │ 5.0 │
             └─────┘
-            >>> my_library_agnostic_function(df_pa)  # nan != null for pyarrow
+            >>> agnostic_drop_nulls(df_pa)
             pyarrow.Table
             a: double
             ----
-            a: [[2,4,nan,3,5]]
+            a: [[2,4,3,5]]
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).drop_nulls())
 
@@ -2438,8 +2438,9 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
@@ -2454,16 +2455,16 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.all().null_count()).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_null_count`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_null_count(df_pd)
                a  b
             0  1  2
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_null_count(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -2472,7 +2473,7 @@ class Expr:
             ╞═════╪═════╡
             │ 1   ┆ 2   │
             └─────┴─────┘
-            >>> my_library_agnostic_function(df_pa)
+            >>> agnostic_null_count(df_pa)
             pyarrow.Table
             a: int64
             b: int64
@@ -6088,7 +6089,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     Notes:
         `nth` is not supported for Polars version<1.0.0. Please use
-        [`col`](../narwhals/#narwhals.col) instead.
+        [`narwhals.col`][] instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.

@@ -38,14 +38,14 @@ class Series(Generic[IntoSeriesT]):
 
         - If the native object is a series from one of the supported backend (e.g.
             pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_series, allow_series=True)
             narwhals.from_native(native_series, series_only=True)
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            create a series via [`narwhals.new_series`][]:
             ```py
             narwhals.new_series(
                 name=name,
@@ -1278,44 +1278,56 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(self._compliant_series.arg_true())
 
     def drop_nulls(self) -> Self:
-        """Drop all null values.
+        """Drop null values.
 
         Notes:
-          pandas and Polars handle null values differently. Polars distinguishes
-          between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
-          >>> import pandas as pd
-          >>> import polars as pl
-          >>> import numpy as np
-          >>> import narwhals as nw
-          >>> from narwhals.typing import IntoSeriesT
-          >>> s_pd = pd.Series([2, 4, None, 3, 5])
-          >>> s_pl = pl.Series("a", [2, 4, None, 3, 5])
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> s_pd = pd.Series([2, 4, None, 3, 5])
+            >>> s_pl = pl.Series([2, 4, None, 3, 5])
+            >>> s_pa = pa.chunked_array([[2, 4, None, 3, 5]])
 
-          Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
+            Let's define a dataframe-agnostic function:
 
-          >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
-          ...     s = nw.from_native(s_native, series_only=True)
-          ...     return s.drop_nulls().to_native()
+            >>> def agnostic_drop_nulls(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.drop_nulls().to_native()
 
-          Then we can pass either Series (polars or pandas) to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_drop_nulls`:
 
-          >>> my_library_agnostic_function(s_pd)
-          0    2.0
-          1    4.0
-          3    3.0
-          4    5.0
-          dtype: float64
-          >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
-          shape: (4,)
-          Series: 'a' [i64]
-          [
-             2
-             4
-             3
-             5
-          ]
+            >>> agnostic_drop_nulls(s_pd)
+            0    2.0
+            1    4.0
+            3    3.0
+            4    5.0
+            dtype: float64
+            >>> agnostic_drop_nulls(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+                2
+                4
+                3
+                5
+            ]
+            >>> agnostic_drop_nulls(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                4,
+                3,
+                5
+              ]
+            ]
         """
         return self._from_compliant_series(self._compliant_series.drop_nulls())
 
@@ -1879,38 +1891,50 @@ class Series(Generic[IntoSeriesT]):
         """Returns a boolean Series indicating which values are null.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+            >>> import pyarrow as pa
             >>> from narwhals.typing import IntoSeriesT
             >>> s = [1, 2, None]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
 
-            We define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_is_null(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.is_null().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_is_null`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_is_null(s_pd)
             0    False
             1    False
             2     True
             dtype: bool
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_null(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
                false
                false
                true
+            ]
+            >>> agnostic_is_null(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true
+              ]
             ]
         """
         return self._from_compliant_series(self._compliant_series.is_null())
@@ -1925,38 +1949,39 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             value: Value used to fill null values.
-
             strategy: Strategy used to fill null values.
-
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> s = [1, 2, None]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
 
-            We define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_fill_null(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.fill_null(5).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `agnostic_fill_null`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_fill_null(s_pd)
             0    1.0
             1    2.0
             2    5.0
             dtype: float64
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_fill_null(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -1964,26 +1989,43 @@ class Series(Generic[IntoSeriesT]):
                2
                5
             ]
+            >>> agnostic_fill_null(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2,
+                5
+              ]
+            ]
 
             Using a strategy:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_fill_null_with_strategy(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.fill_null(strategy="forward", limit=1).to_native()
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_fill_null_with_strategy(s_pd)
             0    1.0
             1    2.0
             2    2.0
             dtype: float64
-
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_fill_null_with_strategy(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
                1
                2
                2
+            ]
+            >>> agnostic_fill_null_with_strategy(s_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2,
+                2
+              ]
             ]
         """
         if value is not None and strategy is not None:
@@ -2416,28 +2458,35 @@ class Series(Generic[IntoSeriesT]):
         r"""Create a new Series that shows the null counts per column.
 
         Notes:
-            pandas and Polars handle null values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
             >>> import pandas as pd
             >>> import polars as pl
-            >>> s_pd = pd.Series([1, None, 3])
-            >>> s_pl = pl.Series([1, None, None])
+            >>> import pyarrow as pa
+            >>> s = [1, None, None]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
 
             Let's define a dataframe-agnostic function that returns the null count of
             the series:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries):
+            >>> def agnostic_null_count(s_native: IntoSeries):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.null_count()
 
-            We can then pass either pandas or Polars to `func`:
-            >>> my_library_agnostic_function(s_pd)
-            np.int64(1)
-            >>> my_library_agnostic_function(s_pl)
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `agnostic_null_count`:
+
+            >>> agnostic_null_count(s_pd)
+            np.int64(2)
+            >>> agnostic_null_count(s_pl)
+            2
+            >>> agnostic_null_count(s_pa)
             2
         """
         return self._compliant_series.null_count()  # type: ignore[no-any-return]
