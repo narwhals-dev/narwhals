@@ -48,6 +48,7 @@ extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
   "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "dask[dataframe]; python_version >= '3.9'",
+  "modin",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
