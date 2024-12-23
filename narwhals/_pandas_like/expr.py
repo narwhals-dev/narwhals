@@ -448,6 +448,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     kwargs = {
                         "periods": (self._kwargs.get("n", 1) if self._kwargs else 1)
                     }
+                elif self._function_name.startswith("col->cum_"):
+                    kwargs = {"skipna": True}
                 else:
                     kwargs = {}
 
@@ -456,7 +458,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                         self._root_names
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
-                )(skipna=True, **kwargs)
+                )(**kwargs)
 
                 result_frame = df._from_native_frame(
                     rename(
