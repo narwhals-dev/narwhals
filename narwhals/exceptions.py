@@ -35,6 +35,10 @@ class ColumnNotFoundError(FormattedKeyError):
         return ColumnNotFoundError(message)
 
 
+class ShapeError(Exception):
+    """Exception raised when trying to perform operations on data structures with incompatible shapes."""
+
+
 class InvalidOperationError(Exception):
     """Exception raised during invalid operations."""
 

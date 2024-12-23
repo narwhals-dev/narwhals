@@ -17,7 +17,7 @@ from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_axis
+from narwhals._pandas_like.utils import set_index
 from narwhals._pandas_like.utils import to_datetime
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.typing import CompliantSeries
@@ -211,7 +211,7 @@ class PandasLikeSeries(CompliantSeries):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
             _, values = broadcast_align_and_extract_native(self, values)
-            values = set_axis(
+            values = set_index(
                 values.copy(),
                 self._native_series.index[indices],
                 implementation=self._implementation,
@@ -1473,7 +1473,7 @@ class PandasLikeSeriesListNamespace:
             self._compliant_series._implementation is Implementation.PANDAS
             and self._compliant_series._backend_version < (3, 0)
         ):  # pragma: no cover
-            native_result = set_axis(
+            native_result = set_index(
                 rename(
                     native_result,
                     native_series.name,

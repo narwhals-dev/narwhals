@@ -92,12 +92,28 @@ T = TypeVar("T")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals DataFrame, backed by a native eager dataframe.
 
-    The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+        - If the native object is a eager dataframe from one of the supported
+            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
+            you can use [`narwhals.from_native`][]:
+            ```py
+            narwhals.from_native(native_dataframe)
+            narwhals.from_native(native_dataframe, eager_only=True)
+            ```
+
+        - If the object is a dictionary of column names and generic sequences mapping
+            (e.g. `dict[str, list]`), you can create a DataFrame via
+            [`narwhals.from_dict`][]:
+            ```py
+            narwhals.from_dict(
+                data={"a": [1, 2, 3]},
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     # We need to override any method which don't return Self so that type
@@ -364,12 +380,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
-    """Narwhals DataFrame, backed by a native dataframe.
+    """Narwhals LazyFrame, backed by a native lazyframe.
 
-    The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
-
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`.
+    !!! warning
+        This class is not meant to be instantiated directly - instead use
+        [`narwhals.from_native`][] with a native
+        object that is a lazy dataframe from one of the supported
+        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
+        ```py
+        narwhals.from_native(native_lazyframe)
+        ```
     """
 
     @property
@@ -425,11 +445,26 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
 
-    The native series might be pandas.Series, polars.Series, ...
+    !!! warning
+        This class is not meant to be instantiated directly - instead:
 
-    This class is not meant to be instantiated directly - instead, use
-    `narwhals.from_native`, making sure to pass `allow_series=True` or
-    `series_only=True`.
+        - If the native object is a series from one of the supported backend (e.g.
+            pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
+            [`narwhals.from_native`][]:
+            ```py
+            narwhals.from_native(native_series, allow_series=True)
+            narwhals.from_native(native_series, series_only=True)
+            ```
+
+        - If the object is a generic sequence (e.g. a list or a tuple of values), you can
+            create a series via [`narwhals.new_series`][]:
+            ```py
+            narwhals.new_series(
+                name=name,
+                values=values,
+                native_namespace=narwhals.get_native_namespace(another_object),
+            )
+            ```
     """
 
     # We need to override any method which don't return Self so that type
@@ -1973,7 +2008,7 @@ def from_native(
             **Deprecated** (v1.13.0):
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+                see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals:
 
             - `False` or `None` (default): raise an error
@@ -1990,7 +2025,7 @@ def from_native(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 
@@ -2071,7 +2106,7 @@ def to_native(
             **Deprecated** (v1.13.0):
                 Please use `pass_through` instead. Note that `strict` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+                see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class:
 
             - `False` (default): raise an error
@@ -2124,7 +2159,7 @@ def narwhalify(
         strict: **Deprecated** (v1.13.0):
             Please use `pass_through` instead. Note that `strict` is still available
             (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](https://narwhals-dev.github.io/narwhals/backcompat/).
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
             Determine what happens if the object can't be converted to Narwhals:
 
@@ -2146,7 +2181,7 @@ def narwhalify(
             - `True`: only convert to Narwhals if `native_object` is eager or has
               interchange-level support in Narwhals
 
-            See [interchange-only support](https://narwhals-dev.github.io/narwhals/extending/#interchange-only-support)
+            See [interchange-only support](../extending.md/#interchange-only-support)
             for more details.
         series_only: Whether to only allow Series:
 
@@ -2334,7 +2369,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 
     Notes:
-        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+        `nth` is not supported for Polars version<1.0.0. Please use
+        [`narwhals.col`][] instead.
 
     Arguments:
         indices: One or more indices representing the columns to retrieve.
@@ -3574,7 +3610,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](https://narwhals-dev.github.io/narwhals/pandas_like_concepts/pandas_index/).
+    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe

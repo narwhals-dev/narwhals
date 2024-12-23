@@ -151,3 +151,11 @@ class DuckDBInterchangeFrame:
 
     def _from_native_frame(self: Self, df: Any) -> Self:
         return self.__class__(df, version=self._version)
+
+    def collect_schema(self) -> dict[str, DType]:
+        return {
+            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
+            for column_name, duckdb_dtype in zip(
+                self._native_frame.columns, self._native_frame.types
+            )
+        }

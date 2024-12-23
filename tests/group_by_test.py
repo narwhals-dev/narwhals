@@ -75,7 +75,12 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
+def test_group_by_iter(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/17650
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
@@ -117,13 +122,44 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(constructor) and attr == "n_unique":
-        request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
+    result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("attr", "ddof"),
+    [
+        ("std", 0),
+        ("var", 0),
+        ("std", 2),
+        ("var", 2),
+    ],
+)
+def test_group_by_depth_1_std_var(
+    constructor: Constructor,
+    attr: str,
+    ddof: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "dask" in str(constructor):
+        # Complex aggregation for dask
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
+    _pow = 0.5 if attr == "std" else 1
+    expected = {
+        "a": [1, 2],
+        "b": [
+            (sum((v - 5) ** 2 for v in [4, 5, 6]) / (3 - ddof)) ** _pow,
+            (sum((v - 10 / 3) ** 2 for v in [0, 5, 5]) / (3 - ddof)) ** _pow,
+        ],
+    }
+    expr = getattr(nw.col("b"), attr)(ddof=ddof)
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
@@ -140,13 +176,7 @@ def test_group_by_median(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_n_unique_w_missing(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "cudf" in str(constructor):
-        # Issue in cuDF https://github.com/rapidsai/cudf/issues/16861
-        request.applymarker(pytest.mark.xfail)
-
+def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -173,7 +203,7 @@ def test_group_by_same_name_twice() -> None:
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="two aggregations with the same"):
+    with pytest.raises(ValueError, match="Expected unique output names"):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
 
 
@@ -294,6 +324,9 @@ def test_key_with_nulls_iter(
     if PANDAS_VERSION < (1, 3) and "pandas_constructor" in str(constructor_eager):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/17650
+        request.applymarker(pytest.mark.xfail)
     data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
@@ -364,3 +397,59 @@ def test_group_by_shift_raises(
         ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
     ):
         df.group_by("b").agg(nw.col("a").shift(1))
+
+
+def test_double_same_aggregation(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "modin", "cudf")):
+        # bugged in dask https://github.com/dask/dask/issues/11612
+        # and modin lol https://github.com/modin-project/modin/issues/7414
+        # and cudf https://github.com/rapidsai/cudf/issues/17649
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
+    expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
+    assert_equal_data(result, expected)
+
+
+def test_all_kind_of_aggs(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "cudf", "modin_constructor")):
+        # bugged in dask https://github.com/dask/dask/issues/11612
+        # and modin lol https://github.com/modin-project/modin/issues/7414
+        # and cudf https://github.com/rapidsai/cudf/issues/17649
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
+        # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
+    result = (
+        df.group_by("a")
+        .agg(
+            c=nw.col("b").mean(),
+            d=nw.col("b").mean(),
+            e=nw.col("b").std(ddof=1),
+            f=nw.col("b").std(ddof=2),
+            g=nw.col("b").var(ddof=2),
+            h=nw.col("b").var(ddof=2),
+            i=nw.col("b").n_unique(),
+        )
+        .sort("a")
+    )
+
+    variance_num = sum((v - 10 / 3) ** 2 for v in [0, 5, 5])
+    expected = {
+        "a": [1, 2],
+        "c": [5, 10 / 3],
+        "d": [5, 10 / 3],
+        "e": [1, (variance_num / (3 - 1)) ** 0.5],
+        "f": [2**0.5, (variance_num) ** 0.5],  # denominator is 1 (=3-2)
+        "g": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "h": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "i": [3, 2],
+    }
+    assert_equal_data(result, expected)
