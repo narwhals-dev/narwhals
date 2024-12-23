@@ -74,13 +74,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[dev, extra]" --system
-      - name: show-deps
-        run: uv pip freeze
       - name: install ibis
         run: uv pip install ibis-framework>=6.0.0 rich packaging pyarrow_hotfix --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
         if: matrix.python-version == '3.11'
+      - name: show-deps
+        run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
