@@ -151,6 +151,14 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
+    def __truediv__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input / other,
+            "__truediv__",
+            other=other,
+            returns_scalar=False,
+        )
+
     def __sub__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
@@ -179,6 +187,18 @@ class DuckDBExpr(CompliantExpr["Column"]):
         return self._from_call(
             lambda _input, other: _input > other,
             "__gt__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __eq__(self, other: SparkLikeExpr) -> Self:
+        import duckdb
+
+        if isinstance(other, str):
+            other = duckdb.ConstantExpression(other)
+        return self._from_call(
+            lambda _input, other: _input == other,
+            "__eq__",
             other=other,
             returns_scalar=False,
         )
