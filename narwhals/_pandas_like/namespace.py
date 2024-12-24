@@ -503,15 +503,9 @@ class PandasWhen:
 
     def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
         from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
-        plx = PandasLikeNamespace(
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
