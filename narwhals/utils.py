@@ -72,6 +72,8 @@ class Implementation(Enum):
     """Polars implementation."""
     DASK = auto()
     """Dask implementation."""
+    DUCKDB = auto()
+    """DuckDB implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""

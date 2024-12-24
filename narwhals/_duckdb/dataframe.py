@@ -81,6 +81,45 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
+def _columns_from_expr(df: SparkLikeLazyFrame, expr: IntoSparkLikeExpr) -> list[Column]:
+    if isinstance(expr, str):  # pragma: no cover
+        from duckdb import ColumnExpression
+
+        return [ColumnExpression(expr)]
+    elif hasattr(expr, "__narwhals_expr__"):
+        col_output_list = expr._call(df)
+        if expr._output_names is not None and (
+            len(col_output_list) != len(expr._output_names)
+        ):  # pragma: no cover
+            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            raise AssertionError(msg)
+        return col_output_list
+    else:
+        raise InvalidIntoExprError.from_invalid_type(type(expr))
+
+
+def parse_exprs_and_named_exprs(
+    df: SparkLikeLazyFrame, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
+) -> dict[str, Column]:
+    result_columns: dict[str, list[Column]] = {}
+    for expr in exprs:
+        column_list = _columns_from_expr(df, expr)
+        if isinstance(expr, str):  # pragma: no cover
+            output_names = [expr]
+        elif expr._output_names is None:
+            output_names = [get_column_name(df, col) for col in column_list]
+        else:
+            output_names = expr._output_names
+        result_columns.update(zip(output_names, column_list))
+    for col_alias, expr in named_exprs.items():
+        columns_list = _columns_from_expr(df, expr)
+        if len(columns_list) != 1:  # pragma: no cover
+            msg = "Named expressions must return a single column"
+            raise AssertionError(msg)
+        result_columns[col_alias] = columns_list[0]
+    return result_columns
+
+
 class DuckDBInterchangeFrame:
     def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
@@ -91,6 +130,11 @@ class DuckDBInterchangeFrame:
 
     def __native_namespace__(self: Self) -> ModuleType:
         return get_duckdb()  # type: ignore[no-any-return]
+
+    def __narwhals_namespace__(self):
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        return DuckDBNamespace(backend_version="1.1.1", version=self._version)
 
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
@@ -114,6 +158,24 @@ class DuckDBInterchangeFrame:
             raise NotImplementedError(msg)
 
         return self._from_native_frame(self._native_frame.select(*exprs))
+
+    def with_columns(
+        self: Self,
+        *exprs: Any,
+        **named_exprs: Any,
+    ) -> Self:
+        from duckdb import ColumnExpression
+
+        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        result = []
+        for col in self._native_frame.columns:
+            if col in new_columns_map:
+                result.append(new_columns_map.pop(col).alias(col))
+            else:
+                result.append(ColumnExpression(col))
+        for col, value in new_columns_map.items():
+            result.append(value.alias(col))
+        return self._from_native_frame(self._native_frame.select(*result))
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
