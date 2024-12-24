@@ -504,7 +504,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     predicates, (plx.col(name) == v for name, v in constraints.items())
                 )
             )
-            # Safety: all_horizontal's expression only returns a single column.
+            # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]._native_series
         return self._from_native_frame(self._native_frame.filter(mask))
 

@@ -461,11 +461,9 @@ class ArrowWhen:
         import pyarrow as pa
         import pyarrow.compute as pc
 
-        from narwhals._arrow.namespace import ArrowNamespace
         from narwhals._expression_parsing import parse_into_expr
 
-        plx = ArrowNamespace(backend_version=self._backend_version, version=self._version)
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
