@@ -7,7 +7,7 @@ from typing import Any
 
 from narwhals.dependencies import get_duckdb
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import parse_version
+from narwhals.utils import parse_version, parse_columns_to_drop
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -126,7 +126,7 @@ class DuckDBInterchangeFrame:
         self._version = version
         self._backend_version='0.0.0'
 
-    def __narwhals_dataframe__(self) -> Any:
+    def __narwhals_lazyframe__(self) -> Any:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
@@ -155,6 +155,16 @@ class DuckDBInterchangeFrame:
                 *(val.alias(col) for col, val in new_columns_map.items())
             )
         )
+    
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        columns_to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        selection = (col for col in self.columns if col not in columns_to_drop)
+        return self._from_native_frame(self._native_frame.select(*selection))
+    
+    def lazy(self):
+        return self
 
     def with_columns(
         self: Self,
