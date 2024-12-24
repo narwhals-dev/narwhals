@@ -126,6 +126,11 @@ class DuckDBInterchangeFrame:
         self._version = version
         self._backend_version='0.0.0'
 
+    # This one is a historical mistake.
+    # Keep around for backcompat, but remove in stable.v2
+    def __narwhals_dataframe__(self) -> Any:
+        return self
+
     def __narwhals_lazyframe__(self) -> Any:
         return self
 
