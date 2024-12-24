@@ -10,6 +10,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -70,6 +71,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.PYSPARK
     )
+    is_duckdb = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.DUCKDB
+    )
+    if is_duckdb:
+        result = from_native(result.to_arrow())
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):

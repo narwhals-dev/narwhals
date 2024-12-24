@@ -8,26 +8,27 @@ from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
-
-# from narwhals._duckdb.utils import get_column_name
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
+    import duckdb
 
-    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.utils import Version
 
-def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
+
+def get_column_name(df: DuckDBInterchangeFrame, column: duckdb.Expression) -> str:
     return str(df._native_frame.select(column).columns[0])
 
-class DuckDBNamespace(CompliantNamespace["ColumnExpression"]):
+
+class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def all(self) -> SparkLikeExpr:
-        def _all(df: SparkLikeLazyFrame) -> list[Column]:
+    def all(self) -> DuckDBExpr:
+        def _all(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             from duckdb import ColumnExpression
 
             return [ColumnExpression(col_name) for col_name in df.columns]
@@ -44,10 +45,10 @@ class DuckDBNamespace(CompliantNamespace["ColumnExpression"]):
             kwargs={},
         )
 
-    def all_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
+    def all_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]

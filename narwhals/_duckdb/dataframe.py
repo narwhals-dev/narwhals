@@ -5,9 +5,12 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import parse_version, parse_columns_to_drop
+from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -16,6 +19,8 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -81,50 +86,11 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def _columns_from_expr(df: SparkLikeLazyFrame, expr: IntoSparkLikeExpr) -> list[Column]:
-    if isinstance(expr, str):  # pragma: no cover
-        from duckdb import ColumnExpression
-
-        return [ColumnExpression(expr)]
-    elif hasattr(expr, "__narwhals_expr__"):
-        col_output_list = expr._call(df)
-        if expr._output_names is not None and (
-            len(col_output_list) != len(expr._output_names)
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
-        return col_output_list
-    else:
-        raise InvalidIntoExprError.from_invalid_type(type(expr))
-
-
-def parse_exprs_and_named_exprs(
-    df: SparkLikeLazyFrame, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
-) -> dict[str, Column]:
-    result_columns: dict[str, list[Column]] = {}
-    for expr in exprs:
-        column_list = _columns_from_expr(df, expr)
-        if isinstance(expr, str):  # pragma: no cover
-            output_names = [expr]
-        elif expr._output_names is None:
-            output_names = [get_column_name(df, col) for col in column_list]
-        else:
-            output_names = expr._output_names
-        result_columns.update(zip(output_names, column_list))
-    for col_alias, expr in named_exprs.items():
-        columns_list = _columns_from_expr(df, expr)
-        if len(columns_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise AssertionError(msg)
-        result_columns[col_alias] = columns_list[0]
-    return result_columns
-
-
 class DuckDBInterchangeFrame:
     def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
         self._version = version
-        self._backend_version='0.0.0'
+        self._backend_version = (0, 0, 0)
 
     # This one is a historical mistake.
     # Keep around for backcompat, but remove in stable.v2
@@ -137,10 +103,12 @@ class DuckDBInterchangeFrame:
     def __native_namespace__(self: Self) -> ModuleType:
         return get_duckdb()  # type: ignore[no-any-return]
 
-    def __narwhals_namespace__(self):
+    def __narwhals_namespace__(self) -> DuckDBNamespace:
         from narwhals._duckdb.namespace import DuckDBNamespace
 
-        return DuckDBNamespace(backend_version="1.1.1", version=self._version)
+        return DuckDBNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
@@ -149,26 +117,44 @@ class DuckDBInterchangeFrame:
             self._native_frame.select(item), version=self._version
         )
 
+    def collect(self) -> Any:
+        import pyarrow as pa  # ignore-banned-import()
+
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        return ArrowDataFrame(
+            native_dataframe=self._native_frame.arrow(),
+            backend_version=parse_version(pa.__version__),
+            version=self._version,
+        )
+
+    def head(self, n: int) -> Self:
+        return self._from_native_frame(self._native_frame.limit(n))
+
     def select(
         self: Self,
         *exprs: Any,
         **named_exprs: Any,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        if not new_columns_map:
+            # TODO(marco): return empty relation with 0 columns?
+            return self._from_native_frame(self._native_frame.limit(0))
         return self._from_native_frame(
             self._native_frame.select(
                 *(val.alias(col) for col, val in new_columns_map.items())
             )
         )
-    
+
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._from_native_frame(self._native_frame.select(*selection))
-    
-    def lazy(self):
+
+    def lazy(self) -> Self:
+        # TODO(marco): is this right? probably not
         return self
 
     def with_columns(
@@ -189,7 +175,7 @@ class DuckDBInterchangeFrame:
             result.append(value.alias(col))
         return self._from_native_frame(self._native_frame.select(*result))
 
-    def filter(self, *predicates) -> Self:
+    def filter(self, *predicates: DuckDBExpr) -> Self:
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         if (
@@ -208,7 +194,6 @@ class DuckDBInterchangeFrame:
         native_frame = self._native_frame.filter(condition)
         return self._from_native_frame(native_frame)
 
-
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
@@ -219,6 +204,8 @@ class DuckDBInterchangeFrame:
             }
         elif attr == "columns":
             return self._native_frame.columns
+        elif attr == "_implementation":
+            return Implementation.DUCKDB
 
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"

@@ -10,24 +10,22 @@ from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
-from narwhals.utils import parse_version
-from narwhals._duckdb.utils import validate_comparand
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    import duckdb
     from typing_extensions import Self
 
-    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals.utils import Version
 
 
-class DuckDBExpr(CompliantExpr["Column"]):
+class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
         self,
-        call: Callable[[SparkLikeLazyFrame], list[Column]],
+        call: Callable[[DuckDBInterchangeFrame], list[duckdb.Expression]],
         *,
         depth: int,
         function_name: str,
@@ -50,12 +48,12 @@ class DuckDBExpr(CompliantExpr["Column"]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
+    def __call__(self, df: DuckDBInterchangeFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
 
-    def __narwhals_namespace__(self) -> SparkLikeNamespace:  # pragma: no cover
+    def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._duckdb.namespace import DuckDBNamespace
 
@@ -70,7 +68,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: SparkLikeLazyFrame) -> list[Column]:
+        def func(_: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             from duckdb import ColumnExpression
 
             return [ColumnExpression(col_name) for col_name in column_names]
@@ -89,13 +87,13 @@ class DuckDBExpr(CompliantExpr["Column"]):
 
     def _from_call(
         self,
-        call: Callable[..., Column],
+        call: Callable[..., duckdb.Expression],
         expr_name: str,
         *,
         returns_scalar: bool,
         **kwargs: Any,
     ) -> Self:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             results = []
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
@@ -145,7 +143,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             kwargs=kwargs,
         )
 
-    def __add__(self, other: SparkLikeExpr) -> Self:
+    def __add__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,
             "__add__",
@@ -153,7 +151,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __truediv__(self, other: SparkLikeExpr) -> Self:
+    def __truediv__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input / other,
             "__truediv__",
@@ -161,7 +159,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __sub__(self, other: SparkLikeExpr) -> Self:
+    def __sub__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
@@ -169,7 +167,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __mul__(self, other: SparkLikeExpr) -> Self:
+    def __mul__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input * other,
             "__mul__",
@@ -177,7 +175,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __lt__(self, other: SparkLikeExpr) -> Self:
+    def __lt__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input < other,
             "__lt__",
@@ -185,7 +183,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __gt__(self, other: SparkLikeExpr) -> Self:
+    def __gt__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input > other,
             "__gt__",
@@ -193,7 +191,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __eq__(self, other: SparkLikeExpr) -> Self:
+    def __eq__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input == other,
             "__eq__",
@@ -202,7 +200,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
         )
 
     def alias(self, name: str) -> Self:
-        def _alias(df: SparkLikeLazyFrame) -> list[Column]:
+        def _alias(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             return [col.alias(name) for col in self._call(df)]
 
         # Define this one manually, so that we can
@@ -218,57 +216,3 @@ class DuckDBExpr(CompliantExpr["Column"]):
             version=self._version,
             kwargs={**self._kwargs, "name": name},
         )
-
-    def count(self) -> Self:
-        def _count(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.count(_input)
-
-        return self._from_call(_count, "count", returns_scalar=True)
-
-    def max(self) -> Self:
-        def _max(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.max(_input)
-
-        return self._from_call(_max, "max", returns_scalar=True)
-
-    def mean(self) -> Self:
-        def _mean(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.mean(_input)
-
-        return self._from_call(_mean, "mean", returns_scalar=True)
-
-    def min(self) -> Self:
-        def _min(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.min(_input)
-
-        return self._from_call(_min, "min", returns_scalar=True)
-
-    def std(self, ddof: int) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        def _std(_input: Column, ddof: int) -> Column:  # pragma: no cover
-            if self._backend_version < (3, 5) or parse_version(np.__version__) > (2, 0):
-                from pyspark.sql import functions as F  # noqa: N812
-
-                if ddof == 1:
-                    return F.stddev_samp(_input)
-
-                n_rows = F.count(_input)
-                return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-
-            from pyspark.pandas.spark.functions import stddev
-
-            return stddev(_input, ddof=ddof)
-
-        expr = self._from_call(_std, "std", returns_scalar=True, ddof=ddof)
-        if ddof != 1:
-            expr._depth += 1
-        return expr
