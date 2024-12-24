@@ -124,6 +124,7 @@ class DuckDBInterchangeFrame:
     def __init__(self, df: Any, version: Version) -> None:
         self._native_frame = df
         self._version = version
+        self._backend_version='0.0.0'
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -172,6 +173,26 @@ class DuckDBInterchangeFrame:
         for col, value in new_columns_map.items():
             result.append(value.alias(col))
         return self._from_native_frame(self._native_frame.select(*result))
+
+    def filter(self, *predicates) -> Self:
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            msg = "`LazyFrame.filter` is not supported for DuckDB backend with boolean masks."
+            raise NotImplementedError(msg)
+        plx = DuckDBNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        condition = expr._call(self)[0]
+        native_frame = self._native_frame.filter(condition)
+        return self._from_native_frame(native_frame)
+
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":

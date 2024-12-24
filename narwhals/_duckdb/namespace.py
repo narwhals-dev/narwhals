@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.utils import Version
 
+def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
+    return str(df._native_frame.select(column).columns[0])
 
 class DuckDBNamespace(CompliantNamespace["ColumnExpression"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
