@@ -6,11 +6,12 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
-from narwhals._spark_like.utils import get_column_name
-from narwhals._spark_like.utils import maybe_evaluate
+from narwhals._duckdb.utils import get_column_name
+from narwhals._duckdb.utils import maybe_evaluate
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
+from narwhals._duckdb.utils import validate_comparand
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -100,6 +101,7 @@ class DuckDBExpr(CompliantExpr["Column"]):
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
                 input_col_name = get_column_name(df, _input)
+
                 column_result = call(_input, **_kwargs)
                 if not returns_scalar:
                     column_result = column_result.alias(input_col_name)
@@ -192,10 +194,6 @@ class DuckDBExpr(CompliantExpr["Column"]):
         )
 
     def __eq__(self, other: SparkLikeExpr) -> Self:
-        import duckdb
-
-        if isinstance(other, str):
-            other = duckdb.ConstantExpression(other)
         return self._from_call(
             lambda _input, other: _input == other,
             "__eq__",
