@@ -104,12 +104,16 @@ class DuckDBInterchangeFrame:
         *exprs: Any,
         **named_exprs: Any,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
-        return self._from_native_frame(
-            self._native_frame.select(
-                *(val.alias(col) for col, val in new_columns_map.items())
+        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
+            msg = (
+                "`select`-ing not by name is not supported for DuckDB backend.\n\n"
+                "If you would like to see this kind of object better supported in "
+                "Narwhals, please open a feature request "
+                "at https://github.com/narwhals-dev/narwhals/issues."
             )
-        )
+            raise NotImplementedError(msg)
+
+        return self._from_native_frame(self._native_frame.select(*exprs))
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
