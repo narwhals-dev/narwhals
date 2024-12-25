@@ -216,3 +216,21 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             version=self._version,
             kwargs={**self._kwargs, "name": name},
         )
+
+    def mean(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: _input == FunctionExpression("mean", _input),
+            "mean",
+            returns_scalar=True,
+        )
+
+    def max(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: _input == FunctionExpression("max", _input),
+            "max",
+            returns_scalar=True,
+        )

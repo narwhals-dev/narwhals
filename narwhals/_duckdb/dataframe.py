@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
@@ -235,6 +236,11 @@ class DuckDBInterchangeFrame:
 
     def _from_native_frame(self: Self, df: Any) -> Self:
         return self.__class__(df, version=self._version)
+
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
+        from narwhals._duckdb.group_by import DuckDBGroupBy
+
+        return DuckDBGroupBy(df=self, keys=list(keys), drop_null_keys=drop_null_keys)
 
     def collect_schema(self) -> dict[str, DType]:
         return {
