@@ -4,10 +4,13 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Sequence
 
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.utils import Implementation
+from narwhals.utils import flatten
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -240,3 +243,27 @@ class DuckDBInterchangeFrame:
                 self._native_frame.columns, self._native_frame.types
             )
         }
+
+    def sort(
+        self: Self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        flat_by = flatten([*flatten([by]), *more_by])
+        if isinstance(descending, bool):
+            descending = [descending] * len(flat_by)
+        descending_str = ["desc" if x else "" for x in descending]
+
+        result = self._native_frame.order(
+            ",".join(
+                (
+                    f"{col} {desc} nulls last"
+                    if nulls_last
+                    else f"{col} {desc} nulls first"
+                    for col, desc in zip(flat_by, descending_str)
+                )
+            )
+        )
+        return self._from_native_frame(result)
