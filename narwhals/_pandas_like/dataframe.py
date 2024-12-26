@@ -412,7 +412,7 @@ class PandasLikeDataFrame:
                     predicates, (plx.col(name) == v for name, v in constraints.items())
                 )
             )
-            # Safety: all_horizontal's expression only returns a single column.
+            # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
             _mask = validate_dataframe_comparand(self._native_frame.index, mask)
         return self._from_native_frame(self._native_frame.loc[_mask])
@@ -1006,7 +1006,6 @@ class PandasLikeDataFrame:
             ]
 
             plx = self.__native_namespace__()
-
             return self._from_native_frame(
                 plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns]
             )

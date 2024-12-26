@@ -48,7 +48,6 @@ jobs:
       matrix:
         python-version: ["3.8"]
         os: [ubuntu-latest]
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +86,6 @@ jobs:
       matrix:
         python-version: ["3.9"]
         os: [ubuntu-latest]
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +115,6 @@ jobs:
           echo "$DEPS" | grep 'scipy==1.8.0'
           echo "$DEPS" | grep 'scikit-learn==1.3.0'
           echo "$DEPS" | grep 'dask==2024.7'
-
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
 
