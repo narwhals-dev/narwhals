@@ -217,11 +217,20 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs={**self._kwargs, "name": name},
         )
 
+    def abs(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("abs", _input),
+            "abs",
+            returns_scalar=False,
+        )
+
     def mean(self) -> Self:
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: _input == FunctionExpression("mean", _input),
+            lambda _input: FunctionExpression("mean", _input),
             "mean",
             returns_scalar=True,
         )
@@ -230,7 +239,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: _input == FunctionExpression("max", _input),
+            lambda _input: FunctionExpression("max", _input),
             "max",
             returns_scalar=True,
         )
