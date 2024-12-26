@@ -101,8 +101,12 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 input_col_name = get_column_name(df, _input)
 
                 column_result = call(_input, **_kwargs)
-                if not returns_scalar:
-                    column_result = column_result.alias(input_col_name)
+                column_result = column_result.alias(input_col_name)
+                if returns_scalar:
+                    # TODO(marco): once WindowExpression is supported, then
+                    # we may need to call it with `over(1)` here,
+                    # depending on the context?
+                    pass
                 results.append(column_result)
             return results
 
@@ -257,5 +261,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("max", _input),
             "max",
+            returns_scalar=True,
+        )
+
+    def min(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("min", _input),
+            "min",
             returns_scalar=True,
         )
