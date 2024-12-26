@@ -6,6 +6,7 @@ from typing import Literal
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -40,7 +41,9 @@ def test_rank_expr(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, float],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     context = (
@@ -63,10 +66,14 @@ def test_rank_expr(
 @pytest.mark.parametrize("method", rank_methods)
 @pytest.mark.parametrize("data", [data_int, data_float])
 def test_rank_series(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, float],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+
     context = (
         pytest.raises(
             ValueError,
@@ -96,10 +103,10 @@ def test_rank_expr_in_over_context(
         # We can handle that to provide a better error message.
         request.applymarker(pytest.mark.xfail)
 
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+
     if method == "ordinal" and "polars" not in str(constructor):
-        # Pyarrow raises:
-        # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
-        # We can handle that to provide a better error message.
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_int))
