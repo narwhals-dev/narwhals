@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -10,7 +9,6 @@ from typing import Sequence
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.utils import Implementation
-from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -201,17 +199,11 @@ class SparkLikeLazyFrame:
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool,
     ) -> Self:
+        # The param `maintain_order` is only here for compatibility with the Polars API
+        # and has no effect on the output.
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
-
-        if maintain_order is True:
-            warnings.warn(
-                "Argument `maintain_order=True` is unused in `LazyFrame.unique` with "
-                "PySpark backend",
-                UserWarning,
-                stacklevel=find_stacklevel(),
-            )
         subset = [subset] if isinstance(subset, str) else subset
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
