@@ -79,7 +79,7 @@ def agg_duckdb(
     keys: list[str],
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
-    agg_columns = [*keys, *(expr._call(df) for expr in exprs)]
+    agg_columns = [*keys, *(x for expr in exprs for x in expr._call(df))]
     try:
         result_simple = df._native_frame.aggregate(agg_columns, group_expr=",".join(keys))
     except ValueError as exc:  # pragma: no cover
