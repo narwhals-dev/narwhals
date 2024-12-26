@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
-CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
+MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "col->cum_sum": "cumsum",
     "col->cum_min": "cummin",
     "col->cum_max": "cummax",
@@ -33,6 +33,7 @@ CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # Pandas cumcount counts nulls while Polars does not
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "col->cum_count": "cumsum",
+    "col->shift": "shift",
     "col->rank": "rank",
 }
 
@@ -418,7 +419,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def over(self: Self, keys: list[str]) -> Self:
-        if self._function_name in CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT:
+        if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 if (
@@ -444,12 +445,22 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*self._root_names).is_null())
 
+                if self._function_name == "col->shift":
+                    kwargs = {"periods": self._kwargs.get("n", 1)}
+                elif self._function_name == "col->rank":
+                    kwargs = {
+                        "method": self._kwargs.get("method", "average"),
+                        "ascending": not self._kwargs.get("descending", False),
+                    }
+                else:  # Cumulative operation
+                    kwargs = {"skipna": True}
+
                 res_native = getattr(
                     df._native_frame.groupby(list(keys), as_index=False)[
                         self._root_names
                     ],
-                    CUMULATIVE_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
-                )(skipna=True)
+                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
+                )(**kwargs)
 
                 result_frame = df._from_native_frame(
                     rename(

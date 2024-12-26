@@ -203,7 +203,7 @@ def test_pandas_fixed_offset_1302() -> None:
 def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):  # pragma: no cover
-        result = nw.from_native(df).schema
+        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
         assert result["a"] == nw.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
@@ -220,13 +220,6 @@ def test_huge_int() -> None:
                      """)
     result = nw.from_native(rel).schema
     assert result["a"] == nw.UInt128
-
-    if POLARS_VERSION >= (1, 18):  # pragma: no cover
-        result = nw.from_native(df).schema
-        assert result["a"] == nw.UInt128
-    else:  # pragma: no cover
-        # UInt128 was not available yet
-        pass
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
     # add tests for them too

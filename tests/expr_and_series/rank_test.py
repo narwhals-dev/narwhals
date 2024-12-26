@@ -90,7 +90,13 @@ def test_rank_expr_in_over_context(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if "polars" not in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+        # Pyarrow raises:
+        # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
+        # We can handle that to provide a better error message.
+        request.applymarker(pytest.mark.xfail)
+
+    if method == "ordinal" and "polars" not in str(constructor):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
         # We can handle that to provide a better error message.

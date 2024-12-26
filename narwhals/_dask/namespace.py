@@ -416,11 +416,9 @@ class DaskWhen:
         self._version = version
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
-        from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
 
-        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("dask_expr.Series", condition)
         try:
