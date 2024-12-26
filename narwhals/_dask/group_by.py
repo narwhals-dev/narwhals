@@ -40,8 +40,8 @@ def var(ddof: int = 1) -> dd.Aggregation:
     import dask.dataframe as dd
 
     return dd.Aggregation(
-        name="var",
-        chunk=lambda s: (s.count(), s.sum(), (s.pow(2)).sum()),
+        name="var_ddof",
+        chunk=lambda s: (s.count(), s.sum(), (s**2).sum()),
         agg=lambda count, sum_, sum_sq: (count.sum(), sum_.sum(), sum_sq.sum()),
         finalize=lambda count, sum_, sum_sq: (sum_sq - (sum_**2 / count))
         / (count - ddof),
@@ -52,8 +52,8 @@ def std(ddof: int = 1) -> dd.Aggregation:
     import dask.dataframe as dd
 
     return dd.Aggregation(
-        name="var",
-        chunk=lambda s: (s.count(), s.sum(), s.pow(2).sum()),
+        name="std_ddof",
+        chunk=lambda s: (s.count(), s.sum(), (s**2).sum()),
         agg=lambda count, sum_, sum_sq: (count.sum(), sum_.sum(), sum_sq.sum()),
         finalize=lambda count, sum_, sum_sq: (
             (sum_sq - (sum_**2 / count)) / (count - ddof)
