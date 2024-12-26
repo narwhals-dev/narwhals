@@ -235,6 +235,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def std(self, ddof: int) -> Self:
+        from duckdb import FunctionExpression
+
+        if ddof == 1:
+            func = "stddev"
+        elif ddof == 0:
+            func = "stddev_pop"
+        else:
+            msg = f"std with ddof {ddof} is not supported in DuckDB"
+            raise NotImplementedError(msg)
+        return self._from_call(
+            lambda _input: FunctionExpression(func, _input),
+            "std",
+            returns_scalar=True,
+        )
+
     def max(self) -> Self:
         from duckdb import FunctionExpression
 
