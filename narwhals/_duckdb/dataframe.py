@@ -240,7 +240,9 @@ class DuckDBInterchangeFrame:
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
 
-        return DuckDBGroupBy(df=self, keys=list(keys), drop_null_keys=drop_null_keys)
+        return DuckDBGroupBy(
+            compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
+        )
 
     def collect_schema(self) -> dict[str, DType]:
         return {
