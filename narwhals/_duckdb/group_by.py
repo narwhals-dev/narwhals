@@ -79,53 +79,7 @@ def agg_duckdb(
     keys: list[str],
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
-    # for expr in exprs:
-    #     if not is_simple_aggregation(expr):  # pragma: no cover
-    #         msg = (
-    #             "Non-trivial complex aggregation found.\n\n"
-    #             "Hint: you were probably trying to apply a non-elementary aggregation with a "
-    #             "dask dataframe.\n"
-    #             "Please rewrite your query such that group-by aggregations "
-    #             "are elementary. For example, instead of:\n\n"
-    #             "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-    #             "use:\n\n"
-    #             "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-    #         )
-    #         raise ValueError(msg)
-
-    simple_aggregations: dict[str, Column] = {}
-    for expr in exprs:
-        if expr._depth == 0:  # pragma: no cover
-            # e.g. agg(nw.len()) # noqa: ERA001
-            # if expr._output_names is None:  # pragma: no cover
-            #     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            #     raise AssertionError(msg)
-
-            function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-                expr._function_name, expr._function_name
-            )
-            for output_name in expr._output_names:
-                breakpoint()
-                agg_func = get_spark_function(function_name)
-                simple_aggregations[output_name] = agg_func(keys[0])
-            continue
-
-        # e.g. agg(nw.mean('a')) # noqa: ERA001
-        # if (
-        #     expr._depth != 1 or expr._root_names is None or expr._output_names is None
-        # ):  # pragma: no cover
-        #     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        #     raise AssertionError(msg)
-
-        function_name = remove_prefix(expr._function_name, "col->")
-        function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(function_name, function_name)
-
-        # for root_name, output_name in zip(expr._root_names, expr._output_names):
-        #     from duckdb import FunctionExpression, ColumnExpression
-        #     breakpoint()
-        #     simple_aggregations[output_name] = FunctionExpression(function_name, ColumnExpression(root_name))
-    # agg_columns = [*keys, *(col_.alias(name) for name, col_ in simple_aggregations.items())]
-    agg_columns = [*keys, *expr._call(df)]
+    agg_columns = [*keys, *(expr._call(df) for expr in exprs)]
     try:
         result_simple = df._native_frame.aggregate(agg_columns, group_expr=",".join(keys))
     except ValueError as exc:  # pragma: no cover
