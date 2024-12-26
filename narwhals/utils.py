@@ -548,13 +548,13 @@ def maybe_set_index(
             df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
-        from narwhals._pandas_like.utils import set_axis
+        from narwhals._pandas_like.utils import set_index
 
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
 
-        native_obj = set_axis(
+        native_obj = set_index(
             native_obj,
             keys,
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
@@ -914,7 +914,7 @@ def validate_strict_and_pass_though(
             msg = (
                 "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
                 "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                "See [stable api](../backcompat.md/) for more information.\n"
             )
             issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict

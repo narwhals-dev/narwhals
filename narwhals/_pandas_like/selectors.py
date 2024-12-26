@@ -40,6 +40,7 @@ class PandasSelectorNamespace:
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"dtypes": dtypes},
         )
 
     def numeric(self) -> PandasSelector:
@@ -84,6 +85,7 @@ class PandasSelectorNamespace:
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
 
@@ -107,6 +109,7 @@ class PandasSelector(PandasLikeExpr):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs=self._kwargs,
         )
 
     def __sub__(self, other: PandasSelector | Any) -> PandasSelector | Any:
@@ -126,6 +129,7 @@ class PandasSelector(PandasLikeExpr):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() - other
@@ -147,6 +151,7 @@ class PandasSelector(PandasLikeExpr):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() | other
@@ -168,6 +173,7 @@ class PandasSelector(PandasLikeExpr):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() & other

@@ -105,13 +105,11 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
             raise NotImplementedError(msg)
 
-        from narwhals._dask.namespace import DaskNamespace
-
-        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
+        plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
         )
-        # Safety: all_horizontal's expression only returns a single column.
+        # `[0]` is safe as all_horizontal's expression only returns a single column
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 

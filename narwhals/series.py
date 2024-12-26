@@ -38,14 +38,14 @@ class Series(Generic[IntoSeriesT]):
 
         - If the native object is a series from one of the supported backend (e.g.
             pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`](../narwhals/#narwhals.from_native):
+            [`narwhals.from_native`][]:
             ```py
             narwhals.from_native(native_series, allow_series=True)
             narwhals.from_native(native_series, series_only=True)
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`](../narwhals/#narwhals.new_series):
+            create a series via [`narwhals.new_series`][]:
             ```py
             narwhals.new_series(
                 name=name,
@@ -843,6 +843,9 @@ class Series(Generic[IntoSeriesT]):
         Notes:
           Only works on Series of data type Boolean.
 
+        Returns:
+            A boolean indicating if any values in the Series are True.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -869,6 +872,9 @@ class Series(Generic[IntoSeriesT]):
 
     def all(self) -> Any:
         """Return whether all values in the Series are True.
+
+        Returns:
+            A boolean indicating if all values in the Series are True.
 
         Examples:
             >>> import pandas as pd
@@ -1282,7 +1288,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1333,6 +1339,9 @@ class Series(Generic[IntoSeriesT]):
 
     def abs(self) -> Self:
         """Calculate the absolute value of each element.
+
+        Returns:
+            A new Series with the absolute values of the original elements.
 
         Examples:
             >>> import pandas as pd
@@ -1631,6 +1640,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             name: The new name.
 
+        Returns:
+            A new Series with the updated name.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1892,7 +1904,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1954,7 +1966,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -2459,7 +2471,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../../pandas_like_concepts/null_handling)
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
         Examples:

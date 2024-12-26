@@ -314,7 +314,6 @@ class PolarsDataFrame:
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]
         | None,
-        maintain_order: bool,
         sort_columns: bool,
         separator: str,
     ) -> Self:
@@ -326,7 +325,6 @@ class PolarsDataFrame:
             index=index,
             values=values,
             aggregate_function=aggregate_function,
-            maintain_order=maintain_order,
             sort_columns=sort_columns,
             separator=separator,
         )
