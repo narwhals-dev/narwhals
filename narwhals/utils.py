@@ -14,7 +14,7 @@ from typing import cast
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_dask_dataframe, get_duckdb
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -98,6 +98,7 @@ class Implementation(Enum):
             get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
+            get_duckdb(): Implementation.DUCKDB,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 

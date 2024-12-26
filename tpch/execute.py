@@ -4,10 +4,11 @@ import argparse
 from importlib import import_module
 from pathlib import Path
 
-import dask.dataframe as dd
+# import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+import duckdb
 
 import narwhals as nw
 
@@ -25,15 +26,17 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 BACKEND_NAMESPACE_KWARGS_MAP = {
-    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-    "polars[lazy]": (pl, {}),
-    "pyarrow": (pa, {}),
-    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    # "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    # "polars[lazy]": (pl, {}),
+    # "pyarrow": (pa, {}),
+    # "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "duckdb": (duckdb, {}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
+    "duckdb": (duckdb, lambda x: x.arrow()),
     "polars[lazy]": lambda x: x.collect(),
-    "dask": lambda x: x.compute(),
+    # "dask": lambda x: x.compute(),
 }
 
 QUERY_DATA_PATH_MAP = {
@@ -92,7 +95,7 @@ def execute_query(query_id: str) -> None:
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         result = query_module.query(
             *(
-                nw.scan_parquet(path, native_namespace=native_namespace, **kwargs)
+                nw.scan_parquet(str(path), native_namespace=native_namespace, **kwargs)
                 for path in data_paths
             )
         )
