@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.conftest import dask_lazy_p2_constructor
 from tests.conftest import pandas_constructor
 from tests.utils import Constructor
@@ -38,3 +41,14 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
         expected = {"a": [True, False, None]}  # type: ignore[list-item]
 
     assert_equal_data(result, expected)
+
+
+def test_nan_non_float() -> None:
+    data = {"a": ["0", "1"]}
+    pd_df = nw.from_native(pandas_constructor(data))
+    with pytest.raises(InvalidOperationError, match="not supported"):
+        pd_df.select(nw.col("a").is_nan())
+
+    dd_df = nw.from_native(dask_lazy_p2_constructor(data))
+    with pytest.raises(InvalidOperationError, match="not supported"):
+        dd_df.select(nw.col("a").is_nan())
