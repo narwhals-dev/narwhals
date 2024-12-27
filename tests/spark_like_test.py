@@ -369,6 +369,27 @@ def test_std(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/var_test.py
+def test_var(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2, None], "b": [4, 4, 6, None], "z": [7.0, 8, 9, None]}
+
+    expected_results = {
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.6666666666666666],
+        "b_ddof_2": [2.666666666666667],
+        "z_ddof_0": [0.6666666666666666],
+    }
+
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(
+        nw.col("a").var(ddof=1).alias("a_ddof_1"),
+        nw.col("a").var(ddof=0).alias("a_ddof_0"),
+        nw.col("b").var(ddof=2).alias("b_ddof_2"),
+        nw.col("z").var(ddof=0).alias("z_ddof_0"),
+    )
+    assert_equal_data(result, expected_results)
+
+
 # copied from tests/group_by_test.py
 def test_group_by_std(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
@@ -440,4 +461,33 @@ def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
         "c_min": [2, 1],
         "c_max": [7, 1],
     }
+    assert_equal_data(result, expected)
+
+
+# copied from tests/group_by_test.py
+@pytest.mark.parametrize(
+    ("attr", "ddof"),
+    [
+        ("std", 0),
+        ("var", 0),
+        ("std", 2),
+        ("var", 2),
+    ],
+)
+def test_group_by_depth_1_std_var(
+    pyspark_constructor: Constructor,
+    attr: str,
+    ddof: int,
+) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
+    _pow = 0.5 if attr == "std" else 1
+    expected = {
+        "a": [1, 2],
+        "b": [
+            (sum((v - 5) ** 2 for v in [4, 5, 6]) / (3 - ddof)) ** _pow,
+            (sum((v - 10 / 3) ** 2 for v in [0, 5, 5]) / (3 - ddof)) ** _pow,
+        ],
+    }
+    expr = getattr(nw.col("b"), attr)(ddof=ddof)
+    result = nw.from_native(pyspark_constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
