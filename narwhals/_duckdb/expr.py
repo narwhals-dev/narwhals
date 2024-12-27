@@ -322,3 +322,17 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             "min",
             returns_scalar=True,
         )
+
+    @property
+    def str(self: Self) -> DuckDBExprStringNamespace:
+        return DuckDBExprStringNamespace(self)
+
+class DuckDBExprStringNamespace:
+    def __init__(self, expr: DuckDBExpr) -> None:
+        self._compliant_expr = expr
+
+    def ends_with(self, suffix) -> DuckDBExpr:
+        from duckdb import FunctionExpression, ConstantExpression
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("ends_with", _input, ConstantExpression(suffix)), "ends_with", returns_scalar=False
+        )

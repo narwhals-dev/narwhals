@@ -259,14 +259,12 @@ class DuckDBInterchangeFrame:
             right_on = [right_on]
         if how != "inner":
             raise NotImplementedError("..")
-        condition = ""
+        conditions = []
         for left, right in zip(left_on, right_on):
-            condition += f"lhs.{left} = rhs.{right}"
-        return self._from_native_frame(
-            self._native_frame.set_alias("lhs").join(
-                other._native_frame.set_alias("rhs"), condition=condition
-            ),
-        )
+            conditions.append(f"lhs.{left} = rhs.{right}")
+        condition = ' and '.join(conditions)
+        # oh, gosh...might need to rename, and drop columns, if necessary
+        return self._from_native_frame( self._native_frame.set_alias("lhs").join( other._native_frame.set_alias("rhs"), condition=condition),)
 
     def collect_schema(self) -> dict[str, DType]:
         return {
