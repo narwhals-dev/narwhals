@@ -150,8 +150,12 @@ def agg_pyspark(
         else:
             agg_func = get_spark_function(pyspark_function)  # type: ignore[arg-type]
 
-        for root_name, output_name in zip(expr._root_names, expr._output_names):
-            simple_aggregations[output_name] = agg_func(root_name)
+        simple_aggregations.update(
+            {
+                output_name: agg_func(root_name)
+                for root_name, output_name in zip(expr._root_names, expr._output_names)
+            }
+        )
 
     agg_columns = [col_.alias(name) for name, col_ in simple_aggregations.items()]
     try:
