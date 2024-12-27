@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=24.12.0"]
+cudf = ["cudf>=24.10.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
