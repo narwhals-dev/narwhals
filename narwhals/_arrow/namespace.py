@@ -477,7 +477,7 @@ class ArrowWhen:
             )
 
         value_series_native = value_series._native_series
-        condition_native = condition._native_series.combine_chunks()
+        condition_native = condition._native_series
 
         if self._otherwise_value is None:
             otherwise_native = pa.repeat(
