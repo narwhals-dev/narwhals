@@ -1925,32 +1925,43 @@ class Series(Generic[IntoSeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> s = [1.0, 2.0, float("nan")]
             >>> s_pd = pd.Series(s, dtype="float64")
             >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s], type=pa.float64())
 
-            We define a dataframe-agnostic function:
+            We define a series-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_is_nan_series(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.is_nan().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `agnostic_is_nan_series`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_is_nan_series(s_pd)
             0    False
             1    False
             2     True
             dtype: bool
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_nan_series(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
                false
                false
                true
+            ]
+            >>> agnostic_is_nan_series(s_pa)  # doctest: +NORMALIZE_WHITESPACE
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true
+              ]
             ]
         """
         return self._from_compliant_series(self._compliant_series.is_nan())
