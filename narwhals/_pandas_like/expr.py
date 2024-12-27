@@ -448,9 +448,12 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                 if self._function_name == "col->shift":
                     kwargs = {"periods": self._kwargs.get("n", 1)}
                 elif self._function_name == "col->rank":
+                    _method = self._kwargs.get("method", "average")
                     kwargs = {
-                        "method": self._kwargs.get("method", "average"),
+                        "method": "first" if _method == "ordinal" else _method,
                         "ascending": not self._kwargs.get("descending", False),
+                        "na_option": "keep",
+                        "pct": False,
                     }
                 else:  # Cumulative operation
                     kwargs = {"skipna": True}
