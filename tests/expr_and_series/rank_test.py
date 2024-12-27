@@ -115,10 +115,7 @@ def test_rank_expr_in_over_context(
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    if method == "ordinal" and "polars" not in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data_int))
+    df = nw.from_native(constructor(data_float))
 
     result = df.select(nw.col("a").rank(method=method).over("b"))
     expected_data = {"a": expected_over[method]}
