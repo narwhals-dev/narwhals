@@ -244,6 +244,30 @@ class DuckDBInterchangeFrame:
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
 
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal[left, inner, outer, cross, anti, semi] = "inner",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        suffix: str,
+    ) -> Self:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+        if how != "inner":
+            raise NotImplementedError("..")
+        condition = ""
+        for left, right in zip(left_on, right_on):
+            condition += f"lhs.{left} = rhs.{right}"
+        return self._from_native_frame(
+            self._native_frame.set_alias("lhs").join(
+                other._native_frame.set_alias("rhs"), condition=condition
+            ),
+        )
+
     def collect_schema(self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
