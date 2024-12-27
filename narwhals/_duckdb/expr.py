@@ -155,6 +155,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
+    def __radd__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other + _input,
+            "__radd__",
+            other=other,
+            returns_scalar=False,
+        )
+
     def __truediv__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input / other,
@@ -167,6 +175,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rsub__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other - _input,
+            "__rsub__",
             other=other,
             returns_scalar=False,
         )
@@ -191,6 +207,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input, other: _input > other,
             "__gt__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __le__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input <= other,
+            "__le__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ge__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input >= other,
+            "__ge__",
             other=other,
             returns_scalar=False,
         )
@@ -236,6 +268,24 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("mean", _input),
             "mean",
+            returns_scalar=True,
+        )
+
+    def sum(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("sum", _input),
+            "sum",
+            returns_scalar=True,
+        )
+
+    def count(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("count", _input),
+            "count",
             returns_scalar=True,
         )
 

@@ -6293,7 +6293,7 @@ def sum(*columns: str) -> Expr:
         ----
         a: [[3]]
     """
-    return Expr(lambda plx: plx.sum(*columns))
+    return Expr(lambda plx: plx.col(*columns).sum())
 
 
 def mean(*columns: str) -> Expr:
@@ -6344,7 +6344,7 @@ def mean(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.mean(*columns))
+    return Expr(lambda plx: plx.col(*columns).mean())
 
 
 def median(*columns: str) -> Expr:

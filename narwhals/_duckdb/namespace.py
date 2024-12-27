@@ -69,3 +69,21 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
+
+    def len(self) -> DuckDBExpr:
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+            from duckdb import FunctionExpression
+
+            return [FunctionExpression("count").alias("len")]
+
+        return DuckDBExpr(  # type: ignore[abstract]
+            call=func,
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={},
+        )
