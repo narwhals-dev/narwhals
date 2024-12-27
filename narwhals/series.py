@@ -4171,6 +4171,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                true
                null
             ]
+
             >>> agnostic_contains(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [

@@ -4207,6 +4207,7 @@ class ExprStringNamespace(Generic[ExprT]):
             2  rabbit and parrot          True                   True         False
             3               dove         False                   True         False
             4               None          None                   None          None
+
             >>> agnostic_contains(df_pl)
             shape: (5, 4)
             ┌───────────────────┬───────────────┬────────────────────────┬───────────────┐
@@ -4220,6 +4221,7 @@ class ExprStringNamespace(Generic[ExprT]):
             │ dove              ┆ false         ┆ true                   ┆ false         │
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
+
             >>> agnostic_contains(df_pa)
             pyarrow.Table
             pets: string
