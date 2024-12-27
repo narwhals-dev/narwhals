@@ -470,7 +470,7 @@ class ArrowWhen:
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             value_series = condition.__class__._from_iterable(
-                [self._then_value] * len(condition),
+                pa.repeat(pa.scalar(self._then_value), len(condition)),
                 name="literal",
                 backend_version=self._backend_version,
                 version=self._version,
@@ -480,8 +480,8 @@ class ArrowWhen:
         condition_native = condition._native_series.combine_chunks()
 
         if self._otherwise_value is None:
-            otherwise_native = pa.array(
-                [None] * len(condition_native), type=value_series_native.type
+            otherwise_native = pa.repeat(
+                pa.scalar(None, type=value_series_native.type), len(condition_native)
             )
             return [
                 value_series._from_native_series(
