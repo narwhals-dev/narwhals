@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -692,15 +693,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def is_nan(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             dtype = native_to_narwhals_dtype(_input, self._version, Implementation.DASK)
-            dtypes = import_dtypes_module(self._version)
-            if dtype == dtypes.Float64:
+            if dtype.is_numeric():
                 return _input != _input  # noqa: PLR0124
-
-            import dask_expr as dx
-
-            return dx.new_collection(
-                dx.expr.ScalarToSeries(frame=False, index=_input.index)
-            )
+            msg = f"`is_nan` is not supported for dtype {dtype}"
+            raise InvalidOperationError(msg)
 
         return self._from_call(
             func,
