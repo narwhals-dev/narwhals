@@ -1956,7 +1956,7 @@ class Expr:
                   a    b  a_is_nan  b_is_nan
             0     2  2.0     False     False
             1     4  4.0     False     False
-            2  <NA>  NaN     False      True
+            2  <NA>  NaN      <NA>      True
             3     3  3.0     False     False
             4     5  5.0     False     False
 
