@@ -260,11 +260,22 @@ class DuckDBInterchangeFrame:
         if how != "inner":
             raise NotImplementedError("..")
         conditions = []
+        lhs = []
         for left, right in zip(left_on, right_on):
             conditions.append(f"lhs.{left} = rhs.{right}")
+            lhs.append(left)
         condition = ' and '.join(conditions)
         # oh, gosh...might need to rename, and drop columns, if necessary
-        return self._from_native_frame( self._native_frame.set_alias("lhs").join( other._native_frame.set_alias("rhs"), condition=condition),)
+        # yup, drop the rhs ones
+        import duckdb
+        rel =  self._native_frame.set_alias("lhs").join( other._native_frame.set_alias("rhs"), condition=condition)
+
+        select = [x for x in [*self._native_frame.columns, *other._native_frame.columns] if x not in left_on and x not in right_on]
+
+        # The logic for which to keep isn't correct and needs carefully studying and fixing
+        select += [f'lhs.{i}' for i in lhs]
+        res = rel.select(*select)
+        return self._from_native_frame(res)
 
     def collect_schema(self) -> dict[str, DType]:
         return {
