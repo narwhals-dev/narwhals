@@ -39,10 +39,15 @@ def test_rank_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
-    data: dict[str, float],
+    data: dict[str, list[float]],
 ) -> None:
-    if "dask" in str(constructor) or (
-        "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1)
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    if (
+        "pandas_pyarrow" in str(constructor)
+        and PANDAS_VERSION < (2, 1)
+        and isinstance(data["a"][0], int)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -69,9 +74,13 @@ def test_rank_series(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
-    data: dict[str, float],
+    data: dict[str, list[float]],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if (
+        "pandas_pyarrow" in str(constructor_eager)
+        and PANDAS_VERSION < (2, 1)
+        and isinstance(data["a"][0], int)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     context = (
