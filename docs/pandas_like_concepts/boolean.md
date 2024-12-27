@@ -8,12 +8,12 @@ For example, if you do `nw.col('a')*2`, then:
 
 ```python exec="1" source="above" session="boolean"
 import narwhals as nw
-from narwhals.typing import FrameT
+from narwhals.typing import IntoFrameT
 
 data = {"a": [1.4, None, 4.2]}
 
 
-def multiplication(df: FrameT) -> FrameT:
+def multiplication(df: IntoFrameT) -> IntoFrameT:
     return nw.from_native(df).with_columns((nw.col("a") * 2).alias("a*2")).to_native()
 ```
 

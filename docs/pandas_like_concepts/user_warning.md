@@ -14,6 +14,7 @@ The pandas API most likely cannot efficiently handle the complexity of the aggre
     ```python exec="true" source="above" result="python" session="df_ex1"
     import narwhals as nw
     import pandas as pd
+    from narwhals.typing import IntoFrameT
 
     data = {"a": [1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1], "c": [10, 20, 30, 40, 50]}
 
@@ -21,7 +22,7 @@ The pandas API most likely cannot efficiently handle the complexity of the aggre
 
 
     @nw.narwhalify
-    def approach_1(df):
+    def approach_1(df: IntoFrameT) -> IntoFrameT:
 
         # Pay attention to this next line
         df = df.group_by("a").agg(d=(nw.col("b") + nw.col("c")).sum())
@@ -43,7 +44,7 @@ The pandas API most likely cannot efficiently handle the complexity of the aggre
 
 
     @nw.narwhalify
-    def approach_2(df):
+    def approach_2(df: IntoFrameT) -> IntoFrameT:
 
         # Pay attention to this next line
         df = df.with_columns(d=nw.col("b") + nw.col("c")).group_by("a").agg(nw.sum("d"))
@@ -54,7 +55,6 @@ The pandas API most likely cannot efficiently handle the complexity of the aggre
     print(approach_2(df_pd))
     ```
 
-
 Both Approaches shown above return the exact same result, but Approach 1 is inefficient and returns the warning message
 we showed at the top.
 
@@ -62,6 +62,7 @@ What makes the first approach inefficient and the second approach efficient? It 
 pandas API lets us express.
 
 ## Approach 1
+
 ```python
 # From line 11
 
@@ -69,15 +70,18 @@ return df.group_by("a").agg((nw.col("b") + nw.col("c")).sum().alias("d"))
 ```
 
 To translate this to pandas, we would do:
+
 ```python
 df.groupby("a").apply(
     lambda df: pd.Series([(df["b"] + df["c"]).sum()], index=["d"]), include_groups=False
 )
 ```
+
 Any time you use `apply` in pandas, that's a performance footgun - best to avoid it and use vectorised operations instead.
 Let's take a look at how "approach 2" gets translated to pandas to see the difference.
 
 ## Approach 2
+
 ```python
 # Line 11 in Approach 2
 
@@ -85,9 +89,11 @@ return df.with_columns(d=nw.col("b") + nw.col("c")).group_by("a").agg({"d": "sum
 ```
 
 This gets roughly translated to:
+
 ```python
 df.assign(d=lambda df: df["b"] + df["c"]).groupby("a").agg({"d": "sum"})
 ```
+
 Because we're using pandas' own API, as opposed to `apply` and a custom `lambda` function, then this is going to be much more efficient.
 
 ## Tips for Avoiding the `UserWarning`
