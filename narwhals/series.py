@@ -598,6 +598,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             dtype: Data type that the object will be cast into.
 
+        Returns:
+            A new Series with the specified data type.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -811,6 +814,9 @@ class Series(Generic[IntoSeriesT]):
 
     def count(self) -> Any:
         """Returns the number of non-null elements in the Series.
+
+        Returns:
+            The number of non-null elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -1117,6 +1123,9 @@ class Series(Generic[IntoSeriesT]):
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
 
+        Returns:
+            A new Series with values clipped to the specified bounds.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1251,6 +1260,9 @@ class Series(Generic[IntoSeriesT]):
 
     def arg_true(self) -> Self:
         """Find elements where boolean Series is True.
+
+        Returns:
+            A new Series with the indices of elements that are True.
 
         Examples:
             >>> import pandas as pd
