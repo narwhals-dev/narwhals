@@ -431,3 +431,25 @@ class DuckDBExprStringNamespace:
             "ends_with",
             returns_scalar=False,
         )
+
+    def slice(self, offset: int, length: int) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            return FunctionExpression(
+                "array_slice",
+                _input,
+                ConstantExpression(offset + 1)
+                if offset >= 0
+                else FunctionExpression("length", _input) + offset + 1,
+                FunctionExpression("length", _input)
+                if length is None
+                else ConstantExpression(length) + offset,
+            )
+
+        return self._compliant_expr._from_call(
+            func,
+            "slice",
+            returns_scalar=False,
+        )
