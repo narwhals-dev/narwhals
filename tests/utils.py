@@ -81,7 +81,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         expected = _sort_dict_by_key(expected, sort_key)
         result = _sort_dict_by_key(result, sort_key)
     assert (
-        result.keys() == expected.keys()
+        list(result.keys()) == expected.keys()
     ), f"Result keys {result.keys()}, expected keys: {expected.keys()}"
 
     for key, expected_value in expected.items():
