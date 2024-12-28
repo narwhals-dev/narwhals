@@ -457,10 +457,15 @@ class DuckDBExprStringNamespace:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            if literal:
+                return FunctionExpression("contains", _input, ConstantExpression(pattern))
+            return FunctionExpression(
+                "regexp_matches", _input, ConstantExpression(pattern)
+            )
+
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "contains", _input, ConstantExpression(pattern)
-            ),
+            func,
             "contains",
             returns_scalar=False,
         )
