@@ -369,7 +369,9 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
     ) -> Self:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(
+            _input: duckdb.Expression, lower_bound, upper_bound
+        ) -> duckdb.Expression:
             if closed == "left":
                 return (_input >= lower_bound) & (_input < upper_bound)
             elif closed == "right":
@@ -378,7 +380,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 return (_input > lower_bound) & (_input < upper_bound)
             return (_input >= lower_bound) & (_input <= upper_bound)
 
-        return self._from_call(func, "is_between", returns_scalar=False)
+        return self._from_call(
+            func,
+            "is_between",
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            returns_scalar=False,
+        )
 
     def sum(self) -> Self:
         from duckdb import FunctionExpression

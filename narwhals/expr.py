@@ -1724,7 +1724,9 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_between(
-                lower_bound, upper_bound, closed
+                extract_compliant(plx, lower_bound),
+                extract_compliant(plx, upper_bound),
+                closed,
             )
         )
 
