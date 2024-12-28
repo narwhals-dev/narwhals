@@ -271,6 +271,24 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def quantile(self, quantile: float, interpolation) -> Self:
+        from duckdb import FunctionExpression, ConstantExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("quantile", _input, ConstantExpression(quantile)),
+            "quantile",
+            returns_scalar=True,
+        )
+
+    # def quantile(self, quantile: float, interpolation) -> Self:
+    #     from duckdb import FunctionExpression, ConstantExpression
+
+    #     return self._from_call(
+    #         lambda _input: FunctionExpression("quantile", _input, ConstantExpression(quantile)),
+    #         "quantile",
+    #         returns_scalar=True,
+    #     )
+
     def sum(self) -> Self:
         from duckdb import FunctionExpression
 

@@ -65,6 +65,70 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
+    def any_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [reduce(operator.or_, cols).alias(col_name)]
+
+        return DuckDBExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="or_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
+    def max_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [FunctionExpression('greatest', *cols).alias(col_name)]
+
+        return DuckDBExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
+    def min_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [FunctionExpression('least', *cols).alias(col_name)]
+
+        return DuckDBExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
+
+
     def col(self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version

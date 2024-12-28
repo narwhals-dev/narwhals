@@ -13,7 +13,7 @@ expected_values = [4, 3, 6, float("nan")]
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
-def test_maxh(constructor: Constructor, col_expr: Any) -> None:
+def test_maxh(constructor: Constructor, col_expr: Any, request: pytest.FixtureRequest) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(horizontal_max=nw.max_horizontal(col_expr, nw.col("b"), "z"))
     expected = {"horizontal_max": expected_values}
