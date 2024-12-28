@@ -453,6 +453,18 @@ class DuckDBExprStringNamespace:
             returns_scalar=False,
         )
 
+    def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "contains", _input, ConstantExpression(pattern)
+            ),
+            "contains",
+            returns_scalar=False,
+        )
+
     def slice(self, offset: int, length: int) -> DuckDBExpr:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
