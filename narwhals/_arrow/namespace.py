@@ -348,31 +348,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             result_table, backend_version=self._backend_version, version=self._version
         )
 
-    def sum(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).sum()
-
-    def mean(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).mean()
-
-    def median(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).median()
-
-    def max(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).max()
-
-    def min(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).min()
-
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace(

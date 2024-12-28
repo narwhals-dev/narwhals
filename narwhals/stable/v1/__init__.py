@@ -2319,7 +2319,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     """Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        names: Name(s) of the columns to use in the aggregation function.
+        names: Name(s) of the columns to use.
 
     Returns:
         A new expression.
