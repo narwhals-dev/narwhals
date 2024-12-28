@@ -27,5 +27,5 @@ def query(
         .group_by("o_orderpriority")
         .agg(nw.len().alias("order_count"))
         .sort(by="o_orderpriority")
-        .with_columns(nw.col("order_count").cast(nw.Int64))
+        # .with_columns(nw.col("order_count").cast(nw.Int64))
     )

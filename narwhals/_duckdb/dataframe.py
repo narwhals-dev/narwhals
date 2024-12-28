@@ -284,6 +284,11 @@ class DuckDBInterchangeFrame:
                 self._native_frame.columns, self._native_frame.types
             )
         }
+    
+    def unique(self, subset, keep, maintain_order):
+        if subset is not None:
+            return self._from_native_frame(self._native_frame.unique(', '.join(subset)))
+        return self._from_native_frame(self._native_frame.unique(', '.join(self.columns)))
 
     def sort(
         self: Self,
