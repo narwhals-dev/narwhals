@@ -280,14 +280,25 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
-    # def quantile(self, quantile: float, interpolation) -> Self:
-    #     from duckdb import FunctionExpression, ConstantExpression
-
-    #     return self._from_call(
-    #         lambda _input: FunctionExpression("quantile", _input, ConstantExpression(quantile)),
-    #         "quantile",
-    #         returns_scalar=True,
-    #     )
+    def clip(self, lower_bound, upper_bound) -> Self:
+        from duckdb import FunctionExpression, ConstantExpression
+        if lower_bound is None:
+            func = lambda _input: FunctionExpression('least', _input, ConstantExpression(upper_bound))
+        elif upper_bound is None:
+            func = lambda _input: FunctionExpression('greatest', _input, ConstantExpression(lower_bound))
+        else:
+            func = lambda _input: (
+                FunctionExpression(
+                    'greatest',
+                    FunctionExpression('least', _input, ConstantExpression(upper_bound)),
+                    ConstantExpression(lower_bound)
+                )
+            )
+        return self._from_call(
+            func,
+            "clip",
+            returns_scalar=False,
+        )
 
     def sum(self) -> Self:
         from duckdb import FunctionExpression
