@@ -192,6 +192,8 @@ class DuckDBInterchangeFrame:
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
+        from duckdb import ColumnExpression
+
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -216,9 +218,9 @@ class DuckDBInterchangeFrame:
             if col in self._native_frame.columns and col not in right_on:
                 select.append(f"rhs.{col} as {col}_right")
             elif col not in right_on:
-                select.append(f"rhs.{col}")
+                select.append(ColumnExpression("rhs.{col}").alias(f"{col}_right"))
 
-        res = rel.select(*select)
+        res = rel.select(", ".join(select))
         return self._from_native_frame(res)
 
     def collect_schema(self) -> dict[str, DType]:
