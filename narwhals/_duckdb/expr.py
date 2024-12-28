@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 
 from narwhals._duckdb.utils import get_column_name
@@ -271,7 +272,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
-    def quantile(self, quantile: float, interpolation) -> Self:
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
@@ -283,41 +288,46 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
-    def clip(self, lower_bound, upper_bound) -> Self:
+    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        if lower_bound is None:
-            func = lambda _input: FunctionExpression(
-                "least", _input, ConstantExpression(upper_bound)
-            )
-        elif upper_bound is None:
-            func = lambda _input: FunctionExpression(
-                "greatest", _input, ConstantExpression(lower_bound)
-            )
-        else:
-            func = lambda _input: (
-                FunctionExpression(
-                    "greatest",
-                    FunctionExpression("least", _input, ConstantExpression(upper_bound)),
-                    ConstantExpression(lower_bound),
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            if lower_bound is None:
+                return FunctionExpression(
+                    "least", _input, ConstantExpression(upper_bound)
                 )
+            elif upper_bound is None:
+                return FunctionExpression(
+                    "greatest", _input, ConstantExpression(lower_bound)
+                )
+            return FunctionExpression(
+                "greatest",
+                FunctionExpression("least", _input, ConstantExpression(upper_bound)),
+                ConstantExpression(lower_bound),
             )
+
         return self._from_call(
             func,
             "clip",
             returns_scalar=False,
         )
 
-    def is_between(self, lower_bound, upper_bound, closed) -> Self:
-        if closed == "left":
-            func = lambda _input: (_input >= lower_bound) & (_input < upper_bound)
-        elif closed == "right":
-            func = lambda _input: (_input > lower_bound) & (_input <= upper_bound)
-        elif closed == "none":
-            func = lambda _input: (_input > lower_bound) & (_input < upper_bound)
-        else:
-            func = lambda _input: (_input >= lower_bound) & (_input <= upper_bound)
+    def is_between(
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
+    ) -> Self:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            if closed == "left":
+                return (_input >= lower_bound) & (_input < upper_bound)
+            elif closed == "right":
+                return (_input > lower_bound) & (_input <= upper_bound)
+            elif closed == "none":
+                return (_input > lower_bound) & (_input < upper_bound)
+            return (_input >= lower_bound) & (_input <= upper_bound)
+
         return self._from_call(func, "is_between", returns_scalar=False)
 
     def sum(self) -> Self:
@@ -381,7 +391,7 @@ class DuckDBExprStringNamespace:
     def __init__(self, expr: DuckDBExpr) -> None:
         self._compliant_expr = expr
 
-    def starts_with(self, prefix) -> DuckDBExpr:
+    def starts_with(self, prefix: str) -> DuckDBExpr:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
@@ -393,7 +403,7 @@ class DuckDBExprStringNamespace:
             returns_scalar=False,
         )
 
-    def ends_with(self, suffix) -> DuckDBExpr:
+    def ends_with(self, suffix: str) -> DuckDBExpr:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 

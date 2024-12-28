@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import re
-from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 
+from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
@@ -28,66 +27,6 @@ if TYPE_CHECKING:
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-
-
-@lru_cache(maxsize=16)
-def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
-    if duckdb_dtype == "HUGEINT":
-        return dtypes.Int128()
-    if duckdb_dtype == "BIGINT":
-        return dtypes.Int64()
-    if duckdb_dtype == "INTEGER":
-        return dtypes.Int32()
-    if duckdb_dtype == "SMALLINT":
-        return dtypes.Int16()
-    if duckdb_dtype == "TINYINT":
-        return dtypes.Int8()
-    if duckdb_dtype == "UHUGEINT":
-        return dtypes.UInt128()
-    if duckdb_dtype == "UBIGINT":
-        return dtypes.UInt64()
-    if duckdb_dtype == "UINTEGER":
-        return dtypes.UInt32()
-    if duckdb_dtype == "USMALLINT":
-        return dtypes.UInt16()
-    if duckdb_dtype == "UTINYINT":
-        return dtypes.UInt8()
-    if duckdb_dtype == "DOUBLE":
-        return dtypes.Float64()
-    if duckdb_dtype == "FLOAT":
-        return dtypes.Float32()
-    if duckdb_dtype == "VARCHAR":
-        return dtypes.String()
-    if duckdb_dtype == "DATE":
-        return dtypes.Date()
-    if duckdb_dtype == "TIMESTAMP":
-        return dtypes.Datetime()
-    if duckdb_dtype == "BOOLEAN":
-        return dtypes.Boolean()
-    if duckdb_dtype == "INTERVAL":
-        return dtypes.Duration()
-    if duckdb_dtype.startswith("STRUCT"):
-        matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
-        return dtypes.Struct(
-            [
-                dtypes.Field(
-                    matchstruc_[i][0],
-                    native_to_narwhals_dtype(matchstruc_[i][1], version),
-                )
-                for i in range(len(matchstruc_))
-            ]
-        )
-    if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
-        return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
-    if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
-        return dtypes.Array(
-            native_to_narwhals_dtype(match_.group(1), version),
-            int(match_.group(2)),
-        )
-    if duckdb_dtype.startswith("DECIMAL("):
-        return dtypes.Decimal()
-    return dtypes.Unknown()  # pragma: no cover
 
 
 class DuckDBInterchangeFrame:
@@ -248,7 +187,7 @@ class DuckDBInterchangeFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal[left, inner, outer, cross, anti, semi] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -258,21 +197,26 @@ class DuckDBInterchangeFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
         if how != "inner":
-            raise NotImplementedError("Only inner join is implemented for DuckDB")
+            msg = "Only inner join is implemented for DuckDB"
+            raise NotImplementedError(msg)
+        assert left_on is not None  # noqa: S101
+        assert right_on is not None  # noqa: S101
         conditions = []
         lhs = []
         for left, right in zip(left_on, right_on):
             conditions.append(f"lhs.{left} = rhs.{right}")
             lhs.append(left)
-        condition = ' and '.join(conditions)
-        rel =  self._native_frame.set_alias("lhs").join( other._native_frame.set_alias("rhs"), condition=condition)
+        condition = " and ".join(conditions)
+        rel = self._native_frame.set_alias("lhs").join(
+            other._native_frame.set_alias("rhs"), condition=condition
+        )
 
-        select = [f'lhs.{x}' for x in self._native_frame.columns]
+        select = [f"lhs.{x}" for x in self._native_frame.columns]
         for col in other._native_frame.columns:
             if col in self._native_frame.columns and col not in right_on:
-                select.append(f'rhs.{col} as {col}_right')
+                select.append(f"rhs.{col} as {col}_right")
             elif col not in right_on:
-                select.append(f'rhs.{col}')
+                select.append(f"rhs.{col}")
 
         res = rel.select(*select)
         return self._from_native_frame(res)
@@ -284,11 +228,13 @@ class DuckDBInterchangeFrame:
                 self._native_frame.columns, self._native_frame.types
             )
         }
-    
-    def unique(self, subset, keep, maintain_order):
+
+    def unique(
+        self, subset: Sequence[str] | None, keep: Any, *, maintain_order: bool
+    ) -> Self:
         if subset is not None:
-            return self._from_native_frame(self._native_frame.unique(', '.join(subset)))
-        return self._from_native_frame(self._native_frame.unique(', '.join(self.columns)))
+            return self._from_native_frame(self._native_frame.unique(", ".join(subset)))
+        return self._from_native_frame(self._native_frame.unique(", ".join(self.columns)))
 
     def sort(
         self: Self,
