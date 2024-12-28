@@ -420,6 +420,10 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
 
+    @property
+    def dt(self: Self) -> DuckDBExprDateTimeNamespace:
+        return DuckDBExprDateTimeNamespace(self)
+
 
 class DuckDBExprStringNamespace:
     def __init__(self, expr: DuckDBExpr) -> None:
@@ -468,5 +472,19 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             func,
             "slice",
+            returns_scalar=False,
+        )
+
+
+class DuckDBExprDateTimeNamespace:
+    def __init__(self, expr: DuckDBExpr) -> None:
+        self._compliant_expr = expr
+
+    def year(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("year", _input),
+            "year",
             returns_scalar=False,
         )

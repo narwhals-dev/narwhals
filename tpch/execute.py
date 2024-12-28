@@ -14,6 +14,7 @@ import narwhals as nw
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
+pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
