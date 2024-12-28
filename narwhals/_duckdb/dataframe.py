@@ -258,22 +258,22 @@ class DuckDBInterchangeFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
         if how != "inner":
-            raise NotImplementedError("..")
+            raise NotImplementedError("Only inner join is implemented for DuckDB")
         conditions = []
         lhs = []
         for left, right in zip(left_on, right_on):
             conditions.append(f"lhs.{left} = rhs.{right}")
             lhs.append(left)
         condition = ' and '.join(conditions)
-        # oh, gosh...might need to rename, and drop columns, if necessary
-        # yup, drop the rhs ones
-        import duckdb
         rel =  self._native_frame.set_alias("lhs").join( other._native_frame.set_alias("rhs"), condition=condition)
 
-        select = [x for x in [*self._native_frame.columns, *other._native_frame.columns] if x not in left_on and x not in right_on]
+        select = [f'lhs.{x}' for x in self._native_frame.columns]
+        for col in other._native_frame.columns:
+            if col in self._native_frame.columns and col not in right_on:
+                select.append(f'rhs.{col} as {col}_right')
+            elif col not in right_on:
+                select.append(f'rhs.{col}')
 
-        # The logic for which to keep isn't correct and needs carefully studying and fixing
-        select += [f'lhs.{i}' for i in lhs]
         res = rel.select(*select)
         return self._from_native_frame(res)
 

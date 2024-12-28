@@ -1102,6 +1102,7 @@ def _scan_csv_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
+        Implementation.DUCKDB,
     ):
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:

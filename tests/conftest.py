@@ -1,4 +1,5 @@
 from __future__ import annotations
+import duckdb
 
 import contextlib
 from typing import TYPE_CHECKING
@@ -87,6 +88,10 @@ def polars_eager_constructor(obj: Any) -> IntoDataFrame:
 def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
+def duckdb_lazy_constructor(obj: Any) -> duckdb.DuckDBPyRelation:
+    _df = pl.LazyFrame(obj)
+    return duckdb.table('_df')
+
 
 def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
@@ -143,7 +148,7 @@ else:  # pragma: no cover
     eager_constructors = [pandas_constructor]
 
 eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
-lazy_constructors = [polars_lazy_constructor]
+lazy_constructors = [polars_lazy_constructor, duckdb_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
