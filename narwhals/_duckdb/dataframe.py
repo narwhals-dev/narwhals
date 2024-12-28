@@ -206,7 +206,7 @@ class DuckDBInterchangeFrame:
             right_on = [right_on]
 
         if how not in ("inner", "left"):
-            msg = "Only inner join is implemented for DuckDB"
+            msg = "Only inner and left join is implemented for DuckDB"
             raise NotImplementedError(msg)
         assert left_on is not None  # noqa: S101
         assert right_on is not None  # noqa: S101

@@ -151,6 +151,38 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs=kwargs,
         )
 
+    def __and__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input & other,
+            "__and__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rand__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input & other,
+            "__rand__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __or__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input | other,
+            "__or__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ror__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input | other,
+            "__ror__",
+            other=other,
+            returns_scalar=False,
+        )
+
     def __add__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,
@@ -235,6 +267,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input, other: _input == other,
             "__eq__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ne__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input != other,
+            "__ne__",
             other=other,
             returns_scalar=False,
         )

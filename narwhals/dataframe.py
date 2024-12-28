@@ -4143,6 +4143,8 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
+        if isinstance(subset, str):
+            subset = [subset]
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
     def filter(
