@@ -391,6 +391,18 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
+    def round(self, decimals: int) -> Self:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression(
+                "round", _input, ConstantExpression(decimals)
+            ),
+            "round",
+            returns_scalar=False,
+        )
+
     def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
         from duckdb import CoalesceOperator
         from duckdb import ConstantExpression
