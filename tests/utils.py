@@ -76,7 +76,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         and result._compliant_frame._implementation is Implementation.DUCKDB
     )
     if is_duckdb:
-        result = from_native(result.to_arrow())
+        result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):

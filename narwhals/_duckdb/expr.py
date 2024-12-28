@@ -360,6 +360,12 @@ class DuckDBExprStringNamespace:
     def __init__(self, expr: DuckDBExpr) -> None:
         self._compliant_expr = expr
 
+    def starts_with(self, prefix) -> DuckDBExpr:
+        from duckdb import FunctionExpression, ConstantExpression
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("starts_with", _input, ConstantExpression(prefix)), "starts_with", returns_scalar=False
+        )
+
     def ends_with(self, suffix) -> DuckDBExpr:
         from duckdb import FunctionExpression, ConstantExpression
         return self._compliant_expr._from_call(

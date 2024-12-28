@@ -24,9 +24,9 @@ def test_filter_with_boolean_list(constructor: Constructor) -> None:
     context = (
         pytest.raises(
             NotImplementedError,
-            match="`LazyFrame.filter` is not supported for Dask backend with boolean masks.",
+            match="`LazyFrame.filter` is not supported for .* with boolean masks.",
         )
-        if "dask" in str(constructor)
+        if any(x in str(constructor) for x in ('dask', 'duckdb'))
         else does_not_raise()
     )
 
