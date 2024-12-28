@@ -26,7 +26,7 @@ def test_filter_with_boolean_list(constructor: Constructor) -> None:
             NotImplementedError,
             match="`LazyFrame.filter` is not supported for .* with boolean masks.",
         )
-        if any(x in str(constructor) for x in ('dask', 'duckdb'))
+        if any(x in str(constructor) for x in ("dask", "duckdb"))
         else does_not_raise()
     )
 

@@ -40,7 +40,7 @@ def test_explode_single_col(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", 'duckdb')
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail)
 

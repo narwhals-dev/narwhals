@@ -14,7 +14,8 @@ from typing import cast
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_dask_dataframe, get_duckdb
+from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars

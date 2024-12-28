@@ -4,11 +4,11 @@ import argparse
 from importlib import import_module
 from pathlib import Path
 
+import dask.dataframe as dd
 import duckdb
-
-# import dask.dataframe as dd
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 
 import narwhals as nw
 
@@ -26,17 +26,17 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 BACKEND_NAMESPACE_KWARGS_MAP = {
-    # "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "polars[lazy]": (pl, {}),
-    # "pyarrow": (pa, {}),
-    # "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "pyarrow": (pa, {}),
+    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "duckdb": (duckdb, {}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
     "duckdb": lambda x: x.pl(),
     "polars[lazy]": lambda x: x.collect(),
-    # "dask": lambda x: x.compute(),
+    "dask": lambda x: x.compute(),
 }
 
 QUERY_DATA_PATH_MAP = {

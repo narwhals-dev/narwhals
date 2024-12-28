@@ -87,12 +87,13 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def max_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         from duckdb import FunctionExpression
+
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
-            return [FunctionExpression('greatest', *cols).alias(col_name)]
+            return [FunctionExpression("greatest", *cols).alias(col_name)]
 
         return DuckDBExpr(  # type: ignore[abstract]
             call=func,
@@ -108,12 +109,13 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def min_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         from duckdb import FunctionExpression
+
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
-            return [FunctionExpression('least', *cols).alias(col_name)]
+            return [FunctionExpression("least", *cols).alias(col_name)]
 
         return DuckDBExpr(  # type: ignore[abstract]
             call=func,
@@ -127,15 +129,13 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
-
-
     def col(self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
     def len(self) -> DuckDBExpr:
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(_df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             from duckdb import FunctionExpression
 
             return [FunctionExpression("count").alias("len")]

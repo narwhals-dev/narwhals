@@ -1,11 +1,11 @@
 from __future__ import annotations
-import duckdb
 
 import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Generator
 
+import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -88,9 +88,10 @@ def polars_eager_constructor(obj: Any) -> IntoDataFrame:
 def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
+
 def duckdb_lazy_constructor(obj: Any) -> duckdb.DuckDBPyRelation:
     _df = pl.LazyFrame(obj)
-    return duckdb.table('_df')
+    return duckdb.table("_df")
 
 
 def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
@@ -157,7 +158,7 @@ if get_cudf() is not None:
 if get_dask_dataframe() is not None:  # pragma: no cover
     # TODO(unassigned): reinstate both dask constructors once if/when we have a dask use-case
     # lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # noqa: ERA001
-    lazy_constructors.append(dask_lazy_p2_constructor)  # type: ignore  # noqa: PGH003
+    lazy_constructors.append(dask_lazy_p2_constructor)
 
 
 @pytest.fixture(params=eager_constructors)

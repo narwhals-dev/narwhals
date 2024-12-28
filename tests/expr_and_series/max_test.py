@@ -11,8 +11,10 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
 
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").max(), nw.max("a", "b", "z")])
-def test_expr_max_expr(constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest) -> None:
-    if 'duckdb' in str(constructor):
+def test_expr_max_expr(
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(expr)
