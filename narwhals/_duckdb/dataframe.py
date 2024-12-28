@@ -17,6 +17,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import duckdb
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -30,8 +31,8 @@ if TYPE_CHECKING:
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any, version: Version) -> None:
-        self._native_frame = df
+    def __init__(self, df: duckdb.DuckDBPyRelation, version: Version) -> None:
+        self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = (0, 0, 0)
 
