@@ -272,26 +272,35 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def quantile(self, quantile: float, interpolation) -> Self:
-        from duckdb import FunctionExpression, ConstantExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("quantile", _input, ConstantExpression(quantile)),
+            lambda _input: FunctionExpression(
+                "quantile", _input, ConstantExpression(quantile)
+            ),
             "quantile",
             returns_scalar=True,
         )
 
     def clip(self, lower_bound, upper_bound) -> Self:
-        from duckdb import FunctionExpression, ConstantExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
         if lower_bound is None:
-            func = lambda _input: FunctionExpression('least', _input, ConstantExpression(upper_bound))
+            func = lambda _input: FunctionExpression(
+                "least", _input, ConstantExpression(upper_bound)
+            )
         elif upper_bound is None:
-            func = lambda _input: FunctionExpression('greatest', _input, ConstantExpression(lower_bound))
+            func = lambda _input: FunctionExpression(
+                "greatest", _input, ConstantExpression(lower_bound)
+            )
         else:
             func = lambda _input: (
                 FunctionExpression(
-                    'greatest',
-                    FunctionExpression('least', _input, ConstantExpression(upper_bound)),
-                    ConstantExpression(lower_bound)
+                    "greatest",
+                    FunctionExpression("least", _input, ConstantExpression(upper_bound)),
+                    ConstantExpression(lower_bound),
                 )
             )
         return self._from_call(
@@ -299,6 +308,17 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             "clip",
             returns_scalar=False,
         )
+
+    def is_between(self, lower_bound, upper_bound, closed) -> Self:
+        if closed == "left":
+            func = lambda _input: (_input >= lower_bound) & (_input < upper_bound)
+        elif closed == "right":
+            func = lambda _input: (_input > lower_bound) & (_input <= upper_bound)
+        elif closed == "none":
+            func = lambda _input: (_input > lower_bound) & (_input < upper_bound)
+        else:
+            func = lambda _input: (_input >= lower_bound) & (_input <= upper_bound)
+        return self._from_call(func, "is_between", returns_scalar=False)
 
     def sum(self) -> Self:
         from duckdb import FunctionExpression
@@ -356,18 +376,31 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
 
+
 class DuckDBExprStringNamespace:
     def __init__(self, expr: DuckDBExpr) -> None:
         self._compliant_expr = expr
 
     def starts_with(self, prefix) -> DuckDBExpr:
-        from duckdb import FunctionExpression, ConstantExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("starts_with", _input, ConstantExpression(prefix)), "starts_with", returns_scalar=False
+            lambda _input: FunctionExpression(
+                "starts_with", _input, ConstantExpression(prefix)
+            ),
+            "starts_with",
+            returns_scalar=False,
         )
 
     def ends_with(self, suffix) -> DuckDBExpr:
-        from duckdb import FunctionExpression, ConstantExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("ends_with", _input, ConstantExpression(suffix)), "ends_with", returns_scalar=False
+            lambda _input: FunctionExpression(
+                "ends_with", _input, ConstantExpression(suffix)
+            ),
+            "ends_with",
+            returns_scalar=False,
         )
