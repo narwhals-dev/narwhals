@@ -5,15 +5,16 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import duckdb
 
     from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
     from narwhals._duckdb.typing import IntoDuckDBExpr
-    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -36,6 +37,8 @@ def maybe_evaluate(df: DuckDBInterchangeFrame, obj: Any) -> Any:
             msg = "Reductions are not yet supported for DuckDB, at least until they implement duckdb.WindowExpression"
             raise NotImplementedError(msg)
         return column_result
+    if isinstance_or_issubclass(obj, DType):
+        return obj
     return duckdb.ConstantExpression(obj)
 
 
@@ -140,3 +143,56 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
+
+
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
+    dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Float64):
+        return "FLOAT"
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
+        return "DOUBLE"
+    if isinstance_or_issubclass(dtype, dtypes.Int64):
+        return "BIGINT"
+    if isinstance_or_issubclass(dtype, dtypes.Int32):
+        return "INT"
+    if isinstance_or_issubclass(dtype, dtypes.Int16):
+        return "SMALLINT"
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return "TINYINT"
+    if isinstance_or_issubclass(dtype, dtypes.UInt64):
+        return "UBIGINT"
+    if isinstance_or_issubclass(dtype, dtypes.UInt32):
+        return "UINT"
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):
+        return "USMALLINT"
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+        return "UTINYINT"
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        return "VARCHAR"
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
+        return "BOOLEAN"
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        msg = "Categorical not supported by DuckDB"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        _time_unit = getattr(dtype, "time_unit", "us")
+        _time_zone = getattr(dtype, "time_zone", None)
+        msg = "todo"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        _time_unit = getattr(dtype, "time_unit", "us")
+        msg = "todo"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return "DATE"
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        msg = "todo"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "todo"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "todo"
+        raise NotImplementedError(msg)
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)

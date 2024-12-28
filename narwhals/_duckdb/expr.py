@@ -9,6 +9,7 @@ from typing import Sequence
 
 from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
+from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -380,6 +382,21 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression("min", _input),
             "min",
             returns_scalar=True,
+        )
+
+    def cast(
+        self: Self,
+        dtype: DType | type[DType],
+    ) -> Self:
+        def func(_input: Any, dtype: DType | type[DType]) -> Any:
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return _input.cast(native_dtype)
+
+        return self._from_call(
+            func,
+            "cast",
+            dtype=dtype,
+            returns_scalar=False,
         )
 
     @property
