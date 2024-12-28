@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -238,6 +239,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
+    def __invert__(self) -> Self:
+        return self._from_call(
+            lambda _input: ~_input,
+            "__invert__",
+            returns_scalar=False,
+        )
+
     def alias(self, name: str) -> Self:
         def _alias(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
             return [col.alias(name) for col in self._call(df)]
@@ -388,6 +396,19 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: _input.isnull(),
             "is_null",
+            returns_scalar=False,
+        )
+
+    def is_in(self, other: Sequence[Any]) -> Self:
+        from duckdb import ConstantExpression
+
+        return self._from_call(
+            lambda _input: functools.reduce(
+                lambda x, y: x | _input.isin(ConstantExpression(y)),
+                other[1:],
+                _input.isin(ConstantExpression(other[0])),
+            ),
+            "is_in",
             returns_scalar=False,
         )
 
