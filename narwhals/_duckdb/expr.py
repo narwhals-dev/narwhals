@@ -384,6 +384,23 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def is_null(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isnull(),
+            "is_null",
+            returns_scalar=False,
+        )
+
+    def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
+        from duckdb import CoalesceOperator
+        from duckdb import ConstantExpression
+
+        return self._from_call(
+            lambda _input: CoalesceOperator(_input, ConstantExpression(value)),
+            "fill_null",
+            returns_scalar=False,
+        )
+
     def cast(
         self: Self,
         dtype: DType | type[DType],

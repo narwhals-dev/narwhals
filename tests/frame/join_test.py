@@ -74,7 +74,9 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     assert_equal_data(result_on, expected)
 
 
-def test_cross_join(constructor: Constructor) -> None:
+def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
@@ -112,7 +114,11 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
+def test_cross_join_suffix(
+    constructor: Constructor, suffix: str, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
@@ -363,7 +369,7 @@ def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -422,7 +428,7 @@ def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -503,7 +509,7 @@ def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))

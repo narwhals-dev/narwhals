@@ -33,7 +33,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
             return [ColumnExpression(col_name) for col_name in df.columns]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=_all,
             depth=0,
             function_name="all",
@@ -53,7 +53,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
@@ -73,7 +73,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.or_, cols).alias(col_name)]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="or_horizontal",
@@ -95,7 +95,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             col_name = get_column_name(df, cols[0])
             return [FunctionExpression("greatest", *cols).alias(col_name)]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="max_horizontal",
@@ -117,7 +117,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             col_name = get_column_name(df, cols[0])
             return [FunctionExpression("least", *cols).alias(col_name)]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="min_horizontal",
@@ -140,7 +140,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
             return [FunctionExpression("count").alias("len")]
 
-        return DuckDBExpr(  # type: ignore[abstract]
+        return DuckDBExpr(
             call=func,
             depth=0,
             function_name="len",
