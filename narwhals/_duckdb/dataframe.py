@@ -198,7 +198,8 @@ class DuckDBInterchangeFrame:
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
-        if how != "inner":
+
+        if how not in ("inner", "left"):
             msg = "Only inner join is implemented for DuckDB"
             raise NotImplementedError(msg)
         assert left_on is not None  # noqa: S101
@@ -216,9 +217,9 @@ class DuckDBInterchangeFrame:
         select = [f"lhs.{x}" for x in self._native_frame.columns]
         for col in other._native_frame.columns:
             if col in self._native_frame.columns and col not in right_on:
-                select.append(f"rhs.{col} as {col}_right")
+                select.append(f"rhs.{col} as {col}{suffix}")
             elif col not in right_on:
-                select.append(ColumnExpression("rhs.{col}").alias(f"{col}_right"))
+                select.append(ColumnExpression("rhs.{col}").alias(f"{col}{suffix}"))
 
         res = rel.select(", ".join(select))
         return self._from_native_frame(res)
