@@ -153,6 +153,8 @@ class BaseFrame(Generic[FrameT]):
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
     ) -> Self:
+        if isinstance(subset, str):
+            subset = [subset]
         return self._from_compliant_dataframe(
             self._compliant_frame.unique(
                 subset=subset, keep=keep, maintain_order=maintain_order
