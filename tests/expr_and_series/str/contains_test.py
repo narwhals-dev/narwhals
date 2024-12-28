@@ -7,7 +7,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"pets": ["cat", "dog", "rabbit and parrot", "dove"]}
+data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", "Parrot|dove", None]}
 
 
 def test_contains_case_insensitive(
@@ -17,12 +17,11 @@ def test_contains_case_insensitive(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    result = df.with_columns(
-        nw.col("pets").str.contains("(?i)parrot|Dove").alias("result")
+    result = df.select(
+        nw.col("pets").str.contains("(?i)parrot|Dove").alias("case_insensitive_match")
     )
     expected = {
-        "pets": ["cat", "dog", "rabbit and parrot", "dove"],
-        "result": [False, False, True, True],
+        "case_insensitive_match": [False, False, True, True, True, None],
     }
     assert_equal_data(result, expected)
 
@@ -34,31 +33,52 @@ def test_contains_series_case_insensitive(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.with_columns(
-        case_insensitive_match=df["pets"].str.contains("(?i)parrot|Dove")
-    )
+    result = df.select(case_insensitive_match=df["pets"].str.contains("(?i)parrot|Dove"))
     expected = {
-        "pets": ["cat", "dog", "rabbit and parrot", "dove"],
-        "case_insensitive_match": [False, False, True, True],
+        "case_insensitive_match": [False, False, True, True, True, None],
     }
     assert_equal_data(result, expected)
 
 
 def test_contains_case_sensitive(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.with_columns(nw.col("pets").str.contains("parrot|Dove").alias("result"))
+    result = df.select(nw.col("pets").str.contains("parrot|Dove").alias("default_match"))
     expected = {
-        "pets": ["cat", "dog", "rabbit and parrot", "dove"],
-        "result": [False, False, True, False],
+        "default_match": [False, False, True, False, False, None],
     }
     assert_equal_data(result, expected)
 
 
 def test_contains_series_case_sensitive(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.with_columns(case_sensitive_match=df["pets"].str.contains("parrot|Dove"))
+    result = df.select(default_match=df["pets"].str.contains("parrot|Dove"))
     expected = {
-        "pets": ["cat", "dog", "rabbit and parrot", "dove"],
-        "case_sensitive_match": [False, False, True, False],
+        "default_match": [False, False, True, False, False, None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_contains_literal(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("pets").str.contains("Parrot|dove").alias("default_match"),
+        nw.col("pets").str.contains("Parrot|dove", literal=True).alias("literal_match"),
+    )
+    expected = {
+        "default_match": [False, False, False, True, True, None],
+        "literal_match": [False, False, False, False, True, None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_contains_series_literal(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(
+        default_match=df["pets"].str.contains("Parrot|dove"),
+        literal_match=df["pets"].str.contains("Parrot|dove", literal=True),
+    )
+    expected = {
+        "default_match": [False, False, False, True, True, None],
+        "literal_match": [False, False, False, False, True, None],
     }
     assert_equal_data(result, expected)
