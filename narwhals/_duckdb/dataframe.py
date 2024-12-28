@@ -183,6 +183,13 @@ class DuckDBInterchangeFrame:
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
 
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
+        df = self._native_frame
+        selection = [
+            f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
+        ]
+        return self._from_native_frame(df.select(", ".join(selection)))
+
     def join(
         self: Self,
         other: Self,
