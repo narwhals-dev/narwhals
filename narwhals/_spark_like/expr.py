@@ -233,24 +233,34 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_min, "min", returns_scalar=True)
 
-    def std(self, ddof: int) -> Self:
+    def std(self: Self, ddof: int) -> Self:
+        from functools import partial
+
         import numpy as np  # ignore-banned-import
 
-        def _std(_input: Column, ddof: int) -> Column:  # pragma: no cover
-            if self._backend_version < (3, 5) or parse_version(np.__version__) > (2, 0):
-                from pyspark.sql import functions as F  # noqa: N812
+        from narwhals._spark_like.utils import _std
 
-                if ddof == 1:
-                    return F.stddev_samp(_input)
+        func = partial(
+            _std,
+            ddof=ddof,
+            backend_version=self._backend_version,
+            np_version=parse_version(np.__version__),
+        )
 
-                n_rows = F.count(_input)
-                return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
+        return self._from_call(func, "std", returns_scalar=True, ddof=ddof)
 
-            from pyspark.pandas.spark.functions import stddev
+    def var(self: Self, ddof: int) -> Self:
+        from functools import partial
 
-            return stddev(_input, ddof=ddof)
+        import numpy as np  # ignore-banned-import
 
-        expr = self._from_call(_std, "std", returns_scalar=True, ddof=ddof)
-        if ddof != 1:
-            expr._depth += 1
-        return expr
+        from narwhals._spark_like.utils import _var
+
+        func = partial(
+            _var,
+            ddof=ddof,
+            backend_version=self._backend_version,
+            np_version=parse_version(np.__version__),
+        )
+
+        return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
