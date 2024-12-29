@@ -412,7 +412,7 @@ class PandasLikeDataFrame:
                     predicates, (plx.col(name) == v for name, v in constraints.items())
                 )
             )
-            # Safety: all_horizontal's expression only returns a single column.
+            # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
             _mask = validate_dataframe_comparand(self._native_frame.index, mask)
         return self._from_native_frame(self._native_frame.loc[_mask])
@@ -684,7 +684,7 @@ class PandasLikeDataFrame:
 
     def unique(
         self: Self,
-        subset: str | list[str] | None,
+        subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
@@ -692,7 +692,6 @@ class PandasLikeDataFrame:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        subset = flatten(subset) if subset else None
         return self._from_native_frame(
             self._native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
         )
@@ -1006,7 +1005,6 @@ class PandasLikeDataFrame:
             ]
 
             plx = self.__native_namespace__()
-
             return self._from_native_frame(
                 plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns]
             )

@@ -348,31 +348,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             result_table, backend_version=self._backend_version, version=self._version
         )
 
-    def sum(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).sum()
-
-    def mean(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).mean()
-
-    def median(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).median()
-
-    def max(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).max()
-
-    def min(self: Self, *column_names: str) -> ArrowExpr:
-        return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).min()
-
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace(
@@ -461,11 +436,9 @@ class ArrowWhen:
         import pyarrow as pa
         import pyarrow.compute as pc
 
-        from narwhals._arrow.namespace import ArrowNamespace
         from narwhals._expression_parsing import parse_into_expr
 
-        plx = ArrowNamespace(backend_version=self._backend_version, version=self._version)
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]

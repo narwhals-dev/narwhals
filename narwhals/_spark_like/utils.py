@@ -118,3 +118,43 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
             return column_result.over(Window.partitionBy(F.lit(1)))
         return column_result
     return obj
+
+
+def _std(
+    _input: Column,
+    ddof: int,
+    backend_version: tuple[int, ...],
+    np_version: tuple[int, ...],
+) -> Column:
+    if backend_version < (3, 5) or np_version > (2, 0):
+        from pyspark.sql import functions as F  # noqa: N812
+
+        if ddof == 1:
+            return F.stddev_samp(_input)
+
+        n_rows = F.count(_input)
+        return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
+
+    from pyspark.pandas.spark.functions import stddev
+
+    return stddev(_input, ddof=ddof)
+
+
+def _var(
+    _input: Column,
+    ddof: int,
+    backend_version: tuple[int, ...],
+    np_version: tuple[int, ...],
+) -> Column:
+    if backend_version < (3, 5) or np_version > (2, 0):
+        from pyspark.sql import functions as F  # noqa: N812
+
+        if ddof == 1:
+            return F.var_samp(_input)
+
+        n_rows = F.count(_input)
+        return F.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
+
+    from pyspark.pandas.spark.functions import var
+
+    return var(_input, ddof=ddof)

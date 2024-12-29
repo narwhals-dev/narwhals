@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=24.12.0"]
+cudf = ["cudf>=24.10.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
@@ -34,18 +34,21 @@ dev = [
   "duckdb",
   "pandas",
   "polars",
+  "pre-commit",
   "pyarrow",
-  "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "pyarrow-stubs",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
   "pytest-env",
-  "hypothesis",
   "hypothesis[numpy]",
-  "scikit-learn",
   "typing_extensions",
+]
+extra = [  # heavier dependencies we don't necessarily need in every testing job
+  "scikit-learn",
+  "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "dask[dataframe]; python_version >= '3.9'",
+  "modin",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -175,6 +178,7 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
+fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
@@ -183,14 +187,13 @@ omit = [
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
+  # we don't run these in every environment
   'tests/spark_like_test.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
-  "if (:?self._)?implementation is Implementation.MODIN",
   "if .*implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail',
-  '\w+._backend_version < ',
   'backend_version <',
   'if "cudf" in str\(constructor'
 ]

@@ -530,7 +530,7 @@ def pad_series(
         pad_left = pa.array([None] * offset_left, type=native_series.type)
         pad_right = pa.array([None] * offset_right, type=native_series.type)
         padded_arr = series._from_native_series(
-            pa.concat_arrays([pad_left, native_series.combine_chunks(), pad_right])
+            pa.concat_arrays([pad_left, *native_series.chunks, pad_right])
         )
         offset = offset_left + offset_right
     else:
