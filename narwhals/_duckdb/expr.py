@@ -591,6 +591,23 @@ class DuckDBExprStringNamespace:
             returns_scalar=False,
         )
 
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "replace" if literal else "regexp_replace",
+                _input,
+                ConstantExpression(pattern),
+                ConstantExpression(value),
+            ),
+            "replace_all",
+            returns_scalar=False,
+        )
+
 
 class DuckDBExprDateTimeNamespace:
     def __init__(self, expr: DuckDBExpr) -> None:
