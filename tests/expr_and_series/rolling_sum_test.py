@@ -50,6 +50,8 @@ def test_rolling_sum_expr(
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(

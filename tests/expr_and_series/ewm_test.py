@@ -15,7 +15,7 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
     "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
 )
 def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")):
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "duckdb")):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -70,7 +70,7 @@ def test_ewm_mean_expr_adjust(
     adjust: bool,  # noqa: FBT001
     expected: dict[str, list[float]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin")):
+    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "duckdb")):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -130,7 +130,10 @@ def test_ewm_mean_nulls(
     expected: dict[str, list[float]],
     constructor: Constructor,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "cudf")):
+    if any(
+        x in str(constructor)
+        for x in ("pyarrow_table_", "dask", "modin", "cudf", "duckdb")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))

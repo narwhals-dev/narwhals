@@ -60,8 +60,10 @@ def test_rolling_std_expr(
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "dask" in str(constructor) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1,)
+    if (
+        "dask" in str(constructor)
+        or ("polars" in str(constructor) and POLARS_VERSION < (1,))
+        or "duckdb" in str(constructor)
     ):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
