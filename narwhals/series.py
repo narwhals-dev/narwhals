@@ -1437,7 +1437,7 @@ class Series(Generic[IntoSeriesT]):
             reverse: reverse the operation
 
         Returns:
-            A new Series with the cumulative sum of the values.
+            A new Series with the cumulative sum of non-null values.
 
         Examples:
             >>> import pandas as pd
