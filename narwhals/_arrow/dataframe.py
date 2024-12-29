@@ -641,7 +641,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unique(
         self: Self,
-        subset: str | list[str] | None,
+        subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool,
@@ -653,9 +653,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow.compute as pc
 
         df = self._native_frame
-
-        if isinstance(subset, str):
-            subset = [subset]
         subset = subset or self.columns
 
         if keep in {"any", "first", "last"}:
