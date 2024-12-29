@@ -573,6 +573,24 @@ class DuckDBExprStringNamespace:
             returns_scalar=False,
         )
 
+    def to_lowercase(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("lower", _input),
+            "to_lowercase",
+            returns_scalar=False,
+        )
+
+    def to_uppercase(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("upper", _input),
+            "to_uppercase",
+            returns_scalar=False,
+        )
+
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
