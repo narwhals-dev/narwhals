@@ -2957,7 +2957,6 @@ class Series(Generic[IntoSeriesT]):
         Returns:
             A new Series containing the first n characters of each string.
 
-
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
