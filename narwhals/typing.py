@@ -68,6 +68,7 @@ CompliantSeriesT_co = TypeVar(
 
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
+    _backend_version: tuple[int, ...]
     _output_names: list[str] | None
     _root_names: list[str] | None
     _depth: int
