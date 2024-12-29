@@ -592,14 +592,18 @@ class DuckDBExprStringNamespace:
         )
 
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
+        import string
+
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        if characters is None:
-            characters = "\n \t"
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
-                "trim", _input, ConstantExpression(characters)
+                "trim",
+                _input,
+                ConstantExpression(
+                    string.whitespace if characters is None else characters
+                ),
             ),
             "strip_chars",
             returns_scalar=False,
