@@ -36,30 +36,28 @@ def n_unique() -> dd.Aggregation:
     )
 
 
-def var(ddof: int = 1) -> dd.Aggregation:
+def var(
+    ddof: int = 1,
+) -> Callable[
+    [pd.core.groupby.generic.SeriesGroupBy], pd.core.groupby.generic.SeriesGroupBy
+]:
+    from functools import partial
+
     import dask.dataframe as dd
 
-    return dd.Aggregation(
-        name="var_ddof",
-        chunk=lambda s: (s.count(), s.sum(), (s**2).sum()),
-        agg=lambda count, sum_, sum_sq: (count.sum(), sum_.sum(), sum_sq.sum()),
-        finalize=lambda count, sum_, sum_sq: (sum_sq - (sum_**2 / count))
-        / (count - ddof),
-    )
+    return partial(dd.groupby.DataFrameGroupBy.var, ddof=ddof)
 
 
-def std(ddof: int = 1) -> dd.Aggregation:
+def std(
+    ddof: int = 1,
+) -> Callable[
+    [pd.core.groupby.generic.SeriesGroupBy], pd.core.groupby.generic.SeriesGroupBy
+]:
+    from functools import partial
+
     import dask.dataframe as dd
 
-    return dd.Aggregation(
-        name="std_ddof",
-        chunk=lambda s: (s.count(), s.sum(), (s**2).sum()),
-        agg=lambda count, sum_, sum_sq: (count.sum(), sum_.sum(), sum_sq.sum()),
-        finalize=lambda count, sum_, sum_sq: (
-            (sum_sq - (sum_**2 / count)) / (count - ddof)
-        )
-        ** 0.5,
-    )
+    return partial(dd.groupby.DataFrameGroupBy.std, ddof=ddof)
 
 
 POLARS_TO_DASK_AGGREGATIONS = {
@@ -163,8 +161,12 @@ def agg_dask(
                 function_name = POLARS_TO_DASK_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
-                for output_name in expr._output_names:
-                    simple_aggregations[output_name] = (keys[0], function_name)
+                simple_aggregations.update(
+                    {
+                        output_name: (keys[0], function_name)
+                        for output_name in expr._output_names
+                    }
+                )
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
@@ -187,8 +189,14 @@ def agg_dask(
                 agg_function(**kwargs) if callable(agg_function) else agg_function
             )
 
-            for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (root_name, agg_function)
+            simple_aggregations.update(
+                {
+                    output_name: (root_name, agg_function)
+                    for root_name, output_name in zip(
+                        expr._root_names, expr._output_names
+                    )
+                }
+            )
         result_simple = grouped.agg(**simple_aggregations)
         return from_dataframe(result_simple.reset_index())
 
