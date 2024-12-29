@@ -617,7 +617,7 @@ class DuckDBExprStringNamespace:
         from duckdb import FunctionExpression
 
         if literal is False:
-            msg = "Only `literal=True` is currently supported."
+            msg = "`replace_all` for DuckDB currently only supports `literal=True`."
             raise NotImplementedError(msg)
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
@@ -632,7 +632,7 @@ class DuckDBExprStringNamespace:
 
     def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> NoReturn:
         msg = "`replace` is currently not supported for DuckDB"
-        raise TypeError(msg)
+        raise NotImplementedError(msg)
 
 
 class DuckDBExprDateTimeNamespace:
