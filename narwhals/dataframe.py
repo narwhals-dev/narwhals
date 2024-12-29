@@ -2209,9 +2209,15 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
+        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
+        from narwhals.series import Series
 
-        return GroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
+        flat_keys = flatten(keys)
+        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
+            msg = "`group_by` with expression or Series keys is not (yet?) supported."
+            raise NotImplementedError(msg)
+        return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,
@@ -4444,9 +4450,15 @@ class LazyFrame(BaseFrame[FrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
+        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
+        from narwhals.series import Series
 
-        return LazyGroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
+        flat_keys = flatten(keys)
+        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
+            msg = "`group_by` with expression or Series keys is not (yet?) supported."
+            raise NotImplementedError(msg)
+        return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,
