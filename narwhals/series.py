@@ -2119,7 +2119,11 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.is_between(lower_bound, upper_bound, closed=closed)
+            self._compliant_series.is_between(
+                self._extract_native(lower_bound),
+                self._extract_native(upper_bound),
+                closed=closed,
+            )
         )
 
     def n_unique(self) -> int:
