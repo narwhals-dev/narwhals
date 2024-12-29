@@ -2069,7 +2069,7 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self, lower_bound: Any | Self, upper_bound: Any | Self, closed: str = "both"
     ) -> Self:
         """Get a boolean mask of the values that are between the given lower/upper bounds.
 
