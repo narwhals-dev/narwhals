@@ -1419,10 +1419,8 @@ class ArrowSeriesCatNamespace:
         import pyarrow as pa
 
         ca = self._compliant_series._native_series
-        # TODO(Unassigned): this looks potentially expensive - is there no better way?
-        # https://github.com/narwhals-dev/narwhals/issues/464
         out = pa.chunked_array(
-            [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
+            [pa.concat_arrays(x.dictionary for x in ca.chunks).unique()]
         )
         return self._compliant_series._from_native_series(out)
 
