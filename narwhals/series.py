@@ -256,6 +256,9 @@ class Series(Generic[IntoSeriesT]):
             indices: Position(s) to set items at.
             values: Values to set.
 
+        Returns:
+            A new Series with values set at given positions.
+
         Note:
             This method always returns a new Series, without modifying the original one.
             Using this function in a for-loop is an anti-pattern, we recommend building
@@ -319,6 +322,9 @@ class Series(Generic[IntoSeriesT]):
     def shape(self) -> tuple[int]:
         """Get the shape of the Series.
 
+        Returns:
+            A tuple containing the length of the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -358,6 +364,9 @@ class Series(Generic[IntoSeriesT]):
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
+
+        Returns:
+            A new Series with the results of the piped function applied.
 
         Examples:
             >>> import polars as pl
@@ -416,6 +425,9 @@ class Series(Generic[IntoSeriesT]):
 
         Null values count towards the total.
 
+        Returns:
+            The number of elements in the Series.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
@@ -444,6 +456,9 @@ class Series(Generic[IntoSeriesT]):
     def dtype(self: Self) -> DType:
         """Get the data type of the Series.
 
+        Returns:
+            The data type of the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -471,6 +486,9 @@ class Series(Generic[IntoSeriesT]):
     @property
     def name(self) -> str:
         """Get the name of the Series.
+
+        Returns:
+            The name of the Series.
 
         Examples:
             >>> import pandas as pd
@@ -639,7 +657,7 @@ class Series(Generic[IntoSeriesT]):
         """Convert to dataframe.
 
         Returns:
-            A new DataFrame.
+            A DataFrame containing this Series as a single column.
 
         Examples:
             >>> import pandas as pd
@@ -719,6 +737,9 @@ class Series(Generic[IntoSeriesT]):
     def mean(self) -> Any:
         """Reduce this Series to the mean value.
 
+        Returns:
+            The average of all elements in the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -748,6 +769,9 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
+        Returns:
+            The median value of all elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -910,6 +934,9 @@ class Series(Generic[IntoSeriesT]):
     def min(self) -> Any:
         """Get the minimal value in this Series.
 
+        Returns:
+            The minimum value in the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -936,6 +963,9 @@ class Series(Generic[IntoSeriesT]):
 
     def max(self) -> Any:
         """Get the maximum value in this Series.
+
+        Returns:
+            The maximum value in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -1028,6 +1058,9 @@ class Series(Generic[IntoSeriesT]):
     def sum(self) -> Any:
         """Reduce this Series to the sum value.
 
+        Returns:
+            The sum of all elements in the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1058,6 +1091,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements.
+
+        Returns:
+            The standard deviation of all elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -1224,6 +1260,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             other: Sequence of primitive type.
 
+        Returns:
+            A new Series with boolean values indicating if the elements are in the other sequence.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1302,6 +1341,9 @@ class Series(Generic[IntoSeriesT]):
             pandas handles null values differently from Polars and PyArrow.
             See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
+
+        Returns:
+            A new Series with null values removed.
 
         Examples:
             >>> import pandas as pd
@@ -1395,7 +1437,7 @@ class Series(Generic[IntoSeriesT]):
             reverse: reverse the operation
 
         Returns:
-            A new Series with the cumulative sum of the values.
+            A new Series with the cumulative sum of non-null values.
 
         Examples:
             >>> import pandas as pd
@@ -1439,6 +1481,9 @@ class Series(Generic[IntoSeriesT]):
             maintain_order: Keep the same order as the original series. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
                 to run on the streaming engine for Polars.
+
+        Returns:
+            A new Series with duplicate values removed.
 
         Examples:
             >>> import pandas as pd
@@ -1487,6 +1532,9 @@ class Series(Generic[IntoSeriesT]):
 
                 s.diff().fill_null(0).cast(nw.Int64)
 
+        Returns:
+            A new Series with the difference between each element and its predecessor.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1526,6 +1574,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             n: Number of indices to shift forward. If a negative value is passed,
                 values are shifted in the opposite direction instead.
+
+        Returns:
+            A new Series with values shifted by n positions.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1585,6 +1636,9 @@ class Series(Generic[IntoSeriesT]):
             with_replacement: Allow values to be sampled more than once.
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
+
+        Returns:
+            A new Series containing randomly sampled values from the original Series.
 
         Notes:
             The `sample` method returns a Series with a specified number of
@@ -1729,6 +1783,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             name: The new name.
 
+        Returns:
+            A new Series with the updated name.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1792,6 +1849,9 @@ class Series(Generic[IntoSeriesT]):
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
                 inputs.
+
+        Returns:
+            A new Series with values replaced according to the mapping.
 
         Examples:
             >>> import narwhals as nw
@@ -1858,6 +1918,9 @@ class Series(Generic[IntoSeriesT]):
             descending: Sort in descending order.
             nulls_last: Place null values last instead of first.
 
+        Returns:
+            A new sorted Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1922,6 +1985,9 @@ class Series(Generic[IntoSeriesT]):
             See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
+        Returns:
+            A boolean Series indicating which values are null.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1983,6 +2049,9 @@ class Series(Generic[IntoSeriesT]):
             pandas handles null values differently from Polars and PyArrow.
             See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
+
+        Returns:
+            A new Series with null values filled according to the specified value or strategy.
 
         Examples:
             >>> import pandas as pd
@@ -2075,14 +2144,15 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             lower_bound: Lower bound value.
-
             upper_bound: Upper bound value.
-
             closed: Define which sides of the interval are closed (inclusive).
 
         Notes:
             If the value of the `lower_bound` is greater than that of the `upper_bound`,
             then the values will be False, as no value can satisfy the condition.
+
+        Returns:
+            A boolean Series indicating which values are between the given bounds.
 
         Examples:
             >>> import pandas as pd
@@ -2125,6 +2195,9 @@ class Series(Generic[IntoSeriesT]):
     def n_unique(self) -> int:
         """Count the number of unique values.
 
+        Returns:
+            Number of unique values in the Series.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2151,6 +2224,9 @@ class Series(Generic[IntoSeriesT]):
 
     def to_numpy(self) -> np.ndarray:
         """Convert to numpy.
+
+        Returns:
+            NumPy ndarray representation of the Series.
 
         Examples:
             >>> import pandas as pd
@@ -2179,6 +2255,9 @@ class Series(Generic[IntoSeriesT]):
 
     def to_pandas(self) -> pd.Series:
         """Convert to pandas.
+
+        Returns:
+            A pandas Series containing the data from this Series.
 
         Examples:
             >>> import pandas as pd
@@ -2337,6 +2416,9 @@ class Series(Generic[IntoSeriesT]):
     def filter(self, other: Any) -> Self:
         """Filter elements in the Series based on a condition.
 
+        Returns:
+            A new Series with elements that satisfy the condition.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -2377,7 +2459,7 @@ class Series(Generic[IntoSeriesT]):
         r"""Get a mask of all duplicated rows in the Series.
 
         Returns:
-            A new Series.
+            A new Series with boolean values indicating duplicated rows.
 
         Examples:
             >>> import narwhals as nw
@@ -2416,6 +2498,9 @@ class Series(Generic[IntoSeriesT]):
     def is_empty(self: Self) -> bool:
         r"""Check if the series is empty.
 
+        Returns:
+            A boolean indicating if the series is empty.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
@@ -2445,6 +2530,9 @@ class Series(Generic[IntoSeriesT]):
 
     def is_unique(self: Self) -> Self:
         r"""Get a mask of all unique rows in the Series.
+
+        Returns:
+            A new Series with boolean values indicating unique rows.
 
         Examples:
             >>> import narwhals as nw
@@ -2489,6 +2577,9 @@ class Series(Generic[IntoSeriesT]):
             See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
 
+        Returns:
+            The number of null values in the Series.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
@@ -2520,6 +2611,9 @@ class Series(Generic[IntoSeriesT]):
 
     def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Returns:
+            A new Series with boolean values indicating the first occurrence of each distinct value.
 
         Examples:
             >>> import narwhals as nw
@@ -2560,6 +2654,9 @@ class Series(Generic[IntoSeriesT]):
 
     def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Returns:
+            A new Series with boolean values indicating the last occurrence of each distinct value.
 
         Examples:
             >>> import narwhals as nw
@@ -2603,6 +2700,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             descending: Check if the Series is sorted in descending order.
+
+        Returns:
+            A boolean indicating if the Series is sorted.
 
         Examples:
             >>> import narwhals as nw
@@ -2652,7 +2752,9 @@ class Series(Generic[IntoSeriesT]):
             normalize: If true gives relative frequencies of the unique values
 
         Returns:
-            A new DataFrame.
+            A DataFrame with two columns:
+            - The original values as first column
+            - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
             >>> import narwhals as nw
@@ -2709,6 +2811,9 @@ class Series(Generic[IntoSeriesT]):
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
+        Returns:
+            The quantile value.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
@@ -2748,6 +2853,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             mask: Boolean Series
             other: Series of same type.
+
+        Returns:
+            A new Series with values selected from self or other based on the mask.
 
         Examples:
             >>> import narwhals as nw
@@ -2804,6 +2912,9 @@ class Series(Generic[IntoSeriesT]):
 
         If no index is provided, this is equivalent to `s[0]`, with a check
         that the shape is (1,). With an index, this is equivalent to `s[index]`.
+
+        Returns:
+            The scalar value of the Series or the element at the given index.
 
         Examples:
             >>> import narwhals as nw
@@ -2879,6 +2990,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             n: Number of rows to return.
 
+        Returns:
+            A new Series with the last n rows.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -2917,6 +3031,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             decimals: Number of decimals to round by.
+
+        Returns:
+            A new Series with rounded values.
 
         Notes:
             For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
@@ -2968,6 +3085,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             separator: Separator/delimiter used when generating column names.
             drop_first: Remove the first category from the variable being encoded.
+
+        Returns:
+            A new DataFrame containing the dummy/indicator variables.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -3039,6 +3159,9 @@ class Series(Generic[IntoSeriesT]):
             n: Gather every *n*-th row.
             offset: Starting index.
 
+        Returns:
+            A new Series with every nth value starting from the offset.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3074,6 +3197,9 @@ class Series(Generic[IntoSeriesT]):
 
     def to_arrow(self: Self) -> pa.Array:
         r"""Convert to arrow.
+
+        Returns:
+            A PyArrow Array containing the data from the Series.
 
         Examples:
             >>> import narwhals as nw
@@ -3115,6 +3241,9 @@ class Series(Generic[IntoSeriesT]):
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Returns:
+            A new Series containing the mode(s) (values that appear most frequently).
 
         Examples:
             >>> import pandas as pd
@@ -4279,6 +4408,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
+
+        Returns:
+            A new Series containing the first n characters of each string.
 
         Notes:
             1. When the `n` input is negative, `head` returns characters up to the n-th from the end of the string.
