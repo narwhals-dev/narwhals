@@ -24,7 +24,10 @@ def test_unique(
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

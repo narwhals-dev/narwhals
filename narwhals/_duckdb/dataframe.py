@@ -243,7 +243,8 @@ class DuckDBInterchangeFrame:
         self, subset: Sequence[str] | None, keep: Any, *, maintain_order: bool
     ) -> Self:
         if subset is not None:
-            return self._from_native_frame(self._native_frame.unique(", ".join(subset)))
+            msg = "`unique` with non-null `subset` is not yet supported"
+            raise NotImplementedError(msg)
         return self._from_native_frame(self._native_frame.unique(", ".join(self.columns)))
 
     def sort(
