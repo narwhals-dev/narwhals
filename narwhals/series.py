@@ -1436,6 +1436,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new Series with the cumulative sum of the values.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -3340,6 +3343,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new Series with the cumulative count of non-null values.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3392,6 +3398,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new Series with the cumulative min of non-null values.
 
         Examples:
             >>> import narwhals as nw
@@ -3446,6 +3455,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new Series with the cumulative max of non-null values.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3498,6 +3510,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new Series with the cumulative product of non-null values.
 
         Examples:
             >>> import narwhals as nw
