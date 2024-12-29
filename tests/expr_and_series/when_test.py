@@ -17,7 +17,9 @@ data = {
 }
 
 
-def test_when(constructor: Constructor) -> None:
+def test_when(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {
@@ -26,7 +28,9 @@ def test_when(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_otherwise(constructor: Constructor) -> None:
+def test_when_otherwise(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
     expected = {
@@ -35,7 +39,11 @@ def test_when_otherwise(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_multiple_conditions(constructor: Constructor) -> None:
+def test_multiple_conditions(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
@@ -46,7 +54,11 @@ def test_multiple_conditions(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_no_arg_when_fail(constructor: Constructor) -> None:
+def test_no_arg_when_fail(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))
@@ -56,6 +68,8 @@ def test_value_numpy_array(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -82,7 +96,11 @@ def test_value_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_value_expression(constructor: Constructor) -> None:
+def test_value_expression(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
     expected = {
@@ -95,6 +113,8 @@ def test_otherwise_numpy_array(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -121,7 +141,11 @@ def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_otherwise_expression(constructor: Constructor) -> None:
+def test_otherwise_expression(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(nw.col("a") + 7).alias("a_when")
@@ -132,14 +156,22 @@ def test_otherwise_expression(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
+def test_when_then_otherwise_into_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
+def test_when_then_otherwise_lit_str(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
