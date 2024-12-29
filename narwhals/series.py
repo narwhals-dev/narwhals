@@ -598,6 +598,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             dtype: Data type that the object will be cast into.
 
+        Returns:
+            A new Series with the specified data type.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -811,6 +814,9 @@ class Series(Generic[IntoSeriesT]):
 
     def count(self) -> Any:
         """Returns the number of non-null elements in the Series.
+
+        Returns:
+            The number of non-null elements in the Series.
 
         Examples:
             >>> import pandas as pd
@@ -1117,6 +1123,9 @@ class Series(Generic[IntoSeriesT]):
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
 
+        Returns:
+            A new Series with values clipped to the specified bounds.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1252,6 +1261,9 @@ class Series(Generic[IntoSeriesT]):
     def arg_true(self) -> Self:
         """Find elements where boolean Series is True.
 
+        Returns:
+            A new Series with the indices of elements that are True.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -1381,6 +1393,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new Series with the cumulative sum of the values.
 
         Examples:
             >>> import pandas as pd
@@ -3199,6 +3214,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new Series with the cumulative count of non-null values.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3251,6 +3269,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new Series with the cumulative min of non-null values.
 
         Examples:
             >>> import narwhals as nw
@@ -3305,6 +3326,9 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             reverse: reverse the operation
 
+        Returns:
+            A new Series with the cumulative max of non-null values.
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3357,6 +3381,9 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             reverse: reverse the operation
+
+        Returns:
+            A new Series with the cumulative product of non-null values.
 
         Examples:
             >>> import narwhals as nw
@@ -4125,21 +4152,23 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> pets = ["cat", "dog", "rabbit and parrot", "dove", None]
             >>> s_pd = pd.Series(pets)
             >>> s_pl = pl.Series(pets)
+            >>> s_pa = pa.chunked_array([pets])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_contains(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.contains("parrot|dove").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `agnostic_contains`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_contains(s_pd)
             0    False
             1    False
             2     True
@@ -4147,7 +4176,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             4     None
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_contains(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: '' [bool]
             [
@@ -4156,6 +4185,18 @@ class SeriesStringNamespace(Generic[SeriesT]):
                true
                true
                null
+            ]
+
+            >>> agnostic_contains(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                true,
+                null
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
