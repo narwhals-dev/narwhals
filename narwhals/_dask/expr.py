@@ -768,7 +768,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
-                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
+                _input.to_frame()
+                .groupby(_name, dropna=False)
+                .transform("size", meta=(_name, int))
+                > 1
             )
 
         return self._from_call(
@@ -781,7 +784,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
-                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
+                _input.to_frame()
+                .groupby(_name, dropna=False)
+                .transform("size", meta=(_name, int))
+                == 1
             )
 
         return self._from_call(
