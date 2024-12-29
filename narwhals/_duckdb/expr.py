@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import NoReturn
 from typing import Sequence
 
 from narwhals._duckdb.utils import get_column_name
@@ -597,9 +598,12 @@ class DuckDBExprStringNamespace:
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
+        if literal is False:
+            msg = "Only `literal=True` is currently supported."
+            raise NotImplementedError(msg)
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
-                "replace" if literal else "regexp_replace",
+                "replace",
                 _input,
                 ConstantExpression(pattern),
                 ConstantExpression(value),
@@ -607,6 +611,10 @@ class DuckDBExprStringNamespace:
             "replace_all",
             returns_scalar=False,
         )
+
+    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> NoReturn:
+        msg = "`replace` is currently not supported for DuckDB"
+        raise TypeError(msg)
 
 
 class DuckDBExprDateTimeNamespace:
