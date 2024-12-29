@@ -597,7 +597,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
-        import numpy as np  # ignore-banned-import
         import pyarrow as pa
         import pyarrow.compute as pc
 
@@ -608,14 +607,18 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         columns = self.columns
         col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         row_count = (
-            df.append_column(col_token, pa.array(np.arange(len(self))))
+            df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
             .group_by(columns)
-            .aggregate([(col_token, "count")])
+            .aggregate([(col_token, "sum")])
         )
         is_duplicated = pc.greater(
             df.join(
-                row_count, keys=columns, right_keys=columns, join_type="inner"
-            ).column(f"{col_token}_count"),
+                row_count,
+                keys=columns,
+                right_keys=columns,
+                join_type="inner",
+                use_threads=False,
+            ).column(f"{col_token}_sum"),
             1,
         )
         return ArrowSeries(

@@ -261,7 +261,7 @@ def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
 
     import pyarrow as pa
 
-    return pa.concat_tables(dfs).combine_chunks()
+    return pa.concat_tables(dfs)
 
 
 def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
@@ -276,7 +276,7 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
         if backend_version < (14, 0, 0)
         else {"promote_options": "default"}  # type: ignore[dict-item]
     )
-    return pa.concat_tables(dfs, **kwargs).combine_chunks()
+    return pa.concat_tables(dfs, **kwargs)
 
 
 def floordiv_compat(left: Any, right: Any) -> Any:
