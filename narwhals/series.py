@@ -488,7 +488,7 @@ class Series(Generic[IntoSeriesT]):
         """Get the name of the Series.
 
         Returns:
-            The name of the Series as a string.
+            The name of the Series.
 
         Examples:
             >>> import pandas as pd
