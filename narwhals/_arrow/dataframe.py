@@ -602,13 +602,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         from narwhals._arrow.series import ArrowSeries
 
-        df = self._native_frame
+        index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        df = self.with_row_index(index_token)._native_frame
 
         columns = self.columns
         col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         row_count = (
             df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
-            .group_by(columns)
+            .group_by([x for x in columns if x != index_token])
             .aggregate([(col_token, "sum")])
         )
         is_duplicated = pc.greater(
@@ -616,17 +617,20 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 row_count,
                 keys=columns,
                 right_keys=columns,
-                join_type="inner",
+                join_type="left outer",
                 use_threads=False,
-            ).column(f"{col_token}_sum"),
+            )
+            .sort_by(index_token)
+            .column(f"{col_token}_sum"),
             1,
         )
-        return ArrowSeries(
+        res = ArrowSeries(
             is_duplicated,
             name="",
             backend_version=self._backend_version,
             version=self._version,
         )
+        return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
