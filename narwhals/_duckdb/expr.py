@@ -370,7 +370,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         def func(
-            _input: duckdb.Expression, lower_bound, upper_bound
+            _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
             if closed == "left":
                 return (_input >= lower_bound) & (_input < upper_bound)
@@ -570,6 +570,20 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             func,
             "slice",
+            returns_scalar=False,
+        )
+
+    def strip_chars(self, characters: str | None) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        if characters is None:
+            characters = "\n \t"
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "trim", _input, ConstantExpression(characters)
+            ),
+            "strip_chars",
             returns_scalar=False,
         )
 
