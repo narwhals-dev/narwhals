@@ -4180,15 +4180,17 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>> data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_contains(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         default_match=nw.col("pets").str.contains("parrot|Dove"),
@@ -4198,16 +4200,17 @@ class ExprStringNamespace(Generic[ExprT]):
             ...         ),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `agnostic_contains`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_contains(df_pd)
                             pets default_match case_insensitive_match literal_match
             0                cat         False                  False         False
             1                dog         False                  False         False
             2  rabbit and parrot          True                   True         False
             3               dove         False                   True         False
             4               None          None                   None          None
-            >>> my_library_agnostic_function(df_pl)
+
+            >>> agnostic_contains(df_pl)
             shape: (5, 4)
             ┌───────────────────┬───────────────┬────────────────────────┬───────────────┐
             │ pets              ┆ default_match ┆ case_insensitive_match ┆ literal_match │
@@ -4220,6 +4223,18 @@ class ExprStringNamespace(Generic[ExprT]):
             │ dove              ┆ false         ┆ true                   ┆ false         │
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
+
+            >>> agnostic_contains(df_pa)
+            pyarrow.Table
+            pets: string
+            default_match: bool
+            case_insensitive_match: bool
+            literal_match: bool
+            ----
+            pets: [["cat","dog","rabbit and parrot","dove",null]]
+            default_match: [[false,false,true,false,null]]
+            case_insensitive_match: [[false,false,true,true,null]]
+            literal_match: [[false,false,false,false,null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
