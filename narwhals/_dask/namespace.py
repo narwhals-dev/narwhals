@@ -91,31 +91,6 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             kwargs={},
         )
 
-    def min(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).min()
-
-    def max(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).max()
-
-    def mean(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).mean()
-
-    def median(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).median()
-
-    def sum(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).sum()
-
     def len(self) -> DaskExpr:
         import dask.dataframe as dd
         import pandas as pd

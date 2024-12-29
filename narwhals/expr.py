@@ -1666,7 +1666,10 @@ class Expr:
 
     # --- transform ---
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any | IntoExpr,
+        upper_bound: Any | IntoExpr,
+        closed: str = "both",
     ) -> Self:
         """Check if this expression is between the given lower and upper bounds.
 
@@ -1724,7 +1727,9 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_between(
-                lower_bound, upper_bound, closed
+                extract_compliant(plx, lower_bound),
+                extract_compliant(plx, upper_bound),
+                closed,
             )
         )
 
@@ -6049,7 +6054,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     """Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        names: Name(s) of the columns to use in the aggregation function.
+        names: Name(s) of the columns to use.
 
     Returns:
         A new expression.
@@ -6308,7 +6313,7 @@ def sum(*columns: str) -> Expr:
         ----
         a: [[3]]
     """
-    return Expr(lambda plx: plx.sum(*columns))
+    return Expr(lambda plx: plx.col(*columns).sum())
 
 
 def mean(*columns: str) -> Expr:
@@ -6359,7 +6364,7 @@ def mean(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.mean(*columns))
+    return Expr(lambda plx: plx.col(*columns).mean())
 
 
 def median(*columns: str) -> Expr:
@@ -6411,7 +6416,7 @@ def median(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.median(*columns))
+    return Expr(lambda plx: plx.col(*columns).median())
 
 
 def min(*columns: str) -> Expr:
@@ -6462,7 +6467,7 @@ def min(*columns: str) -> Expr:
         ----
         b: [[5]]
     """
-    return Expr(lambda plx: plx.min(*columns))
+    return Expr(lambda plx: plx.col(*columns).min())
 
 
 def max(*columns: str) -> Expr:
@@ -6513,7 +6518,7 @@ def max(*columns: str) -> Expr:
         ----
         a: [[2]]
     """
-    return Expr(lambda plx: plx.max(*columns))
+    return Expr(lambda plx: plx.col(*columns).max())
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
