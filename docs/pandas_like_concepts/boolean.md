@@ -57,6 +57,9 @@ be a temporary legacy pandas issue which will eventually go
 away anyway.
 
 ```python exec="1" source="above" session="boolean"
+from narwhals.typing import FrameT
+
+
 def comparison(df: FrameT) -> FrameT:
     return nw.from_native(df).with_columns((nw.col("a") > 2).alias("a>2")).to_native()
 ```
