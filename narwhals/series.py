@@ -2954,6 +2954,10 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             n: Number of rows to return.
 
+        Returns:
+            A new Series containing the first n characters of each string.
+
+
         Examples:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
@@ -3970,6 +3974,9 @@ class SeriesCatNamespace(Generic[SeriesT]):
     def get_categories(self: Self) -> SeriesT:
         """Get unique categories from column.
 
+        Returns:
+            A new Series containing the unique categories.
+
         Examples:
             Let's create some series:
 
@@ -4013,6 +4020,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def len_chars(self: Self) -> SeriesT:
         r"""Return the length of each string as the number of characters.
+
+        Returns:
+            A new Series containing the length of each string in characters.
 
         Examples:
             >>> import pandas as pd
@@ -4065,6 +4075,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
 
+        Returns:
+            A new Series with the regex/literal pattern replaced with the specified value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4112,6 +4125,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
 
+        Returns:
+            A new Series with all occurrences of pattern replaced with the specified value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4155,6 +4171,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
 
+        Returns:
+            A new Series with leading and trailing characters removed.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4195,6 +4214,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             prefix: prefix substring
+
+        Returns:
+            A new Series with boolean values indicating if each string starts with the prefix.
 
         Examples:
             >>> import pandas as pd
@@ -4237,6 +4259,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             suffix: suffix substring
+
+        Returns:
+            A new Series with boolean values indicating if each string ends with the suffix.
 
         Examples:
             >>> import pandas as pd
@@ -4281,6 +4306,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             pattern: A Character sequence or valid regular expression pattern.
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
+
+        Returns:
+            A new Series with boolean values indicating if each string contains the pattern.
 
         Examples:
             >>> import pandas as pd
@@ -4343,6 +4371,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             offset: Start index. Negative indexing is supported.
             length: Length of the slice. If set to `None` (default), the slice is taken to the
                 end of the string.
+
+        Returns:
+            A new Series containing subslices of each string.
 
         Examples:
             >>> import pandas as pd
@@ -4464,6 +4495,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
 
+        Returns:
+            A new Series containing the last n characters of each string.
+
         Notes:
             1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
                 the string. For example, if `n = -3`, then all characters except the first three are returned.
@@ -4508,6 +4542,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_uppercase(self) -> SeriesT:
         r"""Transform string to uppercase variant.
+
+        Returns:
+            A new Series with values converted to uppercase.
 
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
@@ -4558,6 +4595,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
+
+        Returns:
+            A new Series with values converted to lowercase.
 
         Examples:
             >>> import pandas as pd
@@ -4618,6 +4658,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
 
+        Returns:
+            A new Series with datetime dtype.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4669,6 +4712,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def date(self: Self) -> SeriesT:
         """Get the date in a datetime series.
 
+        Returns:
+            A new Series with the date portion of the datetime values.
+
         Raises:
             NotImplementedError: If pandas default backend is being used.
 
@@ -4710,6 +4756,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def year(self: Self) -> SeriesT:
         """Get the year in a datetime series.
 
+        Returns:
+            A new Series containing the year component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4746,6 +4795,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def month(self: Self) -> SeriesT:
         """Gets the month in a datetime series.
+
+        Returns:
+            A new Series containing the month component of each datetime value.
 
         Examples:
             >>> import pandas as pd
@@ -4784,6 +4836,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def day(self: Self) -> SeriesT:
         """Extracts the day in a datetime series.
 
+        Returns:
+            A new Series containing the day component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4820,6 +4875,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def hour(self: Self) -> SeriesT:
         """Extracts the hour in a datetime series.
+
+        Returns:
+            A new Series containing the hour component of each datetime value.
 
         Examples:
             >>> import pandas as pd
@@ -4858,6 +4916,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def minute(self: Self) -> SeriesT:
         """Extracts the minute in a datetime series.
 
+        Returns:
+            A new Series containing the minute component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4895,6 +4956,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def second(self: Self) -> SeriesT:
         """Extracts the seconds in a datetime series.
 
+        Returns:
+            A new Series containing the second component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4931,6 +4995,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def millisecond(self: Self) -> SeriesT:
         """Extracts the milliseconds in a datetime series.
+
+        Returns:
+            A new Series containing the millisecond component of each datetime value.
 
         Examples:
             >>> import pandas as pd
@@ -4982,6 +5049,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def microsecond(self: Self) -> SeriesT:
         """Extracts the microseconds in a datetime series.
 
+        Returns:
+            A new Series containing the microsecond component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -5032,6 +5102,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def nanosecond(self: Self) -> SeriesT:
         """Extract the nanoseconds in a date series.
 
+        Returns:
+            A new Series containing the nanosecond component of each datetime value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -5071,6 +5144,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def ordinal_day(self: Self) -> SeriesT:
         """Get ordinal day.
+
+        Returns:
+            A new Series containing the ordinal day (day of year) for each datetime value.
 
         Examples:
             >>> import pandas as pd
@@ -5114,6 +5190,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
+        Returns:
+            A new Series containing the total number of minutes for each timedelta value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -5155,6 +5234,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             The function outputs the total seconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
+
+        Returns:
+            A new Series containing the total number of seconds for each timedelta value.
 
         Examples:
             >>> import pandas as pd
@@ -5198,6 +5280,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
+        Returns:
+            A new Series containing the total number of milliseconds for each timedelta value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -5237,6 +5322,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def total_microseconds(self: Self) -> SeriesT:
         """Get total microseconds.
+
+        Returns:
+            A new Series containing the total number of microseconds for each timedelta value.
 
         Notes:
             The function outputs the total microseconds in the int dtype by default,
@@ -5288,6 +5376,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
+        Returns:
+            A new Series containing the total number of nanoseconds for each timedelta value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -5324,6 +5415,12 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def to_string(self: Self, format: str) -> SeriesT:  # noqa: A002
         """Convert a Date/Time/Datetime series into a String series with the given format.
+
+        Arguments:
+            format: Format string for converting the datetime to string.
+
+        Returns:
+            A new Series with the datetime values formatted as strings according to the specified format.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -5403,6 +5500,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         Arguments:
             time_zone: Target time zone.
 
+        Returns:
+            A new Series with the specified time zone.
+
         Examples:
             >>> from datetime import datetime, timezone
             >>> import narwhals as nw
@@ -5458,6 +5558,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
         Arguments:
             time_zone: Target time zone.
+
+        Returns:
+            A new Series with the specified time zone.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -5515,6 +5618,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         Arguments:
             time_unit: {'ns', 'us', 'ms'}
                 Time unit.
+
+        Returns:
+            A new Series with timestamps in the specified time unit.
 
         Examples:
             >>> from datetime import date
