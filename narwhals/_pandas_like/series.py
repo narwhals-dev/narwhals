@@ -263,6 +263,8 @@ class PandasLikeSeries(CompliantSeries):
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasLikeSeries:
         ser = self._native_series
+        _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
+        _, upper_bound = broadcast_align_and_extract_native(self, upper_bound)
         if closed == "left":
             res = ser.ge(lower_bound) & ser.lt(upper_bound)
         elif closed == "right":
@@ -273,7 +275,14 @@ class PandasLikeSeries(CompliantSeries):
             res = ser.ge(lower_bound) & ser.le(upper_bound)
         else:  # pragma: no cover
             raise AssertionError
-        return self._from_native_series(res)
+        return self._from_native_series(
+            rename(
+                res,
+                ser.name,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+        )
 
     def is_in(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
