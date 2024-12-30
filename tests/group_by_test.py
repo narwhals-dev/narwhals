@@ -453,3 +453,9 @@ def test_all_kind_of_aggs(
         "i": [3, 2],
     }
     assert_equal_data(result, expected)
+
+
+def test_group_by_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
+    with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
+        df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]

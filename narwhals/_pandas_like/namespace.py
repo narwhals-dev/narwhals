@@ -169,47 +169,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={},
         )
 
-    # --- reduction ---
-    def sum(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).sum()
-
-    def mean(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).mean()
-
-    def median(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).median()
-
-    def max(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).max()
-
-    def min(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).min()
-
     def len(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
