@@ -3826,7 +3826,7 @@ class Expr:
             descending: Rank in descending order.
 
         Returns:
-            A new expression.
+            A new expression with rank data.
 
         Examples:
             >>> import narwhals as nw

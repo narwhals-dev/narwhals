@@ -3977,7 +3977,7 @@ class Series(Generic[IntoSeriesT]):
             descending: Rank in descending order.
 
         Returns:
-            A new series
+            A new series with rank data as values.
 
         Examples:
             >>> import narwhals as nw
