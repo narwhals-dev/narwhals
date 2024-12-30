@@ -1931,6 +1931,9 @@ class Expr:
         Returns:
             A new expression.
 
+        Raises:
+            narwhals.InvalidOperationError for non-Float64 dtypes.
+
         Notes:
             pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
             distinguish between NaN and Null, whereas pandas doesn't.
@@ -1941,54 +1944,50 @@ class Expr:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
-            >>> df_pd = pd.DataFrame(data).astype({"a": "Int64"})
+            >>> data = {"orig": [0.0, None, 2.0]}
+            >>> df_pd = pd.DataFrame(data).astype({"orig": "Float64"})
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
-            >>> def agnostic_is_nan_columns(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_self_div_is_nan(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan()
+            ...         divided=nw.col("orig") / nw.col("orig"),
+            ...         divided_is_nan=(nw.col("orig") / nw.col("orig")).is_nan(),
             ...     ).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_is_nan_columns`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_self_div_is_nan`:
 
-            >>> agnostic_is_nan_columns(df_pd)
-                  a    b  a_is_nan  b_is_nan
-            0     2  2.0     False     False
-            1     4  4.0     False     False
-            2  <NA>  NaN      <NA>      True
-            3     3  3.0     False     False
-            4     5  5.0     False     False
+            >>> print(agnostic_self_div_is_nan(df_pd))
+               orig  divided  divided_is_nan
+            0   0.0      NaN            True
+            1  <NA>     <NA>            <NA>
+            2   2.0      1.0           False
 
-            >>> agnostic_is_nan_columns(df_pl)  # nan != null for polars
-            shape: (5, 4)
-            ┌──────┬─────┬──────────┬──────────┐
-            │ a    ┆ b   ┆ a_is_nan ┆ b_is_nan │
-            │ ---  ┆ --- ┆ ---      ┆ ---      │
-            │ i64  ┆ f64 ┆ bool     ┆ bool     │
-            ╞══════╪═════╪══════════╪══════════╡
-            │ 2    ┆ 2.0 ┆ false    ┆ false    │
-            │ 4    ┆ 4.0 ┆ false    ┆ false    │
-            │ null ┆ NaN ┆ false    ┆ true     │
-            │ 3    ┆ 3.0 ┆ false    ┆ false    │
-            │ 5    ┆ 5.0 ┆ false    ┆ false    │
-            └──────┴─────┴──────────┴──────────┘
+            >>> print(agnostic_self_div_is_nan(df_pl))
+            shape: (3, 3)
+            ┌──────┬─────────┬────────────────┐
+            │ orig ┆ divided ┆ divided_is_nan │
+            │ ---  ┆ ---     ┆ ---            │
+            │ f64  ┆ f64     ┆ bool           │
+            ╞══════╪═════════╪════════════════╡
+            │ 0.0  ┆ NaN     ┆ true           │
+            │ null ┆ null    ┆ null           │
+            │ 2.0  ┆ 1.0     ┆ false          │
+            └──────┴─────────┴────────────────┘
 
-            >>> agnostic_is_nan_columns(df_pa)  # nan != null for pyarrow
+            >>> print(agnostic_self_div_is_nan(df_pa))
             pyarrow.Table
-            a: int64
-            b: double
-            a_is_nan: bool
-            b_is_nan: bool
+            orig: double
+            divided: double
+            divided_is_nan: bool
             ----
-            a: [[2,4,null,3,5]]
-            b: [[2,4,nan,3,5]]
-            a_is_nan: [[false,false,null,false,false]]
-            b_is_nan: [[false,false,true,false,false]]
+            orig: [[0,null,2]]
+            divided: [[nan,null,1]]
+            divided_is_nan: [[true,null,false]]
+
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_nan())
 

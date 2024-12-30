@@ -2033,7 +2033,13 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(self._compliant_series.is_null())
 
     def is_nan(self) -> Self:
-        """Returns a boolean Series indicating which values are null.
+        """Returns a boolean Series indicating which values are NaN.
+
+        Returns:
+            A new Series.
+
+        Raises:
+            narwhals.InvalidOperationError for non-Float64 dtypes.
 
         Notes:
             pandas and Polars handle NaN values differently. Polars distinguishes
@@ -2045,39 +2051,37 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
-            >>> s = [1.0, 2.0, float("nan")]
-            >>> s_pd = pd.Series(s, dtype="float64")
-            >>> s_pl = pl.Series(s)
-            >>> s_pa = pa.chunked_array([s], type=pa.float64())
 
-            We define a series-agnostic function:
+            >>> data = [0.0, None, 2.0]
+            >>> s_pd = pd.Series(data, dtype="Float64")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data], type=pa.float64())
 
-            >>> def agnostic_is_nan_series(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_self_div_is_nan(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.is_nan().to_native()
 
-            We can then pass either pandas or Polars to `agnostic_is_nan_series`:
-
-            >>> agnostic_is_nan_series(s_pd)
+            >>> print(agnostic_self_div_is_nan(s_pd))
             0    False
-            1    False
-            2     True
-            dtype: bool
-            >>> agnostic_is_nan_series(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            1     <NA>
+            2    False
+            dtype: boolean
+
+            >>> print(agnostic_self_div_is_nan(s_pl))  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
-               false
-               false
-               true
+                    false
+                    null
+                    false
             ]
-            >>> agnostic_is_nan_series(s_pa)  # doctest: +NORMALIZE_WHITESPACE
-            <pyarrow.lib.ChunkedArray object at ...>
+
+            >>> print(agnostic_self_div_is_nan(s_pa))  # doctest: +NORMALIZE_WHITESPACE
             [
               [
                 false,
-                false,
-                true
+                null,
+                false
               ]
             ]
         """
