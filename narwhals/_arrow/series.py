@@ -487,6 +487,12 @@ class ArrowSeries(CompliantSeries):
         import pyarrow.compute as pc
 
         ser = self._native_series
+        _, lower_bound = broadcast_and_extract_native(
+            self, lower_bound, self._backend_version
+        )
+        _, upper_bound = broadcast_and_extract_native(
+            self, upper_bound, self._backend_version
+        )
         if closed == "left":
             ge = pc.greater_equal(ser, lower_bound)
             lt = pc.less(ser, upper_bound)
@@ -1443,10 +1449,8 @@ class ArrowSeriesCatNamespace:
         import pyarrow as pa
 
         ca = self._compliant_series._native_series
-        # TODO(Unassigned): this looks potentially expensive - is there no better way?
-        # https://github.com/narwhals-dev/narwhals/issues/464
         out = pa.chunked_array(
-            [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
+            [pa.concat_arrays(x.dictionary for x in ca.chunks).unique()]
         )
         return self._compliant_series._from_native_series(out)
 

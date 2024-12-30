@@ -478,7 +478,7 @@ class Series(NwSeries[Any]):
         """Convert to dataframe.
 
         Returns:
-            A new DataFrame.
+            A DataFrame containing this Series as a single column.
 
         Examples:
             >>> import pandas as pd
@@ -535,7 +535,9 @@ class Series(NwSeries[Any]):
             normalize: If true gives relative frequencies of the unique values
 
         Returns:
-            A new DataFrame.
+            A DataFrame with two columns:
+            - The original values as first column
+            - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
             >>> import narwhals as nw
@@ -2319,7 +2321,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     """Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        names: Name(s) of the columns to use in the aggregation function.
+        names: Name(s) of the columns to use.
 
     Returns:
         A new expression.
