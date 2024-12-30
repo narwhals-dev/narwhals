@@ -140,7 +140,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 if self._returns_scalar:
                     _input = _input[0]
                 result = call(_input, **_kwargs)
-                if returns_scalar and hasattr(result, "to_series"):
+                if returns_scalar:
                     result = result.to_series()
                 result = result.rename(name)
                 results.append(result)
