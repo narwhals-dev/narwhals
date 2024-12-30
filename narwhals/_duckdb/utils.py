@@ -18,7 +18,11 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def get_column_name(df: DuckDBInterchangeFrame, column: duckdb.Expression) -> str:
+def get_column_name(
+    df: DuckDBInterchangeFrame, column: duckdb.Expression, *, returns_scalar: bool
+) -> str:
+    if returns_scalar:
+        return str(df._native_frame.aggregate([column]).columns[0])
     return str(df._native_frame.select(column).columns[0])
 
 
@@ -53,7 +57,10 @@ def parse_exprs_and_named_exprs(
         if isinstance(expr, str):  # pragma: no cover
             output_names = [expr]
         elif expr._output_names is None:
-            output_names = [get_column_name(df, col) for col in column_list]
+            output_names = [
+                get_column_name(df, col, returns_scalar=expr._returns_scalar)
+                for col in column_list
+            ]
         else:
             output_names = expr._output_names
         result_columns.update(zip(output_names, column_list))

@@ -17,15 +17,15 @@ from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from narwhals.typing import IntoFrame
 
 import duckdb
 import polars as pl
 
 
-def duckdb_constructor(obj) -> Constructor:
+def duckdb_constructor(obj: dict[str, Any]) -> IntoFrame:
     _df = pl.DataFrame(obj)
-    return duckdb.table("_df")
+    return duckdb.table("_df")  # type: ignore[no-any-return]
 
 
 # copied from tests/translate/from_native_test.py
@@ -281,7 +281,6 @@ def test_allh_all() -> None:
 
 
 # copied from tests/expr_and_series/count_test.py
-@pytest.mark.xfail
 def test_count() -> None:
     data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(duckdb_constructor(data))
@@ -313,7 +312,6 @@ def test_double_alias() -> None:
 
 
 # copied from tests/expr_and_series/max_test.py
-@pytest.mark.xfail
 def test_expr_max_expr() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
@@ -324,7 +322,6 @@ def test_expr_max_expr() -> None:
 
 
 # copied from tests/expr_and_series/min_test.py
-@pytest.mark.xfail
 def test_expr_min_expr() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(duckdb_constructor(data))

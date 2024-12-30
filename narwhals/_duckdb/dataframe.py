@@ -84,6 +84,16 @@ class DuckDBInterchangeFrame:
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(self._native_frame.limit(0))
+
+        if all(getattr(x, "_returns_scalar", False) for x in exprs) and all(
+            getattr(x, "_returns_scalar", False) for x in named_exprs.values()
+        ):
+            return self._from_native_frame(
+                self._native_frame.aggregate(
+                    [val.alias(col) for col, val in new_columns_map.items()]
+                )
+            )
+
         return self._from_native_frame(
             self._native_frame.select(
                 *(val.alias(col) for col, val in new_columns_map.items())

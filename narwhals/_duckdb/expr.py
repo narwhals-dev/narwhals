@@ -103,7 +103,9 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                input_col_name = get_column_name(df, _input)
+                input_col_name = get_column_name(
+                    df, _input, returns_scalar=self._returns_scalar
+                )
 
                 column_result = call(_input, **_kwargs)
                 column_result = column_result.alias(input_col_name)
