@@ -602,14 +602,18 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         from narwhals._arrow.series import ArrowSeries
 
-        index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        columns = self.columns
+        index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
+        col_token = generate_temporary_column_name(
+            n_bytes=8,
+            columns=[*columns, index_token],
+        )
+
         df = self.with_row_index(index_token)._native_frame
 
-        columns = self.columns
-        col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         row_count = (
             df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
-            .group_by([x for x in columns if x != index_token])
+            .group_by(columns)
             .aggregate([(col_token, "sum")])
         )
         is_duplicated = pc.greater(
