@@ -324,9 +324,6 @@ def test_key_with_nulls_iter(
     if PANDAS_VERSION < (1, 3) and "pandas_constructor" in str(constructor_eager):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/17650
-        request.applymarker(pytest.mark.xfail)
     data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
