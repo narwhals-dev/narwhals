@@ -167,7 +167,6 @@ filterwarnings = [
   'ignore:is_datetime64tz_dtype is deprecated',
   'ignore: unclosed <socket.socket',
   'ignore:The distutils package is deprecated and slated for removal',
-  'ignore:*All-NaN slice encountered:RuntimeWarning',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
