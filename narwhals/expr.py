@@ -5203,6 +5203,50 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
         )
 
+    def weekday(self: Self) -> ExprT:
+        """Extract the week day in a datetime series.
+
+        Returns:
+            Returns the ISO weekday number where monday = 1 and sunday = 7
+
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(a_weekday=nw.col("a").dt.weekday()).to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> my_library_agnostic_function(df_pd)
+                       a  a_weekday
+            0 2020-01-01          3
+            1 2020-08-03          1
+            >>> my_library_agnostic_function(df_pl)
+            shape: (2, 2)
+            ┌─────────────────────┬───────────┐
+            │ a                   ┆ a_weekday │
+            │ ---                 ┆ ---       │
+            │ datetime[μs]        ┆ i8        │
+            ╞═════════════════════╪═══════════╡
+            │ 2020-01-01 00:00:00 ┆ 3         │
+            │ 2020-08-03 00:00:00 ┆ 1         │
+            └─────────────────────┴───────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
+        )
+
     def total_minutes(self: Self) -> ExprT:
         """Get total minutes.
 

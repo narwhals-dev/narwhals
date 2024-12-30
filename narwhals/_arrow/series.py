@@ -1303,6 +1303,14 @@ class ArrowSeriesDateTimeNamespace:
             pc.day_of_year(self._compliant_series._native_series)
         )
 
+    def weekday(self: Self) -> ArrowSeries:
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        return self._compliant_series._from_native_series(
+            pc.add(pc.day_of_week(self._compliant_series._native_series), pa.scalar(1))
+        )
+
     def total_minutes(self: Self) -> ArrowSeries:
         import pyarrow as pa
         import pyarrow.compute as pc
