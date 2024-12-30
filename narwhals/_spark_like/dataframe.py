@@ -215,6 +215,8 @@ class SparkLikeLazyFrame:
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
+        import pyspark.sql.functions as F  # noqa: N812
+
         self_native = self._native_frame
         other_native = other._native_frame
 
@@ -236,8 +238,7 @@ class SparkLikeLazyFrame:
                 for colname in list(set(right_columns).difference(set(right_on or [])))
             },
         }
-        return self._from_native_frame(
-            self_native.join(
-                other=other_native.withColumnsRenamed(rename_mapping), on=left_on, how=how
-            )
+        other = other_native.select(
+            [F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
+        return self._from_native_frame(self_native.join(other=other, on=left_on, how=how))

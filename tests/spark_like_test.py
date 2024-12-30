@@ -824,8 +824,6 @@ def test_left_join_multiple_column(pyspark_constructor: Constructor) -> None:
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
-    from pyspark.errors import AnalysisException
-
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
@@ -852,17 +850,22 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     }
     assert_equal_data(result, expected)
 
-    with pytest.raises(
-        AnalysisException,
-        match=r"\[COLUMN_ALREADY_EXISTS\] The column `antananarivo_right` already exists.",
-    ):
-        (
-            df_left.join(
-                df_right,  # type: ignore[arg-type]
-                left_on="antananarivo",
-                right_on="d",
-                how="left",
-            )
-            .sort("idx")
-            .drop("idx_right")
+    result = (
+        df_left.join(
+            df_right,  # type: ignore[arg-type]
+            left_on="antananarivo",
+            right_on="d",
+            how="left",
         )
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "d": [1, 4, 2],
+        "antananarivo_right": [1.0, 3.0, float("nan")],
+        "c": [4.0, 6.0, float("nan")],
+        "idx": [0, 1, 2],
+    }
+    assert_equal_data(result, expected)
