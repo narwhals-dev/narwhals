@@ -20,9 +20,10 @@ Let's learn about what Narwhals promises.
 
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
+from narwhals.typing import IntoFrameT
 
 
-def my_func(df):
+def my_func(df: IntoFrameT) -> IntoFrameT:
     df = nw.from_native(df)
     df = df.with_columns(a_plus_one=nw.col("a") + 1)
     return nw.to_native(df)
@@ -51,13 +52,16 @@ df_pd = pd.DataFrame({"a": [2, 1, 3], "b": [4, 5, 6]})
 s_pd = df_pd["a"].sort_values()
 df_pd["a_sorted"] = s_pd
 ```
+
 Reading the code, you might expect that `'a_sorted'` will contain the
 values `[1, 2, 3]`.
 
 **However**, here's what actually happens:
+
 ```python exec="1" source="material-block" session="ex2" result="python"
 print(df_pd)
 ```
+
 In other words, pandas' index alignment undid the `sort_values` operation!
 
 Narwhals, on the other hand, preserves the index of the left-hand-side argument.
