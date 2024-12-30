@@ -9,6 +9,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
+from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -114,7 +115,11 @@ def test_missing_columns(constructor: Constructor) -> None:
             df.select(nw.col("fdfa"))
 
 
-def test_left_to_right_broadcasting(constructor: Constructor) -> None:
+def test_left_to_right_broadcasting(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 9):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
