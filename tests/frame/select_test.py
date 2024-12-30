@@ -112,3 +112,16 @@ def test_missing_columns(constructor: Constructor) -> None:
             df.drop(selected_columns, strict=True)
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.select(nw.col("fdfa"))
+
+
+def test_left_to_right_broadcasting(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.select(nw.col("a") + nw.col("b").sum())
+    expected = {"a": [16, 16, 17]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.col("b").sum() + nw.col("a"))
+    expected = {"b": [16, 16, 17]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.col("b").sum() + nw.col("a").sum())
+    expected = {"b": [19]}
+    assert_equal_data(result, expected)

@@ -136,10 +136,13 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
+                name = _input.name
+                if self._returns_scalar:
+                    _input = _input[0]
                 result = call(_input, **_kwargs)
                 if returns_scalar and hasattr(result, "to_series"):
                     result = result.to_series()
-                result = result.rename(_input.name)
+                result = result.rename(name)
                 results.append(result)
             return results
 
@@ -168,12 +171,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
             raise AssertionError(msg)
 
-        if self._returns_scalar and not returns_scalar:
-            msg = (
-                "Binary operations between scalar (left-hand-side) "
-                "and Series (right-hand-side) are not yet supported for Dask."
-            )
-            raise NotImplementedError(msg)
         return self.__class__(
             func,
             depth=self._depth + 1,
