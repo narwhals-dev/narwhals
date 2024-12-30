@@ -2036,14 +2036,12 @@ class Series(Generic[IntoSeriesT]):
         """Returns a boolean Series indicating which values are NaN.
 
         Returns:
-            A new Series.
-
-        Raises:
-            narwhals.InvalidOperationError for non-Float64 dtypes.
+            A boolean Series indicating which values are NaN.
 
         Notes:
-            pandas and Polars handle NaN values differently. Polars distinguishes
-            between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd

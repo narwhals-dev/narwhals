@@ -1926,17 +1926,15 @@ class Expr:
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def is_nan(self) -> Self:
-        """Returns a boolean Series indicating which values are NaN.
+        """Indicate which values are NaN.
 
         Returns:
             A new expression.
 
-        Raises:
-            narwhals.InvalidOperationError for non-Float64 dtypes.
-
         Notes:
-            pandas, Polars and PyArrow handle null values differently. Polars and PyArrow
-            distinguish between NaN and Null, whereas pandas doesn't.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
 
         Examples:
             >>> import pandas as pd
