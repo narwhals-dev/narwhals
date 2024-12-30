@@ -58,6 +58,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        kwargs: dict[str, Any],
     ) -> PandasLikeExpr:
         return PandasLikeExpr(
             func,
@@ -68,6 +69,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs=kwargs,
         )
 
     def _create_series_from_scalar(
@@ -92,6 +94,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
@@ -137,6 +140,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def lit(self, value: Any, dtype: DType | None) -> PandasLikeExpr:
@@ -162,48 +166,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
-
-    # --- reduction ---
-    def sum(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).sum()
-
-    def mean(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).mean()
-
-    def median(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).median()
-
-    def max(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).max()
-
-    def min(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).min()
 
     def len(self) -> PandasLikeExpr:
         return PandasLikeExpr(
@@ -224,6 +188,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     # --- horizontal ---
@@ -240,6 +205,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -255,6 +221,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -270,6 +237,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -288,6 +256,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="mean_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -318,6 +287,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="min_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -348,6 +318,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="max_horizontal",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -462,6 +433,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             function_name="concat_str",
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 
@@ -485,15 +462,9 @@ class PandasWhen:
 
     def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
         from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
-        plx = PandasLikeNamespace(
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
@@ -542,6 +513,7 @@ class PandasWhen:
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"value": value},
         )
 
 
@@ -557,6 +529,7 @@ class PandasThen(PandasLikeExpr):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        kwargs: dict[str, Any],
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
@@ -566,6 +539,7 @@ class PandasThen(PandasLikeExpr):
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._kwargs = kwargs
 
     def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a

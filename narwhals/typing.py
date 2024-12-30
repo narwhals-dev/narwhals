@@ -68,10 +68,12 @@ CompliantSeriesT_co = TypeVar(
 
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
+    _backend_version: tuple[int, ...]
     _output_names: list[str] | None
     _root_names: list[str] | None
     _depth: int
     _function_name: str
+    _kwargs: dict[str, Any]
 
     def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
     def __narwhals_expr__(self) -> None: ...

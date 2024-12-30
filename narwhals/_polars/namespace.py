@@ -128,17 +128,6 @@ class PolarsNamespace:
             pl.lit(value), version=self._version, backend_version=self._backend_version
         )
 
-    def mean(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl
-
-        from narwhals._polars.expr import PolarsExpr
-
-        return PolarsExpr(
-            pl.mean([*column_names]),  # type: ignore[arg-type]
-            version=self._version,
-            backend_version=self._backend_version,
-        )
-
     def mean_horizontal(self: Self, *exprs: IntoPolarsExpr) -> PolarsExpr:
         import polars as pl
 
@@ -156,17 +145,6 @@ class PolarsNamespace:
 
         return PolarsExpr(
             pl.mean_horizontal(e._native_expr for e in polars_exprs),
-            version=self._version,
-            backend_version=self._backend_version,
-        )
-
-    def median(self: Self, *column_names: str) -> PolarsExpr:
-        import polars as pl
-
-        from narwhals._polars.expr import PolarsExpr
-
-        return PolarsExpr(
-            pl.median([*column_names]),  # type: ignore[arg-type]
             version=self._version,
             backend_version=self._backend_version,
         )

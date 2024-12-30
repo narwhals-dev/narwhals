@@ -17,7 +17,7 @@ from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_axis
+from narwhals._pandas_like.utils import set_index
 from narwhals._pandas_like.utils import to_datetime
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
@@ -212,7 +212,7 @@ class PandasLikeSeries(CompliantSeries):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
             _, values = broadcast_align_and_extract_native(self, values)
-            values = set_axis(
+            values = set_index(
                 values.copy(),
                 self._native_series.index[indices],
                 implementation=self._implementation,
@@ -264,6 +264,8 @@ class PandasLikeSeries(CompliantSeries):
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasLikeSeries:
         ser = self._native_series
+        _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
+        _, upper_bound = broadcast_align_and_extract_native(self, upper_bound)
         if closed == "left":
             res = ser.ge(lower_bound) & ser.lt(upper_bound)
         elif closed == "right":
@@ -274,7 +276,14 @@ class PandasLikeSeries(CompliantSeries):
             res = ser.ge(lower_bound) & ser.le(upper_bound)
         else:  # pragma: no cover
             raise AssertionError
-        return self._from_native_series(res)
+        return self._from_native_series(
+            rename(
+                res,
+                ser.name,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+        )
 
     def is_in(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
@@ -1429,7 +1438,7 @@ class PandasLikeSeriesListNamespace:
             self._compliant_series._implementation is Implementation.PANDAS
             and self._compliant_series._backend_version < (3, 0)
         ):  # pragma: no cover
-            native_result = set_axis(
+            native_result = set_index(
                 rename(
                     native_result,
                     native_series.name,

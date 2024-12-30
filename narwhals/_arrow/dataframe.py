@@ -504,7 +504,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     predicates, (plx.col(name) == v for name, v in constraints.items())
                 )
             )
-            # Safety: all_horizontal's expression only returns a single column.
+            # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]._native_series
         return self._from_native_frame(self._native_frame.filter(mask))
 
@@ -597,33 +597,44 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
-        import numpy as np  # ignore-banned-import
         import pyarrow as pa
         import pyarrow.compute as pc
 
         from narwhals._arrow.series import ArrowSeries
 
-        df = self._native_frame
-
         columns = self.columns
-        col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
+        index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
+        col_token = generate_temporary_column_name(
+            n_bytes=8,
+            columns=[*columns, index_token],
+        )
+
+        df = self.with_row_index(index_token)._native_frame
+
         row_count = (
-            df.append_column(col_token, pa.array(np.arange(len(self))))
+            df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
             .group_by(columns)
-            .aggregate([(col_token, "count")])
+            .aggregate([(col_token, "sum")])
         )
         is_duplicated = pc.greater(
             df.join(
-                row_count, keys=columns, right_keys=columns, join_type="inner"
-            ).column(f"{col_token}_count"),
+                row_count,
+                keys=columns,
+                right_keys=columns,
+                join_type="left outer",
+                use_threads=False,
+            )
+            .sort_by(index_token)
+            .column(f"{col_token}_sum"),
             1,
         )
-        return ArrowSeries(
+        res = ArrowSeries(
             is_duplicated,
             name="",
             backend_version=self._backend_version,
             version=self._version,
         )
+        return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
@@ -641,7 +652,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unique(
         self: Self,
-        subset: str | list[str] | None,
+        subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool,
@@ -653,9 +664,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow.compute as pc
 
         df = self._native_frame
-
-        if isinstance(subset, str):
-            subset = [subset]
         subset = subset or self.columns
 
         if keep in {"any", "first", "last"}:

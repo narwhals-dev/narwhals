@@ -1,37 +1,27 @@
+# Reference: https://packaging.python.org/en/latest/guides/writing-pyproject-toml
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.18.4"
+version = "1.20.1"
+dependencies = []
+requires-python = ">=3.8"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
-requires-python = ">=3.8"
+keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
+license = {file = "LICENSE.md"}
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
   "Operating System :: OS Independent",
 ]
 
-[tool.hatch.build]
-exclude = [
-  "/.*",
-  "/docs",
-  "/tests",
-  "/tpch",
-  "/utils",
-  ".gitignore",
-  "CONTRIBUTING.md",
-  "mkdocs.yml",
-  "noxfile.py",
-]
-
 [project.optional-dependencies]
-cudf = ["cudf>=23.08.00"]
+cudf = ["cudf>=24.10.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
@@ -44,18 +34,21 @@ dev = [
   "duckdb",
   "pandas",
   "polars",
+  "pre-commit",
   "pyarrow",
-  "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "pyarrow-stubs",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
   "pytest-env",
-  "hypothesis",
   "hypothesis[numpy]",
-  "scikit-learn",
   "typing_extensions",
+]
+extra = [  # heavier dependencies we don't necessarily need in every testing job
+  "scikit-learn",
+  "pyspark; python_version >= '3.9' and python_version < '3.12'",
   "dask[dataframe]; python_version >= '3.9'",
+  "modin",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -72,8 +65,24 @@ docs = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/narwhals-dev/narwhals"
-"Bug Tracker" = "https://github.com/narwhals-dev/narwhals"
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Documentation = "https://narwhals-dev.github.io/narwhals/"
+Repository = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
+
+[tool.hatch.build]
+exclude = [
+  "/.*",
+  "/docs",
+  "/tests",
+  "/tpch",
+  "/utils",
+  ".gitignore",
+  "CONTRIBUTING.md",
+  "mkdocs.yml",
+  "noxfile.py",
+]
+
 
 [tool.ruff]
 line-length = 90
@@ -169,6 +178,7 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
+fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
@@ -177,14 +187,13 @@ omit = [
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
+  # we don't run these in every environment
   'tests/spark_like_test.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
-  "if (:?self._)?implementation is Implementation.MODIN",
-  "if (:?self._)?implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail',
-  '\w+._backend_version < ',
   'backend_version <',
   'if "cudf" in str\(constructor'
 ]

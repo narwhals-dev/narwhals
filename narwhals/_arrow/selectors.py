@@ -38,6 +38,7 @@ class ArrowSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"dtypes": dtypes},
         )
 
     def numeric(self: Self) -> ArrowSelector:
@@ -81,6 +82,7 @@ class ArrowSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
 
@@ -103,6 +105,7 @@ class ArrowSelector(ArrowExpr):
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs=self._kwargs,
         )
 
     def __sub__(self: Self, other: Self | Any) -> ArrowSelector | Any:
@@ -121,6 +124,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() - other
@@ -141,6 +145,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() | other
@@ -161,6 +166,7 @@ class ArrowSelector(ArrowExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
+                kwargs={**self._kwargs, "other": other},
             )
         else:
             return self._to_expr() & other

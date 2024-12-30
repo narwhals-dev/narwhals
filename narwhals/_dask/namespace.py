@@ -52,6 +52,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def col(self, *column_names: str) -> DaskExpr:
@@ -87,32 +88,8 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
-
-    def min(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).min()
-
-    def max(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).max()
-
-    def mean(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).mean()
-
-    def median(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).median()
-
-    def sum(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).sum()
 
     def len(self) -> DaskExpr:
         import dask.dataframe as dd
@@ -138,6 +115,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -156,6 +134,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -174,6 +153,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -192,6 +172,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -273,6 +254,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -294,6 +276,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
@@ -315,6 +298,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"exprs": exprs},
         )
 
     def when(
@@ -379,6 +363,12 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 
@@ -401,11 +391,9 @@ class DaskWhen:
         self._version = version
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
-        from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
 
-        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
-
+        plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("dask_expr.Series", condition)
         try:
@@ -441,6 +429,7 @@ class DaskWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"value": value},
         )
 
 
@@ -456,6 +445,7 @@ class DaskThen(DaskExpr):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
+        kwargs: dict[str, Any],
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -465,6 +455,7 @@ class DaskThen(DaskExpr):
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._kwargs = kwargs
 
     def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a

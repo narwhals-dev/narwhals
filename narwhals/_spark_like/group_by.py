@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
+from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -8,6 +9,9 @@ from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._spark_like.utils import _std
+from narwhals._spark_like.utils import _var
+from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -18,10 +22,8 @@ if TYPE_CHECKING:
     from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.typing import CompliantExpr
 
-POLARS_TO_PYSPARK_AGGREGATIONS = {
-    "len": "count",
-    "std": "stddev",
-}
+
+POLARS_TO_PYSPARK_AGGREGATIONS = {"len": "count"}
 
 
 class SparkLikeLazyGroupBy:
@@ -77,7 +79,18 @@ class SparkLikeLazyGroupBy:
         )
 
 
-def get_spark_function(function_name: str) -> Column:
+def get_spark_function(
+    function_name: str, backend_version: tuple[int, ...], **kwargs: Any
+) -> Column:
+    if function_name in {"std", "var"}:
+        import numpy as np  # ignore-banned-import
+
+        return partial(
+            _std if function_name == "std" else _var,
+            ddof=kwargs.get("ddof", 1),
+            backend_version=backend_version,
+            np_version=parse_version(np.__version__),
+        )
     from pyspark.sql import functions as F  # noqa: N812
 
     return getattr(F, function_name)
@@ -114,9 +127,12 @@ def agg_pyspark(
             function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(
                 expr._function_name, expr._function_name
             )
-            for output_name in expr._output_names:
-                agg_func = get_spark_function(function_name)
-                simple_aggregations[output_name] = agg_func(keys[0])
+            agg_func = get_spark_function(
+                function_name, backend_version=expr._backend_version, **expr._kwargs
+            )
+            simple_aggregations.update(
+                {output_name: agg_func(keys[0]) for output_name in expr._output_names}
+            )
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
@@ -127,15 +143,25 @@ def agg_pyspark(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(function_name, function_name)
+        pyspark_function = POLARS_TO_PYSPARK_AGGREGATIONS.get(
+            function_name, function_name
+        )
+        agg_func = get_spark_function(
+            pyspark_function, backend_version=expr._backend_version, **expr._kwargs
+        )
 
-        for root_name, output_name in zip(expr._root_names, expr._output_names):
-            agg_func = get_spark_function(function_name)
-            simple_aggregations[output_name] = agg_func(root_name)
+        simple_aggregations.update(
+            {
+                output_name: agg_func(root_name)
+                for root_name, output_name in zip(expr._root_names, expr._output_names)
+            }
+        )
+
     agg_columns = [col_.alias(name) for name, col_ in simple_aggregations.items()]
     try:
         result_simple = grouped.agg(*agg_columns)
     except ValueError as exc:  # pragma: no cover
-        msg = "Failed to aggregated - does your aggregation function return a scalar?"
+        msg = "Failed to aggregated - does your aggregation function return a scalar? \
+        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/"
         raise RuntimeError(msg) from exc
     return from_dataframe(result_simple)
