@@ -188,8 +188,15 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
+        import pyspark.sql.functions as F  # noqa: N812
+
+        rename_mapping = {
+            colname: mapping.get(colname, colname) for colname in self.columns
+        }
         return self._from_native_frame(
-            self._native_frame.withColumnsRenamed(colsMap=mapping)
+            self._native_frame.select(
+                [F.col(old).alias(new) for old, new in rename_mapping.items()]
+            )
         )
 
     def unique(
