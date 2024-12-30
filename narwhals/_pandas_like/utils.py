@@ -446,6 +446,8 @@ def native_to_narwhals_dtype(
     dtypes = import_dtypes_module(version)
 
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+        if implementation is Implementation.CUDF:
+            return arrow_native_to_narwhals_dtype(native_column.dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
     if dtype != "object":
         return non_object_native_to_narwhals_dtype(dtype, version, implementation)
