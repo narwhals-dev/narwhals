@@ -666,7 +666,7 @@ class PandasLikeSeries(CompliantSeries):
         ser = self._native_series
         if self.dtype.is_numeric():
             return self._from_native_series(ser != ser)  # noqa: PLR0124
-        msg = f"`is_nan` is not supported for dtype {self.dtype}"
+        msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
         raise InvalidOperationError(msg)
 
     def fill_null(

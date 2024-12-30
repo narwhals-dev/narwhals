@@ -705,10 +705,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def is_nan(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
-            dtype = native_to_narwhals_dtype(_input, self._version, Implementation.DASK)
+            dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
             if dtype.is_numeric():
                 return _input != _input  # noqa: PLR0124
-            msg = f"`is_nan` is not supported for dtype {dtype}"
+            msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
         return self._from_call(
