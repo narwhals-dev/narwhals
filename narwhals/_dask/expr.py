@@ -9,6 +9,7 @@ from typing import NoReturn
 from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
+from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import calculate_timestamp_date
@@ -205,8 +206,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__add__(other),
             "__add__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __radd__(self, other: Any) -> Self:
@@ -214,8 +214,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__radd__(other),
             "__radd__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __sub__(self, other: Any) -> Self:
@@ -223,8 +222,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__sub__(other),
             "__sub__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rsub__(self, other: Any) -> Self:
@@ -232,8 +230,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rsub__(other),
             "__rsub__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __mul__(self, other: Any) -> Self:
@@ -241,8 +238,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__mul__(other),
             "__mul__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rmul__(self, other: Any) -> Self:
@@ -250,8 +246,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rmul__(other),
             "__rmul__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __truediv__(self, other: Any) -> Self:
@@ -259,8 +254,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__truediv__(other),
             "__truediv__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rtruediv__(self, other: Any) -> Self:
@@ -268,8 +262,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rtruediv__(other),
             "__rtruediv__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
@@ -277,8 +270,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rfloordiv__(self, other: Any) -> Self:
@@ -286,8 +278,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rfloordiv__(other),
             "__rfloordiv__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __pow__(self, other: Any) -> Self:
@@ -295,8 +286,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__pow__(other),
             "__pow__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rpow__(self, other: Any) -> Self:
@@ -304,8 +294,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rpow__(other),
             "__rpow__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __mod__(self, other: Any) -> Self:
@@ -313,8 +302,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__mod__(other),
             "__mod__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rmod__(self, other: Any) -> Self:
@@ -322,8 +310,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rmod__(other),
             "__rmod__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
@@ -331,8 +318,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__eq__(other),
             "__eq__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
@@ -340,8 +326,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__ne__(other),
             "__ne__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ge__(self, other: DaskExpr) -> Self:
@@ -349,8 +334,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__ge__(other),
             "__ge__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __gt__(self, other: DaskExpr) -> Self:
@@ -358,8 +342,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__gt__(other),
             "__gt__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __le__(self, other: DaskExpr) -> Self:
@@ -367,8 +350,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__le__(other),
             "__le__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __lt__(self, other: DaskExpr) -> Self:
@@ -376,8 +358,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__lt__(other),
             "__lt__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __and__(self, other: DaskExpr) -> Self:
@@ -385,8 +366,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__and__(other),
             "__and__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __rand__(self, other: DaskExpr) -> Self:
@@ -394,8 +374,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__rand__(other),
             "__rand__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __or__(self, other: DaskExpr) -> Self:
@@ -403,8 +382,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__or__(other),
             "__or__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ror__(self, other: DaskExpr) -> Self:
@@ -412,8 +390,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             lambda _input, other: _input.__ror__(other),
             "__ror__",
             other=other,
-            returns_scalar=self._returns_scalar
-            and getattr(other, "_returns_scalar", True),
+            returns_scalar=binary_operation_returns_scalar(self, other),
         ).alias("literal")
 
     def __invert__(self: Self) -> Self:
