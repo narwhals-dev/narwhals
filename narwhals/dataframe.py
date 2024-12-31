@@ -4149,6 +4149,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
             )
             raise ValueError(msg)
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
+            raise ValueError(msg)
         if maintain_order is not None:
             msg = (
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
