@@ -151,22 +151,8 @@ docstring-code-format = true
 testpaths = ["tests"]
 filterwarnings = [
   "error",
-  'ignore:distutils Version classes are deprecated:DeprecationWarning',
-  'ignore:In the future `np.bool`',
-  'ignore:make_block is deprecated and will be removed',
-  'ignore:np.find_common_type is deprecated',
-  'ignore:is_sparse is deprecated and will be removed',
-  'ignore:Passing a BlockManager to DataFrame is deprecated',
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
-  'ignore:.*Do not use the `random` module inside strategies',
-  'ignore:.*You are using pyarrow version',
-  'ignore:.*but when imported by',
-  'ignore:Distributing .*This may take some time',
-  'ignore:.*The default coalesce behavior',
-  'ignore:is_datetime64tz_dtype is deprecated',
-  'ignore: unclosed <socket.socket',
-  'ignore:The distutils package is deprecated and slated for removal',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
