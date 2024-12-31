@@ -1,7 +1,8 @@
 from __future__ import annotations
+import os
 
 import contextlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Any
 from typing import Any
 from typing import Generator
 
@@ -18,29 +19,28 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
 
-with contextlib.suppress(ImportError):
-    import modin.pandas  # noqa: F401
-with contextlib.suppress(ImportError):
-    import dask.dataframe  # noqa: F401
-with contextlib.suppress(ImportError):
-    import cudf  # noqa: F401
-with contextlib.suppress(ImportError):
-    from pyspark.sql import SparkSession
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
-    from tests.utils import Constructor
 
 
 def pytest_addoption(parser: Any) -> None:
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+    parser.addoption(
+        "--all-cpu-constructors", action="store_true", default=False, help="run tests with all cpu constructors"
+    )
+    parser.addoption(
+        "--constructors",
+        action="store",
+        default='pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow',
+        type=str,
+        help="libraries to test",
     )
 
 
@@ -132,36 +132,42 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
         yield session
     session.stop()
 
+EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
+    'pandas': pandas_constructor,
+    'pandas[nullable]': pandas_nullable_constructor,
+    'pandas[pyarrow]': pandas_pyarrow_constructor,
+    'pyarrow': pyarrow_table_constructor,
+    'modin': modin_constructor,
+    'cudf': cudf_constructor,
+    'polars[eager]': polars_eager_constructor,
+}
+LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
+    'dask': dask_lazy_p2_constructor,
+    'polars[lazy]': polars_lazy_constructor,
+}
+    
+def pytest_generate_tests(metafunc: Any) -> None:
+    selected_constructors = metafunc.config.getoption('constructors').split(',')
 
-if PANDAS_VERSION >= (2, 0, 0):
-    eager_constructors = [
-        pandas_constructor,
-        pandas_nullable_constructor,
-        pandas_pyarrow_constructor,
-    ]
-else:  # pragma: no cover
-    eager_constructors = [pandas_constructor]
+    eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
+    eager_constructors_ids: list[str] = []
+    constructors: list[Callable[[Any], IntoFrame]] = []
+    constructors_ids: list[str] = []
 
-eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
-lazy_constructors = [polars_lazy_constructor]
+    for constructor in selected_constructors:
+        if constructor in EAGER_CONSTRUCTORS:
+            eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
+            eager_constructors_ids.append(constructor)
+            constructors.append(EAGER_CONSTRUCTORS[constructor])
+            constructors_ids.append(constructor)
+        elif constructor in LAZY_CONSTRUCTORS:
+            constructors.append(LAZY_CONSTRUCTORS[constructor])
+            constructors_ids.append(constructor)
+        else:  # pragma: no cover
+            msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
+            raise ValueError(msg)
 
-if get_modin() is not None:  # pragma: no cover
-    eager_constructors.append(modin_constructor)
-if get_cudf() is not None:
-    eager_constructors.append(cudf_constructor)  # pragma: no cover
-if get_dask_dataframe() is not None:  # pragma: no cover
-    # TODO(unassigned): reinstate both dask constructors once if/when we have a dask use-case
-    # lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # noqa: ERA001
-    lazy_constructors.append(dask_lazy_p2_constructor)  # type: ignore  # noqa: PGH003
-
-
-@pytest.fixture(params=eager_constructors)
-def constructor_eager(
-    request: pytest.FixtureRequest,
-) -> ConstructorEager:
-    return request.param  # type: ignore[no-any-return]
-
-
-@pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: pytest.FixtureRequest) -> Constructor:
-    return request.param  # type: ignore[no-any-return]
+    if "constructor_eager" in metafunc.fixturenames:
+        metafunc.parametrize("constructor_eager", eager_constructors, ids=eager_constructors_ids)
+    elif 'constructor' in metafunc.fixturenames:
+        metafunc.parametrize("constructor", constructors, ids=constructors_ids)
