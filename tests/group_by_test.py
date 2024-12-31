@@ -330,6 +330,7 @@ def test_key_with_nulls_iter(
         .group_by("b", "c", drop_null_keys=True)
         .__iter__()
     )
+
     assert len(result) == 2
     assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
     assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
@@ -415,7 +416,7 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf", "modin_constructor")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "modin")):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
