@@ -200,7 +200,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
+        keep: Literal["any", "none"] = "any",
     ) -> Self:
         native_frame = self._native_frame
         if keep == "none":
