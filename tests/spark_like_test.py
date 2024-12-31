@@ -491,3 +491,381 @@ def test_group_by_depth_1_std_var(
     expr = getattr(nw.col("b"), attr)(ddof=ddof)
     result = nw.from_native(pyspark_constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
+
+
+# copied from tests/frame/drop_nulls_test.py
+def test_drop_nulls(pyspark_constructor: Constructor) -> None:
+    data = {
+        "a": [1.0, 2.0, None, 4.0],
+        "b": [None, 3.0, None, 5.0],
+    }
+
+    result = nw.from_native(pyspark_constructor(data)).drop_nulls()
+    expected = {
+        "a": [2.0, 4.0],
+        "b": [3.0, 5.0],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("subset", "expected"),
+    [
+        ("a", {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        (["a"], {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        (["a", "b"], {"a": [2.0, 4.0], "b": [3.0, 5.0]}),
+    ],
+)
+def test_drop_nulls_subset(
+    pyspark_constructor: Constructor, subset: str | list[str], expected: dict[str, float]
+) -> None:
+    data = {
+        "a": [1.0, 2.0, None, 4.0],
+        "b": [None, 3.0, None, 5.0],
+    }
+
+    result = nw.from_native(pyspark_constructor(data)).drop_nulls(subset=subset)
+    assert_equal_data(result, expected)
+
+
+# copied from tests/frame/rename_test.py
+def test_rename(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.rename({"a": "x", "b": "y"})
+    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8, 9]}
+    assert_equal_data(result, expected)
+
+
+# adapted from tests/frame/unique_test.py
+@pytest.mark.parametrize("subset", ["b", ["b"]])
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [
+        ("first", {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}),
+        ("last", {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}),
+        ("any", {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}),
+        ("none", {"a": [2], "b": [6], "z": [9]}),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:Argument `maintain_order=True` is unused")
+def test_unique(
+    pyspark_constructor: Constructor,
+    subset: str | list[str] | None,
+    keep: str,
+    expected: dict[str, list[float]],
+) -> None:
+    context = (
+        does_not_raise()
+        if keep == "any"
+        else pytest.raises(
+            ValueError,
+            match=r"`LazyFrame.unique` with PySpark backend only supports `keep='any'`.",
+        )
+    )
+
+    with context:
+        data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+        df = nw.from_native(pyspark_constructor(data))
+
+        result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
+        assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore:Argument `maintain_order=True` is unused")
+def test_unique_none(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.unique(maintain_order=True)
+    assert_equal_data(result, data)
+
+
+def test_inner_join_two_keys(pyspark_constructor: Constructor) -> None:
+    data = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
+    }
+    df = nw.from_native(pyspark_constructor(data))
+    df_right = nw.from_native(pyspark_constructor(data))
+    result = df.join(
+        df_right,  # type: ignore[arg-type]
+        left_on=["antananarivo", "bob"],
+        right_on=["antananarivo", "bob"],
+        how="inner",
+    )
+    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
+    result = result.sort("idx").drop("idx_right")
+    result_on = result_on.sort("idx").drop("idx_right")
+    expected = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+        "zorro_right": [7.0, 8, 9],
+        "idx": [0, 1, 2],
+    }
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on, expected)
+
+
+def test_inner_join_single_key(pyspark_constructor: Constructor) -> None:
+    data = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
+    }
+    df = nw.from_native(pyspark_constructor(data))
+    df_right = nw.from_native(pyspark_constructor(data))
+    result = df.join(
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        how="inner",
+    ).sort("idx")
+    result_on = df.join(df_right, on="antananarivo", how="inner").sort("idx")  # type: ignore[arg-type]
+    result = result.drop("idx_right")
+    result_on = result_on.drop("idx_right")
+    expected = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "bob_right": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+        "zorro_right": [7.0, 8, 9],
+        "idx": [0, 1, 2],
+    }
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on, expected)
+
+
+def test_cross_join(pyspark_constructor: Constructor) -> None:
+    data = {"antananarivo": [1, 3, 2]}
+    df = nw.from_native(pyspark_constructor(data))
+    other = nw.from_native(pyspark_constructor(data))
+    result = df.join(other, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
+    expected = {
+        "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        "antananarivo_right": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+    }
+    assert_equal_data(result, expected)
+
+    with pytest.raises(
+        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
+    ):
+        df.join(other, how="cross", left_on="antananarivo")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("how", ["inner", "left"])
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_suffix(pyspark_constructor: Constructor, how: str, suffix: str) -> None:
+    data = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+    }
+    df = nw.from_native(pyspark_constructor(data))
+    df_right = nw.from_native(pyspark_constructor(data))
+    result = df.join(
+        df_right,  # type: ignore[arg-type]
+        left_on=["antananarivo", "bob"],
+        right_on=["antananarivo", "bob"],
+        how=how,  # type: ignore[arg-type]
+        suffix=suffix,
+    )
+    result_cols = result.collect_schema().names()
+    assert result_cols == ["antananarivo", "bob", "zorro", f"zorro{suffix}"]
+
+
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_cross_join_suffix(pyspark_constructor: Constructor, suffix: str) -> None:
+    data = {"antananarivo": [1, 3, 2]}
+    df = nw.from_native(pyspark_constructor(data))
+    other = nw.from_native(pyspark_constructor(data))
+    result = df.join(other, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
+        "antananarivo", f"antananarivo{suffix}"
+    )
+    expected = {
+        "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        f"antananarivo{suffix}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("join_key", "filter_expr", "expected"),
+    [
+        (
+            ["antananarivo", "bob"],
+            (nw.col("bob") < 5),
+            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+        ),
+        (["bob"], (nw.col("bob") < 5), {"antananarivo": [2], "bob": [6], "zorro": [9]}),
+        (
+            ["bob"],
+            (nw.col("bob") > 5),
+            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7.0, 8.0]},
+        ),
+    ],
+)
+def test_anti_join(
+    pyspark_constructor: Constructor,
+    join_key: list[str],
+    filter_expr: nw.Expr,
+    expected: dict[str, list[Any]],
+) -> None:
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    other = df.filter(filter_expr)
+    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("join_key", "filter_expr", "expected"),
+    [
+        (
+            "antananarivo",
+            (nw.col("bob") > 5),
+            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+        ),
+        (
+            ["antananarivo"],
+            (nw.col("bob") > 5),
+            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+        ),
+        (
+            ["bob"],
+            (nw.col("bob") < 5),
+            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
+        ),
+        (
+            ["antananarivo", "bob"],
+            (nw.col("bob") < 5),
+            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
+        ),
+    ],
+)
+def test_semi_join(
+    pyspark_constructor: Constructor,
+    join_key: list[str],
+    filter_expr: nw.Expr,
+    expected: dict[str, list[Any]],
+) -> None:
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    other = df.filter(filter_expr)
+    result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
+        "antananarivo"
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
+def test_left_join(pyspark_constructor: Constructor) -> None:
+    data_left = {
+        "antananarivo": [1.0, 2, 3],
+        "bob": [4.0, 5, 6],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    data_right = {
+        "antananarivo": [1.0, 2, 3],
+        "co": [4.0, 5, 7],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    df_left = nw.from_native(pyspark_constructor(data_left))
+    df_right = nw.from_native(pyspark_constructor(data_right))
+    result = (
+        df_left.join(df_right, left_on="bob", right_on="co", how="left")  # type: ignore[arg-type]
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "antananarivo_right": [1, 2, float("nan")],
+        "idx": [0, 1, 2],
+    }
+    result_on_list = df_left.join(
+        df_right,  # type: ignore[arg-type]
+        on=["antananarivo", "idx"],
+        how="left",
+    )
+    result_on_list = result_on_list.sort("idx")
+    expected_on_list = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "idx": [0, 1, 2],
+        "co": [4, 5, 7],
+    }
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on_list, expected_on_list)
+
+
+@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
+def test_left_join_multiple_column(pyspark_constructor: Constructor) -> None:
+    data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
+    data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
+    df_left = nw.from_native(pyspark_constructor(data_left))
+    df_right = nw.from_native(pyspark_constructor(data_right))
+    result = (
+        df_left.join(
+            df_right,  # type: ignore[arg-type]
+            left_on=["antananarivo", "bob"],
+            right_on=["antananarivo", "c"],
+            how="left",
+        )
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
+def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
+    data_left = {
+        "antananarivo": [1.0, 2, 3],
+        "bob": [4.0, 5, 6],
+        "d": [1.0, 4, 2],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    data_right = {
+        "antananarivo": [1.0, 2, 3],
+        "c": [4.0, 5, 6],
+        "d": [1.0, 4, 2],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    df_left = nw.from_native(pyspark_constructor(data_left))
+    df_right = nw.from_native(pyspark_constructor(data_right))
+    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")  # type: ignore[arg-type]
+    result = result.drop("idx_right")
+    expected: dict[str, list[Any]] = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "d": [1, 4, 2],
+        "antananarivo_right": [1, 2, 3],
+        "d_right": [1, 4, 2],
+        "idx": [0, 1, 2],
+    }
+    assert_equal_data(result, expected)
+
+    result = (
+        df_left.join(
+            df_right,  # type: ignore[arg-type]
+            left_on="antananarivo",
+            right_on="d",
+            how="left",
+        )
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "d": [1, 4, 2],
+        "antananarivo_right": [1.0, 3.0, float("nan")],
+        "c": [4.0, 6.0, float("nan")],
+        "idx": [0, 1, 2],
+    }
+    assert_equal_data(result, expected)
