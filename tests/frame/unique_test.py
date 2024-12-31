@@ -43,9 +43,10 @@ def test_unique(
         assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")
 def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
-    result = df.unique().sort("z")
+    result = df.unique(maintain_order=True).sort("z")
     assert_equal_data(result, data)
