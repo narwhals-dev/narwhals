@@ -18,7 +18,6 @@ from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
-from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -124,20 +123,8 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        indices = self._grouped.indices
-        if (
-            self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (2, 2)
-        ) or (
-            self._df._implementation is Implementation.CUDF
-            and self._df._backend_version < (2024, 12)
-        ):  # pragma: no cover
-            for key in indices:
-                yield (key, self._from_native_frame(self._grouped.get_group(key)))
-        else:
-            for key in indices:
-                key = tupleify(key)  # noqa: PLW2901
-                yield (key, self._from_native_frame(self._grouped.get_group(key)))
+        for key, group in self._grouped:
+            yield (key, self._from_native_frame(group))
 
 
 def agg_pandas(  # noqa: PLR0915
