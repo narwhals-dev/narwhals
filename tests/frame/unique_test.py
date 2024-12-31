@@ -24,14 +24,11 @@ def test_unique(
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
-    result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
+    result = df.unique(subset, keep=keep, maintain_order=True).sort("z")  # type: ignore[arg-type]
     assert_equal_data(result, expected)
 
 
@@ -39,5 +36,5 @@ def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
-    result = df.unique(maintain_order=True)
+    result = df.unique(maintain_order=True).sort("z")
     assert_equal_data(result, data)

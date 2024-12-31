@@ -11,6 +11,7 @@ from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
@@ -253,8 +254,28 @@ class DuckDBInterchangeFrame:
         self, subset: Sequence[str] | None, keep: Any, *, maintain_order: bool
     ) -> Self:
         if subset is not None:
-            msg = "`unique` with non-null `subset` is not yet supported"
-            raise NotImplementedError(msg)
+            import duckdb
+
+            rel = self._native_frame
+            idx_name = f'"{generate_temporary_column_name(8, rel.columns)}"'
+            count_name = (
+                f'"{generate_temporary_column_name(8, [*rel.columns, idx_name])}"'
+            )
+            if keep == "none":
+                keep = f"where {count_name}=1"
+            elif keep == "any":
+                keep = f"where {idx_name}=1"
+            query = f"""
+                with cte as (
+                    select *,
+                           row_number() over (partition by {",".join(subset)}) as {idx_name},
+                           count(*) over (partition by {",".join(subset)}) as {count_name}
+                    from rel
+                )
+                select * exclude ({idx_name}, {count_name}) from cte {keep}
+                """  # noqa: S608
+            res = duckdb.sql(query)
+            return self._from_native_frame(res)
         return self._from_native_frame(self._native_frame.unique(", ".join(self.columns)))
 
     def sort(
