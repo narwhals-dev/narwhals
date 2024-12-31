@@ -9,6 +9,7 @@ from typing import Sequence
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
@@ -251,20 +252,24 @@ class DuckDBInterchangeFrame:
         }
 
     def unique(
-        self, subset: Sequence[str] | None, keep: Any, *, maintain_order: bool
+        self, subset: Sequence[str] | None, keep_condition: Any, *, maintain_order: bool
     ) -> Self:
         if subset is not None:
             import duckdb
 
             rel = self._native_frame
+            # Sanitise input
+            if any(x not in rel.columns for x in subset):
+                msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
+                raise ColumnNotFoundError(msg)
             idx_name = f'"{generate_temporary_column_name(8, rel.columns)}"'
             count_name = (
                 f'"{generate_temporary_column_name(8, [*rel.columns, idx_name])}"'
             )
-            if keep == "none":
-                keep = f"where {count_name}=1"
-            elif keep == "any":
-                keep = f"where {idx_name}=1"
+            if keep_condition == "none":
+                keep_condition = f"where {count_name}=1"
+            elif keep_condition == "any":
+                keep_condition = f"where {idx_name}=1"
             query = f"""
                 with cte as (
                     select *,
@@ -272,10 +277,9 @@ class DuckDBInterchangeFrame:
                            count(*) over (partition by {",".join(subset)}) as {count_name}
                     from rel
                 )
-                select * exclude ({idx_name}, {count_name}) from cte {keep}
+                select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
                 """  # noqa: S608
-            res = duckdb.sql(query)
-            return self._from_native_frame(res)
+            return self._from_native_frame(duckdb.sql(query))
         return self._from_native_frame(self._native_frame.unique(", ".join(self.columns)))
 
     def sort(
