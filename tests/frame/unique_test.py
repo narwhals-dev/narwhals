@@ -55,5 +55,5 @@ def test_unique_none(constructor: Constructor) -> None:
         with pytest.raises(ValueError, match="not supported"):
             result = df.unique(maintain_order=True).sort("z")
     else:
-        result = df.unique()
+        result = df.unique(maintain_order=True)
         assert_equal_data(result, data)
