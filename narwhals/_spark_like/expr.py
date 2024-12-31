@@ -233,6 +233,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_min, "min", returns_scalar=True)
 
+    def sum(self) -> Self:
+        def _sum(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.sum(_input)
+
+        return self._from_call(_sum, "sum", returns_scalar=True)
+
     def std(self: Self, ddof: int) -> Self:
         from functools import partial
 
