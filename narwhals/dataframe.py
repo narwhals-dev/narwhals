@@ -3265,9 +3265,8 @@ class LazyFrame(BaseFrame[FrameT]):
     def implementation(self) -> Implementation:
         """Return implementation of native frame.
 
-        This can be useful when you need to some special-casing for
-        some libraries for features outside of Narwhals' scope - for
-        example, when dealing with pandas' Period Dtype.
+        This can be useful when you need to use special-casing for features outside of
+        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
 
         Returns:
             Implementation.
