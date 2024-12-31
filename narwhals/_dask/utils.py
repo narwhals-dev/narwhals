@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     import dask_expr
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -143,3 +144,10 @@ def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr
 
 def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
     return (s1 / s2).rename(s1.name)
+
+
+def binary_operation_returns_scalar(lhs: DaskExpr, rhs: DaskExpr | Any) -> bool:
+    # If `rhs` is a DaskExpr, we look at `_returns_scalar`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
+    # to `True`.
+    return lhs._returns_scalar and getattr(rhs, "_returns_scalar", True)
