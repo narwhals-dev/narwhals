@@ -146,21 +146,6 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.drop(columns, strict=strict)
         )
 
-    def unique(
-        self,
-        subset: str | list[str] | None = None,
-        *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
-    ) -> Self:
-        if isinstance(subset, str):
-            subset = [subset]
-        return self._from_compliant_dataframe(
-            self._compliant_frame.unique(
-                subset=subset, keep=keep, maintain_order=maintain_order
-            )
-        )
-
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
@@ -4104,7 +4089,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "none"] = "any",  # type: ignore[override]
+        keep: Literal["any", "none"] = "any",
         maintain_order: bool | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
