@@ -4522,31 +4522,44 @@ class SeriesCatNamespace(Generic[SeriesT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["apple", "mango", "mango"]
             >>> s_pd = pd.Series(data, dtype="category")
             >>> s_pl = pl.Series(data, dtype=pl.Categorical)
+            >>> s_pa = pa.chunked_array([data]).dictionary_encode()
 
             We define a dataframe-agnostic function to get unique categories
             from column 'fruits':
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_get_categories(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.cat.get_categories().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_get_categories(s_pd)
             0    apple
             1    mango
             dtype: object
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+
+            >>> agnostic_get_categories(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [str]
             [
                "apple"
                "mango"
+            ]
+
+            >>> agnostic_get_categories(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "apple",
+                "mango"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4567,21 +4580,24 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["foo", "Café", "345", "東京", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_len_chars(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.len_chars().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_len_chars`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_len_chars(s_pd)
             0    3.0
             1    4.0
             2    3.0
@@ -4589,7 +4605,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             4    NaN
             dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_len_chars(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: '' [u32]
             [
@@ -4598,6 +4614,18 @@ class SeriesStringNamespace(Generic[SeriesT]):
                3
                2
                null
+            ]
+
+            >>> agnostic_len_chars(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                4,
+                3,
+                2,
+                null
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4621,32 +4649,44 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["123abc", "abc abc123"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_replace(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.replace("abc", "")
             ...     return s.to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_replace`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_replace(s_pd)
             0        123
             1     abc123
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_replace(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [str]
             [
                 "123"
                 " abc123"
+            ]
+
+            >>> agnostic_replace(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "123",
+                " abc123"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4671,32 +4711,44 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["123abc", "abc abc123"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_replace_all(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.replace_all("abc", "")
             ...     return s.to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_replace_all`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_replace_all(s_pd)
             0     123
             1     123
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            >>> agnostic_replace_all(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [str]
             [
                 "123"
                 " 123"
+            ]
+
+            >>> agnostic_replace_all(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "123",
+                " 123"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4717,32 +4769,44 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["apple", "\nmango"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_strip_chars(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     s = s.str.strip_chars()
             ...     return s.to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_strip_chars`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_strip_chars(s_pd)
             0    apple
             1    mango
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_strip_chars(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [str]
             [
                 "apple"
                 "mango"
+            ]
+
+            >>> agnostic_strip_chars(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "apple",
+                "mango"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4761,33 +4825,46 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["apple", "mango", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_starts_with(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.starts_with("app").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_starts_with`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_starts_with(s_pd)
             0     True
             1    False
             2     None
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_starts_with(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
                true
                false
                null
+            ]
+
+            >>> agnostic_starts_with(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                true,
+                false,
+                null
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4806,33 +4883,46 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["apple", "mango", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_ends_with(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.ends_with("ngo").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_ends_with`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_ends_with(s_pd)
             0    False
             1     True
             2     None
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_ends_with(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
                false
                true
                null
+            ]
+
+            >>> agnostic_ends_with(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                true,
+                null
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4856,10 +4946,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
-            >>> pets = ["cat", "dog", "rabbit and parrot", "dove", None]
-            >>> s_pd = pd.Series(pets)
-            >>> s_pl = pl.Series(pets)
-            >>> s_pa = pa.chunked_array([pets])
+            >>> data = ["cat", "dog", "rabbit and parrot", "dove", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
@@ -4918,28 +5008,31 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = ["pear", None, "papaya", "dragonfruit"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_slice(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.slice(4, length=3).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_slice`:
 
-            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_slice(s_pd)  # doctest: +NORMALIZE_WHITESPACE
             0
             1    None
             2      ya
             3     onf
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_slice(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [str]
             [
@@ -4949,20 +5042,31 @@ class SeriesStringNamespace(Generic[SeriesT]):
                "onf"
             ]
 
+            >>> agnostic_slice(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "",
+                null,
+                "ya",
+                "onf"
+              ]
+            ]
+
             Using negative indexes:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_slice(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.slice(-3).to_native()
 
-            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_slice(s_pd)  # doctest: +NORMALIZE_WHITESPACE
             0     ear
             1    None
             2     aya
             3     uit
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_slice(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [str]
             [
@@ -4970,6 +5074,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
                 null
                 "aya"
                 "uit"
+            ]
+
+            >>> agnostic_slice(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "ear",
+                null,
+                "aya",
+                "uit"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -4995,27 +5110,31 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
-            >>> lyrics = ["Atatata", "taata", "taatatata", "zukkyun"]
-            >>> s_pd = pd.Series(lyrics)
-            >>> s_pl = pl.Series(lyrics)
+            >>> data = ["Atatata", "taata", "taatatata", "zukkyun"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_head(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.head().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_head`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_head(s_pd)
             0    Atata
             1    taata
             2    taata
             3    zukky
             dtype: object
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+
+            >>> agnostic_head(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [str]
             [
@@ -5023,6 +5142,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
                "taata"
                "taata"
                "zukky"
+            ]
+
+            >>> agnostic_head(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "Atata",
+                "taata",
+                "taata",
+                "zukky"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -5046,27 +5176,31 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
-            >>> lyrics = ["Atatata", "taata", "taatatata", "zukkyun"]
-            >>> s_pd = pd.Series(lyrics)
-            >>> s_pl = pl.Series(lyrics)
+            >>> data = ["Atatata", "taata", "taatatata", "zukkyun"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_tail(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.tail().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_tail`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_tail(s_pd)
             0    atata
             1    taata
             2    atata
             3    kkyun
             dtype: object
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+
+            >>> agnostic_tail(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [str]
             [
@@ -5074,6 +5208,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
                "taata"
                "atata"
                "kkyun"
+            ]
+
+            >>> agnostic_tail(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "atata",
+                "taata",
+                "atata",
+                "kkyun"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -5094,40 +5239,47 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {"fruits": ["apple", "mango", None]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = ["apple", "mango", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         upper_col=nw.col("fruits").str.to_uppercase()
-            ...     ).to_native()
+            >>> def agnostic_to_uppercase(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.str.to_uppercase().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_uppercase`:
 
-            >>> my_library_agnostic_function(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-             fruits  upper_col
-            0  apple      APPLE
-            1  mango      MANGO
-            2   None       None
+            >>> agnostic_to_uppercase(s_pd)
+            0    APPLE
+            1    MANGO
+            2     None
+            dtype: object
 
-            >>> my_library_agnostic_function(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3, 2)
-            ┌────────┬───────────┐
-            │ fruits ┆ upper_col │
-            │ ---    ┆ ---       │
-            │ str    ┆ str       │
-            ╞════════╪═══════════╡
-            │ apple  ┆ APPLE     │
-            │ mango  ┆ MANGO     │
-            │ null   ┆ null      │
-            └────────┴───────────┘
+            >>> agnostic_to_uppercase(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [str]
+            [
+               "APPLE"
+               "MANGO"
+               null
+            ]
 
+            >>> agnostic_to_uppercase(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "APPLE",
+                "MANGO",
+                null
+              ]
+            ]
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.to_uppercase()
@@ -5142,40 +5294,47 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT, IntoFrameT
-            >>> data = {"fruits": ["APPLE", "MANGO", None]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = ["APPLE", "MANGO", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         lower_col=nw.col("fruits").str.to_lowercase()
-            ...     ).to_native()
+            >>> def agnostic_to_lowercase(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.str.to_lowercase().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_lowercase`:
 
-            >>> my_library_agnostic_function(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-              fruits lower_col
-            0  APPLE     apple
-            1  MANGO     mango
-            2   None      None
+            >>> agnostic_to_lowercase(s_pd)
+            0    apple
+            1    mango
+            2     None
+            dtype: object
 
+            >>> agnostic_to_lowercase(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [str]
+            [
+               "apple"
+               "mango"
+               null
+            ]
 
-            >>> my_library_agnostic_function(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3, 2)
-            ┌────────┬───────────┐
-            │ fruits ┆ lower_col │
-            │ ---    ┆ ---       │
-            │ str    ┆ str       │
-            ╞════════╪═══════════╡
-            │ APPLE  ┆ apple     │
-            │ MANGO  ┆ mango     │
-            │ null   ┆ null      │
-            └────────┴───────────┘
+            >>> agnostic_to_lowercase(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "apple",
+                "mango",
+                null
+              ]
+            ]
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.to_lowercase()
@@ -5214,24 +5373,25 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_to_datetime(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.str.to_datetime(format="%Y-%m-%d").to_native()
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow::
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_datetime`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_to_datetime(s_pd)
             0   2020-01-01
             1   2020-01-02
             dtype: datetime64[ns]
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_to_datetime(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [datetime[μs]]
             [
                2020-01-01 00:00:00
                2020-01-02 00:00:00
             ]
-            >>> my_library_agnostic_function(s_pa)  # doctest: +ELLIPSIS
+            >>> agnostic_to_datetime(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at 0x...>
             [
               [
@@ -5274,7 +5434,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.date().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    2012-01-07
@@ -5315,7 +5476,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.year().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    2012
@@ -5355,7 +5517,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.month().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    2
@@ -5395,7 +5558,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.day().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    1
@@ -5435,7 +5599,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.hour().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    5
@@ -5475,7 +5640,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.minute().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0     3
@@ -5515,7 +5681,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.second().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    10
@@ -5562,7 +5729,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.millisecond().alias("datetime").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    400
@@ -5615,7 +5783,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.microsecond().alias("datetime").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    400000
@@ -5664,7 +5833,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.nanosecond().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    500000000
@@ -5704,7 +5874,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.ordinal_day().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0      1
@@ -5749,7 +5920,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.total_minutes().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    10
@@ -5794,7 +5966,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.total_seconds().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    10
@@ -5842,7 +6015,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.total_milliseconds().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    10
@@ -5890,7 +6064,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.total_microseconds().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0      10
@@ -5935,7 +6110,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.diff().dt.total_nanoseconds().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    NaN
@@ -6013,7 +6189,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.to_string("%Y/%m/%d").to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_get_categories`:
 
             >>> my_library_agnostic_function(s_pd)
             0    2020/03/01
