@@ -23,9 +23,10 @@ def test_convert_time_zone(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        ("modin_pyarrow" in str(constructor) and is_windows())
+        ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -50,9 +51,10 @@ def test_convert_time_zone_series(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        ("modin_pyarrow" in str(constructor_eager) and is_windows())
+        ("pyarrow" in str(constructor_eager) and is_windows())
         or ("pyarrow_table" in str(constructor_eager) and is_windows())
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
         or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -76,9 +78,10 @@ def test_convert_time_zone_from_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
-        ("modin_pyarrow" in str(constructor) and is_windows())
+        ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor))
     ):
