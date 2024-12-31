@@ -554,14 +554,15 @@ def test_unique(
     keep: str,
     expected: dict[str, list[float]],
 ) -> None:
-    context = (
-        does_not_raise()
-        if keep == "any"
-        else pytest.raises(
+    if keep == "any":
+        context: Any = does_not_raise()
+    elif keep == "none":
+        context = pytest.raises(
             ValueError,
             match=r"`LazyFrame.unique` with PySpark backend only supports `keep='any'`.",
         )
-    )
+    else:
+        context = pytest.raises(ValueError, match=f": {keep}")
 
     with context:
         data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
