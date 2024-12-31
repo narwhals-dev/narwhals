@@ -6370,26 +6370,36 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_to_string(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.to_string("%Y/%m/%d").to_native()
 
             We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_get_categories`:
+            PyArrow to `agnostic_to_string`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_to_string(s_pd)
             0    2020/03/01
             1    2020/04/01
             2    2020/05/01
             dtype: object
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_to_string(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [str]
             [
                "2020/03/01"
                "2020/04/01"
                "2020/05/01"
+            ]
+
+            >>> agnostic_to_string(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "2020/03/01",
+                "2020/04/01",
+                "2020/05/01"
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -6433,6 +6443,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             0   2024-01-01 00:00:00+05:45
             1   2024-01-02 00:00:00+05:45
             dtype: datetime64[ns, Asia/Kathmandu]
+
             >>> agnostic_replace_time_zone(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [datetime[μs, Asia/Kathmandu]]
@@ -6440,6 +6451,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 2024-01-01 00:00:00 +0545
                 2024-01-02 00:00:00 +0545
             ]
+
             >>> agnostic_replace_time_zone(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -6493,6 +6505,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             0   2024-01-01 05:45:00+05:45
             1   2024-01-02 05:45:00+05:45
             dtype: datetime64[ns, Asia/Kathmandu]
+
             >>> agnostic_convert_time_zone(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [datetime[μs, Asia/Kathmandu]]
@@ -6500,6 +6513,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 2024-01-01 05:45:00 +0545
                 2024-01-02 05:45:00 +0545
             ]
+
             >>> agnostic_convert_time_zone(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -6552,6 +6566,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1             NaN
             2    9.784800e+11
             dtype: float64
+
             >>> agnostic_timestamp(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -6560,6 +6575,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     null
                     978480000000
             ]
+
             >>> agnostic_timestamp(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
