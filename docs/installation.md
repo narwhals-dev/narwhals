@@ -46,6 +46,7 @@ they are not required dependencies - Narwhals only ever uses what the user passe
 
 - [pandas](https://pandas.pydata.org/docs/getting_started/install.html)
 - [Polars](https://pola-rs.github.io/polars/user-guide/installation/)
+- [PySpark](https://spark.apache.org/docs/latest/api/python/getting_started/install.html)
 - [PyArrow](https://arrow.apache.org/docs/python/install.html)
 
 ### Simple example
@@ -57,9 +58,13 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pyspark.sql as ps
+from pyspark.sql import SparkSession
 import pyarrow as pa
 import narwhals as nw
 from narwhals.typing import IntoFrame
+
+spark = SparkSession.builder.getOrCreate()
 
 
 def agnostic_get_columns(df_native: IntoFrame) -> list[str]:
@@ -71,6 +76,7 @@ def agnostic_get_columns(df_native: IntoFrame) -> list[str]:
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 df_pandas = pd.DataFrame(data)
 df_polars = pl.DataFrame(data)
+df_pyspark = spark.createDataFrame(df_pandas)
 table_pa = pa.table(data)
 
 print("pandas output")
@@ -78,6 +84,9 @@ print(agnostic_get_columns(df_pandas))
 
 print("Polars output")
 print(agnostic_get_columns(df_polars))
+
+print("PySpark output")
+print(agnostic_get_columns(df_pyspark))
 
 print("PyArrow output")
 print(agnostic_get_columns(table_pa))
@@ -91,5 +100,5 @@ Let's learn about what you just did, and what Narwhals can do for you!
 
 !!! info
 
-    These examples are using pandas, Polars and PyArrow, however Narwhals supports
-    other dataframe libraries (See [supported libraries](extending.md)).
+    These examples are using pandas, Polars, PyArrow, and PySpark, however Narwhals
+    supports other dataframe libraries (See [supported libraries](extending.md)).
