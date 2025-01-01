@@ -54,8 +54,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 \
-          --constructors="pandas,pandas[nullable],pandas[pyarrow],modin,modin[pyarrow],dask,polars[eager],polars[lazy]"
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --all-cpu-constructors
 
   pytest-full-coverage:
     strategy:
