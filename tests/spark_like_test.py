@@ -30,7 +30,7 @@ pytestmark = [
         "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning "
+        "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning"
     ),
 ]
 
