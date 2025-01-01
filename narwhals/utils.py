@@ -983,14 +983,9 @@ def generate_repr(header: str, native_repr: str) -> str:
         output += f"└{'─' * length}┘"
         return output
 
-    length = len(header)
+    diff = 39 - len(header)
     return (
-        "┌"
-        + "─" * length
-        + "┐\n"
-        + f"|{header}|\n"
-        + "| Use `.to_native` to see native output |\n"
-        + "└"
-        + "─" * length
-        + "┘"
+        f"┌{'─' * (39)}┐\n"
+        f"|{' '*(diff//2)}{header}{' '*(diff//2+diff%2)}|\n"
+        "| Use `.to_native` to see native output |\n" + "└" + "─" * 39 + "┘"
     )
