@@ -430,11 +430,12 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf
-            ┌───────────────────────────────────────┐
-            | Narwhals LazyFrame                    |
-            | Use `.to_native` to see native output |
-            └───────────────────────────────────────┘
+            >>> lf  # doctest:+ELLIPSIS
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |<LazyFrame at ...
+            └─────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df.to_native().sort("a")
             shape: (3, 3)
