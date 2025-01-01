@@ -481,7 +481,7 @@ def native_to_narwhals_dtype(
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
-    if implementation is Implementation.PANDAS:
+    if implementation in [Implementation.PANDAS, Implementation.MODIN]:
         import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
