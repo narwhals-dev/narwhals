@@ -5,7 +5,6 @@ from pathlib import Path
 import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
-import tqdm
 
 if not Path("data").exists():
     Path("data").mkdir()
@@ -23,7 +22,7 @@ tables = [
     "region",
     "supplier",
 ]
-for t in tqdm.tqdm(tables):
+for t in tables:
     res = con.query("SELECT * FROM " + t)  # noqa: S608
     res_arrow = res.to_arrow_table()
     new_schema = []
