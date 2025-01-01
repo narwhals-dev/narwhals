@@ -27,7 +27,7 @@ jobs:
       - name: install-random-verions
         run: uv pip install -r random-requirements.txt --system
       - name: install-narwhals
-        run: uv pip install -e ".[dev]" --system
+        run: uv pip install -e ".[dev, duckdb]" --system
       - name: show versions
         run: uv pip freeze
       - name: Run pytest

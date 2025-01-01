@@ -28,6 +28,7 @@ polars = ["polars>=0.20.3"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
+duckdb = ["duckdb>=1.0"]
 pyspark = ["pyspark>=3.3.0"]
 dev = [
   "covdefaults",
