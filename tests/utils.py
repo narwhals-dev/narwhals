@@ -77,7 +77,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         if result.implementation is Implementation.POLARS and os.environ.get(
             "NARWHALS_POLARS_GPU", False
         ):
-            result = result.to_native().collect(gpu=True)
+            result = result.to_native().collect(engine="gpu")
         else:
             result = result.collect()
 
