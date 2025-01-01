@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Generator
+from typing import Sequence
 
 import pandas as pd
 import polars as pl
@@ -54,11 +55,13 @@ def pytest_addoption(parser: Any) -> None:
     )
 
 
-def pytest_configure(config: Any) -> None:
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow to run")
 
 
-def pytest_collection_modifyitems(config: Any, items: Any) -> Any:  # pragma: no cover
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: Sequence[pytest.Function]
+) -> None:  # pragma: no cover
     if config.getoption("--runslow"):
         # --runslow given in cli: do not skip slow tests
         return
@@ -169,7 +172,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
 
-def pytest_generate_tests(metafunc: Any) -> None:
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if metafunc.config.getoption("all_cpu_constructors"):
         selected_constructors: list[str] = [
             *iter(EAGER_CONSTRUCTORS.keys()),
