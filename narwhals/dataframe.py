@@ -146,21 +146,6 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.drop(columns, strict=strict)
         )
 
-    def unique(
-        self,
-        subset: str | list[str] | None = None,
-        *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
-    ) -> Self:
-        if isinstance(subset, str):
-            subset = [subset]
-        return self._from_compliant_dataframe(
-            self._compliant_frame.unique(
-                subset=subset, keep=keep, maintain_order=maintain_order
-            )
-        )
-
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
@@ -2097,8 +2082,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'first': Keep first unique row.
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
-                expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for Polars.
+                expensive to compute.
 
         Returns:
             The dataframe with the duplicate rows removed.
@@ -2148,7 +2132,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             bar: [["a"]]
             ham: [["b"]]
         """
-        return super().unique(subset, keep=keep, maintain_order=maintain_order)
+        if keep not in {"any", "none", "first", "last"}:
+            msg = f"Expected {'any', 'none', 'first', 'last'}, got: {keep}"
+            raise ValueError(msg)
+        if isinstance(subset, str):
+            subset = [subset]
+        return self._from_compliant_dataframe(
+            self._compliant_frame.unique(
+                subset=subset, keep=keep, maintain_order=maintain_order
+            )
+        )
 
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
@@ -4436,25 +4429,21 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "none"] = "any",
+        maintain_order: bool | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'first', 'last', 'any', 'none'}
+            keep: {'first', 'none'}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
                         This allows more optimizations.
                 * 'none': Don't keep duplicate rows.
-                * 'first': Keep first unique row.
-                * 'last': Keep last unique row.
-            maintain_order: Keep the same order as the original DataFrame. This may be more
-                expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for Polars.
+            maintain_order: Has no effect and is kept around only for backwards-compatibility.
 
         Returns:
             LazyFrame: LazyFrame with unique rows.
@@ -4494,7 +4483,26 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
-        return super().unique(subset, keep=keep, maintain_order=maintain_order)
+        if keep not in {"any", "none"}:
+            msg = (
+                "narwhals.LazyFrame makes no assumptions about row order, so only "
+                f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
+            )
+            raise ValueError(msg)
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
+            raise ValueError(msg)
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        if isinstance(subset, str):
+            subset = [subset]
+        return self._from_compliant_dataframe(
+            self._compliant_frame.unique(subset=subset, keep=keep)
+        )
 
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
