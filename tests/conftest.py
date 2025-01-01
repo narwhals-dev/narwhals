@@ -166,7 +166,7 @@ def pytest_generate_tests(metafunc: Any) -> None:
         selected_constructors = [
             x for x in selected_constructors if x not in GPU_CONSTRUCTORS
         ]
-    else:
+    else:  # pragma: no cover
         selected_constructors = metafunc.config.getoption("constructors").split(",")
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
