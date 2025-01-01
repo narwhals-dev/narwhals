@@ -15,6 +15,7 @@ from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
+from narwhals.utils import generate_repr
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -404,18 +405,7 @@ class Series(Generic[IntoSeriesT]):
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals Series                         "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Use `.to_native()` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘"
-        )
+        return generate_repr("Narwhals Series", self.to_native().__repr__())
 
     def __len__(self) -> int:
         return len(self._compliant_series)
