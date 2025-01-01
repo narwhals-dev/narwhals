@@ -203,11 +203,8 @@ class SparkLikeLazyFrame:
         self: Self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool,
+        keep: Literal["any", "none"],
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
