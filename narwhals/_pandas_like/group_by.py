@@ -123,8 +123,14 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        for key, group in self._grouped:
-            yield (key, self._from_native_frame(group))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*a length 1 tuple will be returned",
+                category=FutureWarning,
+            )
+            for key, group in self._grouped:
+                yield (key, self._from_native_frame(group))
 
 
 def agg_pandas(  # noqa: PLR0915
