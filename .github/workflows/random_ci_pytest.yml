@@ -22,17 +22,15 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install package
-        run: uv pip install -e . --system
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
-      - name: install-reqs
-        run: uv pip install -e ".[dev]" --system
-      - name: uninstall scipy/sklearn
-        run: uv pip uninstall scipy scikit-learn --system
       - name: install-random-verions
         run: uv pip install -r random-requirements.txt --system
+      - name: install-narwhals
+        run: uv pip install -e ".[dev]" --system
       - name: show versions
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=80
+        run: |
+            pytest tests --cov=narwhals --cov=tests --cov-fail-under=80 \
+            --constructors=pandas,pyarrow,polars[eager],polars[lazy]

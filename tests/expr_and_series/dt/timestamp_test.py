@@ -138,7 +138,12 @@ def test_timestamp_dates(
 ) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
+        for x in (
+            "pandas_constructor",
+            "pandas_nullable_constructor",
+            "cudf",
+            "modin_constructor",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
 

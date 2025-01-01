@@ -5,7 +5,6 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Literal
 
-import duckdb
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -201,6 +200,7 @@ def test_pandas_fixed_offset_1302() -> None:
 
 
 def test_huge_int() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):  # pragma: no cover
         result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
@@ -227,6 +227,7 @@ def test_huge_int() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
