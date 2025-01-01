@@ -93,7 +93,7 @@ def test_unary_two_elements(constructor: Constructor) -> None:
         "b_nunique": [2],
         "b_skew": [0.0],
         "c_nunique": [2],
-        "c_skew": [float("nan")],
+        "c_skew": [None],
     }
     assert_equal_data(result, expected)
 
@@ -115,13 +115,13 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
         "b_nunique": [2],
         "b_skew": [0.0],
         "c_nunique": [2],
-        "c_skew": [float("nan")],
+        "c_skew": [None],
     }
     assert_equal_data(result, expected)
 
 
 def test_unary_one_element(constructor: Constructor) -> None:
-    data = {"a": [1], "b": [2], "c": [float("nan")]}
+    data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
         pytest.warns(RuntimeWarning, match="invalid value encountered in scalar divide")
@@ -139,17 +139,17 @@ def test_unary_one_element(constructor: Constructor) -> None:
         )
         expected = {
             "a_nunique": [1],
-            "a_skew": [float("nan")],
+            "a_skew": [None],
             "b_nunique": [1],
-            "b_skew": [float("nan")],
+            "b_skew": [None],
             "c_nunique": [1],
-            "c_skew": [float("nan")],
+            "c_skew": [None],
         }
         assert_equal_data(result, expected)
 
 
 def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [1], "b": [2], "c": [float("nan")]}
+    data = {"a": [1], "b": [2], "c": [None]}
     df = nw.from_native(constructor_eager(data))
     result = {
         "a_nunique": [df["a"].n_unique()],
@@ -161,10 +161,10 @@ def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
     }
     expected = {
         "a_nunique": [1],
-        "a_skew": [float("nan")],
+        "a_skew": [None],
         "b_nunique": [1],
-        "b_skew": [float("nan")],
+        "b_skew": [None],
         "c_nunique": [1],
-        "c_skew": [float("nan")],
+        "c_skew": [None],
     }
     assert_equal_data(result, expected)

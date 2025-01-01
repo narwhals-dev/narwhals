@@ -90,8 +90,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
-            elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:
-                are_equivalent_values = math.isnan(rhs)  # pragma: no cover
+            elif isinstance(lhs, float) and math.isnan(lhs):
+                are_equivalent_values = rhs is None or math.isnan(rhs)
+            elif isinstance(rhs, float) and math.isnan(rhs):
+                are_equivalent_values = lhs is None or math.isnan(lhs)
+            elif lhs is None:
+                are_equivalent_values = rhs is None
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:

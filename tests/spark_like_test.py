@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
     # NaN and NULL are not the same in PySpark
-    pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+    pd_df = pd.DataFrame(obj).replace({None: None}).reset_index()
     return (  # type: ignore[no-any-return]
         spark_session.createDataFrame(pd_df).repartition(2).orderBy("index").drop("index")
     )
@@ -235,8 +235,8 @@ def test_sort(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("nulls_last", "expected"),
     [
-        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, float("nan")]}),
-        (False, {"a": [-1, 0, 2, 0], "b": [float("nan"), 3, 2, 1]}),
+        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, None]}),
+        (False, {"a": [-1, 0, 2, 0], "b": [None, 3, 2, 1]}),
     ],
 )
 def test_sort_nulls(
@@ -511,8 +511,8 @@ def test_drop_nulls(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("subset", "expected"),
     [
-        ("a", {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
-        (["a"], {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        ("a", {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
+        (["a"], {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
         (["a", "b"], {"a": [2.0, 4.0], "b": [3.0, 5.0]}),
     ],
 )
@@ -782,7 +782,7 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, float("nan")],
+        "antananarivo_right": [1, 2, None],
         "idx": [0, 1, 2],
     }
     result_on_list = df_left.join(
@@ -863,8 +863,8 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
-        "antananarivo_right": [1.0, 3.0, float("nan")],
-        "c": [4.0, 6.0, float("nan")],
+        "antananarivo_right": [1.0, 3.0, None],
+        "c": [4.0, 6.0, None],
         "idx": [0, 1, 2],
     }
     assert_equal_data(result, expected)
