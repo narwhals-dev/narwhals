@@ -152,10 +152,20 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
 }
+GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
 
 def pytest_generate_tests(metafunc: Any) -> None:
-    selected_constructors = metafunc.config.getoption("constructors").split(",")
+    if metafunc.config.getoption("all_cpu_constructors"):
+        selected_constructors: list[str] = [
+            *iter(EAGER_CONSTRUCTORS.keys()),
+            *iter(LAZY_CONSTRUCTORS.keys()),
+        ]
+        selected_constructors = [
+            x for x in selected_constructors if x not in GPU_CONSTRUCTORS
+        ]
+    else:
+        selected_constructors = metafunc.config.getoption("constructors").split(",")
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []
