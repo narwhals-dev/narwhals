@@ -11,10 +11,6 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.dependencies import get_dask_dataframe
-from narwhals.stable.v1.dependencies import get_cudf
-from narwhals.stable.v1.dependencies import get_modin
-
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
@@ -73,17 +69,20 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 
 
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
-    mpd = get_modin()
+    import modin.pandas as mpd
+
     return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
 def modin_pyarrow_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
-    mpd = get_modin()
+    import modin.pandas as mpd
+
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
 def cudf_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
-    cudf = get_cudf()
+    import cudf
+
     return cudf.DataFrame(obj)  # type: ignore[no-any-return]
 
 
@@ -96,12 +95,14 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
 
 
 def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
-    dd = get_dask_dataframe()
+    import dask.dataframe as dd
+
     return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
 
 
 def dask_lazy_p2_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
-    dd = get_dask_dataframe()
+    import dask.dataframe as dd
+
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
