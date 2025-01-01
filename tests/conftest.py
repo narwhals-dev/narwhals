@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
 # a way to run `python -m cudf.pandas -m pytest` and control which constructors
 # get tested.
-if default_constructors := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS", None):
+if default_constructors := os.environ.get(
+    "NARWHALS_DEFAULT_CONSTRUCTORS", None
+):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
     DEFAULT_CONSTRUCTORS = (
