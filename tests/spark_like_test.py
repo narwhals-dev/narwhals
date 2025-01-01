@@ -26,7 +26,8 @@ if TYPE_CHECKING:
 
 # Apply filterwarnings to all tests in this module
 pytestmark = pytest.mark.filterwarnings(
-    "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning"
+    "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning",
+    "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning ",
 )
 
 
