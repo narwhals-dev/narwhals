@@ -145,6 +145,7 @@ EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "pandas[pyarrow]": pandas_pyarrow_constructor,
     "pyarrow": pyarrow_table_constructor,
     "modin": modin_constructor,
+    "modin[pyarrow]": modin_pyarrow_constructor,
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
