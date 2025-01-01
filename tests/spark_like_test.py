@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
     # NaN and NULL are not the same in PySpark
-    pd_df = pd.DataFrame(obj).replace({None: None}).reset_index()
+    pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
     return (  # type: ignore[no-any-return]
         spark_session.createDataFrame(pd_df).repartition(2).orderBy("index").drop("index")
     )
@@ -299,7 +299,7 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
 
 # copied from tests/expr_and_series/count_test.py
 def test_count(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
+    data = {"a": [1, 2, 3], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").count())
     expected = {"a": [3], "b": [2], "z": [1]}
