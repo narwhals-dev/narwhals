@@ -7,7 +7,6 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
-import duckdb
 import pandas as pd
 import polars as pl
 import pytest
@@ -215,6 +214,7 @@ def test_from_non_hashable_column_name() -> None:
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},

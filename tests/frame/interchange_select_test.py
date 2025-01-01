@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import duckdb
 import polars as pl
 import pytest
 
@@ -61,6 +60,7 @@ def test_interchange_ibis(
 
 
 def test_interchange_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)
