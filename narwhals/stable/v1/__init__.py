@@ -504,6 +504,7 @@ class Series(NwSeries[Any]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2]
             >>> s_pd = pd.Series(data, name="a")
             >>> s_pl = pl.Series("a", data)
@@ -522,6 +523,7 @@ class Series(NwSeries[Any]):
                a
             0  1
             1  2
+
             >>> agnostic_to_frame(s_pl)
             shape: (2, 1)
             ┌─────┐
@@ -532,6 +534,7 @@ class Series(NwSeries[Any]):
             │ 1   │
             │ 2   │
             └─────┘
+
             >>> agnostic_to_frame(s_pa)
             pyarrow.Table
             : int64
@@ -570,6 +573,7 @@ class Series(NwSeries[Any]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 1, 2, 3, 2]
             >>> s_pd = pd.Series(data, name="s")
             >>> s_pl = pl.Series(values=data, name="s")
@@ -601,6 +605,7 @@ class Series(NwSeries[Any]):
             │ 2   ┆ 2     │
             │ 3   ┆ 1     │
             └─────┴───────┘
+
             >>> agnostic_value_counts(s_pa)
             pyarrow.Table
             : int64
@@ -670,6 +675,7 @@ class Series(NwSeries[Any]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
@@ -847,6 +853,7 @@ class Series(NwSeries[Any]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -942,6 +949,7 @@ class Series(NwSeries[Any]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1038,6 +1046,7 @@ class Series(NwSeries[Any]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)

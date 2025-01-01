@@ -87,14 +87,19 @@ class Series(Generic[IntoSeriesT]):
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
+
             >>> s_native = pd.Series([1, 2, 3])
             >>> s = nw.from_native(s_native, series_only=True)
+
             >>> s.implementation
             <Implementation.PANDAS: 1>
+
             >>> s.implementation.is_pandas()
             True
+
             >>> s.implementation.is_pandas_like()
             True
+
             >>> s.implementation.is_polars()
             False
         """
@@ -123,12 +128,13 @@ class Series(Generic[IntoSeriesT]):
             A single element if `idx` is an integer, else a subset of the Series.
 
         Examples:
+            >>> from typing import Any
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
-            >>> from typing import Any
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -145,8 +151,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_get_first_item(s_pd)
             np.int64(1)
+
             >>> agnostic_get_first_item(s_pl)
             1
+
             >>> agnostic_get_first_item(s_pa)
             1
 
@@ -160,6 +168,7 @@ class Series(Generic[IntoSeriesT]):
             0    1
             1    2
             dtype: int64
+
             >>> agnostic_slice(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i64]
@@ -167,6 +176,7 @@ class Series(Generic[IntoSeriesT]):
                 1
                 2
             ]
+
             >>> agnostic_slice(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -222,6 +232,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -241,6 +252,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             dtype: int64
+
             >>> agnostic_to_native(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -249,6 +261,7 @@ class Series(Generic[IntoSeriesT]):
                 2
                 3
             ]
+
             >>> agnostic_to_native(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -298,6 +311,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+
             >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -317,6 +331,7 @@ class Series(Generic[IntoSeriesT]):
             0  999  4
             1  888  5
             2    3  6
+
             >>> agnostic_scatter(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -328,6 +343,7 @@ class Series(Generic[IntoSeriesT]):
             │ 888 ┆ 5   │
             │ 3   ┆ 6   │
             └─────┴─────┘
+
             >>> agnostic_scatter(df_pa)
             pyarrow.Table
             a: int64
@@ -353,6 +369,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -369,8 +386,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_shape(s_pd)
             (3,)
+
             >>> agnostic_shape(s_pl)
             (3,)
+
             >>> agnostic_shape(s_pa)
             (3,)
         """
@@ -401,6 +420,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -420,6 +440,7 @@ class Series(Generic[IntoSeriesT]):
             1    4
             2    5
             dtype: int64
+
             >>> agnostic_pipe(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -428,6 +449,7 @@ class Series(Generic[IntoSeriesT]):
                4
                5
             ]
+
             >>> agnostic_pipe(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -471,6 +493,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -487,8 +510,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_len(s_pd)
             3
+
             >>> agnostic_len(s_pl)
             3
+
             >>> agnostic_len(s_pa)
             3
         """
@@ -507,6 +532,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -523,8 +549,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_dtype(s_pd)
             Int64
+
             >>> agnostic_dtype(s_pl)
             Int64
+
             >>> agnostic_dtype(s_pa)
             Int64
         """
@@ -559,6 +587,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_name(s_pd)
             'foo'
+
             >>> agnostic_name(s_pl)
             'foo'
         """
@@ -621,6 +650,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
@@ -676,6 +706,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [True, False, True]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -695,6 +726,7 @@ class Series(Generic[IntoSeriesT]):
             1    0
             2    1
             dtype: int64
+
             >>> agnostic_cast(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -703,6 +735,7 @@ class Series(Generic[IntoSeriesT]):
                0
                1
             ]
+
             >>> agnostic_cast(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -729,6 +762,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2]
             >>> s_pd = pd.Series(data, name="a")
             >>> s_pl = pl.Series("a", data)
@@ -747,6 +781,7 @@ class Series(Generic[IntoSeriesT]):
                a
             0  1
             1  2
+
             >>> agnostic_to_frame(s_pl)
             shape: (2, 1)
             ┌─────┐
@@ -757,6 +792,7 @@ class Series(Generic[IntoSeriesT]):
             │ 1   │
             │ 2   │
             └─────┘
+
             >>> agnostic_to_frame(s_pa)
             pyarrow.Table
             : int64
@@ -786,6 +822,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -802,8 +839,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_to_list(s_pd)
             [1, 2, 3]
+
             >>> agnostic_to_list(s_pl)
             [1, 2, 3]
+
             >>> agnostic_to_list(s_pa)
             [1, 2, 3]
         """
@@ -821,6 +860,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -837,8 +877,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_mean(s_pd)
             np.float64(2.0)
+
             >>> agnostic_mean(s_pl)
             2.0
+
             >>> agnostic_mean(s_pa)
             2.0
         """
@@ -859,6 +901,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [5, 3, 8]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -875,8 +918,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_median(s_pd)
             np.float64(5.0)
+
             >>> agnostic_median(s_pl)
             5.0
+
             >>> agnostic_median(s_pa)
             5.0
         """
@@ -894,6 +939,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 1, 2, 10, 100]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -910,8 +956,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_skew(s_pd)
             np.float64(1.4724267269058975)
+
             >>> agnostic_skew(s_pl)
             1.4724267269058975
+
             >>> agnostic_skew(s_pa)
             1.4724267269058975
 
@@ -933,6 +981,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -949,8 +998,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_count(s_pd)
             np.int64(3)
+
             >>> agnostic_count(s_pl)
             3
+
             >>> agnostic_count(s_pa)
             3
         """
@@ -971,6 +1022,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [False, True, False]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -987,8 +1039,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_any(s_pd)
             np.True_
+
             >>> agnostic_any(s_pl)
             True
+
             >>> agnostic_any(s_pa)
             True
         """
@@ -1006,6 +1060,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [False, True, False]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1022,8 +1077,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_all(s_pd)
             np.False_
+
             >>> agnostic_all(s_pl)
             False
+
             >>> agnostic_all(s_pa)
             False
         """
@@ -1041,6 +1098,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1057,8 +1115,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_min(s_pd)
             np.int64(1)
+
             >>> agnostic_min(s_pl)
             1
+
             >>> agnostic_min(s_pa)
             1
         """
@@ -1076,6 +1136,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1092,8 +1153,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_max(s_pd)
             np.int64(3)
+
             >>> agnostic_max(s_pl)
             3
+
             >>> agnostic_max(s_pa)
             3
         """
@@ -1108,6 +1171,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1124,8 +1188,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_arg_min(s_pd)
             np.int64(0)
+
             >>> agnostic_arg_min(s_pl)
             0
+
             >>> agnostic_arg_min(s_pa)
             0
         """
@@ -1140,6 +1206,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1156,8 +1223,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_arg_max(s_pd)
             np.int64(2)
+
             >>> agnostic_arg_max(s_pl)
             2
+
             >>> agnostic_arg_max(s_pa)
             2
         """
@@ -1175,6 +1244,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1191,8 +1261,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_sum(s_pd)
             np.int64(6)
+
             >>> agnostic_sum(s_pl)
             6
+
             >>> agnostic_sum(s_pa)
             6
         """
@@ -1214,6 +1286,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1221,7 +1294,7 @@ class Series(Generic[IntoSeriesT]):
 
             We define a library agnostic function:
 
-            >>> def agnostic_std(s_native: IntoSeries):
+            >>> def agnostic_std(s_native: IntoSeries) -> float:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.std()
 
@@ -1230,8 +1303,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_std(s_pd)
             np.float64(1.0)
+
             >>> agnostic_std(s_pl)
             1.0
+
             >>> agnostic_std(s_pa)
             1.0
         """
@@ -1250,6 +1325,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1257,7 +1333,7 @@ class Series(Generic[IntoSeriesT]):
 
             We define a library agnostic function:
 
-            >>> def agnostic_var(s_native: IntoSeries):
+            >>> def agnostic_var(s_native: IntoSeries) -> float:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.var()
 
@@ -1266,8 +1342,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_var(s_pd)
             np.float64(1.0)
+
             >>> agnostic_var(s_pl)
             1.0
+
             >>> agnostic_var(s_pa)
             1.0
         """
@@ -1291,6 +1369,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1310,6 +1389,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             dtype: int64
+
             >>> agnostic_clip_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1318,6 +1398,7 @@ class Series(Generic[IntoSeriesT]):
                2
                3
             ]
+
             >>> agnostic_clip_lower(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1342,6 +1423,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    2
             dtype: int64
+
             >>> agnostic_clip_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1350,6 +1432,7 @@ class Series(Generic[IntoSeriesT]):
                2
                2
             ]
+
             >>> agnostic_clip_upper(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1384,6 +1467,7 @@ class Series(Generic[IntoSeriesT]):
             4   -1
             5    3
             dtype: int64
+
             >>> agnostic_clip(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (6,)
             Series: '' [i64]
@@ -1395,6 +1479,7 @@ class Series(Generic[IntoSeriesT]):
                -1
                 3
             ]
+
             >>> agnostic_clip_upper(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1427,6 +1512,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1446,6 +1532,7 @@ class Series(Generic[IntoSeriesT]):
             1     True
             2     True
             dtype: bool
+
             >>> agnostic_is_in(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
@@ -1454,6 +1541,7 @@ class Series(Generic[IntoSeriesT]):
                true
                true
             ]
+
             >>> agnostic_is_in(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1480,6 +1568,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, None, None, 2]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1498,6 +1587,7 @@ class Series(Generic[IntoSeriesT]):
             1    1
             2    2
             dtype: int64
+
             >>> agnostic_arg_true(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [u32]
@@ -1505,6 +1595,7 @@ class Series(Generic[IntoSeriesT]):
                1
                2
             ]
+
             >>> agnostic_arg_true(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1533,6 +1624,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, 4, None, 3, 5]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1553,6 +1645,7 @@ class Series(Generic[IntoSeriesT]):
             3    3.0
             4    5.0
             dtype: float64
+
             >>> agnostic_drop_nulls(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -1562,6 +1655,7 @@ class Series(Generic[IntoSeriesT]):
                 3
                 5
             ]
+
             >>> agnostic_drop_nulls(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1587,6 +1681,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, -4, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1606,6 +1701,7 @@ class Series(Generic[IntoSeriesT]):
             1    4
             2    3
             dtype: int64
+
             >>> agnostic_abs(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1614,6 +1710,7 @@ class Series(Generic[IntoSeriesT]):
                4
                3
             ]
+
             >>> agnostic_abs(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1641,6 +1738,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, 4, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1660,6 +1758,7 @@ class Series(Generic[IntoSeriesT]):
             1    6
             2    9
             dtype: int64
+
             >>> agnostic_cum_sum(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1668,6 +1767,7 @@ class Series(Generic[IntoSeriesT]):
                6
                9
             ]
+
             >>> agnostic_cum_sum(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1699,6 +1799,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, 4, 4, 6]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1718,6 +1819,7 @@ class Series(Generic[IntoSeriesT]):
             1    4
             2    6
             dtype: int64
+
             >>> agnostic_unique(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1726,6 +1828,7 @@ class Series(Generic[IntoSeriesT]):
                4
                6
             ]
+
             >>> agnostic_unique(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1761,6 +1864,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, 4, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1780,6 +1884,7 @@ class Series(Generic[IntoSeriesT]):
             1    2.0
             2   -1.0
             dtype: float64
+
             >>> agnostic_diff(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1788,6 +1893,7 @@ class Series(Generic[IntoSeriesT]):
                2
                -1
             ]
+
             >>> agnostic_diff(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1825,6 +1931,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [2, 4, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1844,6 +1951,7 @@ class Series(Generic[IntoSeriesT]):
             1    2.0
             2    4.0
             dtype: float64
+
             >>> agnostic_shift(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -1852,6 +1960,7 @@ class Series(Generic[IntoSeriesT]):
                2
                4
             ]
+
             >>> agnostic_shift(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1895,6 +2004,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 4]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1915,6 +2025,7 @@ class Series(Generic[IntoSeriesT]):
             1  2
             3  4
             3  4
+
             >>> agnostic_sample(s_pl)  # doctest: +SKIP
             shape: (4,)
             Series: '' [i64]
@@ -1924,6 +2035,7 @@ class Series(Generic[IntoSeriesT]):
                3
                4
             ]
+
             >>> agnostic_sample(s_pa)  # doctest: +SKIP
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -1975,6 +2087,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data, name="foo")
             >>> s_pl = pl.Series("foo", data)
@@ -1994,6 +2107,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             Name: bar, dtype: int64
+
             >>> agnostic_alias(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'bar' [i64]
@@ -2002,6 +2116,7 @@ class Series(Generic[IntoSeriesT]):
                2
                3
             ]
+
             >>> agnostic_alias(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at 0x...>
             [
@@ -2050,6 +2165,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data, name="foo")
             >>> s_pl = pl.Series("foo", data)
@@ -2069,6 +2185,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             Name: bar, dtype: int64
+
             >>> agnostic_rename(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'bar' [i64]
@@ -2077,6 +2194,7 @@ class Series(Generic[IntoSeriesT]):
                2
                3
             ]
+
             >>> agnostic_rename(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at 0x...>
             [
@@ -2118,6 +2236,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = {"a": [3, 0, 1, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -2140,6 +2259,7 @@ class Series(Generic[IntoSeriesT]):
             2      one
             3      two
             Name: a, dtype: object
+
             >>> agnostic_replace_strict(df_pl["a"])  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: 'a' [str]
@@ -2149,6 +2269,7 @@ class Series(Generic[IntoSeriesT]):
                 "one"
                 "two"
             ]
+
             >>> agnostic_replace_strict(df_pa["a"])
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2188,6 +2309,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [5, None, 1, 2]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2212,6 +2334,7 @@ class Series(Generic[IntoSeriesT]):
             3    2.0
             0    5.0
             dtype: float64
+
             >>> agnostic_sort(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -2221,6 +2344,7 @@ class Series(Generic[IntoSeriesT]):
                2
                5
             ]
+
             >>> agnostic_sort(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2238,6 +2362,7 @@ class Series(Generic[IntoSeriesT]):
             3    2.0
             2    1.0
             dtype: float64
+
             >>> agnostic_sort_descending(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -2247,6 +2372,7 @@ class Series(Generic[IntoSeriesT]):
                2
                1
             ]
+
             >>> agnostic_sort_descending(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2279,6 +2405,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2298,6 +2425,7 @@ class Series(Generic[IntoSeriesT]):
             1    False
             2     True
             dtype: bool
+
             >>> agnostic_is_null(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
@@ -2306,6 +2434,7 @@ class Series(Generic[IntoSeriesT]):
                false
                true
             ]
+
             >>> agnostic_is_null(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2345,6 +2474,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2364,6 +2494,7 @@ class Series(Generic[IntoSeriesT]):
             1    2.0
             2    5.0
             dtype: float64
+
             >>> agnostic_fill_null(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -2372,6 +2503,7 @@ class Series(Generic[IntoSeriesT]):
                2
                5
             ]
+
             >>> agnostic_fill_null(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2393,6 +2525,7 @@ class Series(Generic[IntoSeriesT]):
             1    2.0
             2    2.0
             dtype: float64
+
             >>> agnostic_fill_null_with_strategy(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -2401,6 +2534,7 @@ class Series(Generic[IntoSeriesT]):
                2
                2
             ]
+
             >>> agnostic_fill_null_with_strategy(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2447,6 +2581,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 4, 5]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2468,6 +2603,7 @@ class Series(Generic[IntoSeriesT]):
             3     True
             4    False
             dtype: bool
+
             >>> agnostic_is_between(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: '' [bool]
@@ -2478,6 +2614,7 @@ class Series(Generic[IntoSeriesT]):
                true
                false
             ]
+
             >>> agnostic_is_between(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2510,6 +2647,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2526,8 +2664,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_n_unique(s_pd)
             3
+
             >>> agnostic_n_unique(s_pl)
             3
+
             >>> agnostic_n_unique(s_pa)
             3
         """
@@ -2546,6 +2686,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data, name="a")
             >>> s_pl = pl.Series("a", data)
@@ -2562,8 +2703,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_to_numpy(s_pd)
             array([1, 2, 3]...)
+
             >>> agnostic_to_numpy(s_pl)
             array([1, 2, 3]...)
+
             >>> agnostic_to_numpy(s_pa)
             array([1, 2, 3]...)
         """
@@ -2581,6 +2724,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data, name="a")
             >>> s_pl = pl.Series("a", data)
@@ -2600,11 +2744,13 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             Name: a, dtype: int64
+
             >>> agnostic_to_pandas(s_pl)
             0    1
             1    2
             2    3
             Name: a, dtype: int64
+
             >>> agnostic_to_pandas(s_pa)
             0    1
             1    2
@@ -2749,6 +2895,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [4, 10, 15, 34, 50]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2768,6 +2915,7 @@ class Series(Generic[IntoSeriesT]):
             3    34
             4    50
             dtype: int64
+
             >>> agnostic_filter(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -2776,6 +2924,7 @@ class Series(Generic[IntoSeriesT]):
                34
                50
             ]
+
             >>> agnostic_filter(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2803,6 +2952,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 1]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2823,6 +2973,7 @@ class Series(Generic[IntoSeriesT]):
             2    False
             3     True
             dtype: bool
+
             >>> agnostic_is_duplicated(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [bool]
@@ -2832,6 +2983,7 @@ class Series(Generic[IntoSeriesT]):
                 false
                 true
             ]
+
             >>> agnostic_is_duplicated(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -2896,6 +3048,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 1]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2956,6 +3109,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, None, None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -2973,8 +3127,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_null_count(s_pd)
             np.int64(2)
+
             >>> agnostic_null_count(s_pl)
             2
+
             >>> agnostic_null_count(s_pa)
             2
         """
@@ -2992,6 +3148,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 1, 2, 3, 2]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3024,6 +3181,7 @@ class Series(Generic[IntoSeriesT]):
                 true
                 false
             ]
+
             >>> agnostic_is_first_distinct(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3050,6 +3208,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 1, 2, 3, 2]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3082,6 +3241,7 @@ class Series(Generic[IntoSeriesT]):
                 true
                 true
             ]
+
             >>> agnostic_is_last_distinct(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3111,6 +3271,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> unsorted_data = [1, 3, 2]
             >>> sorted_data = [3, 2, 1]
 
@@ -3125,14 +3286,19 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_is_sorted(pd.Series(unsorted_data))
             False
+
             >>> agnostic_is_sorted(pd.Series(sorted_data), descending=True)
             True
+
             >>> agnostic_is_sorted(pl.Series(unsorted_data))
             False
+
             >>> agnostic_is_sorted(pl.Series(sorted_data), descending=True)
             True
+
             >>> agnostic_is_sorted(pa.chunked_array([unsorted_data]))
             False
+
             >>> agnostic_is_sorted(pa.chunked_array([sorted_data]), descending=True)
             True
         """
@@ -3168,6 +3334,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 1, 2, 3, 2]
             >>> s_pd = pd.Series(data, name="s")
             >>> s_pl = pl.Series(values=data, name="s")
@@ -3199,6 +3366,7 @@ class Series(Generic[IntoSeriesT]):
             │ 2   ┆ 2     │
             │ 3   ┆ 1     │
             └─────┴───────┘
+
             >>> agnostic_value_counts(s_pa)
             pyarrow.Table
             : int64
@@ -3237,6 +3405,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = list(range(50))
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3256,8 +3425,10 @@ class Series(Generic[IntoSeriesT]):
 
             >>> agnostic_quantile(s_pd)
             [np.int64(5), np.int64(12), np.int64(24), np.int64(37), np.int64(44)]
+
             >>> agnostic_quantile(s_pl)
             [5.0, 12.0, 25.0, 37.0, 44.0]
+
             >>> agnostic_quantile(s_pa)
             [5, 12, 24, 37, 44]
         """
@@ -3284,6 +3455,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 4, 5]
             >>> other = [5, 4, 3, 2, 1]
             >>> mask = [True, False, True, False, True]
@@ -3315,6 +3487,7 @@ class Series(Generic[IntoSeriesT]):
                2
                5
             ]
+
             >>> agnostic_zip_with(
             ...     s1_native=pd.Series(data),
             ...     mask_native=pd.Series(mask),
@@ -3326,6 +3499,7 @@ class Series(Generic[IntoSeriesT]):
             3    2
             4    5
             dtype: int64
+
             >>> agnostic_zip_with(
             ...     s1_native=pa.chunked_array([data]),
             ...     mask_native=pa.chunked_array([mask]),
@@ -3404,6 +3578,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = list(range(10))
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3432,6 +3607,7 @@ class Series(Generic[IntoSeriesT]):
                1
                2
             ]
+
             >>> agnostic_head(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3459,6 +3635,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = list(range(10))
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3478,6 +3655,7 @@ class Series(Generic[IntoSeriesT]):
             8    8
             9    9
             dtype: int64
+
             >>> agnostic_tail(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
@@ -3486,6 +3664,7 @@ class Series(Generic[IntoSeriesT]):
                8
                9
             ]
+
             >>> agnostic_tail(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3521,6 +3700,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.12345, 2.56789, 3.901234]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3549,6 +3729,7 @@ class Series(Generic[IntoSeriesT]):
                2.6
                3.9
             ]
+
             >>> agnostic_round(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3584,6 +3765,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(data, name="a")
             >>> s_pl = pl.Series("a", data)
@@ -3623,6 +3805,7 @@ class Series(Generic[IntoSeriesT]):
             │ 0   ┆ 1   ┆ 0   │
             │ 0   ┆ 0   ┆ 1   │
             └─────┴─────┴─────┘
+
             >>> agnostic_to_dummies(s_pl, drop_first=True)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -3634,6 +3817,7 @@ class Series(Generic[IntoSeriesT]):
             │ 1   ┆ 0   │
             │ 0   ┆ 1   │
             └─────┴─────┘
+
             >>> agnostic_to_dummies(s_pa)
             pyarrow.Table
             _1: int8
@@ -3672,6 +3856,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3, 4]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3699,6 +3884,7 @@ class Series(Generic[IntoSeriesT]):
                2
                4
             ]
+
             >>> agnostic_gather_every(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3724,6 +3910,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeries
+
             >>> data = [1, 2, 3, 4]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3746,6 +3933,7 @@ class Series(Generic[IntoSeriesT]):
                 3,
                 4
             ]
+
             >>> agnostic_to_arrow(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             <pyarrow.lib.Int64Array object at ...>
             [
@@ -3754,6 +3942,7 @@ class Series(Generic[IntoSeriesT]):
                 3,
                 4
             ]
+
             >>> agnostic_to_arrow(s_pa)  # doctest:+NORMALIZE_WHITESPACE
             <pyarrow.lib.Int64Array object at ...>
             [
@@ -3779,6 +3968,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 1, 2, 2, 3]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -3797,6 +3987,7 @@ class Series(Generic[IntoSeriesT]):
             0    1
             1    2
             dtype: int64
+
             >>> agnostic_mode(s_pl)  # doctest:+NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i64]
@@ -3804,6 +3995,7 @@ class Series(Generic[IntoSeriesT]):
                1
                2
             ]
+
             >>> agnostic_mode(s_pa)  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3832,6 +4024,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [float("nan"), float("inf"), 2.0, None]
 
             We define a library agnostic function:
@@ -3888,6 +4081,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["x", "k", None, "d"]
 
             We define a library agnostic function:
@@ -3905,6 +4099,7 @@ class Series(Generic[IntoSeriesT]):
             2    1
             3    1
             dtype: int64
+
             >>> agnostic_cum_count(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [u32]
@@ -3914,6 +4109,7 @@ class Series(Generic[IntoSeriesT]):
                 1
                 1
             ]
+
             >>> agnostic_cum_count(pa.chunked_array([data]))  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -3963,6 +4159,7 @@ class Series(Generic[IntoSeriesT]):
             2    NaN
             3    1.0
             dtype: float64
+
             >>> agnostic_cum_min(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -3972,6 +4169,7 @@ class Series(Generic[IntoSeriesT]):
                null
                1
             ]
+
             >>> agnostic_cum_min(pa.chunked_array([data]))  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -4021,6 +4219,7 @@ class Series(Generic[IntoSeriesT]):
             2    NaN
             3    3.0
             dtype: float64
+
             >>> agnostic_cum_max(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -4030,6 +4229,7 @@ class Series(Generic[IntoSeriesT]):
                null
                3
             ]
+
             >>> agnostic_cum_max(pa.chunked_array([data]))  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -4079,6 +4279,7 @@ class Series(Generic[IntoSeriesT]):
             2    NaN
             3    6.0
             dtype: float64
+
             >>> agnostic_cum_prod(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -4088,6 +4289,7 @@ class Series(Generic[IntoSeriesT]):
                null
                6
             ]
+
             >>> agnostic_cum_prod(pa.chunked_array([data]))  # doctest:+ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
@@ -4236,6 +4438,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4332,6 +4535,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4426,6 +4630,7 @@ class Series(Generic[IntoSeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4525,6 +4730,7 @@ class SeriesCatNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["apple", "mango", "mango"]
             >>> s_pd = pd.Series(data, dtype="category")
             >>> s_pl = pl.Series(data, dtype=pl.Categorical)
@@ -4583,6 +4789,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["foo", "Café", "345", "東京", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4652,6 +4859,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["123abc", "abc abc123"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4714,6 +4922,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["123abc", "abc abc123"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4772,6 +4981,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["apple", "\nmango"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4828,6 +5038,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["apple", "mango", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4886,6 +5097,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["apple", "mango", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -4946,6 +5158,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["cat", "dog", "rabbit and parrot", "dove", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5011,6 +5224,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["pear", None, "papaya", "dragonfruit"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5113,6 +5327,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["Atatata", "taata", "taatatata", "zukkyun"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5179,6 +5394,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["Atatata", "taata", "taatatata", "zukkyun"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5242,6 +5458,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["apple", "mango", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5297,6 +5514,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["APPLE", "MANGO", None]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5366,6 +5584,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["2020-01-01", "2020-01-02"]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -5384,6 +5603,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             0   2020-01-01
             1   2020-01-02
             dtype: datetime64[ns]
+
             >>> agnostic_to_datetime(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [datetime[μs]]
@@ -5391,6 +5611,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                2020-01-01 00:00:00
                2020-01-02 00:00:00
             ]
+
             >>> agnostic_to_datetime(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at 0x...>
             [
@@ -5425,6 +5646,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
             >>> s_pd = pd.Series(dates).convert_dtypes(dtype_backend="pyarrow")
             >>> s_pl = pl.Series(dates)
@@ -5478,6 +5700,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5531,6 +5754,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5583,6 +5807,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5636,6 +5861,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5689,6 +5915,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5742,6 +5969,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
@@ -5795,6 +6023,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [
             ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
             ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
@@ -5863,6 +6092,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [
             ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
             ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
@@ -5931,6 +6161,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> dates = [
             ...     datetime(2022, 1, 1, 5, 3, 10, 500000),
             ...     datetime(2022, 1, 5, 9, 12, 4, 60000),
@@ -5987,6 +6218,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [datetime(2020, 1, 1), datetime(2020, 8, 3)]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -6005,6 +6237,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             0      1
             1    216
             dtype: int32
+
             >>> agnostic_ordinal_day(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i16]
@@ -6012,6 +6245,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                1
                216
             ]
+
 
             >>> agnostic_ordinal_day(s_pa)  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
@@ -6044,6 +6278,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -6102,6 +6337,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -6160,6 +6396,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [
             ...     timedelta(milliseconds=10),
             ...     timedelta(milliseconds=20, microseconds=40),
@@ -6221,6 +6458,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [
             ...     timedelta(microseconds=10),
             ...     timedelta(milliseconds=1, microseconds=200),
@@ -6282,6 +6520,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = ["2024-01-01 00:00:00.000000001", "2024-01-01 00:00:00.000000002"]
             >>> s_pd = pd.to_datetime(pd.Series(data))
             >>> s_pl = pl.Series(data).str.to_datetime(time_unit="ns")
@@ -6359,6 +6598,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [
             ...     datetime(2020, 3, 1),
             ...     datetime(2020, 4, 1),
@@ -6422,6 +6662,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [
             ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
             ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
@@ -6484,6 +6725,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [
             ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
             ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
@@ -6547,6 +6789,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [date(2001, 1, 1), None, date(2001, 1, 3)]
             >>> s_pd = pd.Series(data, dtype="datetime64[ns]")
             >>> s_pl = pl.Series(data)
@@ -6615,6 +6858,7 @@ class SeriesListNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [[1, 2], [3, 4, None], None, []]
 
             Let's define a dataframe-agnostic function:
