@@ -25,7 +25,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # Python3.8 is technically at end-of-life, so we don't test everything
-        run: uv pip install -e ".[dev]" --system
+        run: uv pip install -e ".[dev, core]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -49,11 +49,13 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dev, extra, dask, modin, pyspark]" --system
+        run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --all-cpu-constructors
+        run: |
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 \
+          --constructors=pandas,pandas[nullable],pandas[pyarrow],modin,modin[pyarrow],dask,polars[eager],polars[lazy]
 
   pytest-full-coverage:
     strategy:
@@ -73,7 +75,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dev, extra, modin, dask, pyspark]" --system
+        run: uv pip install -e ".[dev, core, extra, modin, dask, pyspark]" --system
       - name: install ibis
         run: uv pip install -e ".[ibis]" --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,

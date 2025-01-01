@@ -96,9 +96,9 @@ Here's how you can set up your local development environment to contribute.
       uv venv -p 3.12 --seed
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
-2. Install Narwhals: `uv pip install -e ".[dev, docs]"`. This will include fast-ish core libraries.
+2. Install Narwhals: `uv pip install -e ".[dev, core, docs]"`. This will include fast-ish core libraries.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dev, docs, dask, pyspark, modin]"`.
+   `uv pip install -e ".[dev, core, docs, dask, pyspark, modin]"`.
 3. Install a fork of griffe:
    ```
    uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
