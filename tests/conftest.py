@@ -72,6 +72,11 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
+    return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
+
+
+def modin_pyarrow_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+    mpd = get_modin()
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
@@ -146,7 +151,7 @@ eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
 lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
-    eager_constructors.append(modin_constructor)
+    eager_constructors.extend([modin_constructor, modin_pyarrow_constructor])
 if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover

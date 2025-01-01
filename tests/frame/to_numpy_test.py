@@ -31,10 +31,7 @@ def test_to_numpy_tz_aware(
     if (
         ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
-        or (
-            any(x in str(constructor_eager) for x in ("pyarrow", "modin"))
-            and is_windows()
-        )
+        or ("pyarrow" in str(constructor_eager) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
