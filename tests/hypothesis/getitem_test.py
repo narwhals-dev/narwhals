@@ -30,7 +30,9 @@ if TYPE_CHECKING:
     ],
     scope="module",
 )
-def constructor(request: pytest.FixtureRequest) -> Callable[[Any], IntoDataFrame]:
+def pandas_or_pyarrow_constructor(
+    request: pytest.FixtureRequest,
+) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -140,7 +142,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 )  # type: ignore[misc]
 @pytest.mark.slow
 def test_getitem(
-    constructor: Any,
+    pandas_or_pyarrow_constructor: Any,
     selector: Any,
 ) -> None:
     """Compare __getitem__ against polars."""
@@ -150,7 +152,7 @@ def test_getitem(
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -159,7 +161,7 @@ def test_getitem(
     # IndexError: Offset must be non-negative (pyarrow does not support negative indexing)
     assume(
         not (
-            constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, slice)
             and isinstance(selector.start, int)
             and selector.start < 0
@@ -167,7 +169,7 @@ def test_getitem(
     )
     assume(
         not (
-            constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, slice)
             and isinstance(selector.stop, int)
             and selector.stop < 0
@@ -179,7 +181,7 @@ def test_getitem(
     # TypeError: Got unexpected argument type <class 'slice'> for compute function
     assume(
         not (
-            constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, tuple)
             and isinstance(selector[0], slice)
             and isinstance(selector[1], slice)
@@ -194,7 +196,7 @@ def test_getitem(
     # ArrowNotImplementedError: Function 'array_take' has no kernel matching input types (int64, null)
     assume(
         not (
-            constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, tuple)
             and isinstance(selector[0], list)
             and len(selector[0]) == 0
@@ -205,7 +207,7 @@ def test_getitem(
     # df[[], "a":], df[[], :] etc return different results between pandas/polars:
     assume(
         not (
-            constructor is pandas_constructor
+            pandas_or_pyarrow_constructor is pandas_constructor
             and isinstance(selector, tuple)
             and isinstance(selector[0], list)
             and len(selector[0]) == 0
@@ -236,7 +238,7 @@ def test_getitem(
         # rows/columns sides.
         return
 
-    df_other = nw.from_native(constructor(TEST_DATA))
+    df_other = nw.from_native(pandas_or_pyarrow_constructor(TEST_DATA))
     result_other = df_other[selector]
 
     if isinstance(result_polars, nw.Series):
