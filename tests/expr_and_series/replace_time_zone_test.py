@@ -22,8 +22,8 @@ def test_replace_time_zone(
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas[pyarrow]" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("modin[pyarrow]" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor))
     ):
@@ -49,8 +49,8 @@ def test_replace_time_zone_none(
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas[pyarrow]" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("modin[pyarrow]" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -75,8 +75,8 @@ def test_replace_time_zone_series(
 ) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
-        or ("pandas[pyarrow]" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("modin[pyarrow]" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
         or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor_eager))
     ):
@@ -102,8 +102,8 @@ def test_replace_time_zone_none_series(
 ) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
-        or ("pandas[pyarrow]" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("modin[pyarrow]" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
         or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)

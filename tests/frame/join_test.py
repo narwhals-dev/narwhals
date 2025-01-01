@@ -360,8 +360,7 @@ def test_joinasof_numeric(
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
-        ("pandas[pyarrow]" in str(constructor))
-        or ("pandas[nullable]" in str(constructor))
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
@@ -419,7 +418,7 @@ def test_joinasof_time(
 ) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (2, 1) and ("pandas[pyarrow]" in str(constructor)):
+    if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
@@ -501,8 +500,7 @@ def test_joinasof_by(
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
-        ("pandas[pyarrow]" in str(constructor))
-        or ("pandas[nullable]" in str(constructor))
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(

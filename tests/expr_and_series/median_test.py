@@ -47,7 +47,7 @@ def test_median_expr_raises_on_str(
     from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 
     df = nw.from_native(constructor(data))
-    if "polars[lazy]" in str(constructor):
+    if "polars_lazy" in str(constructor):
         with pytest.raises(
             PlInvalidOperationError,
             match="`median` operation not supported for dtype `str`",

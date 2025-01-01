@@ -39,7 +39,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
     result = {"a": input_series.dt.to_string(fmt)}
 
     if any(
-        x in str(constructor_eager) for x in ["pandas[pyarrow]", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
@@ -65,7 +65,7 @@ def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_frame.select(nw.col("a").dt.to_string(fmt).alias("b"))
-    if any(x in str(constructor) for x in ["pandas[pyarrow]", "pyarrow_table", "modin"]):
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = input_frame.select(
