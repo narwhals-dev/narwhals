@@ -150,7 +150,7 @@ def test_collect_schema(pyspark_constructor: Constructor) -> None:
 
     result = df.collect_schema()
     assert result == expected
-    result = df.lazy().collect().collect_schema()
+    result = df.lazy().collect_schema()
     assert result == expected
 
 
@@ -548,34 +548,35 @@ def test_rename(pyspark_constructor: Constructor) -> None:
         ("none", {"a": [2], "b": [6], "z": [9]}),
     ],
 )
+@pytest.mark.filterwarnings("ignore:Argument `maintain_order=True` is unused")
 def test_unique(
     pyspark_constructor: Constructor,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
 ) -> None:
-    if keep == "any":
-        context: Any = does_not_raise()
-    elif keep == "none":
-        context = pytest.raises(
+    context = (
+        does_not_raise()
+        if keep == "any"
+        else pytest.raises(
             ValueError,
             match=r"`LazyFrame.unique` with PySpark backend only supports `keep='any'`.",
         )
-    else:
-        context = pytest.raises(ValueError, match=f": {keep}")
+    )
 
     with context:
         data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
         df = nw.from_native(pyspark_constructor(data))
 
-        result = df.unique(subset, keep=keep).sort("z")  # type: ignore[arg-type]
+        result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
         assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore:Argument `maintain_order=True` is unused")
 def test_unique_none(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
-    result = df.unique().sort("z")
+    result = df.unique(maintain_order=True)
     assert_equal_data(result, data)
 
 

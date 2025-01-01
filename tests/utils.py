@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import sys
 import warnings
 from typing import Any
@@ -69,10 +70,17 @@ def _sort_dict_by_key(
 def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     is_pyspark = (
         hasattr(result, "_compliant_frame")
-        and result._compliant_frame._implementation is Implementation.PYSPARK
+        and result.implementation is Implementation.PYSPARK
     )
+
     if hasattr(result, "collect"):
-        result = result.collect()
+        if result.implementation is Implementation.POLARS and os.environ.get(
+            "NARWHALS_POLARS_GPU", False
+        ):
+            result = result.collect(gpu=True)
+        else:
+            result = result.collect()
+
     if hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected, (key, expected)
