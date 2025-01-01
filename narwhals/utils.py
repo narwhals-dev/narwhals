@@ -964,7 +964,10 @@ def _validate_rolling_arguments(
 
 
 def generate_repr(header: str, native_repr: str) -> str:
-    terminal_width = os.get_terminal_size().columns
+    try:
+        terminal_width = os.get_terminal_size().columns
+    except OSError:
+        terminal_width = 80
     native_lines = native_repr.splitlines()
     max_native_width = max(len(line) for line in native_lines)
 
@@ -976,8 +979,8 @@ def generate_repr(header: str, native_repr: str) -> str:
             f"|{' '*(header_extra//2)}{header}{' '*(header_extra//2 + header_extra%2)}|\n"
         )
         output += f"|{'-'*(length)}|\n"
-        start_extra = (max_native_width - length) // 2
-        end_extra = (max_native_width - length) // 2 + (max_native_width - length) % 2
+        start_extra = (length - max_native_width) // 2
+        end_extra = (length - max_native_width) // 2 + (length - max_native_width) % 2
         for line in native_lines:
             output += f"|{' '*(start_extra)}{line}{' '*(end_extra + max_native_width - len(line))}|\n"
         output += f"└{'─' * length}┘"
@@ -987,5 +990,6 @@ def generate_repr(header: str, native_repr: str) -> str:
     return (
         f"┌{'─' * (39)}┐\n"
         f"|{' '*(diff//2)}{header}{' '*(diff//2+diff%2)}|\n"
-        "| Use `.to_native` to see native output |\n" + "└" + "─" * 39 + "┘"
+        "| Use `.to_native` to see native output |\n└"
+        f"{'─' * 39}┘"
     )
