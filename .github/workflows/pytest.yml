@@ -74,7 +74,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dev, core, extra, modin, dask, pyspark]" --system
+        run: uv pip install -e ".[dev, core, extra, modin, dask]" --system
+      - name: install pyspark
+        run: uv pip install -e ".[pyspark]" --system
+        # PySpark is not yet available on Python3.12+
+        if: matrix.python-version == '3.9' || matrix.python-version == '3.11'
       - name: install ibis
         run: uv pip install -e ".[ibis]" --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
