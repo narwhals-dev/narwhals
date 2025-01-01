@@ -75,7 +75,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[dev, extra, modin, dask, pyspark]" --system
       - name: install ibis
-        run: uv pip install -e ".[dev, extra, ibis]" --system
+        run: uv pip install -e ".[ibis]" --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
         if: matrix.python-version == '3.11'

@@ -122,7 +122,11 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
+    if (
+        "pandas[pyarrow]" in str(constructor)
+        and attr == "var"
+        and PANDAS_VERSION < (2, 1)
+    ):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}

@@ -38,7 +38,7 @@ def test_arithmetic_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -68,7 +68,7 @@ def test_right_arithmetic_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -99,7 +99,7 @@ def test_arithmetic_series(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor_eager) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -129,7 +129,7 @@ def test_right_arithmetic_series(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor_eager) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -242,7 +242,7 @@ def test_arithmetic_expr_left_literal(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -273,7 +273,7 @@ def test_arithmetic_series_left_literal(
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(constructor_eager) for x in ["pandas[pyarrow]", "modin[pyarrow]"]
     ):
         request.applymarker(pytest.mark.xfail)
 

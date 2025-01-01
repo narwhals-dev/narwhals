@@ -44,7 +44,7 @@ def test_duration_attributes(
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas[pyarrow]" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -77,7 +77,7 @@ def test_duration_attributes_series(
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas[pyarrow]" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

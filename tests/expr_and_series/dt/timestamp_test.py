@@ -52,7 +52,7 @@ def test_timestamp_datetimes(
 ) -> None:
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
+    if "pandas[pyarrow]" in str(constructor) and PANDAS_VERSION < (
         2,
         2,
     ):  # pragma: no cover
@@ -92,11 +92,11 @@ def test_timestamp_datetimes_tz_aware(
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow",)) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pandas[pyarrow]" in str(constructor) and PANDAS_VERSION < (2,))
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
+    if "pandas[pyarrow]" in str(constructor) and PANDAS_VERSION < (
         2,
         2,
     ):  # pragma: no cover
