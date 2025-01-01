@@ -48,7 +48,7 @@ def test_drop_strict(
     *,
     strict: bool,
 ) -> None:
-    if "polars_lazy" in str(request) and POLARS_VERSION < (1, 0, 0) and strict:
+    if "polars_lazy" in str(constructor) and POLARS_VERSION < (1, 0, 0) and strict:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
