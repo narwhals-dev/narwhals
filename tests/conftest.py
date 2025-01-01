@@ -15,12 +15,22 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
 
-
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
+
+# When testing cudf.pandas in Kaggle, we get an error if we try to run
+# python -m cudf.pandas -m pytest --constructors=pandas. This gives us
+# a way to run `python -m cudf.pandas -m pytest` and control which constructors
+# get tested.
+if default_constructors := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS", None):
+    DEFAULT_CONSTRUCTORS = default_constructors
+else:
+    DEFAULT_CONSTRUCTORS = (
+        "pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow"
+    )
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -36,7 +46,7 @@ def pytest_addoption(parser: Any) -> None:
     parser.addoption(
         "--constructors",
         action="store",
-        default="pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow",
+        default=DEFAULT_CONSTRUCTORS,
         type=str,
         help="libraries to test",
     )
