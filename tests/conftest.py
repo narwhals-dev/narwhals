@@ -1,9 +1,9 @@
 from __future__ import annotations
-import os
 
-import contextlib
-from typing import TYPE_CHECKING, Callable, Any
+import os
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Generator
 
 import pandas as pd
@@ -14,7 +14,6 @@ import pytest
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.stable.v1.dependencies import get_cudf
 from narwhals.stable.v1.dependencies import get_modin
-from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
@@ -33,12 +32,15 @@ def pytest_addoption(parser: Any) -> None:
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
     parser.addoption(
-        "--all-cpu-constructors", action="store_true", default=False, help="run tests with all cpu constructors"
+        "--all-cpu-constructors",
+        action="store_true",
+        default=False,
+        help="run tests with all cpu constructors",
     )
     parser.addoption(
         "--constructors",
         action="store",
-        default='pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow',
+        default="pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow",
         type=str,
         help="libraries to test",
     )
@@ -71,6 +73,11 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 
 
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+    mpd = get_modin()
+    return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
+
+
+def modin_pyarrow_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
@@ -110,7 +117,6 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
         pytest.skip("pyspark is not installed")
         return
 
-    import os
     import warnings
 
     os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
@@ -132,22 +138,24 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
         yield session
     session.stop()
 
+
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
-    'pandas': pandas_constructor,
-    'pandas[nullable]': pandas_nullable_constructor,
-    'pandas[pyarrow]': pandas_pyarrow_constructor,
-    'pyarrow': pyarrow_table_constructor,
-    'modin': modin_constructor,
-    'cudf': cudf_constructor,
-    'polars[eager]': polars_eager_constructor,
+    "pandas": pandas_constructor,
+    "pandas[nullable]": pandas_nullable_constructor,
+    "pandas[pyarrow]": pandas_pyarrow_constructor,
+    "pyarrow": pyarrow_table_constructor,
+    "modin": modin_constructor,
+    "cudf": cudf_constructor,
+    "polars[eager]": polars_eager_constructor,
 }
 LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
-    'dask': dask_lazy_p2_constructor,
-    'polars[lazy]': polars_lazy_constructor,
+    "dask": dask_lazy_p2_constructor,
+    "polars[lazy]": polars_lazy_constructor,
 }
-    
+
+
 def pytest_generate_tests(metafunc: Any) -> None:
-    selected_constructors = metafunc.config.getoption('constructors').split(',')
+    selected_constructors = metafunc.config.getoption("constructors").split(",")
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []
@@ -168,6 +176,8 @@ def pytest_generate_tests(metafunc: Any) -> None:
             raise ValueError(msg)
 
     if "constructor_eager" in metafunc.fixturenames:
-        metafunc.parametrize("constructor_eager", eager_constructors, ids=eager_constructors_ids)
-    elif 'constructor' in metafunc.fixturenames:
+        metafunc.parametrize(
+            "constructor_eager", eager_constructors, ids=eager_constructors_ids
+        )
+    elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
