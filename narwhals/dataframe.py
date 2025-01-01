@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -414,7 +415,24 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                    "
+        header = "Narwhals DataFrame"
+        terminal_width = os.get_terminal_size().columns
+        native_repr = self.to_native().__repr__()
+        native_lines = native_repr.splitlines()
+        max_native_width = max(len(line) for line in native_lines)
+        if max_native_width + 2 < terminal_width:
+            length = max(max_native_width, len(header))
+            output = f"┌{'─'*length}┐\n"
+            header_extra = length - len(header)
+            output += f"|{' '*(header_extra//2)}{header}{' '*(header_extra//2 + header_extra%2)}|\n"
+            output += f"|{'-'*(length)}|\n"
+            start_extra = (max_native_width - length) // 2
+            end_extra = (max_native_width - length) // 2 + max_native_width % 2
+            for line in native_lines:
+                output += f"|{' '*(start_extra)}{line}{' '*(end_extra + max_native_width - len(line))}|\n"
+            output += f"└{'─' * length}┘"
+            return output
+
         length = len(header)
         return (
             "┌"
