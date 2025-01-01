@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
+
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -118,13 +122,23 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
 
 def test_unary_one_element(constructor: Constructor) -> None:
     data = {"a": [1], "b": [2], "c": [None]}
-    result = nw.from_native(constructor(data)).select(
-        a_nunique=nw.col("a").n_unique(),
-        a_skew=nw.col("a").skew(),
-        b_nunique=nw.col("b").n_unique(),
-        b_skew=nw.col("b").skew(),
-        c_nunique=nw.col("c").n_unique(),
-        c_skew=nw.col("c").skew(),
+    # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
+    context = (
+        pytest.warns(RuntimeWarning, match="invalid value encountered in scalar divide")
+        if "dask" in str(constructor)
+        else does_not_raise()
+    )
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(nw.col("c").cast(nw.Float64))
+        .select(
+            a_nunique=nw.col("a").n_unique(),
+            a_skew=nw.col("a").skew(),
+            b_nunique=nw.col("b").n_unique(),
+            b_skew=nw.col("b").skew(),
+            c_nunique=nw.col("c").n_unique(),
+            c_skew=nw.col("c").skew(),
+        )
     )
     expected = {
         "a_nunique": [1],
@@ -134,7 +148,8 @@ def test_unary_one_element(constructor: Constructor) -> None:
         "c_nunique": [1],
         "c_skew": [None],
     }
-    assert_equal_data(result, expected)
+    with context:
+        assert_equal_data(result, expected)
 
 
 def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
