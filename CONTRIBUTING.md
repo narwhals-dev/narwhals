@@ -139,7 +139,7 @@ If you add code that should be tested, please add tests.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
 
-If you want to have less surprises when opening a PR, you can take advantage of [](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
+If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
 
 To do so, you will first need to install nox and then run the `nox` command in the root of the repository:
 
