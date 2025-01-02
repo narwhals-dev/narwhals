@@ -643,8 +643,12 @@ def test_inner_join_two_keys(pyspark_constructor: Constructor) -> None:
         right_on=["antananarivo", "bob"],
         how="inner",
     )
-    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
     result = result.sort("idx").drop("idx_right")
+
+    df = nw.from_native(pyspark_constructor(data))
+    df_right = nw.from_native(pyspark_constructor(data))
+
+    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
     result_on = result_on.sort("idx").drop("idx_right")
     expected = {
         "antananarivo": [1, 3, 2],
@@ -666,15 +670,29 @@ def test_inner_join_single_key(pyspark_constructor: Constructor) -> None:
     }
     df = nw.from_native(pyspark_constructor(data))
     df_right = nw.from_native(pyspark_constructor(data))
-    result = df.join(
-        df_right,  # type: ignore[arg-type]
-        left_on="antananarivo",
-        right_on="antananarivo",
-        how="inner",
-    ).sort("idx")
-    result_on = df.join(df_right, on="antananarivo", how="inner").sort("idx")  # type: ignore[arg-type]
-    result = result.drop("idx_right")
-    result_on = result_on.drop("idx_right")
+    result = (
+        df.join(
+            df_right,  # type: ignore[arg-type]
+            left_on="antananarivo",
+            right_on="antananarivo",
+            how="inner",
+        )
+        .sort("idx")
+        .drop("idx_right")
+    )
+
+    df = nw.from_native(pyspark_constructor(data))
+    df_right = nw.from_native(pyspark_constructor(data))
+    result_on = (
+        df.join(
+            df_right,  # type: ignore[arg-type]
+            on="antananarivo",
+            how="inner",
+        )
+        .sort("idx")
+        .drop("idx_right")
+    )
+
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
@@ -835,6 +853,9 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
         "antananarivo_right": [1, 2, None],
     }
     assert_equal_data(result, expected)
+
+    df_left = nw.from_native(pyspark_constructor(data_left))
+    df_right = nw.from_native(pyspark_constructor(data_right))
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
         on=["antananarivo", "idx"],
