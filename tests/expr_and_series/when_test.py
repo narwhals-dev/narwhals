@@ -21,7 +21,7 @@ def test_when(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {
-        "a_when": [3, np.nan, np.nan],
+        "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -41,7 +41,7 @@ def test_multiple_conditions(constructor: Constructor) -> None:
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
     )
     expected = {
-        "a_when": [3, np.nan, np.nan],
+        "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -65,7 +65,7 @@ def test_value_numpy_array(
         nw.when(nw.col("a") == 1).then(np.asanyarray([3, 4, 5])).alias("a_when")
     )
     expected = {
-        "a_when": [3, np.nan, np.nan],
+        "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -77,7 +77,7 @@ def test_value_series(constructor_eager: ConstructorEager) -> None:
     assert isinstance(s, nw.Series)
     result = df.select(nw.when(nw.col("a") == 1).then(s).alias("a_when"))
     expected = {
-        "a_when": [3, np.nan, np.nan],
+        "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -86,7 +86,7 @@ def test_value_expression(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
     expected = {
-        "a_when": [10, np.nan, np.nan],
+        "a_when": [10, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -98,7 +98,6 @@ def test_otherwise_numpy_array(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    import numpy as np
 
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(np.array([0, 9, 10])).alias("a_when")

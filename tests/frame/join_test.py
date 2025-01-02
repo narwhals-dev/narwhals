@@ -235,22 +235,20 @@ def test_left_join(constructor: Constructor) -> None:
     }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on="bob", right_on="co", how="left").select(  # type: ignore[arg-type]
-        nw.all().fill_null(float("nan"))
-    )
+    result = df_left.join(df_right, left_on="bob", right_on="co", how="left")  # type: ignore[arg-type]
     result = result.sort("index")
     result = result.drop("index_right")
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, float("nan")],
+        "antananarivo_right": [1, 2, None],
         "index": [0, 1, 2],
     }
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
         on=["antananarivo", "index"],
         how="left",
-    ).select(nw.all().fill_null(float("nan")))
+    )
     result_on_list = result_on_list.sort("index")
     expected_on_list = {
         "antananarivo": [1, 2, 3],
@@ -312,15 +310,15 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         left_on="antananarivo",
         right_on="d",
         how="left",
-    ).select(nw.all().fill_null(float("nan")))
+    )
     result = result.sort("index")
     result = result.drop("index_right")
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
-        "antananarivo_right": [1.0, 3.0, float("nan")],
-        "c": [4.0, 6.0, float("nan")],
+        "antananarivo_right": [1.0, 3.0, None],
+        "c": [4.0, 6.0, None],
         "index": [0, 1, 2],
     }
     assert_equal_data(result, expected)
@@ -397,7 +395,7 @@ def test_joinasof_numeric(
     expected_forward = {
         "antananarivo": [1, 5, 10],
         "val": ["a", "b", "c"],
-        "val_right": [1, 6, float("nan")],
+        "val_right": [1, 6, None],
     }
     expected_nearest = {
         "antananarivo": [1, 5, 10],
@@ -523,7 +521,7 @@ def test_joinasof_by(
         "antananarivo": [1, 5, 7, 10],
         "bob": ["D", "D", "C", "A"],
         "c": [9, 2, 1, 1],
-        "d": [1, 3, float("nan"), 4],
+        "d": [1, 3, None, 4],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_by, expected)

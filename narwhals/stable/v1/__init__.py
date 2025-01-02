@@ -430,11 +430,12 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf
-            ┌───────────────────────────────────────┐
-            | Narwhals LazyFrame                    |
-            | Use `.to_native` to see native output |
-            └───────────────────────────────────────┘
+            >>> lf  # doctest:+ELLIPSIS
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |<LazyFrame at ...
+            └─────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df.to_native().sort("a")
             shape: (3, 3)
@@ -500,27 +501,32 @@ class Series(NwSeries[Any]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeries, IntoDataFrame
-            >>> s = [1, 2, 3]
-            >>> s_pd = pd.Series(s, name="a")
-            >>> s_pl = pl.Series("a", s)
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+
+            >>> data = [1, 2]
+            >>> s_pd = pd.Series(data, name="a")
+            >>> s_pl = pl.Series("a", data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            >>> def agnostic_to_frame(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_frame().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_frame`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_to_frame(s_pd)
                a
             0  1
             1  2
-            2  3
-            >>> my_library_agnostic_function(s_pl)
-            shape: (3, 1)
+
+            >>> agnostic_to_frame(s_pl)
+            shape: (2, 1)
             ┌─────┐
             │ a   │
             │ --- │
@@ -528,8 +534,13 @@ class Series(NwSeries[Any]):
             ╞═════╡
             │ 1   │
             │ 2   │
-            │ 3   │
             └─────┘
+
+            >>> agnostic_to_frame(s_pa)
+            pyarrow.Table
+            : int64
+            ----
+            : [[1,2]]
         """
         return super().to_frame()  # type: ignore[return-value]
 
@@ -557,28 +568,34 @@ class Series(NwSeries[Any]):
             - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> import pandas as pd
             >>> import polars as pl
-            >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
-            >>> s_pl = pl.Series(values=[1, 1, 2, 3, 2], name="s")
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+
+            >>> data = [1, 1, 2, 3, 2]
+            >>> s_pd = pd.Series(data, name="s")
+            >>> s_pl = pl.Series(values=data, name="s")
+            >>> s_pa = pa.chunked_array([data])
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            >>> def agnostic_value_counts(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.value_counts(sort=True).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_value_counts`:
 
-            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_value_counts(s_pd)
                s  count
             0  1      2
             1  2      2
             2  3      1
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_value_counts(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
             ┌─────┬───────┐
             │ s   ┆ count │
@@ -589,6 +606,14 @@ class Series(NwSeries[Any]):
             │ 2   ┆ 2     │
             │ 3   ┆ 1     │
             └─────┴───────┘
+
+            >>> agnostic_value_counts(s_pa)
+            pyarrow.Table
+            : int64
+            count: int64
+            ----
+            : [[1,2,3]]
+            count: [[2,2,1]]
         """
         return super().value_counts(  # type: ignore[return-value]
             sort=sort, parallel=parallel, name=name, normalize=normalize
@@ -651,25 +676,27 @@ class Series(NwSeries[Any]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_ewm_mean(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas or Polars
+            to `agnostic_ewm_mean`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_ewm_mean(s_pd)
             0    1.000000
             1    1.666667
             2    2.428571
             Name: a, dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_ewm_mean(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'a' [f64]
             [
@@ -728,11 +755,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -744,7 +772,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_sum(window_size=2).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_sum`:
 
             >>> agnostic_rolling_sum(s_pd)
             0    NaN
@@ -820,11 +849,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -836,7 +866,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_mean(window_size=2).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_mean`:
 
             >>> agnostic_rolling_mean(s_pd)
             0    NaN
@@ -914,11 +945,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -930,7 +962,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_var(window_size=2, min_periods=1).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_var`:
 
             >>> agnostic_rolling_var(s_pd)
             0    NaN
@@ -1009,11 +1042,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1025,7 +1059,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_std(window_size=2, min_periods=1).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_std`:
 
             >>> agnostic_rolling_std(s_pd)
             0         NaN

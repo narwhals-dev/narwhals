@@ -60,7 +60,7 @@ def test_scan_csv(
     df = nw.from_native(constructor(data))
     native_namespace = nw.get_native_namespace(df)
     result = nw.scan_csv(filepath, native_namespace=native_namespace)
-    assert_equal_data(result.collect(), data)
+    assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
 
@@ -74,7 +74,7 @@ def test_scan_csv_v1(
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     result = nw_v1.scan_csv(filepath, native_namespace=native_namespace)
-    assert_equal_data(result.collect(), data)
+    assert_equal_data(result, data)
     assert isinstance(result, nw_v1.LazyFrame)
 
 
@@ -136,7 +136,7 @@ def test_scan_parquet(
     df = nw.from_native(constructor(data))
     native_namespace = nw.get_native_namespace(df)
     result = nw.scan_parquet(filepath, native_namespace=native_namespace)
-    assert_equal_data(result.collect(), data)
+    assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
 
@@ -151,7 +151,7 @@ def test_scan_parquet_v1(
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     result = nw_v1.scan_parquet(filepath, native_namespace=native_namespace)
-    assert_equal_data(result.collect(), data)
+    assert_equal_data(result, data)
     assert isinstance(result, nw_v1.LazyFrame)
 
 
