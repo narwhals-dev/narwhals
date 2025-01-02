@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import sys
 import warnings
 from typing import Any
@@ -69,10 +70,17 @@ def _sort_dict_by_key(
 def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     is_pyspark = (
         hasattr(result, "_compliant_frame")
-        and result._compliant_frame._implementation is Implementation.PYSPARK
+        and result.implementation is Implementation.PYSPARK
     )
+
     if hasattr(result, "collect"):
-        result = result.collect()
+        if result.implementation is Implementation.POLARS and os.environ.get(
+            "NARWHALS_POLARS_GPU", False
+        ):  # pragma: no cover
+            result = result.to_native().collect(engine="gpu")
+        else:
+            result = result.collect()
+
     if hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected, (key, expected)
@@ -90,8 +98,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
-            elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:
-                are_equivalent_values = math.isnan(rhs)  # pragma: no cover
+            elif isinstance(lhs, float) and math.isnan(lhs):
+                are_equivalent_values = rhs is None or math.isnan(rhs)
+            elif isinstance(rhs, float) and math.isnan(rhs):
+                are_equivalent_values = lhs is None or math.isnan(lhs)
+            elif lhs is None:
+                are_equivalent_values = rhs is None
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
