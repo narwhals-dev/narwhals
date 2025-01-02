@@ -858,13 +858,20 @@ class ArrowSeries(CompliantSeries):
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series[offset::n])
 
-    def clip(self: Self, lower_bound: Any | None, upper_bound: Any | None) -> Self:
-        import pyarrow as pa
+    def clip(
+        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+    ) -> Self:
         import pyarrow.compute as pc
 
         arr = self._native_series
-        arr = pc.max_element_wise(arr, pa.scalar(lower_bound, type=arr.type))
-        arr = pc.min_element_wise(arr, pa.scalar(upper_bound, type=arr.type))
+        _, lower_bound = broadcast_and_extract_native(
+            self, lower_bound, self._backend_version
+        )
+        _, upper_bound = broadcast_and_extract_native(
+            self, upper_bound, self._backend_version
+        )
+        arr = pc.max_element_wise(arr, lower_bound)
+        arr = pc.min_element_wise(arr, upper_bound)
 
         return self._from_native_series(arr)
 
