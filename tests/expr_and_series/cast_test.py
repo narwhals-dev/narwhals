@@ -63,7 +63,7 @@ def test_cast(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin_constructor" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)).select(
@@ -116,7 +116,7 @@ def test_cast_series(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin_constructor" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
     df = (

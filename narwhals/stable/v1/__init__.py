@@ -180,11 +180,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrame
-            >>>
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
-            >>> df_pa = pa.table(df)
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a library agnostic function:
 
@@ -192,7 +191,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ...     df = nw.from_native(df_native)
             ...     return df.lazy().to_native()
 
-            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame
+            becomes a Polars LazyFrame:
 
             >>> agnostic_lazy(df_pd)
                foo  bar ham
@@ -228,7 +228,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
         Arguments:
             as_series: If set to true ``True``, then the values are Narwhals Series,
-                        otherwise the values are Any.
+                    otherwise the values are Any.
 
         Returns:
             A mapping from column name to values / Series.
@@ -239,17 +239,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
-            >>>
-            >>> df = {
+            >>> data = {
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
             ...     "B": [5, 4, 3, 2, 1],
             ...     "animals": ["beetle", "fly", "beetle", "beetle", "beetle"],
             ...     "optional": [28, 300, None, 2, -30],
             ... }
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
-            >>> df_pa = pa.table(df)
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a library agnostic function:
 
@@ -277,38 +276,37 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             A new Series.
 
         Examples:
-            >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 1],
-            ...         "b": ["x", "y", "z", "x"],
-            ...     }
-            ... )
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 1],
-            ...         "b": ["x", "y", "z", "x"],
-            ...     }
-            ... )
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+            >>> data = {
+            ...     "a": [1, 2, 3, 1],
+            ...     "b": ["x", "y", "z", "x"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.is_duplicated()
+            >>> def agnostic_is_duplicated(df_native: IntoDataFrame) -> IntoSeries:
+            ...     df = nw.from_native(df_native, eager_only=True)
+            ...     return df.is_duplicated().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow
+            to `agnostic_is_duplicated`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_duplicated(df_pd)
             0     True
             1    False
             2    False
             3     True
             dtype: bool
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_duplicated(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [bool]
             [
@@ -316,6 +314,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 false
                 false
                 true
+            ]
+            >>> agnostic_is_duplicated(df_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                true,
+                false,
+                false,
+                true
+              ]
             ]
         """
         return super().is_duplicated()  # type: ignore[return-value]
@@ -327,38 +335,37 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             A new Series.
 
         Examples:
-            >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 1],
-            ...         "b": ["x", "y", "z", "x"],
-            ...     }
-            ... )
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 1],
-            ...         "b": ["x", "y", "z", "x"],
-            ...     }
-            ... )
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+            >>> data = {
+            ...     "a": [1, 2, 3, 1],
+            ...     "b": ["x", "y", "z", "x"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.is_unique()
+            >>> def agnostic_is_unique(df_native: IntoDataFrame) -> IntoSeries:
+            ...     df = nw.from_native(df_native, eager_only=True)
+            ...     return df.is_unique().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow
+            to `agnostic_is_unique`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_unique(df_pd)
             0    False
             1     True
             2     True
             3    False
             dtype: bool
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_is_unique(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [bool]
             [
@@ -366,6 +373,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                  true
                  true
                 false
+            ]
+            >>> agnostic_is_unique(df_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                true,
+                true,
+                false
+              ]
             ]
         """
         return super().is_unique()  # type: ignore[return-value]
@@ -413,11 +430,12 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf
-            ┌───────────────────────────────────────┐
-            | Narwhals LazyFrame                    |
-            | Use `.to_native` to see native output |
-            └───────────────────────────────────────┘
+            >>> lf  # doctest:+ELLIPSIS
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |<LazyFrame at ...
+            └─────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df.to_native().sort("a")
             shape: (3, 3)
@@ -483,27 +501,32 @@ class Series(NwSeries[Any]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeries, IntoDataFrame
-            >>> s = [1, 2, 3]
-            >>> s_pd = pd.Series(s, name="a")
-            >>> s_pl = pl.Series("a", s)
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+
+            >>> data = [1, 2]
+            >>> s_pd = pd.Series(data, name="a")
+            >>> s_pl = pl.Series("a", data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            >>> def agnostic_to_frame(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.to_frame().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_frame`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_to_frame(s_pd)
                a
             0  1
             1  2
-            2  3
-            >>> my_library_agnostic_function(s_pl)
-            shape: (3, 1)
+
+            >>> agnostic_to_frame(s_pl)
+            shape: (2, 1)
             ┌─────┐
             │ a   │
             │ --- │
@@ -511,8 +534,13 @@ class Series(NwSeries[Any]):
             ╞═════╡
             │ 1   │
             │ 2   │
-            │ 3   │
             └─────┘
+
+            >>> agnostic_to_frame(s_pa)
+            pyarrow.Table
+            : int64
+            ----
+            : [[1,2]]
         """
         return super().to_frame()  # type: ignore[return-value]
 
@@ -540,28 +568,34 @@ class Series(NwSeries[Any]):
             - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeries, IntoDataFrame
             >>> import pandas as pd
             >>> import polars as pl
-            >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
-            >>> s_pl = pl.Series(values=[1, 1, 2, 3, 2], name="s")
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> from narwhals.typing import IntoSeries
+
+            >>> data = [1, 1, 2, 3, 2]
+            >>> s_pd = pd.Series(data, name="s")
+            >>> s_pl = pl.Series(values=data, name="s")
+            >>> s_pa = pa.chunked_array([data])
 
             Let's define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeries) -> IntoDataFrame:
+            >>> def agnostic_value_counts(s_native: IntoSeries) -> IntoDataFrame:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.value_counts(sort=True).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_value_counts`:
 
-            >>> my_library_agnostic_function(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_value_counts(s_pd)
                s  count
             0  1      2
             1  2      2
             2  3      1
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_value_counts(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
             ┌─────┬───────┐
             │ s   ┆ count │
@@ -572,6 +606,14 @@ class Series(NwSeries[Any]):
             │ 2   ┆ 2     │
             │ 3   ┆ 1     │
             └─────┴───────┘
+
+            >>> agnostic_value_counts(s_pa)
+            pyarrow.Table
+            : int64
+            count: int64
+            ----
+            : [[1,2,3]]
+            count: [[2,2,1]]
         """
         return super().value_counts(  # type: ignore[return-value]
             sort=sort, parallel=parallel, name=name, normalize=normalize
@@ -634,25 +676,27 @@ class Series(NwSeries[Any]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1, 2, 3]
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_ewm_mean(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.ewm_mean(com=1, ignore_nulls=False).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas or Polars
+            to `agnostic_ewm_mean`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_ewm_mean(s_pd)
             0    1.000000
             1    1.666667
             2    2.428571
             Name: a, dtype: float64
 
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_ewm_mean(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'a' [f64]
             [
@@ -711,11 +755,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -727,7 +772,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_sum(window_size=2).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_sum`:
 
             >>> agnostic_rolling_sum(s_pd)
             0    NaN
@@ -803,11 +849,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 2.0, 3.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -819,7 +866,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_mean(window_size=2).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_mean`:
 
             >>> agnostic_rolling_mean(s_pd)
             0    NaN
@@ -897,11 +945,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -913,7 +962,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_var(window_size=2, min_periods=1).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_var`:
 
             >>> agnostic_rolling_var(s_pd)
             0    NaN
@@ -992,11 +1042,12 @@ class Series(NwSeries[Any]):
             A new series.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoSeriesT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
             >>> data = [1.0, 3.0, 1.0, 4.0]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
@@ -1008,7 +1059,8 @@ class Series(NwSeries[Any]):
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.rolling_std(window_size=2, min_periods=1).to_native()
 
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_rolling_std`:
 
             >>> agnostic_rolling_std(s_pd)
             0         NaN

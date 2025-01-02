@@ -29,8 +29,8 @@ def test_sort(constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("nulls_last", "expected"),
     [
-        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, float("nan")]}),
-        (False, {"a": [-1, 0, 2, 0], "b": [float("nan"), 3, 2, 1]}),
+        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, None]}),
+        (False, {"a": [-1, 0, 2, 0], "b": [None, 3, 2, 1]}),
     ],
 )
 def test_sort_nulls(

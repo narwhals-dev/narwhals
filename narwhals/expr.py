@@ -3829,21 +3829,32 @@ class Expr:
             A new expression with rank data.
 
         Examples:
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"a": [3, 6, 1, 1, 6]}
 
             We define a dataframe-agnostic function that computes the dense rank for
             the data:
 
-            >>> @nw.narwhalify
-            ... def agnostic_dense_rank(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return df_native.with_columns(rnk=nw.col("a").rank(method="dense"))
+            >>> def agnostic_dense_rank(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     result = df.with_columns(rnk=nw.col("a").rank(method="dense"))
+            ...     return result.to_native()
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_dense_rank`:
+
+            >>> agnostic_dense_rank(pd.DataFrame(data))
+               a  rnk
+            0  3  2.0
+            1  6  3.0
+            2  1  1.0
+            3  1  1.0
+            4  6  3.0
 
             >>> agnostic_dense_rank(pl.DataFrame(data))
             shape: (5, 2)
@@ -3858,14 +3869,6 @@ class Expr:
             │ 1   ┆ 1   │
             │ 6   ┆ 3   │
             └─────┴─────┘
-
-            >>> agnostic_dense_rank(pd.DataFrame(data))
-               a  rnk
-            0  3  2.0
-            1  6  3.0
-            2  1  1.0
-            3  1  1.0
-            4  6  3.0
 
             >>> agnostic_dense_rank(pa.table(data))
             pyarrow.Table
