@@ -297,6 +297,45 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/sum_horizontal_test.py
+@pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
+def test_sumh(pyspark_constructor: Constructor, col_expr: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.with_columns(horizontal_sum=nw.sum_horizontal(col_expr, nw.col("b")))
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "horizontal_sum": [5, 7, 8],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_sumh_nullable(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 8, 3], "b": [4, 5, None]}
+    expected = {"hsum": [5, 13, 3]}
+
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(hsum=nw.sum_horizontal("a", "b"))
+    assert_equal_data(result, expected)
+
+
+def test_sumh_all(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 2, 3], "b": [10, 20, 30]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.sum_horizontal(nw.all()))
+    expected = {
+        "a": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(c=nw.sum_horizontal(nw.all()))
+    expected = {
+        "c": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)
+
+
 # copied from tests/expr_and_series/count_test.py
 def test_count(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
@@ -344,6 +383,16 @@ def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").min())
     expected = {"a": [1], "b": [4], "z": [7.0]}
+    assert_equal_data(result, expected)
+
+
+# copied from tests/expr_and_series/min_test.py
+@pytest.mark.parametrize("expr", [nw.col("a", "b", "z").sum(), nw.sum("a", "b", "z")])
+def test_expr_sum_expr(constructor: Constructor, expr: nw.Expr) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+    result = df.select(expr)
+    expected = {"a": [6], "b": [14], "z": [24.0]}
     assert_equal_data(result, expected)
 
 
