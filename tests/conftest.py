@@ -53,6 +53,12 @@ def pytest_addoption(parser: Any) -> None:
         type=str,
         help="libraries to test",
     )
+    parser.addoption(
+        "--backend",
+        action="store",
+        default="all",
+        help="specify test backend (pandas, modin, dask, all)",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -171,8 +177,31 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
+BACKEND_MAPPING = {
+    "pandas": ["pandas", "pandas[nullable]", "pandas[pyarrow]"],
+    "modin": ["modin", "modin[pyarrow]"],
+    "dask": ["dask"],
+    "polars": ["polars[eager]", "polars[lazy]"],
+    "pyarrow": ["pyarrow"],
+    "cudf": ["cudf"],
+}
+
+
+def get_filtered_constructors(
+    backend: str, all_constructors: dict[str, Callable[..., Any]]
+) -> dict[str, Callable[..., Any]]:
+    if backend == "all":
+        return all_constructors
+    return {
+        name: func
+        for name, func in all_constructors.items()
+        if any(name.startswith(prefix) for prefix in BACKEND_MAPPING.get(backend, []))
+    }
+
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    backend = metafunc.config.getoption("--backend")
+
     if metafunc.config.getoption("all_cpu_constructors"):
         selected_constructors: list[str] = [
             *iter(EAGER_CONSTRUCTORS.keys()),
@@ -184,23 +213,23 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     else:  # pragma: no cover
         selected_constructors = metafunc.config.getoption("constructors").split(",")
 
+    filtered_eager = get_filtered_constructors(backend, EAGER_CONSTRUCTORS)
+    filtered_lazy = get_filtered_constructors(backend, LAZY_CONSTRUCTORS)
+
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []
     constructors: list[Callable[[Any], IntoFrame]] = []
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
-        if constructor in EAGER_CONSTRUCTORS:
-            eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
+        if constructor in filtered_eager:
+            eager_constructors.append(filtered_eager[constructor])
             eager_constructors_ids.append(constructor)
-            constructors.append(EAGER_CONSTRUCTORS[constructor])
+            constructors.append(filtered_eager[constructor])
             constructors_ids.append(constructor)
-        elif constructor in LAZY_CONSTRUCTORS:
-            constructors.append(LAZY_CONSTRUCTORS[constructor])
+        elif constructor in filtered_lazy:
+            constructors.append(filtered_lazy[constructor])
             constructors_ids.append(constructor)
-        else:  # pragma: no cover
-            msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
-            raise ValueError(msg)
 
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(
