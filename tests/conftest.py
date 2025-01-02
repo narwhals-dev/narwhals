@@ -192,7 +192,10 @@ def get_filtered_constructors(
 ) -> dict[str, Callable[..., Any]]:
     if backend == "all":
         return all_constructors
-    return {
+    if backend not in BACKEND_MAPPING:  # pragma: no cover
+        msg = f"Unknown backend {backend}"
+        raise ValueError(msg)
+    return {  # pragma: no cover
         name: func
         for name, func in all_constructors.items()
         if any(name.startswith(prefix) for prefix in BACKEND_MAPPING.get(backend, []))
