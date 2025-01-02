@@ -76,9 +76,13 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [
-                reduce(operator.add, (F.coalesce(c, F.lit(0)) for c in cols)).alias(
-                    col_name
-                )
+                reduce(
+                    operator.add,
+                    (
+                        F.when(F.isnan(F.col(c)), F.lit(0)).otherwise(F.col(c))
+                        for c in cols
+                    ),
+                ).alias(col_name)
             ]
 
         return SparkLikeExpr(  # type: ignore[abstract]
