@@ -1297,13 +1297,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             └───────┴─────┴─────┘
             >>> agnostic_with_row_index(df_pa)
             pyarrow.Table
+            index: int64
             a: int64
             b: int64
-            index: int64
             ----
+            index: [[0,1,2]]
             a: [[1,2,3]]
             b: [[4,5,6]]
-            index: [[0,1,2]]
         """
         return super().with_row_index(name)
 
