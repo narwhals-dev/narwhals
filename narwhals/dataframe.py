@@ -19,6 +19,7 @@ from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
+from narwhals.utils import generate_repr
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 
@@ -414,18 +415,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                    "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Use `.to_native` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘"
-        )
+        return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
@@ -3581,26 +3571,14 @@ class LazyFrame(BaseFrame[FrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals LazyFrame                    "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Use `.to_native` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘"
-        )
+        return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
 
     @property
     def implementation(self) -> Implementation:
         """Return implementation of native frame.
 
-        This can be useful when you need to some special-casing for
-        some libraries for features outside of Narwhals' scope - for
-        example, when dealing with pandas' Period Dtype.
+        This can be useful when you need to use special-casing for features outside of
+        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
 
         Returns:
             Implementation.
@@ -3640,11 +3618,12 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf
-            ┌───────────────────────────────────────┐
-            | Narwhals LazyFrame                    |
-            | Use `.to_native` to see native output |
-            └───────────────────────────────────────┘
+            >>> lf  # doctest:+ELLIPSIS
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |<LazyFrame at ...
+            └─────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df.to_native().sort("a")
             shape: (3, 3)

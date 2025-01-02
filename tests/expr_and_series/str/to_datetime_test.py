@@ -130,10 +130,7 @@ def test_to_datetime_infer_fmt_from_date(constructor: Constructor) -> None:
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (
-        nw.from_native(constructor(data))
-        .lazy()
-        .select(nw.col("z").str.to_datetime())
-        .collect()
+        nw.from_native(constructor(data)).lazy().select(nw.col("z").str.to_datetime())
     )
     assert_equal_data(result, {"z": expected})
 
