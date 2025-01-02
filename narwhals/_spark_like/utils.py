@@ -4,12 +4,14 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+from pyspark.sql import types as pyspark_types
+
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
-    from pyspark.sql import types as pyspark_types
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.typing import IntoSparkLikeExpr
@@ -35,6 +37,8 @@ def native_to_narwhals_dtype(
         return dtypes.Int32()
     if isinstance(dtype, pyspark_types.ShortType):
         return dtypes.Int16()
+    if isinstance(dtype, pyspark_types.ByteType):
+        return dtypes.Int8()
     string_types = [
         pyspark_types.StringType,
         pyspark_types.VarcharType,
@@ -56,6 +60,40 @@ def native_to_narwhals_dtype(
         # TODO(unassigned): cover this in dtypes_test.py
         return dtypes.Decimal()
     return dtypes.Unknown()
+
+
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
+    dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Float64):
+        return pyspark_types.DoubleType()
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
+        return pyspark_types.FloatType()
+    if isinstance_or_issubclass(dtype, dtypes.Int64):
+        return pyspark_types.LongType()
+    if isinstance_or_issubclass(dtype, dtypes.Int32):
+        return pyspark_types.IntegerType()
+    if isinstance_or_issubclass(dtype, dtypes.Int16):
+        return pyspark_types.ShortType()
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return pyspark_types.ByteType()
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        return pyspark_types.StringType()
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
+        return pyspark_types.BooleanType()
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return pyspark_types.TimestampType()
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
+
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
