@@ -133,9 +133,11 @@ If you add code that should be tested, please add tests.
 - To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 - To choose which backends to run tests with you, you can use the `--constructors` flag:
-  - to only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
-  - to run tests for all CPU constructors, use `pytest --all-cpu-constructors`
-  - by default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
+  - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
+  - To run tests for all CPU constructors, use `pytest --all-cpu-constructors`
+  - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
+  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
+  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
 
 If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
 

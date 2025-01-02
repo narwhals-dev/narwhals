@@ -136,7 +136,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
             nw.col("a", "b").fill_null(strategy="forward", limit=2)
         )
         expected_forward = {
-            "a": [1, 1, 1, float("nan"), 5, 6, 6, 6, float("nan"), 10],
+            "a": [1, 1, 1, None, 5, 6, 6, 6, None, 10],
             "b": ["a", "a", "a", None, "b", "c", "c", "c", None, "d"],
         }
         assert_equal_data(result_forward, expected_forward)
@@ -146,7 +146,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
         )
 
         expected_backward = {
-            "a": [1, float("nan"), 5, 5, 5, 6, float("nan"), 10, 10, 10],
+            "a": [1, None, 5, 5, 5, 6, None, 10, 10, 10],
             "b": ["a", None, "b", "b", "b", "c", None, "d", "d", "d"],
         }
         assert_equal_data(result_backward, expected_backward)
@@ -203,7 +203,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
                 "ignore", message="The 'downcast' keyword in fillna is deprecated"
             )
         expected_forward = {
-            "a_forward": [0.0, 1, 1, float("nan"), 2, 2, float("nan"), 3],
+            "a_forward": [0.0, 1, 1, None, 2, 2, None, 3],
             "b_forward": ["", "a", "a", None, "c", "c", None, "e"],
         }
         result_forward = df.select(
@@ -214,7 +214,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
         assert_equal_data(result_forward, expected_forward)
 
         expected_backward = {
-            "a_backward": [0.0, 1, float("nan"), 2, 2, float("nan"), 3, 3],
+            "a_backward": [0.0, 1, None, 2, 2, None, 3, 3],
             "b_backward": ["", "a", None, "c", "c", None, "e", "e"],
         }
 

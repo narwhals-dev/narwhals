@@ -66,7 +66,6 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
@@ -89,7 +88,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(query_result, expected)
 
 
 @pytest.mark.parametrize(
@@ -193,7 +192,6 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
@@ -216,4 +214,4 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(query_result, expected)

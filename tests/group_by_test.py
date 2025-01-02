@@ -31,9 +31,7 @@ def test_group_by_complex() -> None:
     assert_equal_data(result, expected)
 
     lf = nw.from_native(df_lazy).lazy()
-    result = nw.to_native(
-        lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    )
+    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     assert_equal_data(result, expected)
 
 
@@ -220,7 +218,6 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
             b_min=nw.col("b").min(),
             b_max=nw.col("b").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -240,7 +237,6 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
             nw.col("b").min(),
             nw.col("c").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -260,7 +256,6 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
             c_min=nw.col("c").min(),
             c_max=nw.col("c").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -293,7 +288,7 @@ def test_key_with_nulls(
             .sort("a")
             .with_columns(nw.col("b").cast(nw.Float64))
         )
-        expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
+        expected = {"b": [4.0, 5, None], "len": [1, 1, 1], "a": [1, 2, 3]}
         assert_equal_data(result, expected)
 
 
