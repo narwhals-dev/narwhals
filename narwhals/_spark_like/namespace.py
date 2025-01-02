@@ -71,9 +71,15 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
+            import pyspark.sql.functions as F  # noqa: N812
+
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
-            return [reduce(operator.add, cols).alias(col_name)]
+            return [
+                reduce(operator.add, (F.coalesce(c, F.lit(0)) for c in cols)).alias(
+                    col_name
+                )
+            ]
 
         return SparkLikeExpr(  # type: ignore[abstract]
             call=func,
