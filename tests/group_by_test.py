@@ -288,7 +288,7 @@ def test_key_with_nulls(
             .sort("a")
             .with_columns(nw.col("b").cast(nw.Float64))
         )
-        expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
+        expected = {"b": [4.0, 5, None], "len": [1, 1, 1], "a": [1, 2, 3]}
         assert_equal_data(result, expected)
 
 
