@@ -5,13 +5,20 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.conftest import dask_lazy_p1_constructor
 from tests.conftest import dask_lazy_p2_constructor
+from tests.conftest import modin_constructor
 from tests.conftest import pandas_constructor
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-NON_NULLABLE_CONSTRUCTORS = [pandas_constructor, dask_lazy_p2_constructor]
+NON_NULLABLE_CONSTRUCTORS = [
+    pandas_constructor,
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+]
 
 
 def test_nan(constructor: Constructor) -> None:
