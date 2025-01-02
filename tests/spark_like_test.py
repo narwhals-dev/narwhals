@@ -680,8 +680,8 @@ def test_inner_join_single_key(pyspark_constructor: Constructor) -> None:
         "bob": [4, 4, 6],
         "zorro": [7.0, 8, 9],
         "idx": [0, 1, 2],
-        "zorro_right": [7.0, 8, 9],
         "bob_right": [4, 4, 6],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -748,11 +748,11 @@ def test_cross_join_suffix(pyspark_constructor: Constructor, suffix: str) -> Non
             (nw.col("bob") < 5),
             {"antananarivo": [2], "bob": [6], "zorro": [9]},
         ),
-        (["bob"], (nw.col("bob") < 5), {"bob": [6], "antananarivo": [2], "zorro": [9]}),
+        (["bob"], (nw.col("bob") < 5), {"antananarivo": [2], "bob": [6], "zorro": [9]}),
         (
             ["bob"],
             (nw.col("bob") > 5),
-            {"bob": [4, 4], "antananarivo": [1, 3], "zorro": [7.0, 8.0]},
+            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7.0, 8.0]},
         ),
     ],
 )
@@ -785,7 +785,7 @@ def test_anti_join(
         (
             ["bob"],
             (nw.col("bob") < 5),
-            {"bob": [4, 4], "antananarivo": [1, 3], "zorro": [7, 8]},
+            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
         ),
         (
             ["antananarivo", "bob"],
@@ -829,8 +829,8 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
         .drop("idx_right")
     )
     expected = {
-        "bob": [4, 5, 6],
         "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
         "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, None],
     }
@@ -843,8 +843,8 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
     result_on_list = result_on_list.sort("idx")
     expected_on_list = {
         "antananarivo": [1, 2, 3],
-        "idx": [0, 1, 2],
         "bob": [4, 5, 6],
+        "idx": [0, 1, 2],
         "co": [4, 5, 7],
     }
     assert_equal_data(result_on_list, expected_on_list)
@@ -889,8 +889,8 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")  # type: ignore[arg-type]
     result = result.drop("idx_right")
     expected: dict[str, list[Any]] = {
-        "bob": [4, 5, 6],
         "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
         "d": [1, 4, 2],
         "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, 3],
@@ -898,6 +898,8 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     }
     assert_equal_data(result, expected)
 
+    df_left = nw.from_native(pyspark_constructor(data_left))
+    df_right = nw.from_native(pyspark_constructor(data_right))
     result = (
         df_left.join(
             df_right,  # type: ignore[arg-type]
