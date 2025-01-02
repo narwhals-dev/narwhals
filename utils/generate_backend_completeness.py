@@ -39,7 +39,7 @@ BACKENDS = [
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
-DIRECTLY_IMPLEMENTED_METHODS = ["pipe"]
+DIRECTLY_IMPLEMENTED_METHODS = ["pipe", "implementation", "to_native"]
 
 
 def get_class_methods(kls: type[Any]) -> list[str]:
