@@ -145,24 +145,152 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __add__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input + other,
+            lambda _input, other: _input.__add__(other),
             "__add__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __radd__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__radd__(other),
+            "__radd__",
             other=other,
             returns_scalar=False,
         )
 
     def __sub__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input - other,
+            lambda _input, other: _input.__sub__(other),
             "__sub__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rsub__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rsub__(other),
+            "__rsub__",
             other=other,
             returns_scalar=False,
         )
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input * other,
+            lambda _input, other: _input.__mul__(other),
             "__mul__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rmul__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmul__(other),
+            "__rmul__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __truediv__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__truediv__(other),
+            "__truediv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rtruediv__(other),
+            "__rtruediv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __floordiv__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__floordiv__(other),
+            "__floordiv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rfloordiv__(other),
+            "__rfloordiv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __pow__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__pow__(other),
+            "__pow__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rpow__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rpow__(other),
+            "__rpow__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __mod__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mod__(other),
+            "__mod__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rmod__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmod__(other),
+            "__rmod__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__eq__(other),
+            "__eq__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__ne__(other),
+            "__ne__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ge__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__ge__(other),
+            "__ge__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __gt__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input > other,
+            "__gt__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __le__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__le__(other),
+            "__le__",
             other=other,
             returns_scalar=False,
         )
@@ -175,12 +303,43 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __gt__(self, other: SparkLikeExpr) -> Self:
+    def __and__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input > other,
-            "__gt__",
+            lambda _input, other: _input.__and__(other),
+            "__and__",
             other=other,
             returns_scalar=False,
+        )
+
+    def __rand__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rand__(other),
+            "__rand__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __or__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__or__(other),
+            "__or__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ror__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__ror__(other),
+            "__ror__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __invert__(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.__invert__(),
+            "__invert__",
+            returns_scalar=self._returns_scalar,
         )
 
     def alias(self, name: str) -> Self:
