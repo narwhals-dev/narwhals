@@ -246,19 +246,19 @@ class SparkLikeLazyFrame:
             [F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
 
-        if how in {"inner", "left", "cross"}:
-            col_order = [
-                *left_columns,
-                *[
-                    rename_mapping[colname]
-                    for colname in list(
-                        set(right_columns).difference(set(right_on or []))
-                    )
-                ],
-            ]
+        # If how in {"semi", "anti"}, then resulting columns are same as left columns
+        # Otherwise, we add the right columns with the new mapping, while keeping the
+        # original order of right_columns.
+        col_order = left_columns
 
-        elif how in {"semi", "anti"}:
-            col_order = left_columns
+        if how in {"inner", "left", "cross"}:
+            col_order.extend(
+                [
+                    rename_mapping[colname]
+                    for colname in right_columns
+                    if colname not in (right_on or [])
+                ]
+            )
 
         return self._from_native_frame(
             self_native.join(other=other, on=left_on, how=how).select(col_order)
