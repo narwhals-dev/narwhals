@@ -109,6 +109,16 @@ def get_pyspark_sql() -> Any:
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_pandas_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_dataframe(df)`, "
+            "did you mean `is_pandas_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(df, mod.pandas.DataFrame)
@@ -118,6 +128,15 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
 
 def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_pandas_series`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_series(ser)`, "
+            "did you mean `is_pandas_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -136,11 +155,30 @@ def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_modin_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_modin_dataframe(df)`, "
+            "did you mean `is_modin_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
 def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     """Check whether `ser` is a modin Series without importing modin."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_modin_series`.\n\n"
+            "Hint: Instead of e.g. `is_modin_series(ser)`, "
+            "did you mean `is_modin_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -153,11 +191,30 @@ def is_modin_index(index: Any) -> TypeGuard[mpd.Index]:
 
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_cudf_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_cudf_dataframe(df)`, "
+            "did you mean `is_cudf_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
 def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     """Check whether `ser` is a cudf Series without importing cudf."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_cudf_series`.\n\n"
+            "Hint: Instead of e.g. `is_cudf_series(ser)`, "
+            "did you mean `is_cudf_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -182,31 +239,89 @@ def is_duckdb_relation(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
 
 def is_ibis_table(df: Any) -> TypeGuard[ibis.Table]:
     """Check whether `df` is a Ibis Table without importing Ibis."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_ibis_table`.\n\n"
+            "Hint: Instead of e.g. `is_ibis_table(df)`, "
+            "did you mean `is_ibis_table(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
     """Check whether `df` is a Polars DataFrame without importing Polars."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_polars_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_polars_dataframe(df)`, "
+            "did you mean `is_polars_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
 
 
 def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
     """Check whether `df` is a Polars LazyFrame without importing Polars."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_polars_lazyframe`.\n\n"
+            "Hint: Instead of e.g. `is_polars_lazyframe(df)`, "
+            "did you mean `is_polars_lazyframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
 
 
 def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
     """Check whether `ser` is a Polars Series without importing Polars."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_polars_series`.\n\n"
+            "Hint: Instead of e.g. `is_polars_series(ser)`, "
+            "did you mean `is_polars_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
 def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_pyarrow_chunked_array`.\n\n"
+            "Hint: Instead of e.g. `is_pyarrow_chunked_array(ser)`, "
+            "did you mean `is_pyarrow_chunked_array(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
 def is_pyarrow_table(df: Any) -> TypeGuard[pa.Table]:
     """Check whether `df` is a PyArrow Table without importing PyArrow."""
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_pyarrow_table`.\n\n"
+            "Hint: Instead of e.g. `is_pyarrow_table(df)`, "
+            "did you mean `is_pyarrow_table(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
 
 
@@ -233,6 +348,16 @@ def is_pandas_like_dataframe(df: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if isinstance(df, (DataFrame, LazyFrame)):
+        msg = (
+            f"You passed a `{type(df)}` to `is_pandas_like_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_like_dataframe(df)`, "
+            "did you mean `is_pandas_like_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
     return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
 
 
@@ -241,6 +366,15 @@ def is_pandas_like_series(ser: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
+    from narwhals.series import Series
+
+    if isinstance(ser, Series):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_pandas_like_series`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_like_series(ser)`, "
+            "did you mean `is_pandas_like_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 
