@@ -83,17 +83,14 @@ def test_nan_non_float(constructor: Constructor) -> None:
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor(data))
 
+    exc = NwInvalidOperationError
     if "polars" in str(constructor):
-        with pytest.raises(PlInvalidOperationError):
-            df.select(nw.col("a").is_nan()).lazy().collect()
+        exc = PlInvalidOperationError
+    elif "pyarrow_table" in str(constructor):
+        exc = ArrowNotImplementedError
 
-    elif "dask" in str(constructor) or "pandas" in str(constructor):
-        with pytest.raises(NwInvalidOperationError):
-            df.select(nw.col("a").is_nan())
-
-    elif "pyarrow" in str(constructor):
-        with pytest.raises(ArrowNotImplementedError):
-            df.select(nw.col("a").is_nan())
+    with pytest.raises(exc):
+        df.select(nw.col("a").is_nan()).lazy().collect()
 
 
 def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
@@ -105,14 +102,11 @@ def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
+    exc = NwInvalidOperationError
     if "polars" in str(constructor_eager):
-        with pytest.raises(PlInvalidOperationError):
-            df["a"].is_nan()
+        exc = PlInvalidOperationError
+    elif "pyarrow_table" in str(constructor_eager):
+        exc = ArrowNotImplementedError
 
-    elif "dask" in str(constructor_eager) or "pandas" in str(constructor_eager):
-        with pytest.raises(NwInvalidOperationError):
-            df["a"].is_nan()
-
-    elif "pyarrow" in str(constructor_eager):
-        with pytest.raises(ArrowNotImplementedError):
-            df["a"].is_nan()
+    with pytest.raises(exc):
+        df["a"].is_nan()
