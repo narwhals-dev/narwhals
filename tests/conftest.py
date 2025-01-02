@@ -230,6 +230,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         elif constructor in filtered_lazy:
             constructors.append(filtered_lazy[constructor])
             constructors_ids.append(constructor)
+        else:  # pragma: no cover
+            msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
+            raise ValueError(msg)
 
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(
