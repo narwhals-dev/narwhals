@@ -24,6 +24,18 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
         raise TypeError(msg)
 
 
+def _validate_datetime(
+    dtype: DType | type[DType], series_dtype: DType | type[DType]
+) -> None:
+    from narwhals.dtypes import Datetime
+
+    if isinstance_or_issubclass(series_dtype, Datetime) and not (
+        isinstance_or_issubclass(dtype, Datetime)
+    ):
+        msg = f"Expected to cast to Narwhals Datetime, got: {dtype}.\n\n"
+        raise TypeError(msg)
+
+
 class DType:
     def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__

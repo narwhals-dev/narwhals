@@ -7,6 +7,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -226,3 +227,18 @@ def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
         df.select(nw.col("a").cast(dtype))
+
+
+def test_raise_datetime_to_numeric() -> None:
+    data = [datetime(year=2020, month=1, day=1, hour=0, second=0, minute=0)]
+    s_pd = nw.from_native(pd.Series(data), series_only=True)
+    with pytest.raises(TypeError, match="Expected to cast to Narwhals Datetime, got: "):
+        s_pd.cast(nw.Int64)
+
+    s_pa = nw.from_native(pa.chunked_array([data]), series_only=True)
+    with pytest.raises(TypeError, match="Expected to cast to Narwhals Datetime, got: "):
+        s_pa.cast(nw.Int64)
+
+    s_pl = nw.from_native(pl.Series(data), series_only=True)
+    with pytest.raises(TypeError, match="Expected to cast to Narwhals Datetime, got: "):
+        s_pl.cast(nw.Int64)
