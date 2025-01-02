@@ -359,10 +359,10 @@ def test_double_alias(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
     expected = {
-        "o": [1, 3, 2],
         "a": [2, 6, 4],
         "b": [8, 8, 12],
         "z": [14.0, 16.0, 18.0],
+        "o": [1, 3, 2],
     }
     assert_equal_data(result, expected)
 
@@ -650,8 +650,8 @@ def test_inner_join_two_keys(pyspark_constructor: Constructor) -> None:
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "idx": [0, 1, 2],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -678,10 +678,10 @@ def test_inner_join_single_key(pyspark_constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "bob_right": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "idx": [0, 1, 2],
+        "zorro_right": [7.0, 8, 9],
+        "bob_right": [4, 4, 6],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -748,11 +748,11 @@ def test_cross_join_suffix(pyspark_constructor: Constructor, suffix: str) -> Non
             (nw.col("bob") < 5),
             {"antananarivo": [2], "bob": [6], "zorro": [9]},
         ),
-        (["bob"], (nw.col("bob") < 5), {"antananarivo": [2], "bob": [6], "zorro": [9]}),
+        (["bob"], (nw.col("bob") < 5), {"bob": [6], "antananarivo": [2], "zorro": [9]}),
         (
             ["bob"],
             (nw.col("bob") > 5),
-            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7.0, 8.0]},
+            {"bob": [4, 4], "antananarivo": [1, 3], "zorro": [7.0, 8.0]},
         ),
     ],
 )
@@ -785,7 +785,7 @@ def test_anti_join(
         (
             ["bob"],
             (nw.col("bob") < 5),
-            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
+            {"bob": [4, 4], "antananarivo": [1, 3], "zorro": [7, 8]},
         ),
         (
             ["antananarivo", "bob"],
@@ -829,11 +829,12 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
         .drop("idx_right")
     )
     expected = {
-        "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, None],
+        "antananarivo": [1, 2, 3],
         "idx": [0, 1, 2],
+        "antananarivo_right": [1, 2, None],
     }
+    assert_equal_data(result, expected)
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
         on=["antananarivo", "idx"],
@@ -842,11 +843,10 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
     result_on_list = result_on_list.sort("idx")
     expected_on_list = {
         "antananarivo": [1, 2, 3],
-        "bob": [4, 5, 6],
         "idx": [0, 1, 2],
+        "bob": [4, 5, 6],
         "co": [4, 5, 7],
     }
-    assert_equal_data(result, expected)
     assert_equal_data(result_on_list, expected_on_list)
 
 
@@ -889,12 +889,12 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")  # type: ignore[arg-type]
     result = result.drop("idx_right")
     expected: dict[str, list[Any]] = {
-        "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
+        "antananarivo": [1, 2, 3],
         "d": [1, 4, 2],
+        "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, 3],
         "d_right": [1, 4, 2],
-        "idx": [0, 1, 2],
     }
     assert_equal_data(result, expected)
 
@@ -912,8 +912,8 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
+        "idx": [0, 1, 2],
         "antananarivo_right": [1.0, 3.0, None],
         "c": [4.0, 6.0, None],
-        "idx": [0, 1, 2],
     }
     assert_equal_data(result, expected)
