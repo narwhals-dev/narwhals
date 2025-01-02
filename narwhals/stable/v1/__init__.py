@@ -453,10 +453,18 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
             >>> lf = nw.from_native(lf_dask)
             >>> lf
-            ┌───────────────────────────────────────┐
-            | Narwhals LazyFrame                    |
-            | Use `.to_native` to see native output |
-            └───────────────────────────────────────┘
+            ┌───────────────────────────────────┐
+            |        Narwhals LazyFrame         |
+            |-----------------------------------|
+            |Dask DataFrame Structure:          |
+            |                    a      b      c|
+            |npartitions=2                      |
+            |0              string  int64  int64|
+            |3                 ...    ...    ...|
+            |5                 ...    ...    ...|
+            |Dask Name: frompandas, 1 expression|
+            |Expr=df                            |
+            └───────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.col("b", "c").sum()).collect()
             >>> df.to_native()
                a   b   c
