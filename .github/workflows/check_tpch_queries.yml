@@ -19,13 +19,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: local-install
-        run: uv pip install -e ".[dev, dask]" --system
+        run: uv pip install -e ".[dev, core, dask]" --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 
