@@ -78,10 +78,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             return [
                 reduce(
                     operator.add,
-                    (
-                        F.when(F.isnan(F.col(c)), F.lit(0)).otherwise(F.col(c))
-                        for c in cols
-                    ),
+                    (F.coalesce(col, F.lit(0)) for col in cols),
                 ).alias(col_name)
             ]
 
