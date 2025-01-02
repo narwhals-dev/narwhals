@@ -17,19 +17,19 @@ data_int = {"a": [3, 6, 1, 1, None, 6], "b": [1, 1, 2, 1, 2, 2]}
 data_float = {"a": [3.1, 6.1, 1.5, 1.5, None, 6.1], "b": [1, 1, 2, 1, 2, 2]}
 
 expected = {
-    "average": [3.0, 4.5, 1.5, 1.5, float("nan"), 4.5],
-    "min": [3, 4, 1, 1, float("nan"), 4],
-    "max": [3, 5, 2, 2, float("nan"), 5],
-    "dense": [2, 3, 1, 1, float("nan"), 3],
-    "ordinal": [3, 4, 1, 2, float("nan"), 5],
+    "average": [3.0, 4.5, 1.5, 1.5, None, 4.5],
+    "min": [3, 4, 1, 1, None, 4],
+    "max": [3, 5, 2, 2, None, 5],
+    "dense": [2, 3, 1, 1, None, 3],
+    "ordinal": [3, 4, 1, 2, None, 5],
 }
 
 expected_over = {
-    "average": [2.0, 3.0, 1.0, 1.0, float("nan"), 2.0],
-    "min": [2, 3, 1, 1, float("nan"), 2],
-    "max": [2, 3, 1, 1, float("nan"), 2],
-    "dense": [2, 3, 1, 1, float("nan"), 2],
-    "ordinal": [2, 3, 1, 1, float("nan"), 2],
+    "average": [2.0, 3.0, 1.0, 1.0, None, 2.0],
+    "min": [2, 3, 1, 1, None, 2],
+    "max": [2, 3, 1, 1, None, 2],
+    "dense": [2, 3, 1, 1, None, 2],
+    "ordinal": [2, 3, 1, 1, None, 2],
 }
 
 
