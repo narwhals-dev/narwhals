@@ -5204,7 +5204,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         )
 
     def weekday(self: Self) -> ExprT:
-        """Extract the week day in a datetime series.
+        """Extract the week day from the underlying Date representation.
 
         Returns:
             Returns the ISO weekday number where monday = 1 and sunday = 7
