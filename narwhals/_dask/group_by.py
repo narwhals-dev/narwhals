@@ -43,9 +43,9 @@ def var(
 ]:
     from functools import partial
 
-    import dask.dataframe as dd
+    import dask_expr as dx
 
-    return partial(dd.groupby.DataFrameGroupBy.var, ddof=ddof)
+    return partial(dx._groupby.GroupBy.var, ddof=ddof)
 
 
 def std(
@@ -55,9 +55,9 @@ def std(
 ]:
     from functools import partial
 
-    import dask.dataframe as dd
+    import dask_expr as dx
 
-    return partial(dd.groupby.DataFrameGroupBy.std, ddof=ddof)
+    return partial(dx._groupby.GroupBy.std, ddof=ddof)
 
 
 POLARS_TO_DASK_AGGREGATIONS = {
