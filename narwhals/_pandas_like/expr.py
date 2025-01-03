@@ -34,6 +34,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "col->cum_count": "cumsum",
     "col->shift": "shift",
+    "col->rank": "rank",
 }
 
 
@@ -420,7 +421,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def over(self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str]) -> Self:
         if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -449,8 +450,15 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
                 if self._function_name == "col->shift":
                     kwargs = {"periods": self._kwargs.get("n", 1)}
-                else:
-                    # Cumulative operation
+                elif self._function_name == "col->rank":
+                    _method = self._kwargs.get("method", "average")
+                    kwargs = {
+                        "method": "first" if _method == "ordinal" else _method,
+                        "ascending": not self._kwargs.get("descending", False),
+                        "na_option": "keep",
+                        "pct": False,
+                    }
+                else:  # Cumulative operation
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
@@ -652,6 +660,16 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             min_periods=min_periods,
             center=center,
             ddof=ddof,
+        )
+
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "rank", method=method, descending=descending
         )
 
     @property

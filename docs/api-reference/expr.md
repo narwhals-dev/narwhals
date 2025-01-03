@@ -47,6 +47,7 @@
         - over
         - pipe
         - quantile
+        - rank
         - replace_strict
         - rolling_mean
         - rolling_std
