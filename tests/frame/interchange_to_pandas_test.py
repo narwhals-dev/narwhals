@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import duckdb
 import pandas as pd
 import pytest
 
@@ -39,6 +38,7 @@ def test_interchange_ibis_to_pandas(
 
 
 def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
+    duckdb = pytest.importorskip("duckdb")
     if PANDAS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)

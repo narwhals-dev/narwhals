@@ -9,10 +9,11 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, None, None], "b": [4, None, 6, None], "z": [3, 1, None, None]}
-expected_values = [4, 3, 6, float("nan")]
+expected_values = [4, 3, 6, None]
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
+@pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
 def test_maxh(constructor: Constructor, col_expr: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(horizontal_max=nw.max_horizontal(col_expr, nw.col("b"), "z"))
@@ -20,6 +21,7 @@ def test_maxh(constructor: Constructor, col_expr: Any) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
 def test_maxh_all(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.max_horizontal(nw.all()), c=nw.max_horizontal(nw.all()))

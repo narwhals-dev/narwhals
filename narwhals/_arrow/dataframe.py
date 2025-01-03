@@ -602,10 +602,15 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         from narwhals._arrow.series import ArrowSeries
 
-        df = self._native_frame
-
         columns = self.columns
-        col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
+        index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
+        col_token = generate_temporary_column_name(
+            n_bytes=8,
+            columns=[*columns, index_token],
+        )
+
+        df = self.with_row_index(index_token)._native_frame
+
         row_count = (
             df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
             .group_by(columns)
@@ -616,17 +621,20 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 row_count,
                 keys=columns,
                 right_keys=columns,
-                join_type="inner",
+                join_type="left outer",
                 use_threads=False,
-            ).column(f"{col_token}_sum"),
+            )
+            .sort_by(index_token)
+            .column(f"{col_token}_sum"),
             1,
         )
-        return ArrowSeries(
+        res = ArrowSeries(
             is_duplicated,
             name="",
             backend_version=self._backend_version,
             version=self._version,
         )
+        return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
@@ -647,7 +655,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool,
+        maintain_order: bool = False,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.

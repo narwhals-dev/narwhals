@@ -31,9 +31,7 @@ def test_group_by_complex() -> None:
     assert_equal_data(result, expected)
 
     lf = nw.from_native(df_lazy).lazy()
-    result = nw.to_native(
-        lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    )
+    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     assert_equal_data(result, expected)
 
 
@@ -75,12 +73,7 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/17650
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
@@ -225,7 +218,6 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
             b_min=nw.col("b").min(),
             b_max=nw.col("b").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -245,7 +237,6 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
             nw.col("b").min(),
             nw.col("c").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -265,7 +256,6 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
             c_min=nw.col("c").min(),
             c_max=nw.col("c").max(),
         )
-        .collect()
         .sort("a")
     )
     expected = {
@@ -298,7 +288,7 @@ def test_key_with_nulls(
             .sort("a")
             .with_columns(nw.col("b").cast(nw.Float64))
         )
-        expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
+        expected = {"b": [4.0, 5, None], "len": [1, 1, 1], "a": [1, 2, 3]}
         assert_equal_data(result, expected)
 
 
@@ -321,11 +311,8 @@ def test_key_with_nulls_iter(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
-    if PANDAS_VERSION < (1, 3) and "pandas_constructor" in str(constructor_eager):
-        # bug in old pandas
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/17650
+    if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
+        # Grouping by null values is not supported in pandas < 1.0.0
         request.applymarker(pytest.mark.xfail)
     data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
     result = dict(
@@ -333,6 +320,7 @@ def test_key_with_nulls_iter(
         .group_by("b", "c", drop_null_keys=True)
         .__iter__()
     )
+
     assert len(result) == 2
     assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
     assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
@@ -418,7 +406,7 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf", "modin_constructor")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "modin")):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649

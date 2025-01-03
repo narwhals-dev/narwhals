@@ -200,11 +200,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "none"] = "any",
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns
