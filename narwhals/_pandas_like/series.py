@@ -20,6 +20,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals._pandas_like.utils import to_datetime
 from narwhals.dependencies import is_numpy_scalar
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
@@ -623,8 +624,6 @@ class PandasLikeSeries(CompliantSeries):
         return ser.mean()
 
     def median(self) -> Any:
-        from narwhals.exceptions import InvalidOperationError
-
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
@@ -662,6 +661,13 @@ class PandasLikeSeries(CompliantSeries):
     def is_null(self) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.isna())
+
+    def is_nan(self) -> PandasLikeSeries:
+        ser = self._native_series
+        if self.dtype.is_numeric():
+            return self._from_native_series(ser != ser)  # noqa: PLR0124
+        msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
+        raise InvalidOperationError(msg)
 
     def fill_null(
         self,

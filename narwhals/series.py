@@ -2437,6 +2437,59 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
+    def is_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are NaN.
+
+        Returns:
+            A boolean Series indicating which values are NaN.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
+            >>> data = [0.0, None, 2.0]
+            >>> s_pd = pd.Series(data, dtype="Float64")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data], type=pa.float64())
+
+            >>> def agnostic_self_div_is_nan(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.is_nan().to_native()
+
+            >>> print(agnostic_self_div_is_nan(s_pd))
+            0    False
+            1     <NA>
+            2    False
+            dtype: boolean
+
+            >>> print(agnostic_self_div_is_nan(s_pl))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+                    false
+                    null
+                    false
+            ]
+
+            >>> print(agnostic_self_div_is_nan(s_pa))  # doctest: +NORMALIZE_WHITESPACE
+            [
+              [
+                false,
+                null,
+                false
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_nan())
+
     def fill_null(
         self,
         value: Any | None = None,

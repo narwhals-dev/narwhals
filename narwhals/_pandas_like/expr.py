@@ -311,6 +311,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
+    def is_nan(self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
+
     def fill_null(
         self,
         value: Any | None = None,

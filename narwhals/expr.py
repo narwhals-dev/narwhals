@@ -1925,6 +1925,70 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
+    def is_nan(self) -> Self:
+        """Indicate which values are NaN.
+
+        Returns:
+            A new expression.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"orig": [0.0, None, 2.0]}
+            >>> df_pd = pd.DataFrame(data).astype({"orig": "Float64"})
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_self_div_is_nan(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         divided=nw.col("orig") / nw.col("orig"),
+            ...         divided_is_nan=(nw.col("orig") / nw.col("orig")).is_nan(),
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_self_div_is_nan`:
+
+            >>> print(agnostic_self_div_is_nan(df_pd))
+               orig  divided  divided_is_nan
+            0   0.0      NaN            True
+            1  <NA>     <NA>            <NA>
+            2   2.0      1.0           False
+
+            >>> print(agnostic_self_div_is_nan(df_pl))
+            shape: (3, 3)
+            ┌──────┬─────────┬────────────────┐
+            │ orig ┆ divided ┆ divided_is_nan │
+            │ ---  ┆ ---     ┆ ---            │
+            │ f64  ┆ f64     ┆ bool           │
+            ╞══════╪═════════╪════════════════╡
+            │ 0.0  ┆ NaN     ┆ true           │
+            │ null ┆ null    ┆ null           │
+            │ 2.0  ┆ 1.0     ┆ false          │
+            └──────┴─────────┴────────────────┘
+
+            >>> print(agnostic_self_div_is_nan(df_pa))
+            pyarrow.Table
+            orig: double
+            divided: double
+            divided_is_nan: bool
+            ----
+            orig: [[0,null,2]]
+            divided: [[nan,null,1]]
+            divided_is_nan: [[true,null,false]]
+
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_nan())
+
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 

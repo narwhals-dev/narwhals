@@ -317,6 +317,9 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_null(self: Self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
+    def is_nan(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
+
     def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         return reuse_series_implementation(
             self,
