@@ -220,6 +220,19 @@ class PolarsSeries:
     def __invert__(self: Self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
+    def is_nan(self: Self) -> Self:
+        import polars as pl
+
+        native = self._native_series
+
+        if self._backend_version < (1, 18):  # pragma: no cover
+            return self._from_native_series(
+                pl.select(pl.when(native.is_not_null()).then(native.is_nan()))[
+                    native.name
+                ]
+            )
+        return self._from_native_series(native.is_nan())
+
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
 

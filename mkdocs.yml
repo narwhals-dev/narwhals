@@ -13,7 +13,7 @@ nav:
     - basics/dataframe_conversion.md
   - Pandas-like concepts:
     - pandas_like_concepts/pandas_index.md
-    - pandas_like_concepts/user_warning.md
+    - pandas_like_concepts/improve_group_by_operation.md
     - pandas_like_concepts/column_names.md
     - pandas_like_concepts/boolean.md
     - pandas_like_concepts/null_handling.md

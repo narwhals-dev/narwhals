@@ -18,7 +18,6 @@ from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
-from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -124,20 +123,14 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        indices = self._grouped.indices
-        if (
-            self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (2, 2)
-        ) or (
-            self._df._implementation is Implementation.CUDF
-            and self._df._backend_version < (2024, 12)
-        ):  # pragma: no cover
-            for key in indices:
-                yield (key, self._from_native_frame(self._grouped.get_group(key)))
-        else:
-            for key in indices:
-                key = tupleify(key)  # noqa: PLW2901
-                yield (key, self._from_native_frame(self._grouped.get_group(key)))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*a length 1 tuple will be returned",
+                category=FutureWarning,
+            )
+            for key, group in self._grouped:
+                yield (key, self._from_native_frame(group))
 
 
 def agg_pandas(  # noqa: PLR0915
@@ -342,7 +335,9 @@ def agg_pandas(  # noqa: PLR0915
     warnings.warn(
         "Found complex group-by expression, which can't be expressed efficiently with the "
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
-        "are simple (e.g. mean, std, min, max, ...).",
+        "are simple (e.g. mean, std, min, max, ...). \n\n"
+        "Please see: "
+        "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/",
         UserWarning,
         stacklevel=find_stacklevel(),
     )
@@ -353,7 +348,9 @@ def agg_pandas(  # noqa: PLR0915
         for expr in exprs:
             results_keys = expr(from_dataframe(df))
             if not all(len(x) == 1 for x in results_keys):
-                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar?"
+                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar? \
+                \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/"
+
                 raise ValueError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])

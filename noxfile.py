@@ -14,10 +14,12 @@ PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 
 def run_common(session: Session, coverage_threshold: float) -> None:
-    session.install("-e .[dev]")
-
-    if session.python != "3.8":
-        session.install("ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix")
+    if session.python == "3.8":
+        session.install("-e .[dev,core]")
+    elif session.python == "3.12":
+        session.install("-e .[dev,core,extra,dask,modin]")
+    else:
+        session.install("-e .[dev,core,extra,dask,modin,pyspark,ibis]")
 
     session.run(
         "pytest",
@@ -34,11 +36,7 @@ def run_common(session: Session, coverage_threshold: float) -> None:
 
 @nox.session(python=PYTHON_VERSIONS)  # type: ignore[misc]
 def pytest_coverage(session: Session) -> None:
-    if session.python == "3.8":
-        coverage_threshold = 85
-    else:
-        coverage_threshold = 100
-        session.install("modin[dask]")
+    coverage_threshold = 85 if session.python == "3.8" else 100
 
     run_common(session, coverage_threshold)
 

@@ -161,7 +161,7 @@ def test_left_join(  # pragma: no cover
             left_on=left_key,
             right_on=right_key,
         )
-    ).select(pl.all().fill_null(float("nan")))
+    )
     assert_equal_data(
         result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False)
     )
@@ -174,7 +174,7 @@ def test_left_join(  # pragma: no cover
             left_on=left_key,
             right_on=right_key,
         )
-        .select(nw.all().cast(nw.Float64).fill_null(float("nan")))
+        .select(nw.all().cast(nw.Float64))
         .pipe(lambda df: df.sort(df.columns))
     )
     assert_equal_data(

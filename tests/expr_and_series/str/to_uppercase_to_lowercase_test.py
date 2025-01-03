@@ -38,7 +38,7 @@ def test_str_to_uppercase(
         in (
             "pandas_pyarrow_constructor",
             "pyarrow_table_constructor",
-            "modin_constructor",
+            "modin_pyarrow_constructor",
         )
         or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
@@ -80,6 +80,7 @@ def test_str_to_uppercase_series(
             "pandas_nullable_constructor",
             "polars_eager_constructor",
             "cudf_constructor",
+            "modin_constructor",
         )
     ):
         # We are marking it xfail for these conditions above

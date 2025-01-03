@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import duckdb
 import polars as pl
 import pyarrow as pa
 import pytest
@@ -35,6 +34,7 @@ def test_interchange_ibis_to_arrow(
 
 
 def test_interchange_duckdb_to_arrow() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

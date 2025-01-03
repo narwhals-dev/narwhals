@@ -4,7 +4,6 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
-import duckdb
 import polars as pl
 import pytest
 
@@ -160,6 +159,7 @@ def test_interchange_schema_ibis(
 
 
 def test_interchange_schema_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(  # noqa: F841
         {
             "a": [1, 1, 2],
