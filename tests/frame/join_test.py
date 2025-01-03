@@ -37,8 +37,8 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -65,10 +65,10 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "bob_right": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
+        "bob_right": [4, 4, 6],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -241,8 +241,8 @@ def test_left_join(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, None],
         "index": [0, 1, 2],
+        "antananarivo_right": [1, 2, None],
     }
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
@@ -300,9 +300,9 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
+        "index": [0, 1, 2],
         "antananarivo_right": [1, 2, 3],
         "d_right": [1, 4, 2],
-        "index": [0, 1, 2],
     }
     assert_equal_data(result, expected)
     result = df_left.join(
@@ -317,9 +317,9 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
+        "index": [0, 1, 2],
         "antananarivo_right": [1.0, 3.0, None],
         "c": [4.0, 6.0, None],
-        "index": [0, 1, 2],
     }
     assert_equal_data(result, expected)
 

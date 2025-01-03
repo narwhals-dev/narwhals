@@ -12,5 +12,5 @@ data = {
 
 def test_with_row_index(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).with_row_index()
-    expected = {"a": ["foo", "bars"], "ab": ["foo", "bars"], "index": [0, 1]}
+    expected = {"index": [0, 1], "a": ["foo", "bars"], "ab": ["foo", "bars"]}
     assert_equal_data(result, expected)
