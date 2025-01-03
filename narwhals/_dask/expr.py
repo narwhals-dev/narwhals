@@ -1212,6 +1212,13 @@ class DaskExprDateTimeNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
+    def weekday(self) -> DaskExpr:
+        return self._compliant_expr._from_call(
+            lambda _input: _input.dt.weekday + 1,  # Dask is 0-6
+            "weekday",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
     def to_string(self, format: str) -> DaskExpr:  # noqa: A002
         return self._compliant_expr._from_call(
             lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),

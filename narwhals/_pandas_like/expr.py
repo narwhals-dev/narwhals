@@ -835,6 +835,11 @@ class PandasLikeExprDateTimeNamespace:
             self._compliant_expr, "dt", "ordinal_day"
         )
 
+    def weekday(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
+        )
+
     def total_minutes(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "total_minutes"

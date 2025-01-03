@@ -1298,6 +1298,14 @@ class PandasLikeSeriesDateTimeNamespace:
             )
         )
 
+    def weekday(self) -> PandasLikeSeries:
+        return (
+            self._compliant_series._from_native_series(
+                self._compliant_series._native_series.dt.weekday,
+            )
+            + 1  # Pandas is 0-6 while Polars is 1-7
+        )
+
     def _get_total_seconds(self) -> Any:
         if hasattr(self._compliant_series._native_series.dt, "total_seconds"):
             return self._compliant_series._native_series.dt.total_seconds()

@@ -658,6 +658,11 @@ class ArrowExprDateTimeNamespace:
             self._compliant_expr, "dt", "ordinal_day"
         )
 
+    def weekday(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
+        )
+
     def total_minutes(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "total_minutes"

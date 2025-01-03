@@ -32,6 +32,7 @@ data = {
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes(
@@ -68,6 +69,7 @@ def test_datetime_attributes(
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes_series(
