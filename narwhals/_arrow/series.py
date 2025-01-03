@@ -304,7 +304,9 @@ class ArrowSeries(CompliantSeries):
     def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.sum(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.sum(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def drop_nulls(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
@@ -474,12 +476,16 @@ class ArrowSeries(CompliantSeries):
     def any(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.any(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.any(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def all(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.all(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.all(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
