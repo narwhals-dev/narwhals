@@ -718,7 +718,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(
             func,
             "is_null",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def len(self: Self) -> Self:
