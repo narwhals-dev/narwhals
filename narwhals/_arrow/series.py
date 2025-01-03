@@ -1304,7 +1304,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def weekday(self: Self) -> ArrowSeries:
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         return self._compliant_series._from_native_series(
