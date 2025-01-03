@@ -6259,33 +6259,43 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
 
         Examples:
+            >>> from datetime import datetime
             >>> import pandas as pd
             >>> import polars as pl
-            >>> from datetime import datetime
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
             >>> data = [datetime(2020, 1, 1), datetime(2020, 8, 3)]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
 
             We define a library agnostic function:
 
-            >>> def my_library_agnostic_function(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_weekday(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.dt.weekday().to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars, PyArrow, and other supported libraries to `agnostic_weekday`:
 
-            >>> my_library_agnostic_function(s_pd)
+            >>> agnostic_weekday(s_pd)
             0    3
             1    1
             dtype: int32
-            >>> my_library_agnostic_function(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_weekday(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i8]
             [
                3
                1
+            ]
+            >>> agnostic_weekday(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                1
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(

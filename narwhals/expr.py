@@ -5211,28 +5211,30 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
 
         Examples:
+            >>> from datetime import datetime
             >>> import pandas as pd
             >>> import polars as pl
-            >>> from datetime import datetime
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>> data = {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_weekday(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(a_weekday=nw.col("a").dt.weekday()).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars, PyArrow, and other supported libraries to `agnostic_weekday`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_weekday(df_pd)
                        a  a_weekday
             0 2020-01-01          3
             1 2020-08-03          1
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_weekday(df_pl)
             shape: (2, 2)
             ┌─────────────────────┬───────────┐
             │ a                   ┆ a_weekday │
@@ -5242,6 +5244,13 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2020-01-01 00:00:00 ┆ 3         │
             │ 2020-08-03 00:00:00 ┆ 1         │
             └─────────────────────┴───────────┘
+            >>> agnostic_weekday(df_pa)
+            pyarrow.Table
+            a: timestamp[us]
+            a_weekday: int64
+            ----
+            a: [[2020-01-01 00:00:00.000000,2020-08-03 00:00:00.000000]]
+            a_weekday: [[3,1]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
