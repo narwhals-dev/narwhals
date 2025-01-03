@@ -994,10 +994,13 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(self._native_series.iloc[offset::n])
 
     def clip(
-        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
+        _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
+        _, upper_bound = broadcast_align_and_extract_native(self, upper_bound)
+        kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._from_native_series(
-            self._native_series.clip(lower_bound, upper_bound)
+            self._native_series.clip(lower_bound, upper_bound, **kwargs)
         )
 
     def to_arrow(self: Self) -> Any:

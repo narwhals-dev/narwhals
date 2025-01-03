@@ -1342,7 +1342,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.var(ddof=ddof)
 
     def clip(
-        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self, lower_bound: Self | Any | None = None, upper_bound: Self | Any | None = None
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -1484,7 +1484,10 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+            self._compliant_series.clip(
+                lower_bound=self._extract_native(lower_bound),
+                upper_bound=self._extract_native(upper_bound),
+            )
         )
 
     def is_in(self, other: Any) -> Self:

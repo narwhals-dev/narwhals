@@ -153,6 +153,11 @@ def broadcast_and_extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
+    if rhs is None:
+        import pyarrow as pa
+
+        return lhs._native_series, pa.scalar(None, type=lhs._native_series.type)
+
     # If `rhs` is the output of an expression evaluation, then it is
     # a list of Series. So, we verify that that list is of length-1,
     # and take the first (and only) element.

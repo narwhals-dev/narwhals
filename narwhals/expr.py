@@ -3002,8 +3002,8 @@ class Expr:
     # TODO @aivanoved: make type alias for numeric type
     def clip(
         self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        lower_bound: IntoExpr | Any | None = None,
+        upper_bound: IntoExpr | Any | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -3130,7 +3130,10 @@ class Expr:
             s: [[-1,1,-1,3,-1,3]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).clip(lower_bound, upper_bound)
+            lambda plx: self._to_compliant_expr(plx).clip(
+                extract_compliant(plx, lower_bound),
+                extract_compliant(plx, upper_bound),
+            )
         )
 
     def mode(self: Self) -> Self:
