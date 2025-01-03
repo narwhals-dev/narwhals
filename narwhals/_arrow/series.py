@@ -1308,7 +1308,7 @@ class ArrowSeriesDateTimeNamespace:
         import pyarrow.compute as pc
 
         return self._compliant_series._from_native_series(
-            pc.add(pc.day_of_week(self._compliant_series._native_series), pa.scalar(1))
+            pc.day_of_week(self._compliant_series._native_series, count_from_zero=False)
         )
 
     def total_minutes(self: Self) -> ArrowSeries:
