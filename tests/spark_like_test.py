@@ -917,3 +917,50 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
         "idx": [0, 1, 2],
     }
     assert_equal_data(result, expected)
+
+
+# copied from tests/expr_and_series/arithmetic_test.py
+@pytest.mark.parametrize(
+    ("attr", "rhs", "expected"),
+    [
+        ("__add__", 1, [2, 3, 4]),
+        ("__sub__", 1, [0, 1, 2]),
+        ("__mul__", 2, [2, 4, 6]),
+        ("__truediv__", 2.0, [0.5, 1.0, 1.5]),
+        ("__truediv__", 1, [1, 2, 3]),
+        ("__floordiv__", 2, [0, 1, 1]),
+        ("__mod__", 2, [1, 0, 1]),
+        ("__pow__", 2, [1, 4, 9]),
+    ],
+)
+def test_arithmetic_expr(
+    attr: str, rhs: Any, expected: list[Any], pyspark_constructor: Constructor
+) -> None:
+    data = {"a": [1.0, 2, 3]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(getattr(nw.col("a"), attr)(rhs))
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("attr", "rhs", "expected"),
+    [
+        ("__radd__", 1, [2, 3, 4]),
+        ("__rsub__", 1, [0, -1, -2]),
+        ("__rmul__", 2, [2, 4, 6]),
+        ("__rtruediv__", 2.0, [2, 1, 2 / 3]),
+        ("__rfloordiv__", 2, [2, 1, 0]),
+        ("__rmod__", 2, [0, 0, 2]),
+        ("__rpow__", 2, [2, 4, 8]),
+    ],
+)
+def test_right_arithmetic_expr(
+    attr: str,
+    rhs: Any,
+    expected: list[Any],
+    pyspark_constructor: Constructor,
+) -> None:
+    data = {"a": [1, 2, 3]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(getattr(nw.col("a"), attr)(rhs))
+    assert_equal_data(result, {"literal": expected})
