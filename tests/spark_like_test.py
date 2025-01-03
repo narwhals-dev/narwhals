@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 
 
 # Apply filterwarnings to all tests in this module
-pytestmark = [
-    pytest.mark.filterwarnings(
-        "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning"
-    ),
-    pytest.mark.filterwarnings(
-        "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning"
-    ),
-]
+# pytestmark = [
+#    pytest.mark.filterwarnings(
+#        "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning"
+#    ),
+#    pytest.mark.filterwarnings(
+#        "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning"
+#    ),
+# ]
 
 
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:

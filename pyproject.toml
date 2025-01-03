@@ -152,6 +152,8 @@ filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
+  'ignore:.*distutils package is deprecated and.*',
+  'ignore:.*is_datetime64tz_dtype is deprecated and will be removed.*',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
