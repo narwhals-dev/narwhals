@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -16,15 +17,15 @@ from tests.utils import assert_equal_data
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 
-kwargs_and_expected = {
-    "x1": {"kwargs": {"window_size": 3}, "expected": [float("nan")] * 6 + [7.0]},
+kwargs_and_expected: dict[str, dict[str, Any]] = {
+    "x1": {"kwargs": {"window_size": 3}, "expected": [None] * 6 + [7.0]},
     "x2": {
         "kwargs": {"window_size": 3, "min_periods": 1},
-        "expected": [float("nan"), 1.0, 1.5, 1.5, 3.0, 5.0, 7.0],
+        "expected": [None, 1.0, 1.5, 1.5, 3.0, 5.0, 7.0],
     },
     "x3": {
         "kwargs": {"window_size": 2, "min_periods": 1},
-        "expected": [float("nan"), 1.0, 1.5, 2.0, 4.0, 5.0, 8.5],
+        "expected": [None, 1.0, 1.5, 2.0, 4.0, 5.0, 8.5],
     },
     "x4": {
         "kwargs": {"window_size": 5, "min_periods": 1, "center": True},
@@ -52,7 +53,7 @@ def test_rolling_mean_expr(
     df = nw.from_native(constructor(data))
     result = df.select(
         **{
-            name: nw.col("a").rolling_mean(**values["kwargs"])  # type: ignore[arg-type]
+            name: nw.col("a").rolling_mean(**values["kwargs"])
             for name, values in kwargs_and_expected.items()
         }
     )
@@ -69,7 +70,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
 
     result = df.select(
         **{
-            name: df["a"].rolling_mean(**values["kwargs"])  # type: ignore[arg-type]
+            name: df["a"].rolling_mean(**values["kwargs"])
             for name, values in kwargs_and_expected.items()
         }
     )

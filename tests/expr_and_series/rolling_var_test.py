@@ -23,17 +23,17 @@ kwargs_and_expected = (
     {
         "name": "x1",
         "kwargs": {"window_size": 3},
-        "expected": [float("nan"), float("nan"), 1 / 3, 1, 4 / 3, 7 / 3, 3],
+        "expected": [None, None, 1 / 3, 1, 4 / 3, 7 / 3, 3],
     },
     {
         "name": "x2",
         "kwargs": {"window_size": 3, "min_periods": 1},
-        "expected": [float("nan"), 0.5, 1 / 3, 1.0, 4 / 3, 7 / 3, 3],
+        "expected": [None, 0.5, 1 / 3, 1.0, 4 / 3, 7 / 3, 3],
     },
     {
         "name": "x3",
         "kwargs": {"window_size": 2, "min_periods": 1},
-        "expected": [float("nan"), 0.5, 0.5, 2.0, 2.0, 4.5, 4.5],
+        "expected": [None, 0.5, 0.5, 2.0, 2.0, 4.5, 4.5],
     },
     {
         "name": "x4",
@@ -48,7 +48,7 @@ kwargs_and_expected = (
     {
         "name": "x6",
         "kwargs": {"window_size": 3, "ddof": 2},
-        "expected": [float("nan"), float("nan"), 2 / 3, 2.0, 8 / 3, 14 / 3, 6.0],
+        "expected": [None, None, 2 / 3, 2.0, 8 / 3, 14 / 3, 6.0],
     },
 )
 

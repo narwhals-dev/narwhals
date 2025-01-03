@@ -250,8 +250,8 @@ def test_sort(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("nulls_last", "expected"),
     [
-        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, float("nan")]}),
-        (False, {"a": [-1, 0, 2, 0], "b": [float("nan"), 3, 2, 1]}),
+        (True, {"a": [0, 2, 0, -1], "b": [3, 2, 1, None]}),
+        (False, {"a": [-1, 0, 2, 0], "b": [None, 3, 2, 1]}),
     ],
 )
 def test_sort_nulls(
@@ -312,9 +312,48 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/sum_horizontal_test.py
+@pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
+def test_sumh(pyspark_constructor: Constructor, col_expr: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.with_columns(horizontal_sum=nw.sum_horizontal(col_expr, nw.col("b")))
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "horizontal_sum": [5, 7, 8],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_sumh_nullable(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 8, 3], "b": [4, 5, None], "idx": [0, 1, 2]}
+    expected = {"hsum": [5, 13, 3]}
+
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select("idx", hsum=nw.sum_horizontal("a", "b")).sort("idx").drop("idx")
+    assert_equal_data(result, expected)
+
+
+def test_sumh_all(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 2, 3], "b": [10, 20, 30]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.sum_horizontal(nw.all()))
+    expected = {
+        "a": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(c=nw.sum_horizontal(nw.all()))
+    expected = {
+        "c": [11, 22, 33],
+    }
+    assert_equal_data(result, expected)
+
+
 # copied from tests/expr_and_series/count_test.py
 def test_count(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
+    data = {"a": [1, 2, 3], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").count())
     expected = {"a": [3], "b": [2], "z": [1]}
@@ -359,6 +398,16 @@ def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").min())
     expected = {"a": [1], "b": [4], "z": [7.0]}
+    assert_equal_data(result, expected)
+
+
+# copied from tests/expr_and_series/min_test.py
+@pytest.mark.parametrize("expr", [nw.col("a", "b", "z").sum(), nw.sum("a", "b", "z")])
+def test_expr_sum_expr(pyspark_constructor: Constructor, expr: nw.Expr) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(expr)
+    expected = {"a": [6], "b": [14], "z": [24.0]}
     assert_equal_data(result, expected)
 
 
@@ -526,8 +575,8 @@ def test_drop_nulls(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("subset", "expected"),
     [
-        ("a", {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
-        (["a"], {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        ("a", {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
+        (["a"], {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
         (["a", "b"], {"a": [2.0, 4.0], "b": [3.0, 5.0]}),
     ],
 )
@@ -797,7 +846,7 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, float("nan")],
+        "antananarivo_right": [1, 2, None],
         "idx": [0, 1, 2],
     }
     result_on_list = df_left.join(
@@ -878,8 +927,8 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
-        "antananarivo_right": [1.0, 3.0, float("nan")],
-        "c": [4.0, 6.0, float("nan")],
+        "antananarivo_right": [1.0, 3.0, None],
+        "c": [4.0, 6.0, None],
         "idx": [0, 1, 2],
     }
     assert_equal_data(result, expected)
