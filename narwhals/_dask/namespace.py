@@ -418,10 +418,10 @@ class DaskWhen:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]
         otherwise_series = otherwise_expr(df)[0]
-        validate_comparand(condition, otherwise_series)
 
         if otherwise_expr._returns_scalar:  # type: ignore[attr-defined]
             return [value_series.where(condition, otherwise_series[0])]
+        validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
 
     def then(self, value: DaskExpr | Any) -> DaskThen:

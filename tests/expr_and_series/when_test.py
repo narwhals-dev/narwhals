@@ -128,12 +128,7 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_lit_str(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        # TODO(marco): bug in dask? exprs are not co-aligned
-        request.applymarker(pytest.mark.xfail)
+def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
