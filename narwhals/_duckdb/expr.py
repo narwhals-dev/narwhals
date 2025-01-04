@@ -649,3 +649,78 @@ class DuckDBExprDateTimeNamespace:
             "year",
             returns_scalar=False,
         )
+
+    def month(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("month", _input),
+            "month",
+            returns_scalar=False,
+        )
+
+    def day(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("day", _input),
+            "day",
+            returns_scalar=False,
+        )
+
+    def hour(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("hour", _input),
+            "hour",
+            returns_scalar=False,
+        )
+
+    def minute(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("minute", _input),
+            "minute",
+            returns_scalar=False,
+        )
+
+    def second(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("second", _input),
+            "second",
+            returns_scalar=False,
+        )
+
+    def millisecond(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("millisecond", _input)
+            - FunctionExpression("second", _input) * 1_000,
+            "millisecond",
+            returns_scalar=False,
+        )
+
+    def microsecond(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("microsecond", _input)
+            - FunctionExpression("second", _input) * 1_000_000,
+            "microsecond",
+            returns_scalar=False,
+        )
+
+    def nanosecond(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("nanosecond", _input)
+            - FunctionExpression("second", _input) * 1_000_000_000,
+            "nanosecond",
+            returns_scalar=False,
+        )
