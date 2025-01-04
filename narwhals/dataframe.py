@@ -4597,6 +4597,15 @@ class LazyFrame(BaseFrame[FrameT]):
                foo  bar ham
             1    2    7   b
         """
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
+        ):  # pragma: no cover
+            msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
+            raise TypeError(msg)
+
         return super().filter(*predicates, **constraints)
 
     def group_by(
