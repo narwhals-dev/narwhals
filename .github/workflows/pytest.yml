@@ -59,7 +59,7 @@ jobs:
   pytest-full-coverage:
     strategy:
       matrix:
-        python-version: ["3.9", "3.11", "3.13"]
+        python-version: ["3.11", "3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -74,15 +74,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dev, core, extra, modin]" --system
-      - name: install dask
-        run: uv pip install -e ".[dask]" --system
-        # Dask minimum version requires 3.10+
-        if: matrix.python-version == '3.11' || matrix.python-version == '3.13'
+        run: uv pip install -e ".[dev, core, extra, modin, dask]" --system
       - name: install pyspark
         run: uv pip install -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
-        if: matrix.python-version == '3.9' || matrix.python-version == '3.11'
+        if: matrix.python-version != '3.13'
       - name: install ibis
         run: uv pip install -e ".[ibis]" --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
