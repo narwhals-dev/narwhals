@@ -14,12 +14,12 @@ PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 
 def run_common(session: Session, coverage_threshold: float) -> None:
-    if session.python == "3.12":
-        session.install("-e .[dev,extra,dask,modin]")
-    elif session.python != "3.8":
-        session.install("-e .[dev,extra,dask,modin,pyspark,ibis]")
+    if session.python == "3.8":
+        session.install("-e .[dev,core]")
+    elif session.python == "3.12":
+        session.install("-e .[dev,core,extra,dask,modin]")
     else:
-        session.install("-e .[dev]")
+        session.install("-e .[dev,core,extra,dask,modin,pyspark,ibis]")
 
     session.run(
         "pytest",
