@@ -137,6 +137,7 @@ def test_pivot(
         index=index,
         values=["foo", "bar"],
         aggregate_function=agg_func,  # type: ignore[arg-type]
+        sort_columns=True,
     )
 
     assert_equal_data(result, expected)

@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -63,9 +65,20 @@ def parse_exprs_and_named_exprs(
     return results
 
 
-def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
+def add_row_index(
+    frame: dd.DataFrame,
+    name: str,
+    backend_version: tuple[int, ...],
+    implementation: Implementation,
+) -> dd.DataFrame:
+    original_cols = frame.columns
     frame = frame.assign(**{name: 1})
-    return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
+    return select_columns_by_name(
+        frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1}),
+        [name, *original_cols],
+        backend_version,
+        implementation,
+    )
 
 
 def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:

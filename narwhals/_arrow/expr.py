@@ -317,6 +317,9 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_null(self: Self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
+    def is_nan(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
+
     def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         return reuse_series_implementation(
             self,
@@ -656,6 +659,11 @@ class ArrowExprDateTimeNamespace:
     def ordinal_day(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "ordinal_day"
+        )
+
+    def weekday(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
         )
 
     def total_minutes(self: Self) -> ArrowExpr:

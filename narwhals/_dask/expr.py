@@ -16,6 +16,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -706,6 +707,20 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
+    def is_nan(self: Self) -> Self:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
+            if dtype.is_numeric():
+                return _input != _input  # noqa: PLR0124
+            msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+
+        return self._from_call(
+            func,
+            "is_null",
+            returns_scalar=self._returns_scalar,
+        )
+
     def len(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.size,
@@ -740,7 +755,12 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
@@ -757,7 +777,12 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 
             return _input[col_token].isin(last_distinct_index)
@@ -1209,6 +1234,13 @@ class DaskExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def weekday(self) -> DaskExpr:
+        return self._compliant_expr._from_call(
+            lambda _input: _input.dt.weekday + 1,  # Dask is 0-6
+            "weekday",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 

@@ -121,7 +121,7 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
 
 
 def _std(
-    _input: Column,
+    _input: Column | str,
     ddof: int,
     backend_version: tuple[int, ...],
     np_version: tuple[int, ...],
@@ -136,12 +136,14 @@ def _std(
         return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
     from pyspark.pandas.spark.functions import stddev
+    from pyspark.sql import functions as F  # noqa: N812
 
-    return stddev(_input, ddof=ddof)
+    input_col = F.col(_input) if isinstance(_input, str) else _input
+    return stddev(input_col, ddof=ddof)
 
 
 def _var(
-    _input: Column,
+    _input: Column | str,
     ddof: int,
     backend_version: tuple[int, ...],
     np_version: tuple[int, ...],
@@ -156,5 +158,7 @@ def _var(
         return F.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
 
     from pyspark.pandas.spark.functions import var
+    from pyspark.sql import functions as F  # noqa: N812
 
-    return var(_input, ddof=ddof)
+    input_col = F.col(_input) if isinstance(_input, str) else _input
+    return var(input_col, ddof=ddof)
