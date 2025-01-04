@@ -5038,6 +5038,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     return (
             ...         df.sort("datetime")
             ...         .join_asof(other, on="datetime", by="ticker")
+            ...         .sort("datetime", "ticker")
             ...         .collect()
             ...         .to_native()
             ...     )
