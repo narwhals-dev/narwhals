@@ -18,9 +18,9 @@ def test_double_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
     expected = {
-        "o": [1, 3, 2],
         "a": [2, 6, 4],
         "b": [8, 8, 12],
         "z": [14.0, 16.0, 18.0],
+        "o": [1, 3, 2],
     }
     assert_equal_data(result, expected)
