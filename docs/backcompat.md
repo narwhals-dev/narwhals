@@ -96,12 +96,13 @@ Anything currently in `narwhals.stable.v1` will not be changed or removed in fut
 
 Here are exceptions to our backwards compatibility policy:
 
-- unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
+- Unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
   considering that to be a breaking change.
-- radical changes in backends. Suppose that Polars was to remove
+- Radical changes in backends. Suppose that Polars was to remove
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
-- we may consider making some type hints more precise.
+- We may consider making some type hints more precise.
+- Anything labelled "unstable".
 
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.

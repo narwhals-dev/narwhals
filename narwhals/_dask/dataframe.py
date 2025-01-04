@@ -94,17 +94,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            msg = (
-                "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
-            )
-            raise NotImplementedError(msg)
-
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))

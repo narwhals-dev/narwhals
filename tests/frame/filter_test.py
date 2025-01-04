@@ -20,16 +20,11 @@ def test_filter(constructor: Constructor) -> None:
 def test_filter_with_boolean_list(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
-
     context = (
-        pytest.raises(
-            NotImplementedError,
-            match="`LazyFrame.filter` is not supported for .* with boolean masks.",
-        )
-        if any(x in str(constructor) for x in ("dask", "duckdb"))
+        pytest.raises(TypeError, match="not supported")
+        if isinstance(df, nw.LazyFrame)
         else does_not_raise()
     )
-
     with context:
         result = df.filter([False, True, True])
         expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}

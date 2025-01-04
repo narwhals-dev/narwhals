@@ -105,13 +105,6 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def filter(self, *predicates: SparkLikeExpr) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
-            msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
-            raise NotImplementedError(msg)
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         # `[0]` is safe as all_horizontal's expression only returns a single column

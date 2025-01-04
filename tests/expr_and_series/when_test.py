@@ -64,15 +64,8 @@ def test_no_arg_when_fail(
         df.select(nw.when().then(value=3).alias("a_when"))
 
 
-def test_value_numpy_array(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
+def test_value_numpy_array(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     import numpy as np
 
     result = df.select(
@@ -109,15 +102,8 @@ def test_value_expression(
     assert_equal_data(result, expected)
 
 
-def test_otherwise_numpy_array(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
+def test_otherwise_numpy_array(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
 
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(np.array([0, 9, 10])).alias("a_when")

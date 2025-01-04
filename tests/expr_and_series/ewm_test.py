@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -14,11 +12,13 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 @pytest.mark.filterwarnings(
     "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
 )
-def test_ewm_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "duckdb")):
+def test_ewm_mean_expr(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a", "b").ewm_mean(com=1))
     expected = {
         "a": [1.0, 1.0, 1.5714285714285714],
@@ -66,32 +66,16 @@ def test_ewm_mean_series(
 )
 def test_ewm_mean_expr_adjust(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor_eager: ConstructorEager,
     adjust: bool,  # noqa: FBT001
     expected: dict[str, list[float]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "duckdb")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a", "b").ewm_mean(com=1, adjust=adjust))
     assert_equal_data(result, expected)
-
-
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
-def test_ewm_mean_dask_raise() -> None:
-    pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
-    import dask.dataframe as dd
-
-    df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
-    with pytest.raises(
-        NotImplementedError,
-        match="`Expr.ewm_mean` is not supported for the Dask backend",
-    ):
-        df.select(nw.col("a").ewm_mean(com=1))
 
 
 @pytest.mark.filterwarnings(
@@ -128,15 +112,12 @@ def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
     ignore_nulls: bool,  # noqa: FBT001
     expected: dict[str, list[float]],
-    constructor: Constructor,
+    constructor_eager: ConstructorEager,
 ) -> None:
-    if any(
-        x in str(constructor)
-        for x in ("pyarrow_table_", "dask", "modin", "cudf", "duckdb")
-    ):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor({"a": [2.0, 4.0, None, 3.0]}))
+    df = nw.from_native(constructor_eager({"a": [2.0, 4.0, None, 3.0]}))
     result = df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=ignore_nulls))
     assert_equal_data(result, expected)
 
@@ -146,12 +127,12 @@ def test_ewm_mean_nulls(
 )
 def test_ewm_mean_params(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor_eager: ConstructorEager,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table_", "dask", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor({"a": [2, 5, 3]}))
+    df = nw.from_native(constructor_eager({"a": [2, 5, 3]}))
     expected: dict[str, list[float | None]] = {"a": [2.0, 4.0, 3.4285714285714284]}
     assert_equal_data(
         df.select(nw.col("a").ewm_mean(alpha=0.5, adjust=True, ignore_nulls=True)),

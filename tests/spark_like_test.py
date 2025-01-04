@@ -115,18 +115,6 @@ def test_filter(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
-def test_filter_with_boolean_list(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(pyspark_constructor(data))
-
-    with pytest.raises(
-        NotImplementedError,
-        match="`LazyFrame.filter` is not supported for PySpark backend with boolean masks.",
-    ):
-        _ = df.filter([False, True, True])
-
-
 # copied from tests/frame/schema_test.py
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(pyspark_constructor: Constructor) -> None:
