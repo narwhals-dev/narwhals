@@ -74,7 +74,7 @@ def test_right_arithmetic_expr(
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
-    result = df.with_columns(literal=getattr(nw.col("a"), attr)(rhs)).select("literal")
+    result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"literal": expected})
 
 
