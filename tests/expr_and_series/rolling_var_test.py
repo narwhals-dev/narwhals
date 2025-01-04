@@ -13,7 +13,6 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -59,22 +58,20 @@ kwargs_and_expected = (
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_expr(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "dask" in str(constructor) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1,)
-    ):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").rolling_var(**kwargs).alias(name))
 
     assert_equal_data(result, {name: expected})
