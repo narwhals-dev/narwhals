@@ -210,6 +210,38 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
+    def __floordiv__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__floordiv__(other),
+            "__floordiv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rfloordiv__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rfloordiv__(other),
+            "__rfloordiv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __mod__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mod__(other),
+            "__mod__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rmod__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmod__(other),
+            "__rmod__",
+            other=other,
+            returns_scalar=False,
+        )
+
     def __sub__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
@@ -230,6 +262,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input, other: _input * other,
             "__mul__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __pow__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input**other,
+            "__pow__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __rpow__(self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rpow__(other),
+            "__rpow__",
             other=other,
             returns_scalar=False,
         )

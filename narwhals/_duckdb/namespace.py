@@ -4,10 +4,12 @@ import functools
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Literal
 from typing import Sequence
 
 from narwhals._duckdb.expr import DuckDBExpr
+from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
@@ -18,6 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
     from narwhals._duckdb.typing import IntoDuckDBExpr
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -177,6 +180,27 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def col(self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
+        )
+
+    def lit(self, value: Any, dtype: DType) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+
+        return DuckDBExpr(
+            call=lambda _df: [
+                ConstantExpression(value)
+                .cast(narwhals_to_native_dtype(dtype, version=self._version))
+                .alias("literal")
+                if dtype is not None
+                else ConstantExpression(value).alias("literal")
+            ],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["literal"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={},
         )
 
     def len(self) -> DuckDBExpr:
