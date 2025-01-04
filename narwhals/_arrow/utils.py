@@ -129,9 +129,19 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
                 version=version,
             )
         )
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        return pa.struct(
+            [
+                (
+                    field.name,
+                    narwhals_to_native_dtype(
+                        field.dtype,
+                        version=version,
+                    ),
+                )
+                for field in dtype.fields  # type: ignore[union-attr]
+            ]
+        )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         return NotImplementedError(msg)
