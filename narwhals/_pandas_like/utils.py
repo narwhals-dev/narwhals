@@ -293,6 +293,8 @@ def native_series_from_iterable(
     """Return native series."""
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
         extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
+        if len(index) == 0:
+            index = None
         return implementation.to_native_namespace().Series(
             data, name=name, index=index, **extra_kwargs
         )
