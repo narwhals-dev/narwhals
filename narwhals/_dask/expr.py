@@ -401,14 +401,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
-    ) -> NoReturn:
-        msg = "`Expr.map_batches` is not implemented for Dask yet"
-        raise NotImplementedError(msg)
-
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
