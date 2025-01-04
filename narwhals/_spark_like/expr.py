@@ -213,7 +213,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _any(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            return F.bool_any(_input)
+            return F.bool_or(_input)
 
         return self._from_call(_any, "any", returns_scalar=True)
 
