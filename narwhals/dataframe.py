@@ -3846,10 +3846,10 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2     ┆ 3   ┆ 6   │
             └───────┴─────┴─────┘
             >>> agnostic_with_row_index(lf_dask)
-               a  b  index
-            0  1  4      0
-            1  2  5      1
-            2  3  6      2
+               index  a  b
+            0      0  1  4
+            1      1  2  5
+            2      2  3  6
         """
         return super().with_row_index(name)
 
