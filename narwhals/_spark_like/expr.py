@@ -249,6 +249,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_min, "min", returns_scalar=True)
 
+    def null_count(self) -> Self:
+        def _null_count(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.count_if(F.isnull(_input))
+
+        return self._from_call(_null_count, "null_count", returns_scalar=True)
+
     def sum(self) -> Self:
         def _sum(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
