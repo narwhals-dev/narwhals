@@ -137,6 +137,7 @@ def test_pivot(
         index=index,
         values=["foo", "bar"],
         aggregate_function=agg_func,  # type: ignore[arg-type]
+        sort_columns=True,
     )
 
     assert_equal_data(result, expected)
@@ -271,7 +272,7 @@ def test_pivot_no_index(
     expected = {
         "ix": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
-        "a": [1.0, float("nan"), float("nan"), 3.0],
-        "b": [float("nan"), 2.0, 4.0, float("nan")],
+        "a": [1.0, None, None, 3.0],
+        "b": [None, 2.0, 4.0, None],
     }
     assert_equal_data(result, expected)

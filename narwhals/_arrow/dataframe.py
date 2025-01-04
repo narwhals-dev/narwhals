@@ -485,9 +485,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow as pa
 
         df = self._native_frame
+        cols = self.columns
 
         row_indices = pa.array(range(df.num_rows))
-        return self._from_native_frame(df.append_column(name, row_indices))
+        return self._from_native_frame(
+            df.append_column(name, row_indices).select([name, *cols])
+        )
 
     def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
         if (
@@ -655,7 +658,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool,
+        maintain_order: bool = False,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.

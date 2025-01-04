@@ -66,3 +66,30 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         return SparkLikeExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
+
+    def sum_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            import pyspark.sql.functions as F  # noqa: N812
+
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [
+                reduce(
+                    operator.add,
+                    (F.coalesce(col, F.lit(0)) for col in cols),
+                ).alias(col_name)
+            ]
+
+        return SparkLikeExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )

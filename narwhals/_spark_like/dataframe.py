@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.utils import native_to_narwhals_dtype
@@ -169,16 +170,96 @@ class SparkLikeLazyFrame:
 
         flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):
-            descending = [descending]
+            descending = [descending] * len(flat_by)
 
         if nulls_last:
-            sort_funcs = [
+            sort_funcs = (
                 F.desc_nulls_last if d else F.asc_nulls_last for d in descending
-            ]
+            )
         else:
-            sort_funcs = [
+            sort_funcs = (
                 F.desc_nulls_first if d else F.asc_nulls_first for d in descending
-            ]
+            )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
+
+    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+        return self._from_native_frame(self._native_frame.dropna(subset=subset))
+
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
+        import pyspark.sql.functions as F  # noqa: N812
+
+        rename_mapping = {
+            colname: mapping.get(colname, colname) for colname in self.columns
+        }
+        return self._from_native_frame(
+            self._native_frame.select(
+                [F.col(old).alias(new) for old, new in rename_mapping.items()]
+            )
+        )
+
+    def unique(
+        self: Self,
+        subset: str | list[str] | None = None,
+        *,
+        keep: Literal["any", "none"],
+    ) -> Self:
+        if keep != "any":
+            msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
+            raise ValueError(msg)
+        subset = [subset] if isinstance(subset, str) else subset
+        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
+
+    def join(
+        self,
+        other: Self,
+        how: Literal["inner", "left", "cross", "semi", "anti"],
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        suffix: str,
+    ) -> Self:
+        import pyspark.sql.functions as F  # noqa: N812
+
+        self_native = self._native_frame
+        other_native = other._native_frame
+
+        left_columns = self.columns
+        right_columns = other.columns
+
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        # create a mapping for columns on other
+        # `right_on` columns will be renamed as `left_on`
+        # the remaining columns will be either added the suffix or left unchanged.
+        rename_mapping = {
+            **dict(zip(right_on or [], left_on or [])),
+            **{
+                colname: f"{colname}{suffix}" if colname in left_columns else colname
+                for colname in list(set(right_columns).difference(set(right_on or [])))
+            },
+        }
+        other = other_native.select(
+            [F.col(old).alias(new) for old, new in rename_mapping.items()]
+        )
+
+        # If how in {"semi", "anti"}, then resulting columns are same as left columns
+        # Otherwise, we add the right columns with the new mapping, while keeping the
+        # original order of right_columns.
+        col_order = left_columns
+
+        if how in {"inner", "left", "cross"}:
+            col_order.extend(
+                [
+                    rename_mapping[colname]
+                    for colname in right_columns
+                    if colname not in (right_on or [])
+                ]
+            )
+
+        return self._from_native_frame(
+            self_native.join(other=other, on=left_on, how=how).select(col_order)
+        )

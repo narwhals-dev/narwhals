@@ -1925,6 +1925,70 @@ class Expr:
         """
         return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
 
+    def is_nan(self) -> Self:
+        """Indicate which values are NaN.
+
+        Returns:
+            A new expression.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"orig": [0.0, None, 2.0]}
+            >>> df_pd = pd.DataFrame(data).astype({"orig": "Float64"})
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def agnostic_self_div_is_nan(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(
+            ...         divided=nw.col("orig") / nw.col("orig"),
+            ...         divided_is_nan=(nw.col("orig") / nw.col("orig")).is_nan(),
+            ...     ).to_native()
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_self_div_is_nan`:
+
+            >>> print(agnostic_self_div_is_nan(df_pd))
+               orig  divided  divided_is_nan
+            0   0.0      NaN            True
+            1  <NA>     <NA>            <NA>
+            2   2.0      1.0           False
+
+            >>> print(agnostic_self_div_is_nan(df_pl))
+            shape: (3, 3)
+            ┌──────┬─────────┬────────────────┐
+            │ orig ┆ divided ┆ divided_is_nan │
+            │ ---  ┆ ---     ┆ ---            │
+            │ f64  ┆ f64     ┆ bool           │
+            ╞══════╪═════════╪════════════════╡
+            │ 0.0  ┆ NaN     ┆ true           │
+            │ null ┆ null    ┆ null           │
+            │ 2.0  ┆ 1.0     ┆ false          │
+            └──────┴─────────┴────────────────┘
+
+            >>> print(agnostic_self_div_is_nan(df_pa))
+            pyarrow.Table
+            orig: double
+            divided: double
+            divided_is_nan: bool
+            ----
+            orig: [[0,null,2]]
+            divided: [[nan,null,1]]
+            divided_is_nan: [[true,null,false]]
+
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_nan())
+
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
@@ -2938,8 +3002,8 @@ class Expr:
     # TODO @aivanoved: make type alias for numeric type
     def clip(
         self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        lower_bound: IntoExpr | Any | None = None,
+        upper_bound: IntoExpr | Any | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -3066,7 +3130,10 @@ class Expr:
             s: [[-1,1,-1,3,-1,3]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).clip(lower_bound, upper_bound)
+            lambda plx: self._to_compliant_expr(plx).clip(
+                extract_compliant(plx, lower_bound),
+                extract_compliant(plx, upper_bound),
+            )
         )
 
     def mode(self: Self) -> Self:
@@ -5201,6 +5268,59 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
+        )
+
+    def weekday(self: Self) -> ExprT:
+        """Extract the week day from the underlying Date representation.
+
+        Returns:
+            Returns the ISO weekday number where monday = 1 and sunday = 7
+
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>> data = {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def agnostic_weekday(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(a_weekday=nw.col("a").dt.weekday()).to_native()
+
+            We can then pass either pandas, Polars, PyArrow, and other supported libraries to `agnostic_weekday`:
+
+            >>> agnostic_weekday(df_pd)
+                       a  a_weekday
+            0 2020-01-01          3
+            1 2020-08-03          1
+            >>> agnostic_weekday(df_pl)
+            shape: (2, 2)
+            ┌─────────────────────┬───────────┐
+            │ a                   ┆ a_weekday │
+            │ ---                 ┆ ---       │
+            │ datetime[μs]        ┆ i8        │
+            ╞═════════════════════╪═══════════╡
+            │ 2020-01-01 00:00:00 ┆ 3         │
+            │ 2020-08-03 00:00:00 ┆ 1         │
+            └─────────────────────┴───────────┘
+            >>> agnostic_weekday(df_pa)
+            pyarrow.Table
+            a: timestamp[us]
+            a_weekday: int64
+            ----
+            a: [[2020-01-01 00:00:00.000000,2020-08-03 00:00:00.000000]]
+            a_weekday: [[3,1]]
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
         )
 
     def total_minutes(self: Self) -> ExprT:

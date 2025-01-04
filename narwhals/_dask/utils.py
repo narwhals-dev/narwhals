@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
     import dask_expr
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -62,9 +65,20 @@ def parse_exprs_and_named_exprs(
     return results
 
 
-def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
+def add_row_index(
+    frame: dd.DataFrame,
+    name: str,
+    backend_version: tuple[int, ...],
+    implementation: Implementation,
+) -> dd.DataFrame:
+    original_cols = frame.columns
     frame = frame.assign(**{name: 1})
-    return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
+    return select_columns_by_name(
+        frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1}),
+        [name, *original_cols],
+        backend_version,
+        implementation,
+    )
 
 
 def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
@@ -143,3 +157,10 @@ def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr
 
 def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
     return (s1 / s2).rename(s1.name)
+
+
+def binary_operation_returns_scalar(lhs: DaskExpr, rhs: DaskExpr | Any) -> bool:
+    # If `rhs` is a DaskExpr, we look at `_returns_scalar`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
+    # to `True`.
+    return lhs._returns_scalar and getattr(rhs, "_returns_scalar", True)

@@ -25,30 +25,30 @@ cudf = ["cudf>=24.10.0"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
+ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
+duckdb = ["duckdb>=1.0"]
 pyspark = ["pyspark>=3.3.0"]
 dev = [
-  "tqdm",
   "covdefaults",
-  "duckdb",
-  "pandas",
-  "polars",
   "pre-commit",
-  "pyarrow",
-  "pyarrow-stubs",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
   "pytest-env",
-  "hypothesis[numpy]",
+  "hypothesis",
   "typing_extensions",
+]
+core = [
+  "duckdb",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
-  "pyspark; python_version >= '3.9' and python_version < '3.12'",
-  "dask[dataframe]; python_version >= '3.9'",
-  "modin",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -110,10 +110,8 @@ lint.ignore = [
   "E501",
   "FIX",
   "ISC001",
-  "NPY002",
-  "PD003",
-  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
   "PD010",
+  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
   "PLR0911",
   "PLR0912",
   "PLR0913",

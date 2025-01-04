@@ -186,7 +186,11 @@ class DaskLazyFrame(CompliantLazyFrame):
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._from_native_frame(add_row_index(self._native_frame, name))
+        return self._from_native_frame(
+            add_row_index(
+                self._native_frame, name, self._backend_version, self._implementation
+            )
+        )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))
@@ -200,11 +204,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "none"] = "any",
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns

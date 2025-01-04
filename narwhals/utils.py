@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from enum import Enum
 from enum import auto
@@ -964,3 +965,35 @@ def _validate_rolling_arguments(
         min_periods = window_size
 
     return window_size, min_periods
+
+
+def generate_repr(header: str, native_repr: str) -> str:
+    try:
+        terminal_width = os.get_terminal_size().columns
+    except OSError:
+        terminal_width = 80
+    native_lines = native_repr.splitlines()
+    max_native_width = max(len(line) for line in native_lines)
+
+    if max_native_width + 2 < terminal_width:
+        length = max(max_native_width, len(header))
+        output = f"┌{'─'*length}┐\n"
+        header_extra = length - len(header)
+        output += (
+            f"|{' '*(header_extra//2)}{header}{' '*(header_extra//2 + header_extra%2)}|\n"
+        )
+        output += f"|{'-'*(length)}|\n"
+        start_extra = (length - max_native_width) // 2
+        end_extra = (length - max_native_width) // 2 + (length - max_native_width) % 2
+        for line in native_lines:
+            output += f"|{' '*(start_extra)}{line}{' '*(end_extra + max_native_width - len(line))}|\n"
+        output += f"└{'─' * length}┘"
+        return output
+
+    diff = 39 - len(header)
+    return (
+        f"┌{'─' * (39)}┐\n"
+        f"|{' '*(diff//2)}{header}{' '*(diff//2+diff%2)}|\n"
+        "| Use `.to_native` to see native output |\n└"
+        f"{'─' * 39}┘"
+    )

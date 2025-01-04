@@ -18,15 +18,15 @@ from tests.utils import assert_equal_data
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 
-kwargs_and_expected = {
-    "x1": {"kwargs": {"window_size": 3}, "expected": [float("nan")] * 6 + [21]},
+kwargs_and_expected: dict[str, dict[str, Any]] = {
+    "x1": {"kwargs": {"window_size": 3}, "expected": [None] * 6 + [21]},
     "x2": {
         "kwargs": {"window_size": 3, "min_periods": 1},
-        "expected": [float("nan"), 1.0, 3.0, 3.0, 6.0, 10.0, 21.0],
+        "expected": [None, 1.0, 3.0, 3.0, 6.0, 10.0, 21.0],
     },
     "x3": {
         "kwargs": {"window_size": 2, "min_periods": 1},
-        "expected": [float("nan"), 1.0, 3.0, 2.0, 4.0, 10.0, 17.0],
+        "expected": [None, 1.0, 3.0, 2.0, 4.0, 10.0, 17.0],
     },
     "x4": {
         "kwargs": {"window_size": 5, "min_periods": 1, "center": True},
@@ -56,7 +56,7 @@ def test_rolling_sum_expr(
     df = nw.from_native(constructor(data))
     result = df.select(
         **{
-            name: nw.col("a").rolling_sum(**values["kwargs"])  # type: ignore[arg-type]
+            name: nw.col("a").rolling_sum(**values["kwargs"])
             for name, values in kwargs_and_expected.items()
         }
     )
@@ -73,7 +73,7 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
 
     result = df.select(
         **{
-            name: df["a"].rolling_sum(**values["kwargs"])  # type: ignore[arg-type]
+            name: df["a"].rolling_sum(**values["kwargs"])
             for name, values in kwargs_and_expected.items()
         }
     )

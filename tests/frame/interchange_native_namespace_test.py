@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import duckdb
 import polars as pl
 import pytest
 
@@ -45,6 +44,7 @@ def test_ibis(
 
 
 def test_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(data)  # noqa: F841
 
     rel = duckdb.sql("select * from df_pl")

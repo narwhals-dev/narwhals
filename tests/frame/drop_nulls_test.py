@@ -24,8 +24,8 @@ def test_drop_nulls(constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("subset", "expected"),
     [
-        ("a", {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
-        (["a"], {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        ("a", {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
+        (["a"], {"a": [1, 2.0, 4.0], "b": [None, 3.0, 5.0]}),
         (["a", "b"], {"a": [2.0, 4.0], "b": [3.0, 5.0]}),
     ],
 )

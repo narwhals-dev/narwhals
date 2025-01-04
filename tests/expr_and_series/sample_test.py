@@ -46,17 +46,13 @@ def test_sample_with_seed(
     size, n = 100, 10
     df = nw.from_native(constructor({"a": list(range(size))})).lazy()
     expected = {"res1": [True], "res2": [False]}
-    result = (
-        df.select(
-            seed1=nw.col("a").sample(n=n, seed=123),
-            seed2=nw.col("a").sample(n=n, seed=123),
-            seed3=nw.col("a").sample(n=n, seed=42),
-        )
-        .select(
-            res1=(nw.col("seed1") == nw.col("seed2")).all(),
-            res2=(nw.col("seed1") == nw.col("seed3")).all(),
-        )
-        .collect()
+    result = df.select(
+        seed1=nw.col("a").sample(n=n, seed=123),
+        seed2=nw.col("a").sample(n=n, seed=123),
+        seed3=nw.col("a").sample(n=n, seed=42),
+    ).select(
+        res1=(nw.col("seed1") == nw.col("seed2")).all(),
+        res2=(nw.col("seed1") == nw.col("seed3")).all(),
     )
 
     assert_equal_data(result, expected)

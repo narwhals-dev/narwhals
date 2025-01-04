@@ -311,6 +311,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
+    def is_nan(self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
+
     def fill_null(
         self,
         value: Any | None = None,
@@ -833,6 +836,11 @@ class PandasLikeExprDateTimeNamespace:
     def ordinal_day(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "ordinal_day"
+        )
+
+    def weekday(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
         )
 
     def total_minutes(self) -> PandasLikeExpr:
