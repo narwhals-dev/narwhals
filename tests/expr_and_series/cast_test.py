@@ -221,7 +221,13 @@ def test_cast_datetime_tz_aware(
     assert_equal_data(result, expected)
 
 
-def test_cast_struct(constructor: Constructor) -> None:
+def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "a": [
             {"movie": "Cars", "rating": 4.5},
