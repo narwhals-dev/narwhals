@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -14,9 +15,14 @@ expected = {
 
 
 @pytest.mark.parametrize("reverse", [True, False])
-def test_cum_sum_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> None:
+def test_cum_sum_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
+) -> None:
+    if "dask" in str(constructor) and reverse:
+        request.applymarker(pytest.mark.xfail)
+
     name = "reverse_cum_sum" if reverse else "cum_sum"
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("a").cum_sum(reverse=reverse).alias(name),
     )
