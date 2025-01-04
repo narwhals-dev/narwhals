@@ -442,6 +442,28 @@ def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/null_count_test.py
+def test_null_count_expr(constructor: Constructor) -> None:
+    data = {
+        "a": [1.0, None, None, 3.0],
+        "b": [1.0, None, 4, 5.0],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.all().null_count())
+    expected = {
+        "a": [2],
+        "b": [1],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_null_count_series(constructor_eager: ConstructorEager) -> None:
+    data = [1, 2, None]
+    series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+    result = series.null_count()
+    assert result == 1
+
+
 # copied from tests/expr_and_series/min_test.py
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").sum(), nw.sum("a", "b", "z")])
 def test_expr_sum_expr(pyspark_constructor: Constructor, expr: nw.Expr) -> None:
