@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -211,7 +212,16 @@ def horizontal_concat(
 
     Should be in namespace.
     """
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+    if implementation is Implementation.CUDF:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of array concatenation with empty entries is deprecated",
+                category=FutureWarning,
+            )
+            return implementation.to_native_namespace().concat(dfs, axis=1)
+
+    if implementation.is_pandas_like():
         extra_kwargs = (
             {"copy": False}
             if implementation is Implementation.PANDAS and backend_version < (3,)
