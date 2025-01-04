@@ -526,6 +526,11 @@ class ArrowSeries(CompliantSeries):
         ser = self._native_series
         return self._from_native_series(ser.is_null())
 
+    def is_nan(self: Self) -> Self:
+        import pyarrow.compute as pc
+
+        return self._from_native_series(pc.is_nan(self._native_series))
+
     def cast(self: Self, dtype: DType) -> Self:
         import pyarrow.compute as pc
 
@@ -1307,6 +1312,13 @@ class ArrowSeriesDateTimeNamespace:
 
         return self._compliant_series._from_native_series(
             pc.day_of_year(self._compliant_series._native_series)
+        )
+
+    def weekday(self: Self) -> ArrowSeries:
+        import pyarrow.compute as pc
+
+        return self._compliant_series._from_native_series(
+            pc.day_of_week(self._compliant_series._native_series, count_from_zero=False)
         )
 
     def total_minutes(self: Self) -> ArrowSeries:

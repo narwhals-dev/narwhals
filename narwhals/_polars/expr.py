@@ -79,6 +79,15 @@ class PolarsExpr:
             )
         return self._from_native_expr(native_expr)
 
+    def is_nan(self: Self) -> Self:
+        if self._backend_version < (1, 18):  # pragma: no cover
+            import polars as pl
+
+            return self._from_native_expr(
+                pl.when(self._native_expr.is_not_null()).then(self._native_expr.is_nan())
+            )
+        return self._from_native_expr(self._native_expr.is_nan())
+
     def rolling_var(
         self: Self,
         window_size: int,

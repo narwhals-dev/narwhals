@@ -2437,6 +2437,59 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
+    def is_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are NaN.
+
+        Returns:
+            A boolean Series indicating which values are NaN.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
+            >>> data = [0.0, None, 2.0]
+            >>> s_pd = pd.Series(data, dtype="Float64")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data], type=pa.float64())
+
+            >>> def agnostic_self_div_is_nan(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.is_nan().to_native()
+
+            >>> print(agnostic_self_div_is_nan(s_pd))
+            0    False
+            1     <NA>
+            2    False
+            dtype: boolean
+
+            >>> print(agnostic_self_div_is_nan(s_pl))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+                    false
+                    null
+                    false
+            ]
+
+            >>> print(agnostic_self_div_is_nan(s_pa))  # doctest: +NORMALIZE_WHITESPACE
+            [
+              [
+                false,
+                null,
+                false
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_nan())
+
     def fill_null(
         self,
         value: Any | None = None,
@@ -6248,6 +6301,58 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.ordinal_day()
+        )
+
+    def weekday(self: Self) -> SeriesT:
+        """Extract the week day in a datetime series.
+
+        Returns:
+            A new Series containing the week day for each datetime value.
+            Returns the ISO weekday number where monday = 1 and sunday = 7
+
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_weekday(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.dt.weekday().to_native()
+
+            We can then pass either pandas, Polars, PyArrow, and other supported libraries to `agnostic_weekday`:
+
+            >>> agnostic_weekday(s_pd)
+            0    3
+            1    1
+            dtype: int32
+            >>> agnostic_weekday(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i8]
+            [
+               3
+               1
+            ]
+            >>> agnostic_weekday(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                1
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.weekday()
         )
 
     def total_minutes(self: Self) -> SeriesT:
