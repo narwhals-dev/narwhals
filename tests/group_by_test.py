@@ -137,12 +137,7 @@ def test_group_by_depth_1_std_var(
     constructor: Constructor,
     attr: str,
     ddof: int,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor):
-        # Complex aggregation for dask
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
