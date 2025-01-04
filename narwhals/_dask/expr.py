@@ -401,14 +401,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
-    ) -> NoReturn:
-        msg = "`Expr.map_batches` is not implemented for Dask yet"
-        raise NotImplementedError(msg)
-
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -879,10 +871,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def mode(self: Self) -> Self:
-        msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -916,116 +904,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(
             lambda _input: da.isfinite(_input),
             "is_finite",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).sum()
-
-        return self._from_call(
-            func,
-            "rolling_sum",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).mean()
-
-        return self._from_call(
-            func,
-            "rolling_mean",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).var(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_var",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).std(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_std",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
             returns_scalar=self._returns_scalar,
         )
 

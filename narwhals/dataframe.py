@@ -4597,6 +4597,15 @@ class LazyFrame(BaseFrame[FrameT]):
                foo  bar ham
             1    2    7   b
         """
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+            and not constraints
+        ):  # pragma: no cover
+            msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
+            raise TypeError(msg)
+
         return super().filter(*predicates, **constraints)
 
     def group_by(
@@ -5029,6 +5038,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     return (
             ...         df.sort("datetime")
             ...         .join_asof(other, on="datetime", by="ticker")
+            ...         .sort("datetime", "ticker")
             ...         .collect()
             ...         .to_native()
             ...     )
@@ -5044,16 +5054,16 @@ class LazyFrame(BaseFrame[FrameT]):
             ╞════════════════════════════╪════════╪════════╪══════════╪═══════╪════════╡
             │ 2016-05-25 13:30:00.000023 ┆ MSFT   ┆ 51.95  ┆ 75       ┆ 51.95 ┆ 51.96  │
             │ 2016-05-25 13:30:00.000038 ┆ MSFT   ┆ 51.95  ┆ 155      ┆ 51.97 ┆ 51.98  │
+            │ 2016-05-25 13:30:00.000048 ┆ AAPL   ┆ 98.0   ┆ 100      ┆ null  ┆ null   │
             │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.77 ┆ 100      ┆ 720.5 ┆ 720.93 │
             │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.92 ┆ 100      ┆ 720.5 ┆ 720.93 │
-            │ 2016-05-25 13:30:00.000048 ┆ AAPL   ┆ 98.0   ┆ 100      ┆ null  ┆ null   │
             └────────────────────────────┴────────┴────────┴──────────┴───────┴────────┘
             >>> agnostic_join_asof_datetime_by_ticker(trades_dask, quotes_dask)
                                 datetime ticker   price  quantity     bid     ask
             0 2016-05-25 13:30:00.000023   MSFT   51.95        75   51.95   51.96
             0 2016-05-25 13:30:00.000038   MSFT   51.95       155   51.97   51.98
-            1 2016-05-25 13:30:00.000048   GOOG  720.92       100  720.50  720.93
             2 2016-05-25 13:30:00.000048   AAPL   98.00       100     NaN     NaN
+            1 2016-05-25 13:30:00.000048   GOOG  720.92       100  720.50  720.93
             3 2016-05-25 13:30:00.000048   GOOG  720.77       100  720.50  720.93
         """
         return super().join_asof(

@@ -11,7 +11,6 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -41,16 +40,8 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 @pytest.mark.filterwarnings(
     "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
 )
-def test_rolling_mean_expr(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "dask" in str(constructor):
-        # TODO(FBruzzesi): Dask is raising the following error:
-        # NotImplementedError: Partition size is less than overlapping window size.
-        # Try using ``df.repartition`` to increase the partition size.
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
+def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(
         **{
             name: nw.col("a").rolling_mean(**values["kwargs"])
