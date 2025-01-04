@@ -879,10 +879,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def mode(self: Self) -> Self:
-        msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
