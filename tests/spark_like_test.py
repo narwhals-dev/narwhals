@@ -286,6 +286,35 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/any_horizontal_test.py
+@pytest.mark.parametrize("expr1", ["a", nw.col("a")])
+@pytest.mark.parametrize("expr2", ["b", nw.col("b")])
+def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(any=nw.any_horizontal(expr1, expr2))
+
+    expected = {"any": [False, True, True]}
+    assert_equal_data(result, expected)
+
+
+def test_anyh_all(constructor: Constructor) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(any=nw.any_horizontal(nw.all()))
+    expected = {"any": [False, True, True]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.any_horizontal(nw.all()))
+    expected = {"a": [False, True, True]}
+    assert_equal_data(result, expected)
+
+
 # copied from tests/expr_and_series/sum_horizontal_test.py
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
 def test_sumh(pyspark_constructor: Constructor, col_expr: Any) -> None:
@@ -325,6 +354,7 @@ def test_sumh_all(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/any_all_test.py
 def test_any_all(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(
         pyspark_constructor(
