@@ -84,7 +84,7 @@ jobs:
   not_so_old_versions:
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
