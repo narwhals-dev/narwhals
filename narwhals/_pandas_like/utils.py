@@ -624,7 +624,6 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             if dtype_backend == "pyarrow-nullable"
             else f"timedelta64[{du_time_unit}]"
         )
-
     if isinstance_or_issubclass(dtype, dtypes.Date):
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
@@ -656,9 +655,35 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                 f"{implementation} and version {version}."
             )
             return NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+            try:
+                import pandas as pd
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
+
+            return pd.ArrowDtype(
+                pa.struct(
+                    [
+                        (
+                            field.name,
+                            arrow_narwhals_to_native_dtype(
+                                field.dtype,
+                                version=version,
+                            ),
+                        )
+                        for field in dtype.fields  # type: ignore[union-attr]
+                    ]
+                )
+            )
+        else:  # pragma: no cover
+            msg = (
+                "Converting to Struct dtype is not supported for implementation "
+                f"{implementation} and version {version}."
+            )
+            return NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         return NotImplementedError(msg)
