@@ -530,8 +530,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def is_between(
         self,
-        lower_bound: Any,
-        upper_bound: Any,
+        lower_bound: Self | Any,
+        upper_bound: Self | Any,
         closed: str = "both",
     ) -> Self:
         if closed == "none":
@@ -667,8 +667,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def clip(
         self: Self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        lower_bound: Self | Any | None,
+        upper_bound: Self | Any | None,
     ) -> Self:
         return self._from_call(
             lambda _input, lower_bound, upper_bound: _input.clip(
