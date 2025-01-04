@@ -413,7 +413,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         if ddof == 1:
-            func = "stddev"
+            func = "stddev_samp"
         elif ddof == 0:
             func = "stddev_pop"
         else:
@@ -422,6 +422,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression(func, _input),
             "std",
+            returns_scalar=True,
+        )
+
+    def var(self, ddof: int) -> Self:
+        from duckdb import FunctionExpression
+
+        if ddof == 1:
+            func = "var_samp"
+        elif ddof == 0:
+            func = "var_pop"
+        else:
+            msg = f"var with ddof {ddof} is not supported in DuckDB"
+            raise NotImplementedError(msg)
+        return self._from_call(
+            lambda _input: FunctionExpression(func, _input),
+            "var",
             returns_scalar=True,
         )
 
