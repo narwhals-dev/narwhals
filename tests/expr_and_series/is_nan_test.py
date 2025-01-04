@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
@@ -54,7 +55,11 @@ def test_nan(constructor: Constructor) -> None:
         pytest.raises(
             ComputeError, match="NAN is not supported in a Non-floating point type column"
         )
-        if "cudf" in str(constructor)
+        if ("cudf" in str(constructor))
+        or (
+            "polars_lazy" in str(constructor)
+            and os.environ.get("NARWHALS_POLARS_GPU", False)
+        )
         else does_not_raise()
     )
     with context:
