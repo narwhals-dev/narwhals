@@ -422,13 +422,15 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Examples:
             >>> import narwhals as nw
             >>> import polars as pl
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "b", "c"],
-            ...         "b": [1, 2, 3, 4, 5, 6],
-            ...         "c": [6, 5, 4, 3, 2, 1],
-            ...     }
-            ... )
+            >>> import dask.dataframe as dd
+            >>> data = {
+            ...     "a": ["a", "b", "a", "b", "b", "c"],
+            ...     "b": [1, 2, 3, 4, 5, 6],
+            ...     "c": [6, 5, 4, 3, 2, 1],
+            ... }
+            >>> lf_pl = pl.LazyFrame(data)
+            >>> lf_dask = dd.from_dict(data, npartitions=2)
+
             >>> lf = nw.from_native(lf_pl)
             >>> lf  # doctest:+ELLIPSIS
             ┌─────────────────────────────┐
@@ -448,6 +450,27 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             │ b   ┆ 11  ┆ 10  │
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
+
+            >>> lf = nw.from_native(lf_dask)
+            >>> lf
+            ┌───────────────────────────────────┐
+            |        Narwhals LazyFrame         |
+            |-----------------------------------|
+            |Dask DataFrame Structure:          |
+            |                    a      b      c|
+            |npartitions=2                      |
+            |0              string  int64  int64|
+            |3                 ...    ...    ...|
+            |5                 ...    ...    ...|
+            |Dask Name: frompandas, 1 expression|
+            |Expr=df                            |
+            └───────────────────────────────────┘
+            >>> df = lf.group_by("a").agg(nw.col("b", "c").sum()).collect()
+            >>> df.to_native()
+               a   b   c
+            0  a   4  10
+            1  b  11  10
+            2  c   6   1
         """
         return super().collect()  # type: ignore[return-value]
 
