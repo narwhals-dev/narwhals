@@ -74,7 +74,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dev, core, extra, modin, dask]" --system
+        run: uv pip install -e ".[dev, core, extra, modin]" --system
+      - name: install dask
+        run: uv pip install -e ".[dask]" --system
+        # Dask minimum version requires 3.10+
+        if: matrix.python-version == '3.11' || matrix.python-version == '3.13'
       - name: install pyspark
         run: uv pip install -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
