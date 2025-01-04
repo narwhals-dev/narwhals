@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -184,6 +183,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
+    def abs(self) -> Self:
+        def _abs(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.abs(_input)
+
+        return self._from_call(_abs, "abs", returns_scalar=self._returns_scalar)
+
     def alias(self, name: str) -> Self:
         def _alias(df: SparkLikeLazyFrame) -> list[Column]:
             return [col.alias(name) for col in self._call(df)]
@@ -225,6 +232,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.mean(_input)
 
         return self._from_call(_mean, "mean", returns_scalar=True)
+
+    def median(self) -> Self:
+        def _median(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.median(_input)
+
+        return self._from_call(_median, "median", returns_scalar=True)
 
     def min(self) -> Self:
         def _min(_input: Column) -> Column:
@@ -274,42 +289,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
 
-    def abs(self) -> Self:
-        def _abs(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.abs(_input)
-
-        return self._from_call(_abs, "abs", returns_scalar=self._returns_scalar)
-
-    def all(self) -> Self:
-        def _all(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.min(
-                F.when(_input.isNull() | ~_input, value=False).otherwise(value=True)
-            )
-
-        return self._from_call(_all, "all", returns_scalar=True)
-
-    def any(self) -> Self:
-        def _any(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.max(
-                F.when(_input.isNull() | ~_input, value=False).otherwise(value=True)
-            )
-
-        return self._from_call(_any, "any", returns_scalar=True)
-
-    def arg_true(self) -> Self:
-        def _arg_true(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.array_position(F.collect_list(_input), value=True)
-
-        return self._from_call(_arg_true, "arg_true", returns_scalar=True)
-
     def clip(
         self,
         lower_bound: Any | None = None,
@@ -320,9 +299,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             result = _input
             if lower_bound is not None:
-                result = F.greatest(result, lower_bound)
+                # Convert lower_bound to a literal Column
+                result = F.when(result < lower_bound, F.lit(lower_bound)).otherwise(
+                    result
+                )
             if upper_bound is not None:
-                result = F.least(result, upper_bound)
+                # Convert upper_bound to a literal Column
+                result = F.when(result > upper_bound, F.lit(upper_bound)).otherwise(
+                    result
+                )
             return result
 
         return self._from_call(
@@ -330,25 +315,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             "clip",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def drop_nulls(self) -> Self:
-        def _drop_nulls(_input: Column) -> Column:
-            return _input.dropna()
-
-        return self._from_call(
-            _drop_nulls, "drop_nulls", returns_scalar=self._returns_scalar
-        )
-
-    def filter(self, predicate: Any) -> Self:
-        def _filter(_input: Column, predicate: Any) -> Column:
-            return _input.filter(predicate)
-
-        return self._from_call(
-            _filter,
-            "filter",
-            predicate=predicate,
             returns_scalar=self._returns_scalar,
         )
 
@@ -390,7 +356,13 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _is_finite(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            return ~F.isnan(_input) & ~F.isnull(_input)
+            # A value is finite if it's not NaN, not NULL, and not infinite
+            return (
+                ~F.isnan(_input)
+                & ~F.isnull(_input)
+                & (_input != float("inf"))
+                & (_input != float("-inf"))
+            )
 
         return self._from_call(
             _is_finite, "is_finite", returns_scalar=self._returns_scalar
@@ -411,7 +383,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _is_nan(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            return F.isnan(_input)
+            # Need to handle both NaN and NULL values
+            return F.when(
+                F.isnan(_input) | F.isnull(_input),
+                F.lit(1),
+            ).otherwise(F.lit(0))
 
         return self._from_call(_is_nan, "is_nan", returns_scalar=self._returns_scalar)
 
@@ -434,37 +410,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_len, "len", returns_scalar=True)
 
-    def map_batches(self, func: Callable[[Any], Any]) -> Self:
-        def _map_batches(_input: Column, func: Callable[[Any], Any]) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.transform(_input, func)
-
-        return self._from_call(
-            _map_batches,
-            "map_batches",
-            func=func,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def median(self) -> Self:
-        def _median(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.percentile_approx(_input, 0.5)
-
-        return self._from_call(_median, "median", returns_scalar=True)
-
-    def mode(self) -> Self:
-        def _mode(_input: Column) -> Column:
-            from pyspark.sql import Window
-            from pyspark.sql import functions as F  # noqa: N812
-
-            w = Window.orderBy(F.count(_input).desc())
-            return F.first(_input).over(w)
-
-        return self._from_call(_mode, "mode", returns_scalar=True)
-
     def n_unique(self) -> Self:
         def _n_unique(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
@@ -472,75 +417,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.countDistinct(_input)
 
         return self._from_call(_n_unique, "n_unique", returns_scalar=True)
-
-    def name(self, name: str) -> Self:
-        return self.alias(name)
-
-    def null_count(self) -> Self:
-        def _null_count(_input: Column) -> Column:
-            return _input.isNull().cast("long").sum()
-
-        return self._from_call(_null_count, "null_count", returns_scalar=True)
-
-    def over(self, partition_by: str | Sequence[str]) -> Self:
-        def _over(_input: Column, partition_by: str | Sequence[str]) -> Column:
-            from pyspark.sql import Window
-
-            if isinstance(partition_by, str):
-                partition_by = [partition_by]
-            return _input.over(Window.partitionBy(*partition_by))
-
-        return self._from_call(
-            _over,
-            "over",
-            partition_by=partition_by,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def quantile(self, q: float) -> Self:
-        def _quantile(_input: Column, q: float) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.percentile_approx(_input, q)
-
-        return self._from_call(_quantile, "quantile", q=q, returns_scalar=True)
-
-    def replace_strict(
-        self,
-        old: Sequence[Any] | dict[Any, Any],
-        new: Sequence[Any] | None = None,
-        *,
-        return_dtype: DType | None = None,
-    ) -> Self:
-        def _replace_strict(
-            _input: Column,
-            old: Sequence[Any] | dict[Any, Any],
-            new: Sequence[Any] | None,
-        ) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            if isinstance(old, dict):
-                result = _input
-                for k, v in old.items():
-                    result = F.when(result == k, v).otherwise(result)
-                return result
-
-            if len(old) != len(new):  # type: ignore[arg-type]  # new may be None
-                msg = "Length of replacements must match"
-                raise ValueError(msg)
-
-            result = _input
-            for o, n in zip(old, new):  # type: ignore[arg-type]  # new may be None
-                result = F.when(result == o, n).otherwise(result)
-            return result
-
-        return self._from_call(
-            _replace_strict,
-            "replace_strict",
-            old=old,
-            new=new,
-            returns_scalar=self._returns_scalar,
-        )
 
     def round(self, decimals: int) -> Self:
         def _round(_input: Column, decimals: int) -> Column:
@@ -555,23 +431,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def sample(self, n: int | None = None, fraction: float | None = None) -> Self:
-        def _sample(_input: Column, n: int | None, fraction: float | None) -> Column:
-            if n is not None:
-                return _input.sample(n=n)
-            if fraction is not None:
-                return _input.sample(fraction=fraction)
-            msg = "Either n or fraction must be specified"
-            raise ValueError(msg)
-
-        return self._from_call(
-            _sample,
-            "sample",
-            n=n,
-            fraction=fraction,
-            returns_scalar=self._returns_scalar,
-        )
-
     def skew(self) -> Self:
         def _skew(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
@@ -579,23 +438,3 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.skewness(_input)
 
         return self._from_call(_skew, "skew", returns_scalar=True)
-
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        def _sort(_input: Column, *, descending: bool, nulls_last: bool) -> Column:
-            if descending:
-                _input = _input.desc()
-            return _input.nulls_last() if nulls_last else _input.nulls_first()
-
-        return self._from_call(
-            _sort,
-            "sort",
-            descending=descending,
-            nulls_last=nulls_last,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def unique(self) -> Self:
-        def _unique(_input: Column) -> Column:
-            return _input.distinct()
-
-        return self._from_call(_unique, "unique", returns_scalar=self._returns_scalar)
