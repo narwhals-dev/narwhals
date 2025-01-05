@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -92,6 +93,7 @@ def test_lit_operation(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_date_lit(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1]}))
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
