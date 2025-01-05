@@ -5,7 +5,6 @@ from importlib import import_module
 from pathlib import Path
 
 import dask.dataframe as dd
-import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -31,11 +30,9 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "polars[lazy]": (pl, {}),
     "pyarrow": (pa, {}),
     "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-    "duckdb": (duckdb, {}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
-    "duckdb": lambda x: x.pl(),
     "polars[lazy]": lambda x: x.collect(),
     "dask": lambda x: x.compute(),
 }
