@@ -4153,8 +4153,10 @@ class ExprCatNamespace(Generic[ExprT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"fruits": ["apple", "mango", "mango"]}
             >>> df_pd = pd.DataFrame(data, dtype="category")
             >>> df_pl = pl.DataFrame(data, schema={"fruits": pl.Categorical})
@@ -4162,17 +4164,19 @@ class ExprCatNamespace(Generic[ExprT]):
             We define a dataframe-agnostic function to get unique categories
             from column 'fruits':
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_cat_get_categories(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("fruits").cat.get_categories()).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+           We can then pass any supported library such as pandas or Polars to
+           `agnostic_cat_get_categories`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_cat_get_categories(df_pd)
               fruits
             0  apple
             1  mango
-            >>> my_library_agnostic_function(df_pl)
+
+            >>> agnostic_cat_get_categories(df_pl)
             shape: (2, 1)
             ┌────────┐
             │ fruits │
@@ -4201,23 +4205,27 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"words": ["foo", "Café", "345", "東京", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_len_chars(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         words_len=nw.col("words").str.len_chars()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_len_chars`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_len_chars(df_pd)
               words  words_len
             0   foo        3.0
             1  Café        4.0
@@ -4225,7 +4233,7 @@ class ExprStringNamespace(Generic[ExprT]):
             3    東京        2.0
             4  None        NaN
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_len_chars(df_pl)
             shape: (5, 2)
             ┌───────┬───────────┐
             │ words ┆ words_len │
@@ -4238,6 +4246,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ 東京  ┆ 2         │
             │ null  ┆ null      │
             └───────┴───────────┘
+
+            >>> agnostic_str_len_chars(df_pa)
+            pyarrow.Table
+            words: string
+            words_len: int32
+            ----
+            words: [["foo","Café","345","東京",null]]
+            words_len: [[3,4,3,2,null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
@@ -4260,27 +4276,31 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"foo": ["123abc", "abc abc123"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_replace(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     df = df.with_columns(replaced=nw.col("foo").str.replace("abc", ""))
             ...     return df.to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_replace`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_replace(df_pd)
                       foo replaced
             0      123abc      123
             1  abc abc123   abc123
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_replace(df_pl)
             shape: (2, 2)
             ┌────────────┬──────────┐
             │ foo        ┆ replaced │
@@ -4290,6 +4310,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ 123abc     ┆ 123      │
             │ abc abc123 ┆  abc123  │
             └────────────┴──────────┘
+
+            >>> agnostic_str_replace(df_pa)
+            pyarrow.Table
+            foo: string
+            replaced: string
+            ----
+            foo: [["123abc","abc abc123"]]
+            replaced: [["123"," abc123"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
@@ -4313,27 +4341,31 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"foo": ["123abc", "abc abc123"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_replace_all(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     df = df.with_columns(replaced=nw.col("foo").str.replace_all("abc", ""))
             ...     return df.to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_replace_all`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_replace_all(df_pd)
                       foo replaced
             0      123abc      123
             1  abc abc123      123
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_replace_all(df_pl)
             shape: (2, 2)
             ┌────────────┬──────────┐
             │ foo        ┆ replaced │
@@ -4343,6 +4375,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ 123abc     ┆ 123      │
             │ abc abc123 ┆  123     │
             └────────────┴──────────┘
+
+            >>> agnostic_str_replace_all(df_pa)
+            pyarrow.Table
+            foo: string
+            replaced: string
+            ----
+            foo: [["123abc","abc abc123"]]
+            replaced: [["123"," 123"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
@@ -4354,34 +4394,44 @@ class ExprStringNamespace(Generic[ExprT]):
         r"""Remove leading and trailing characters.
 
         Arguments:
-            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start and end of the string.
+                If set to None (default), all leading and trailing whitespace is removed
+                instead.
 
         Returns:
             A new expression.
 
         Examples:
+            >>> from typing import Any
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrame
-            >>> from typing import Any
+            >>>
             >>> data = {"fruits": ["apple", "\nmango"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrame) -> dict[str, Any]:
+            >>> def agnostic_str_strip_chars(df_native: IntoFrame) -> dict[str, Any]:
             ...     df = nw.from_native(df_native)
             ...     df = df.with_columns(stripped=nw.col("fruits").str.strip_chars())
             ...     return df.to_dict(as_series=False)
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_strip_chars`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_strip_chars(df_pd)
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_strip_chars(df_pl)
+            {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
+
+            >>> agnostic_str_strip_chars(df_pa)
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
         return self._expr.__class__(
@@ -4400,29 +4450,33 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_starts_with(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         has_prefix=nw.col("fruits").str.starts_with("app")
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_starts_with`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_starts_with(df_pd)
               fruits has_prefix
             0  apple       True
             1  mango      False
             2   None       None
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_starts_with(df_pl)
             shape: (3, 2)
             ┌────────┬────────────┐
             │ fruits ┆ has_prefix │
@@ -4433,6 +4487,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ mango  ┆ false      │
             │ null   ┆ null       │
             └────────┴────────────┘
+
+            >>> agnostic_str_starts_with(df_pa)
+            pyarrow.Table
+            fruits: string
+            has_prefix: bool
+            ----
+            fruits: [["apple","mango",null]]
+            has_prefix: [[true,false,null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
@@ -4450,29 +4512,33 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_ends_with(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         has_suffix=nw.col("fruits").str.ends_with("ngo")
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_ends_with`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_ends_with(df_pd)
               fruits has_suffix
             0  apple      False
             1  mango       True
             2   None       None
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_ends_with(df_pl)
             shape: (3, 2)
             ┌────────┬────────────┐
             │ fruits ┆ has_suffix │
@@ -4483,6 +4549,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ mango  ┆ true       │
             │ null   ┆ null       │
             └────────┴────────────┘
+
+            >>> agnostic_str_ends_with(df_pa)
+            pyarrow.Table
+            fruits: string
+            has_suffix: bool
+            ----
+            fruits: [["apple","mango",null]]
+            has_suffix: [[false,true,null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
@@ -4505,6 +4579,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -4512,7 +4587,7 @@ class ExprStringNamespace(Generic[ExprT]):
 
             We define a dataframe-agnostic function:
 
-            >>> def agnostic_contains(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_contains(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         default_match=nw.col("pets").str.contains("parrot|Dove"),
@@ -4522,9 +4597,10 @@ class ExprStringNamespace(Generic[ExprT]):
             ...         ),
             ...     ).to_native()
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow to `agnostic_contains`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_contains`:
 
-            >>> agnostic_contains(df_pd)
+            >>> agnostic_str_contains(df_pd)
                             pets default_match case_insensitive_match literal_match
             0                cat         False                  False         False
             1                dog         False                  False         False
@@ -4532,7 +4608,7 @@ class ExprStringNamespace(Generic[ExprT]):
             3               dove         False                   True         False
             4               None          None                   None          None
 
-            >>> agnostic_contains(df_pl)
+            >>> agnostic_str_contains(df_pl)
             shape: (5, 4)
             ┌───────────────────┬───────────────┬────────────────────────┬───────────────┐
             │ pets              ┆ default_match ┆ case_insensitive_match ┆ literal_match │
@@ -4546,7 +4622,7 @@ class ExprStringNamespace(Generic[ExprT]):
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
 
-            >>> agnostic_contains(df_pa)
+            >>> agnostic_str_contains(df_pa)
             pyarrow.Table
             pets: string
             default_match: bool
@@ -4578,30 +4654,34 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"s": ["pear", None, "papaya", "dragonfruit"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_slice(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         s_sliced=nw.col("s").str.slice(4, length=3)
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_slice`:
 
-            >>> my_library_agnostic_function(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> agnostic_str_slice(df_pd)  # doctest: +NORMALIZE_WHITESPACE
                          s s_sliced
             0         pear
             1         None     None
             2       papaya       ya
             3  dragonfruit      onf
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_slice(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -4614,20 +4694,28 @@ class ExprStringNamespace(Generic[ExprT]):
             │ dragonfruit ┆ onf      │
             └─────────────┴──────────┘
 
+            >>> agnostic_str_slice(df_pa)
+            pyarrow.Table
+            s: string
+            s_sliced: string
+            ----
+            s: [["pear",null,"papaya","dragonfruit"]]
+            s_sliced: [["",null,"ya","onf"]]
+
             Using negative indexes:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_slice_negative(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(s_sliced=nw.col("s").str.slice(-3)).to_native()
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_slice_negative(df_pd)
                          s s_sliced
             0         pear      ear
             1         None     None
             2       papaya      aya
             3  dragonfruit      uit
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_slice_negative(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -4639,6 +4727,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ papaya      ┆ aya      │
             │ dragonfruit ┆ uit      │
             └─────────────┴──────────┘
+
+            >>> agnostic_str_slice_negative(df_pa)
+            pyarrow.Table
+            s: string
+            s_sliced: string
+            ----
+            s: [["pear",null,"papaya","dragonfruit"]]
+            s_sliced: [["ear",null,"aya","uit"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
@@ -4661,30 +4757,34 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_head(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         lyrics_head=nw.col("lyrics").str.head()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_head`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_head(df_pd)
                   lyrics lyrics_head
             0    Atatata       Atata
             1      taata       taata
             2  taatatata       taata
             3    zukkyun       zukky
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_head(df_pl)
             shape: (4, 2)
             ┌───────────┬─────────────┐
             │ lyrics    ┆ lyrics_head │
@@ -4696,6 +4796,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ taatatata ┆ taata       │
             │ zukkyun   ┆ zukky       │
             └───────────┴─────────────┘
+
+            >>> agnostic_str_head(df_pa)
+            pyarrow.Table
+            lyrics: string
+            lyrics_head: string
+            ----
+            lyrics: [["Atatata","taata","taatatata","zukkyun"]]
+            lyrics_head: [["Atata","taata","taata","zukky"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
@@ -4716,30 +4824,34 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_tail(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         lyrics_tail=nw.col("lyrics").str.tail()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_tail`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_tail(df_pd)
                   lyrics lyrics_tail
             0    Atatata       atata
             1      taata       taata
             2  taatatata       atata
             3    zukkyun       kkyun
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_tail(df_pl)
             shape: (4, 2)
             ┌───────────┬─────────────┐
             │ lyrics    ┆ lyrics_tail │
@@ -4751,6 +4863,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ taatatata ┆ atata       │
             │ zukkyun   ┆ kkyun       │
             └───────────┴─────────────┘
+
+            >>> agnostic_str_tail(df_pa)
+            pyarrow.Table
+            lyrics: string
+            lyrics_tail: string
+            ----
+            lyrics: [["Atatata","taata","taatatata","zukkyun"]]
+            lyrics_tail: [["atata","taata","atata","kkyun"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
@@ -4784,6 +4904,7 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = ["2020-01-01", "2020-01-02"]
             >>> df_pd = pd.DataFrame({"a": data})
             >>> df_pl = pl.DataFrame({"a": data})
@@ -4791,19 +4912,21 @@ class ExprStringNamespace(Generic[ExprT]):
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_to_datetime(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(
             ...         nw.col("a").str.to_datetime(format="%Y-%m-%d")
             ...     ).to_native()
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_to_datetime`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_to_datetime(df_pd)
                        a
             0 2020-01-01
             1 2020-01-02
-            >>> my_library_agnostic_function(df_pl)
+
+            >>> agnostic_str_to_datetime(df_pl)
             shape: (2, 1)
             ┌─────────────────────┐
             │ a                   │
@@ -4813,7 +4936,8 @@ class ExprStringNamespace(Generic[ExprT]):
             │ 2020-01-01 00:00:00 │
             │ 2020-01-02 00:00:00 │
             └─────────────────────┘
-            >>> my_library_agnostic_function(df_pa)
+
+            >>> agnostic_str_to_datetime(df_pa)
             pyarrow.Table
             a: timestamp[us]
             ----
@@ -4837,29 +4961,33 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"fruits": ["apple", "mango", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_to_uppercase(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         upper_col=nw.col("fruits").str.to_uppercase()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_to_uppercase`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_to_uppercase(df_pd)
               fruits upper_col
             0  apple     APPLE
             1  mango     MANGO
             2   None      None
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_to_uppercase(df_pl)
             shape: (3, 2)
             ┌────────┬───────────┐
             │ fruits ┆ upper_col │
@@ -4871,6 +4999,13 @@ class ExprStringNamespace(Generic[ExprT]):
             │ null   ┆ null      │
             └────────┴───────────┘
 
+            >>> agnostic_str_to_uppercase(df_pa)
+            pyarrow.Table
+            fruits: string
+            upper_col: string
+            ----
+            fruits: [["apple","mango",null]]
+            upper_col: [["APPLE","MANGO",null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
@@ -4885,29 +5020,33 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
+            >>>
             >>> data = {"fruits": ["APPLE", "MANGO", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a dataframe-agnostic function:
 
-            >>> def my_library_agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_str_to_lowercase(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         lower_col=nw.col("fruits").str.to_lowercase()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_str_to_lowercase`:
 
-            >>> my_library_agnostic_function(df_pd)
+            >>> agnostic_str_to_lowercase(df_pd)
               fruits lower_col
             0  APPLE     apple
             1  MANGO     mango
             2   None      None
 
-            >>> my_library_agnostic_function(df_pl)
+            >>> agnostic_str_to_lowercase(df_pl)
             shape: (3, 2)
             ┌────────┬───────────┐
             │ fruits ┆ lower_col │
@@ -4918,6 +5057,14 @@ class ExprStringNamespace(Generic[ExprT]):
             │ MANGO  ┆ mango     │
             │ null   ┆ null      │
             └────────┴───────────┘
+
+            >>> agnostic_str_to_lowercase(df_pa)
+            pyarrow.Table
+            fruits: string
+            lower_col: string
+            ----
+            fruits: [["APPLE","MANGO",null]]
+            lower_col: [["apple","mango",null]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
@@ -4953,7 +5100,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("a").dt.date()).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                         a
@@ -5007,7 +5155,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.year().alias("year")
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                 datetime  year
@@ -5063,7 +5212,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.month().alias("month"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                 datetime  year  month
@@ -5120,7 +5270,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.day().alias("day"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                 datetime  year  month  day
@@ -5175,7 +5326,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.hour().alias("hour")
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                          datetime  hour
@@ -5231,7 +5383,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                          datetime  hour  minute
@@ -5286,7 +5439,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.second().alias("second"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                          datetime  hour  minute  second
@@ -5342,7 +5496,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.millisecond().alias("millisecond"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                              datetime  hour  minute  second  millisecond
@@ -5398,7 +5553,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.microsecond().alias("microsecond"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                              datetime  hour  minute  second  microsecond
@@ -5454,7 +5610,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("datetime").dt.nanosecond().alias("nanosecond"),
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                              datetime  hour  minute  second  nanosecond
@@ -5501,7 +5658,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_ordinal_day=nw.col("a").dt.ordinal_day()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                        a  a_ordinal_day
@@ -5604,7 +5762,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_total_minutes=nw.col("a").dt.total_minutes()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                             a  a_total_minutes
@@ -5654,7 +5813,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_total_seconds=nw.col("a").dt.total_seconds()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                                    a  a_total_seconds
@@ -5709,7 +5869,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_total_milliseconds=nw.col("a").dt.total_milliseconds()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                                    a  a_total_milliseconds
@@ -5764,7 +5925,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_total_microseconds=nw.col("a").dt.total_microseconds()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                                    a  a_total_microseconds
@@ -5816,7 +5978,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         a_diff_total_nanoseconds=nw.col("a").diff().dt.total_nanoseconds()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                                           a  a_diff_total_nanoseconds
@@ -5899,7 +6062,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...         nw.col("a").dt.to_string("%Y/%m/%d %H:%M:%S")
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd)
                                  a
@@ -6151,7 +6315,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...         nw.col("foo").alias("alias_for_foo").name.keep()
             ...     ).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd).columns
             Index(['foo'], dtype='object')
@@ -6192,7 +6357,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("foo", "BAR").name.map(renaming_func)).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> my_library_agnostic_function(df_pd).columns
             Index(['oof', 'RAB'], dtype='object')
@@ -6232,7 +6398,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("foo", "BAR").name.prefix(prefix)).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> add_colname_prefix(df_pd, "with_prefix_").columns
             Index(['with_prefix_foo', 'with_prefix_BAR'], dtype='object')
@@ -6273,7 +6440,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("foo", "BAR").name.suffix(suffix)).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> add_colname_suffix(df_pd, "_with_suffix").columns
             Index(['foo_with_suffix', 'BAR_with_suffix'], dtype='object')
@@ -6310,7 +6478,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("foo", "BAR").name.to_lowercase()).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
 
             >>> to_lower(df_pd).columns
             Index(['foo', 'bar'], dtype='object')
@@ -6347,7 +6516,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.select(nw.col("foo", "BAR").name.to_uppercase()).to_native()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `my_library_agnostic_function`:
             >>> to_upper(df_pd).columns
             Index(['FOO', 'BAR'], dtype='object')
             >>> to_upper(df_pl).columns
