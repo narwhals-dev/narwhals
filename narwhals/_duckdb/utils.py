@@ -13,21 +13,21 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     import duckdb
 
-    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.utils import Version
 
 
 def get_column_name(
-    df: DuckDBInterchangeFrame, column: duckdb.Expression, *, returns_scalar: bool
+    df: DuckDBLazyFrame, column: duckdb.Expression, *, returns_scalar: bool
 ) -> str:
     if returns_scalar:
         return str(df._native_frame.aggregate([column]).columns[0])
     return str(df._native_frame.select(column).columns[0])
 
 
-def maybe_evaluate(df: DuckDBInterchangeFrame, obj: Any) -> Any:
+def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
     import duckdb
 
     from narwhals._duckdb.expr import DuckDBExpr
@@ -48,7 +48,7 @@ def maybe_evaluate(df: DuckDBInterchangeFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DuckDBInterchangeFrame,
+    df: DuckDBLazyFrame,
     *exprs: IntoDuckDBExpr,
     **named_exprs: IntoDuckDBExpr,
 ) -> dict[str, duckdb.Expression]:
@@ -75,7 +75,7 @@ def parse_exprs_and_named_exprs(
 
 
 def _columns_from_expr(
-    df: DuckDBInterchangeFrame, expr: IntoDuckDBExpr
+    df: DuckDBLazyFrame, expr: IntoDuckDBExpr
 ) -> list[duckdb.Expression]:
     if isinstance(expr, str):  # pragma: no cover
         from duckdb import ColumnExpression

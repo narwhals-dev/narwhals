@@ -11,7 +11,6 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBInterchangeFrame:
+class DuckDBLazyFrame:
     def __init__(self, df: duckdb.DuckDBPyRelation, version: Version) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
@@ -141,28 +140,21 @@ class DuckDBInterchangeFrame:
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.filter(mask))
 
-    def __getattr__(self, attr: str) -> Any:
-        if attr == "schema":
-            return {
-                column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-                for column_name, duckdb_dtype in zip(
-                    self._native_frame.columns, self._native_frame.types
-                )
-            }
-        elif attr == "columns":
-            return self._native_frame.columns
-        elif attr == "_implementation":
-            return Implementation.DUCKDB
+    @property
+    def schema(self) -> dict[str, DType]:
+        return {
+            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
+            for column_name, duckdb_dtype in zip(
+                self._native_frame.columns, self._native_frame.types
+            )
+        }
 
-        msg = (  # pragma: no cover
-            f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
-            "If you would like to see this kind of object better supported in "
-            "Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)  # pragma: no cover
+    @property
+    def columns(self) -> list[str]:
+        return self._native_frame.columns  # type: ignore[no-any-return]
 
     def to_pandas(self: Self) -> pd.DataFrame:
+        # only is version if v1
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd.__version__) >= parse_version("1.0.0"):
@@ -172,6 +164,7 @@ class DuckDBInterchangeFrame:
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
+        # only is version if v1
         return self._native_frame.arrow()
 
     def _change_version(self: Self, version: Version) -> Self:

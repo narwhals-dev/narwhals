@@ -18,13 +18,13 @@ from narwhals.typing import CompliantNamespace
 if TYPE_CHECKING:
     import duckdb
 
-    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-def get_column_name(df: DuckDBInterchangeFrame, column: duckdb.Expression) -> str:
+def get_column_name(df: DuckDBLazyFrame, column: duckdb.Expression) -> str:
     return str(df._native_frame.select(column).columns[0])
 
 
@@ -34,7 +34,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         self._version = version
 
     def all(self) -> DuckDBExpr:
-        def _all(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             from duckdb import ColumnExpression
 
             return [ColumnExpression(col_name) for col_name in df.columns]
@@ -53,10 +53,10 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def concat(
         self,
-        items: Sequence[DuckDBInterchangeFrame],
+        items: Sequence[DuckDBLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
-    ) -> DuckDBInterchangeFrame:
+    ) -> DuckDBLazyFrame:
         if how == "horizontal":
             msg = "horizontal concat not supported for duckdb. Please join instead"
             raise TypeError(msg)
@@ -76,7 +76,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def all_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
@@ -96,7 +96,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def any_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.or_, cols).alias(col_name)]
@@ -118,7 +118,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [FunctionExpression("greatest", *cols).alias(col_name)]
@@ -140,7 +140,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in parsed_exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [FunctionExpression("least", *cols).alias(col_name)]
@@ -165,7 +165,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def lit(self, value: Any, dtype: DType | None) -> DuckDBExpr:
         from duckdb import ConstantExpression
 
-        def func(_df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             if dtype is not None:
                 return [
                     ConstantExpression(value)
@@ -187,7 +187,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         )
 
     def len(self) -> DuckDBExpr:
-        def func(_df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             from duckdb import FunctionExpression
 
             return [FunctionExpression("count").alias("len")]

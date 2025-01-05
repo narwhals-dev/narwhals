@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -31,7 +31,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
     def __init__(
         self,
-        call: Callable[[DuckDBInterchangeFrame], list[duckdb.Expression]],
+        call: Callable[[DuckDBLazyFrame], list[duckdb.Expression]],
         *,
         depth: int,
         function_name: str,
@@ -54,7 +54,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: DuckDBInterchangeFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
@@ -74,7 +74,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(_: DuckDBLazyFrame) -> list[duckdb.Expression]:
             from duckdb import ColumnExpression
 
             return [ColumnExpression(col_name) for col_name in column_names]
@@ -99,7 +99,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         returns_scalar: bool,
         **kwargs: Any,
     ) -> Self:
-        def func(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             results = []
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
@@ -288,7 +288,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def alias(self, name: str) -> Self:
-        def _alias(df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+        def _alias(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [col.alias(name) for col in self._call(df)]
 
         # Define this one manually, so that we can

@@ -698,7 +698,7 @@ def _from_native_impl(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
-        from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+        from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
@@ -710,7 +710,7 @@ def _from_native_impl(  # noqa: PLR0915
                 return native_object
             raise TypeError(msg)
         return DataFrame(
-            DuckDBInterchangeFrame(native_object, version=version),
+            DuckDBLazyFrame(native_object, version=version),
             level="interchange",
         )
 

@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
-    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._spark_like.typing import IntoSparkLikeExpr
 
 
 class DuckDBGroupBy:
     def __init__(
         self,
-        compliant_frame: DuckDBInterchangeFrame,
+        compliant_frame: DuckDBLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
@@ -24,7 +24,7 @@ class DuckDBGroupBy:
         self,
         *aggs: IntoSparkLikeExpr,
         **named_aggs: IntoSparkLikeExpr,
-    ) -> DuckDBInterchangeFrame:
+    ) -> DuckDBLazyFrame:
         exprs = parse_into_exprs(
             *aggs,
             namespace=self._compliant_frame.__narwhals_namespace__(),
