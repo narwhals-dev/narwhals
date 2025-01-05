@@ -64,7 +64,7 @@ def test_unique_none(constructor: Constructor) -> None:
     result = df.unique(maintain_order=False).sort("z")
     assert_equal_data(result, data)
 
-    if isinstance(df, nw.LazyFrame) or nw.get_level(df) == "interchange":
+    if isinstance(df, nw.LazyFrame):
         with pytest.raises(ValueError, match="not supported"):
             result = df.unique(maintain_order=True).sort("z")
     else:
