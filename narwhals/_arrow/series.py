@@ -18,6 +18,7 @@ from narwhals._arrow.utils import parse_datetime_format
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -54,6 +55,7 @@ class ArrowSeries(CompliantSeries):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(

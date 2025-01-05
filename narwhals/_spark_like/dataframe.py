@@ -12,6 +12,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from pyspark.sql import DataFrame
@@ -37,6 +38,7 @@ class SparkLikeLazyFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.PYSPARK
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:  # pragma: no cover
         if self._implementation is Implementation.PYSPARK:

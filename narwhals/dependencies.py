@@ -87,14 +87,14 @@ def get_duckdb() -> Any:
     return sys.modules.get("duckdb", None)
 
 
-def get_dask_expr() -> Any:
-    """Get dask_expr module (if already imported - else return None)."""
-    return sys.modules.get("dask_expr", None)
-
-
 def get_ibis() -> Any:
     """Get ibis module (if already imported - else return None)."""
     return sys.modules.get("ibis", None)
+
+
+def get_dask_expr() -> Any:
+    """Get dask_expr module (if already imported - else return None)."""
+    return sys.modules.get("dask_expr", None)
 
 
 def get_pyspark() -> Any:  # pragma: no cover

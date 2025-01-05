@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_duckdb
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -82,9 +84,15 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any, version: Version) -> None:
+    _implementation = Implementation.DUCKDB
+
+    def __init__(
+        self, df: Any, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._native_frame = df
         self._version = version
+        self._backend_version = backend_version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -147,10 +155,14 @@ class DuckDBInterchangeFrame:
         return self._native_frame.arrow()
 
     def _change_version(self: Self, version: Version) -> Self:
-        return self.__class__(self._native_frame, version=version)
+        return self.__class__(
+            self._native_frame, version=version, backend_version=self._backend_version
+        )
 
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, version=self._version)
+        return self.__class__(
+            df, version=self._version, backend_version=self._backend_version
+        )
 
     def collect_schema(self) -> dict[str, DType]:
         return {

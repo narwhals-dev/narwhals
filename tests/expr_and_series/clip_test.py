@@ -57,6 +57,9 @@ def test_clip_series_expressified(
 ) -> None:
     if "modin_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/17682
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3, -4, 5], "lb": [3, 2, 1, 1, 1], "ub": [4, 4, 2, 2, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
