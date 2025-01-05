@@ -19,14 +19,19 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantNamespace
+    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
 
 
-def extract_compliant(expr: Expr, other: Any) -> Any:
+def extract_compliant(
+    plx: CompliantNamespace[CompliantSeriesT_co], other: Any
+) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
     from narwhals.series import Series
 
     if isinstance(other, Expr):
-        return other._to_compliant_expr(expr)
+        return other._to_compliant_expr(plx)
     if isinstance(other, Series):
         return other._compliant_series
     return other
@@ -227,11 +232,12 @@ class Expr:
         )
 
     def __rand__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rand__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__and__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __or__(self, other: Any) -> Self:
         return self.__class__(
@@ -239,11 +245,12 @@ class Expr:
         )
 
     def __ror__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ror__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__or__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __add__(self, other: Any) -> Self:
         return self.__class__(
@@ -253,11 +260,12 @@ class Expr:
         )
 
     def __radd__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__radd__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__add__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __sub__(self, other: Any) -> Self:
         return self.__class__(
@@ -267,11 +275,12 @@ class Expr:
         )
 
     def __rsub__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rsub__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__sub__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __truediv__(self, other: Any) -> Self:
         return self.__class__(
@@ -281,11 +290,12 @@ class Expr:
         )
 
     def __rtruediv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rtruediv__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__truediv__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __mul__(self, other: Any) -> Self:
         return self.__class__(
@@ -295,11 +305,12 @@ class Expr:
         )
 
     def __rmul__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rmul__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__mul__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __le__(self, other: Any) -> Self:
         return self.__class__(
@@ -329,11 +340,12 @@ class Expr:
         )
 
     def __rpow__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rpow__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__pow__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __floordiv__(self, other: Any) -> Self:
         return self.__class__(
@@ -343,11 +355,12 @@ class Expr:
         )
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rfloordiv__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__floordiv__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     def __mod__(self, other: Any) -> Self:
         return self.__class__(
@@ -357,11 +370,12 @@ class Expr:
         )
 
     def __rmod__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__rmod__(
-                extract_compliant(plx, other)
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            return plx.lit(extract_compliant(plx, other), dtype=None).__mod__(
+                extract_compliant(plx, self)
             )
-        )
+
+        return self.__class__(func)
 
     # --- unary ---
     def __invert__(self) -> Self:
@@ -1788,8 +1802,11 @@ class Expr:
             b: [[true,true,false,false]]
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            other = extract_compliant(self, other)
-            return self.__class__(lambda plx: self._to_compliant_expr(plx).is_in(other))
+            return self.__class__(
+                lambda plx: self._to_compliant_expr(plx).is_in(
+                    extract_compliant(plx, other)
+                )
+            )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             raise NotImplementedError(msg)
