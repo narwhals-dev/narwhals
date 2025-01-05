@@ -183,6 +183,10 @@ class DuckDBInterchangeFrame:
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
 
+        if drop_null_keys:
+            msg = "todo"
+            raise NotImplementedError(msg)
+
         return DuckDBGroupBy(
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
