@@ -182,17 +182,20 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def lit(self, value: Any, dtype: DType) -> DuckDBExpr:
+    def lit(self, value: Any, dtype: DType | None) -> DuckDBExpr:
         from duckdb import ConstantExpression
 
+        def func(_df: DuckDBInterchangeFrame) -> list[duckdb.Expression]:
+            if dtype is not None:
+                return [
+                    ConstantExpression(value)
+                    .cast(narwhals_to_native_dtype(dtype, version=self._version))
+                    .alias("literal")
+                ]
+            return [ConstantExpression(value).alias("literal")]
+
         return DuckDBExpr(
-            call=lambda _df: [
-                ConstantExpression(value)
-                .cast(narwhals_to_native_dtype(dtype, version=self._version))
-                .alias("literal")
-                if dtype is not None
-                else ConstantExpression(value).alias("literal")
-            ],
+            func,
             depth=0,
             function_name="lit",
             root_names=None,

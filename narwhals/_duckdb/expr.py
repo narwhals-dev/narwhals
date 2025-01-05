@@ -162,14 +162,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
-    def __rand__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input & other,
-            "__rand__",
-            other=other,
-            returns_scalar=False,
-        )
-
     def __or__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input | other,
@@ -178,26 +170,10 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
-    def __ror__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input | other,
-            "__ror__",
-            other=other,
-            returns_scalar=False,
-        )
-
     def __add__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,
             "__add__",
-            other=other,
-            returns_scalar=False,
-        )
-
-    def __radd__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: other + _input,
-            "__radd__",
             other=other,
             returns_scalar=False,
         )
@@ -218,14 +194,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
-    def __rfloordiv__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rfloordiv__(other),
-            "__rfloordiv__",
-            other=other,
-            returns_scalar=False,
-        )
-
     def __mod__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
@@ -234,26 +202,10 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
         )
 
-    def __rmod__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmod__(other),
-            "__rmod__",
-            other=other,
-            returns_scalar=False,
-        )
-
     def __sub__(self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
-            other=other,
-            returns_scalar=False,
-        )
-
-    def __rsub__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: other - _input,
-            "__rsub__",
             other=other,
             returns_scalar=False,
         )
@@ -270,14 +222,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input, other: _input**other,
             "__pow__",
-            other=other,
-            returns_scalar=False,
-        )
-
-    def __rpow__(self, other: DuckDBExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rpow__(other),
-            "__rpow__",
             other=other,
             returns_scalar=False,
         )
@@ -381,10 +325,16 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            if interpolation == "linear":
+                return FunctionExpression(
+                    "quantile_cont", _input, ConstantExpression(quantile)
+                )
+            msg = "Only linear interpolation methods are supported for DuckDB quantile."
+            raise NotImplementedError(msg)
+
         return self._from_call(
-            lambda _input: FunctionExpression(
-                "quantile", _input, ConstantExpression(quantile)
-            ),
+            func,
             "quantile",
             returns_scalar=True,
         )

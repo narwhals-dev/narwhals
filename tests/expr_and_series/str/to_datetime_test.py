@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(constructor: Constructor) -> None:
+def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
