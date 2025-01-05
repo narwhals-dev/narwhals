@@ -7,7 +7,7 @@ from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._duckdb.typing import IntoDuckDBExpr
 
 
 class DuckDBGroupBy:
@@ -22,8 +22,8 @@ class DuckDBGroupBy:
 
     def agg(
         self,
-        *aggs: IntoSparkLikeExpr,
-        **named_aggs: IntoSparkLikeExpr,
+        *aggs: IntoDuckDBExpr,
+        **named_aggs: IntoDuckDBExpr,
     ) -> DuckDBLazyFrame:
         exprs = parse_into_exprs(
             *aggs,

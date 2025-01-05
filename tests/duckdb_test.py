@@ -228,7 +228,7 @@ def test_add() -> None:
         d=nw.col("a") - nw.col("a").mean(),
         e=nw.col("a") - nw.col("a").std(),
     )
-    expected = {
+    expected = {  # pragma: no cover
         "a": [1, 3, 2],
         "b": [4, 4, 6],
         "z": [7.0, 8.0, 9.0],
@@ -236,7 +236,7 @@ def test_add() -> None:
         "d": [-1.0, 1.0, 0.0],
         "e": [0.0, 2.0, 1.0],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(result, expected)  # pragma: no cover
 
 
 # copied from tests/expr_and_series/all_horizontal_test.py
@@ -331,14 +331,14 @@ def test_std() -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    expected = {
+    expected = {  # pragma: no cover
         "a_ddof_default": [1.0],
         "a_ddof_1": [1.0],
         "a_ddof_0": [0.816497],
         "b_ddof_2": [1.632993],
         "z_ddof_0": [0.816497],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(result, expected)  # pragma: no cover
 
 
 # copied from tests/group_by_test.py

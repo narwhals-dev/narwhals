@@ -12,6 +12,7 @@ from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
@@ -30,7 +31,6 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 class DuckDBLazyFrame:
@@ -47,9 +47,11 @@ class DuckDBLazyFrame:
         self._version = version
         self._backend_version = backend_version
 
-    # This one is a historical mistake.
-    # Keep around for backcompat, but remove in stable.v2
-    def __narwhals_dataframe__(self) -> Any:
+    def __narwhals_dataframe__(self) -> Any:  # pragma: no cover
+        # Keep around for backcompat.
+        if self._version is not Version.V1:
+            msg = "__narwhals_dataframe__ is not implemented for DuckDBLazyFrame"
+            raise AttributeError(msg)
         return self
 
     def __narwhals_lazyframe__(self) -> Any:
@@ -119,7 +121,6 @@ class DuckDBLazyFrame:
         return self._from_native_frame(self._native_frame.select(*selection))
 
     def lazy(self) -> Self:
-        # TODO(marco): is this right? probably not
         return self
 
     def with_columns(
@@ -163,7 +164,7 @@ class DuckDBLazyFrame:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
     def to_pandas(self: Self) -> pd.DataFrame:
-        # only is version if v1
+        # only is version if v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd.__version__) >= parse_version("1.0.0"):
@@ -173,7 +174,7 @@ class DuckDBLazyFrame:
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
-        # only is version if v1
+        # only is version if v1, keep around for backcompat
         return self._native_frame.arrow()
 
     def _change_version(self: Self, version: Version) -> Self:
@@ -267,11 +268,8 @@ class DuckDBLazyFrame:
             )
             if keep == "none":
                 keep_condition = f"where {count_name}=1"
-            elif keep == "any":
-                keep_condition = f"where {idx_name}=1"
             else:
-                msg = "row order dependent operations not supported"
-                raise ValueError(msg)
+                keep_condition = f"where {idx_name}=1"
             query = f"""
                 with cte as (
                     select *,
