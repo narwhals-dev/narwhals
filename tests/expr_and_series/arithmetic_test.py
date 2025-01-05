@@ -11,6 +11,7 @@ from hypothesis import assume
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
+from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -69,6 +70,8 @@ def test_right_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+        request.applymarker(pytest.mark.xfail)
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
@@ -243,7 +246,9 @@ def test_arithmetic_expr_left_literal(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and attr == "__floordiv__":
+    if ("duckdb" in str(constructor) and attr == "__floordiv__") or (
+        "dask" in str(constructor) and DASK_VERSION < (2024, 10)
+    ):
         request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DASK_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -75,8 +76,17 @@ def test_logic_operators_expr(
     ],
 )
 def test_logic_operators_expr_scalar(
-    constructor: Constructor, operator: str, expected: list[bool]
+    constructor: Constructor,
+    operator: str,
+    expected: list[bool],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if (
+        "dask" in str(constructor)
+        and DASK_VERSION < (2024, 10)
+        and operator in ("__rand__", "__ror__")
+    ):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
     df = nw.from_native(constructor(data))
 

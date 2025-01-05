@@ -124,7 +124,7 @@ def test_missing_columns(
 def test_left_to_right_broadcasting(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 9):
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

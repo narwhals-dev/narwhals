@@ -136,6 +136,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return "datetime64[us]"
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return "date32[day][pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
