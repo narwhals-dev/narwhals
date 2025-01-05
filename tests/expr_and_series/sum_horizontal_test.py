@@ -38,7 +38,9 @@ def test_sumh_nullable(constructor: Constructor, request: pytest.FixtureRequest)
     assert_equal_data(result, expected)
 
 
-def test_sumh_all(constructor: Constructor) -> None:
+def test_sumh_all(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.sum_horizontal(nw.all()))

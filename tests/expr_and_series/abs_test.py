@@ -8,7 +8,7 @@ from tests.utils import assert_equal_data
 
 def test_abs(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
-    result = df.select(b=nw.col("a").abs()).sort("a")
+    result = df.select(b=nw.col("a").abs()).sort("b")
     expected = {"b": [1, 2, 3, 4, 5]}
     assert_equal_data(result, expected)
 
