@@ -48,7 +48,7 @@ class SparkLikeLazyFrame:
     def __narwhals_namespace__(self) -> SparkLikeNamespace:
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
-        return SparkLikeNamespace(
+        return SparkLikeNamespace(  # type: ignore[abstract]
             backend_version=self._backend_version, version=self._version
         )
 

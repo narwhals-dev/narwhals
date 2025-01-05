@@ -186,26 +186,14 @@ class PolarsExpr:
     def __add__(self: Self, other: Any) -> Self:
         return self._from_native_expr(self._native_expr.__add__(extract_native(other)))
 
-    def __radd__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__radd__(extract_native(other)))
-
     def __sub__(self: Self, other: Any) -> Self:
         return self._from_native_expr(self._native_expr.__sub__(extract_native(other)))
-
-    def __rsub__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__rsub__(extract_native(other)))
 
     def __mul__(self: Self, other: Any) -> Self:
         return self._from_native_expr(self._native_expr.__mul__(extract_native(other)))
 
-    def __rmul__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__rmul__(extract_native(other)))
-
     def __pow__(self: Self, other: Any) -> Self:
         return self._from_native_expr(self._native_expr.__pow__(extract_native(other)))
-
-    def __rpow__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__rpow__(extract_native(other)))
 
     def __invert__(self: Self) -> Self:
         return self._from_native_expr(self._native_expr.__invert__())

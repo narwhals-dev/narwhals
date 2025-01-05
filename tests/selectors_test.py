@@ -110,9 +110,9 @@ def test_set_ops_invalid(
     if "duckdb" in str(invalid_constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(invalid_constructor(data))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 - numeric())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 | numeric())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & numeric())
