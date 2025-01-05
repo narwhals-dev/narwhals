@@ -15,7 +15,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -369,25 +368,6 @@ def test_any_all(pyspark_constructor: Constructor) -> None:
     expected = {"a": [False], "b": [True], "c": [False]}
     assert_equal_data(result, expected)
     result = df.select(nw.all().any())
-    expected = {"a": [True], "b": [True], "c": [False]}
-    assert_equal_data(result, expected)
-
-
-def test_any_all_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(
-        constructor_eager(
-            {
-                "a": [True, False, True],
-                "b": [True, True, True],
-                "c": [False, False, False],
-            }
-        ),
-        eager_only=True,
-    )
-    result = {"a": [df["a"].all()], "b": [df["b"].all()], "c": [df["c"].all()]}
-    expected = {"a": [False], "b": [True], "c": [False]}
-    assert_equal_data(result, expected)
-    result = {"a": [df["a"].any()], "b": [df["b"].any()], "c": [df["c"].any()]}
     expected = {"a": [True], "b": [True], "c": [False]}
     assert_equal_data(result, expected)
 
