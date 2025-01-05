@@ -31,7 +31,10 @@ def test_unique(
 ) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    if isinstance(df, nw.LazyFrame) and keep in {"first", "last"}:
+    if (isinstance(df, nw.LazyFrame) or nw.get_level(df) == "interchange") and keep in {
+        "first",
+        "last",
+    }:
         context: Any = pytest.raises(ValueError, match="row order")
     elif keep == "foo":
         context = pytest.raises(ValueError, match=": foo")
@@ -51,7 +54,7 @@ def test_unique_none(constructor: Constructor) -> None:
     result = df.unique(maintain_order=False).sort("z")
     assert_equal_data(result, data)
 
-    if isinstance(df, nw.LazyFrame):
+    if isinstance(df, nw.LazyFrame) or nw.get_level(df) == "interchange":
         with pytest.raises(ValueError, match="not supported"):
             result = df.unique(maintain_order=True).sort("z")
     else:

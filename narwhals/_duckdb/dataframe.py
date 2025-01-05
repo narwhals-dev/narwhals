@@ -247,8 +247,11 @@ class DuckDBInterchangeFrame:
         }
 
     def unique(
-        self, subset: Sequence[str] | None, keep_condition: Any, *, maintain_order: bool
+        self, subset: Sequence[str] | None, keep: str, *, maintain_order: bool
     ) -> Self:
+        if maintain_order:
+            msg = "row order dependent operations not supported"
+            raise ValueError(msg)
         if subset is not None:
             import duckdb
 
@@ -261,10 +264,13 @@ class DuckDBInterchangeFrame:
             count_name = (
                 f'"{generate_temporary_column_name(8, [*rel.columns, idx_name])}"'
             )
-            if keep_condition == "none":
+            if keep == "none":
                 keep_condition = f"where {count_name}=1"
-            elif keep_condition == "any":
+            elif keep == "any":
                 keep_condition = f"where {idx_name}=1"
+            else:
+                msg = "row order dependent operations not supported"
+                raise ValueError(msg)
             query = f"""
                 with cte as (
                     select *,
