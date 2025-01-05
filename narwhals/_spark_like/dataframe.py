@@ -105,13 +105,6 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def filter(self, *predicates: SparkLikeExpr) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
-            msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
-            raise NotImplementedError(msg)
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         # `[0]` is safe as all_horizontal's expression only returns a single column
@@ -245,4 +238,21 @@ class SparkLikeLazyFrame:
         other = other_native.select(
             [F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
-        return self._from_native_frame(self_native.join(other=other, on=left_on, how=how))
+
+        # If how in {"semi", "anti"}, then resulting columns are same as left columns
+        # Otherwise, we add the right columns with the new mapping, while keeping the
+        # original order of right_columns.
+        col_order = left_columns
+
+        if how in {"inner", "left", "cross"}:
+            col_order.extend(
+                [
+                    rename_mapping[colname]
+                    for colname in right_columns
+                    if colname not in (right_on or [])
+                ]
+            )
+
+        return self._from_native_frame(
+            self_native.join(other=other, on=left_on, how=how).select(col_order)
+        )

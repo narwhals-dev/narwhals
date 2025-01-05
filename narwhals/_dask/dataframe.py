@@ -94,17 +94,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            msg = (
-                "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
-            )
-            raise NotImplementedError(msg)
-
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
@@ -186,7 +175,11 @@ class DaskLazyFrame(CompliantLazyFrame):
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._from_native_frame(add_row_index(self._native_frame, name))
+        return self._from_native_frame(
+            add_row_index(
+                self._native_frame, name, self._backend_version, self._implementation
+            )
+        )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))

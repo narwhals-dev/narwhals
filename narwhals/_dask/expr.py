@@ -401,14 +401,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
-    ) -> NoReturn:
-        msg = "`Expr.map_batches` is not implemented for Dask yet"
-        raise NotImplementedError(msg)
-
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -443,26 +435,20 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def std(self, ddof: int) -> Self:
-        expr = self._from_call(
+        return self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
             ddof=ddof,
             returns_scalar=True,
         )
-        if ddof != 1:
-            expr._depth += 1
-        return expr
 
     def var(self, ddof: int) -> Self:
-        expr = self._from_call(
+        return self._from_call(
             lambda _input, ddof: _input.var(ddof=ddof),
             "var",
             ddof=ddof,
             returns_scalar=True,
         )
-        if ddof != 1:
-            expr._depth += 1
-        return expr
 
     def skew(self: Self) -> Self:
         return self._from_call(
@@ -536,8 +522,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def is_between(
         self,
-        lower_bound: Any,
-        upper_bound: Any,
+        lower_bound: Self | Any,
+        upper_bound: Self | Any,
         closed: str = "both",
     ) -> Self:
         if closed == "none":
@@ -673,8 +659,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def clip(
         self: Self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        lower_bound: Self | Any | None,
+        upper_bound: Self | Any | None,
     ) -> Self:
         return self._from_call(
             lambda _input, lower_bound, upper_bound: _input.clip(
@@ -755,7 +741,12 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
@@ -772,7 +763,12 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 
             return _input[col_token].isin(last_distinct_index)
@@ -875,10 +871,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def mode(self: Self) -> Self:
-        msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -912,116 +904,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(
             lambda _input: da.isfinite(_input),
             "is_finite",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).sum()
-
-        return self._from_call(
-            func,
-            "rolling_sum",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).mean()
-
-        return self._from_call(
-            func,
-            "rolling_mean",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).var(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_var",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).std(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_std",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
             returns_scalar=self._returns_scalar,
         )
 

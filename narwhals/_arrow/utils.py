@@ -129,9 +129,19 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
                 version=version,
             )
         )
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        return pa.struct(
+            [
+                (
+                    field.name,
+                    narwhals_to_native_dtype(
+                        field.dtype,
+                        version=version,
+                    ),
+                )
+                for field in dtype.fields  # type: ignore[union-attr]
+            ]
+        )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         return NotImplementedError(msg)
@@ -152,6 +162,11 @@ def broadcast_and_extract_native(
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
+
+    if rhs is None:
+        import pyarrow as pa
+
+        return lhs._native_series, pa.scalar(None, type=lhs._native_series.type)
 
     # If `rhs` is the output of an expression evaluation, then it is
     # a list of Series. So, we verify that that list is of length-1,

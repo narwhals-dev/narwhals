@@ -221,6 +221,28 @@ def test_cast_datetime_tz_aware(
     assert_equal_data(result, expected)
 
 
+def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "a": [
+            {"movie": "Cars", "rating": 4.5},
+            {"movie": "Toy Story", "rating": 4.9},
+        ]
+    }
+
+    dtype = nw.Struct([nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())])
+    result = (
+        nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
+    )
+
+    assert result.schema == {"a": dtype}
+
+
 @pytest.mark.parametrize("dtype", [pl.String, pl.String()])
 def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
