@@ -13,8 +13,8 @@ from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import get_module_version_as_tuple
 from tests.utils import PANDAS_VERSION
+from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from narwhals.series import Series

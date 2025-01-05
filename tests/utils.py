@@ -14,12 +14,19 @@ import pandas as pd
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
-from narwhals.utils import get_module_version_as_tuple
+from narwhals.utils import parse_version
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias  # pragma: no cover
 else:
     from typing_extensions import TypeAlias  # pragma: no cover
+
+
+def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
+    try:
+        return parse_version(__import__(module_name).__version__)
+    except ImportError:
+        return (0, 0, 0)
 
 
 IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")

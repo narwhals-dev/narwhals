@@ -10,7 +10,6 @@ from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
-from narwhals.utils import get_module_version_as_tuple
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -20,8 +19,6 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.utils import Version
-
-PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 
 
 class SparkLikeExpr(CompliantExpr["Column"]):
@@ -226,9 +223,10 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def median(self) -> Self:
         def _median(_input: Column) -> Column:
+            import pyspark  # ignore-banned-import
             from pyspark.sql import functions as F  # noqa: N812
 
-            if PYSPARK_VERSION < (3, 4):
+            if parse_version(pyspark.__version__) < (3, 4):
                 # Use percentile_approx with default accuracy parameter (10000)
                 return F.percentile_approx(_input.cast("double"), 0.5)
 

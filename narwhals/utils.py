@@ -1058,10 +1058,3 @@ def generate_repr(header: str, native_repr: str) -> str:
         "| Use `.to_native` to see native output |\n└"
         f"{'─' * 39}┘"
     )
-
-
-def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
-    try:
-        return parse_version(__import__(module_name).__version__)
-    except ImportError:
-        return (0, 0, 0)
