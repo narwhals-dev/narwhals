@@ -223,4 +223,5 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         ):
             # TODO(unassigned): list and name namespaces still need implementing for duckdb
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
+            constructors_ids.remove("duckdb")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
