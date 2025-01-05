@@ -159,6 +159,8 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
   'ignore:.*You are using pyarrow version',
+  # This warning was temporarily raised by pandas but then reverted.
+  'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -12,6 +11,7 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -148,30 +148,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 results.append(result)
             return results
 
-        # Try tracking root and output names by combining them from all
-        # expressions appearing in args and kwargs. If any anonymous
-        # expression appears (e.g. nw.all()), then give up on tracking root names
-        # and just set it to None.
-        root_names = copy(self._root_names)
-        output_names = self._output_names
-        for arg in list(kwargs.values()):
-            if root_names is not None and isinstance(arg, self.__class__):
-                if arg._root_names is not None:
-                    root_names.extend(arg._root_names)
-                else:
-                    root_names = None
-                    output_names = None
-                    break
-            elif root_names is None:
-                output_names = None
-                break
-
-        if not (
-            (output_names is None and root_names is None)
-            or (output_names is not None and root_names is not None)
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+        root_names, output_names = infer_new_root_output_names(self, **kwargs)
 
         return self.__class__(
             func,
