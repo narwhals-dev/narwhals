@@ -7,17 +7,13 @@ from typing import Callable
 from typing import Generator
 from typing import Sequence
 
-import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoFrame
-
-if TYPE_CHECKING:
+    import duckdb
     from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
@@ -111,6 +107,8 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
 
 
 def duckdb_lazy_constructor(obj: Any) -> duckdb.DuckDBPyRelation:
+    import duckdb
+
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")
 
