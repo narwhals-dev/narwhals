@@ -52,7 +52,7 @@ def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
     return nw.from_arrow(nw.from_native(df), native_namespace=pl).to_native()
 
 
-print(df_to_polars(df_duckdb))  # You can only execute this line of code once.
+print(df_to_polars(df_duckdb.arrow()))  # You can only execute this line of code once.
 ```
 
 It works to pass Polars to `native_namespace` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
