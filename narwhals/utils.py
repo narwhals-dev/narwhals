@@ -293,7 +293,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 3),
     Implementation.POLARS: (0, 20, 3),
-    Implementation.DASK: (2024, 10),
+    Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
 }
