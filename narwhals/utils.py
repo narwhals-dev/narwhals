@@ -253,6 +253,38 @@ class Implementation(Enum):
         """
         return self is Implementation.DASK  # pragma: no cover
 
+    def is_duckdb(self) -> bool:
+        """Return whether implementation is DuckDB.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_duckdb()
+            False
+        """
+        return self is Implementation.DUCKDB  # pragma: no cover
+
+    def is_ibis(self) -> bool:
+        """Return whether implementation is Ibis.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_ibis()
+            False
+        """
+        return self is Implementation.IBIS  # pragma: no cover
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
