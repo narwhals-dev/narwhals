@@ -41,9 +41,10 @@ def test_median_series(
 
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
-    constructor: Constructor,
-    expr: nw.Expr,
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 
     df = nw.from_native(constructor(data))

@@ -29,9 +29,18 @@ def test_clip_expr_expressified(
     if "modin_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 2, 3, -4, 5], "lb": [3, 2, 1, 1, 1], "ub": [4, 4, 2, 2, 2]}
+    data = {
+        "a": [1, 2, 3, -4, 5],
+        "lb": [3, 2, 1, 1, 1],
+        "ub": [4, 4, 2, 2, 2],
+        "i": [1, 2, 3, 4, 5],
+    }
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").clip(nw.col("lb"), nw.col("ub") + 1))
+    result = (
+        df.with_columns(nw.col("a").clip(nw.col("lb"), nw.col("ub") + 1))
+        .sort("i")
+        .select("a")
+    )
     expected_dict = {"a": [3, 2, 3, 1, 3]}
     assert_equal_data(result, expected_dict)
 

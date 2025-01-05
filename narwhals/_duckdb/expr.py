@@ -373,27 +373,26 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(
+            _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
+        ) -> duckdb.Expression:
             if lower_bound is None:
-                return FunctionExpression(
-                    "least", _input, ConstantExpression(upper_bound)
-                )
+                return FunctionExpression("least", _input, upper_bound)
             elif upper_bound is None:
-                return FunctionExpression(
-                    "greatest", _input, ConstantExpression(lower_bound)
-                )
+                return FunctionExpression("greatest", _input, lower_bound)
             return FunctionExpression(
                 "greatest",
-                FunctionExpression("least", _input, ConstantExpression(upper_bound)),
-                ConstantExpression(lower_bound),
+                FunctionExpression("least", _input, upper_bound),
+                lower_bound,
             )
 
         return self._from_call(
             func,
             "clip",
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
             returns_scalar=self._returns_scalar,
         )
 
@@ -525,6 +524,10 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
         from duckdb import CoalesceOperator
         from duckdb import ConstantExpression
+
+        if strategy is not None:
+            msg = "todo"
+            raise NotImplementedError(msg)
 
         return self._from_call(
             lambda _input: CoalesceOperator(_input, ConstantExpression(value)),

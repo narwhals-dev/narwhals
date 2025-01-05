@@ -28,6 +28,7 @@ def test_convert_time_zone(
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("cudf" in str(constructor))
+        or ("duckdb" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {

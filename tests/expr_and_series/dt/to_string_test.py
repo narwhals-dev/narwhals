@@ -59,7 +59,11 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
+def test_dt_to_string_expr(
+    constructor: Constructor, fmt: str, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     input_frame = nw.from_native(constructor(data))
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]

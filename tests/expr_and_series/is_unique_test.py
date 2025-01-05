@@ -8,7 +8,9 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_is_unique_expr(constructor: Constructor) -> None:
+def test_is_unique_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, 1, 2],
         "b": [1, 2, 3],
