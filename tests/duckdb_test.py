@@ -19,8 +19,9 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
 
-import duckdb
 import polars as pl
+
+duckdb = pytest.importorskip("duckdb")
 
 
 def duckdb_constructor(obj: dict[str, Any]) -> IntoFrame:
