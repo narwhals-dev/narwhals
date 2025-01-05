@@ -289,24 +289,24 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
 # copied from tests/expr_and_series/any_horizontal_test.py
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
+def test_anyh(pyspark_constructor: Constructor, expr1: Any, expr2: Any) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(pyspark_constructor(data))
     result = df.select(any=nw.any_horizontal(expr1, expr2))
 
     expected = {"any": [False, True, True]}
     assert_equal_data(result, expected)
 
 
-def test_anyh_all(constructor: Constructor) -> None:
+def test_anyh_all(pyspark_constructor: Constructor) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(pyspark_constructor(data))
     result = df.select(any=nw.any_horizontal(nw.all()))
     expected = {"any": [False, True, True]}
     assert_equal_data(result, expected)
@@ -443,25 +443,18 @@ def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
 
 
 # copied from tests/expr_and_series/null_count_test.py
-def test_null_count_expr(constructor: Constructor) -> None:
+def test_null_count_expr(pyspark_constructor: Constructor) -> None:
     data = {
         "a": [1.0, None, None, 3.0],
         "b": [1.0, None, 4, 5.0],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.all().null_count())
     expected = {
         "a": [2],
         "b": [1],
     }
     assert_equal_data(result, expected)
-
-
-def test_null_count_series(constructor_eager: ConstructorEager) -> None:
-    data = [1, 2, None]
-    series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
-    result = series.null_count()
-    assert result == 1
 
 
 # copied from tests/expr_and_series/min_test.py
