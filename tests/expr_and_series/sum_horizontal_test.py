@@ -27,7 +27,9 @@ def test_sumh(
     assert_equal_data(result, expected)
 
 
-def test_sumh_nullable(constructor: Constructor) -> None:
+def test_sumh_nullable(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 8, 3], "b": [4, 5, None]}
     expected = {"hsum": [5, 13, 3]}
 

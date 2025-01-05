@@ -323,6 +323,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def skew(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("skewness", _input),
+            "skew",
+            returns_scalar=True,
+        )
+
     def median(self) -> Self:
         from duckdb import FunctionExpression
 
@@ -436,6 +445,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("count", _input),
             "count",
+            returns_scalar=True,
+        )
+
+    def len(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("count"),
+            "len",
             returns_scalar=True,
         )
 
