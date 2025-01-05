@@ -252,12 +252,7 @@ class DuckDBLazyFrame:
             )
         }
 
-    def unique(
-        self, subset: Sequence[str] | None, keep: str, *, maintain_order: bool
-    ) -> Self:
-        if maintain_order:
-            msg = "row order dependent operations not supported"
-            raise ValueError(msg)
+    def unique(self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
             import duckdb
 
