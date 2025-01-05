@@ -5,7 +5,9 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+# We use nw instead of nw.stable.v1 to ensure that DuckDBPyRelation
+# becomes LazyFrame instead of DataFrame
+import narwhals as nw
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
