@@ -23,7 +23,7 @@ classifiers = [
 [project.optional-dependencies]
 # these should be aligned with MIN_VERSIONS in narwhals/utils.py
 pandas = ["pandas>=0.25.3"]
-modin = ["modin>=0.25.3"]
+modin = ["modin>=0.32"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.3.0"]

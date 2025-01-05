@@ -559,9 +559,10 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Modin
     elif is_modin_dataframe(native_object):  # pragma: no cover
+        import modin  # ignore-banned-import
+
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        mpd = get_modin()
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with modin.DataFrame"
@@ -571,15 +572,16 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeDataFrame(
                 native_object,
                 implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd.__version__),
+                backend_version=parse_version(modin.__version__),
                 version=version,
             ),
             level="full",
         )
     elif is_modin_series(native_object):  # pragma: no cover
+        import modin  # ignore-banned-import
+
         from narwhals._pandas_like.series import PandasLikeSeries
 
-        mpd = get_modin()
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
@@ -589,7 +591,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeSeries(
                 native_object,
                 implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd.__version__),
+                backend_version=parse_version(modin.__version__),
                 version=version,
             ),
             level="full",
