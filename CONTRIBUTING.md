@@ -78,6 +78,29 @@ where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
 Here's how you can set up your local development environment to contribute.
 
+#### Prerequisites for PySpark tests
+
+If you want to run PySpark-related tests, you'll need to have Java installed:
+
+- On Ubuntu/Debian:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install default-jdk
+  sudo apt-get install default-jre
+  ```
+
+- On macOS:
+  Follow the instructions [here](https://www.java.com/en/download/help/mac_install.html)
+
+- On Windows:
+  Follow the instructions [here](https://www.java.com/en/download/help/windows_manual_download.html)
+  - Add JAVA_HOME to your environment variables
+
+You can verify your Java installation by running:
+```bash
+java -version
+```
+
 #### Option 1: Use UV (recommended)
 
 1. Make sure you have Python3.12 installed, create a virtual environment,

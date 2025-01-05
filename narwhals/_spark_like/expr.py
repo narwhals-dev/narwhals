@@ -184,12 +184,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def abs(self) -> Self:
-        def _abs(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.abs(_input)
-
-        return self._from_call(_abs, "abs", returns_scalar=self._returns_scalar)
+        return self._from_call(F.abs, "abs", returns_scalar=self._returns_scalar)
 
     def alias(self, name: str) -> Self:
         def _alias(df: SparkLikeLazyFrame) -> list[Column]:
@@ -210,52 +207,34 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def count(self) -> Self:
-        def _count(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.count(_input)
-
-        return self._from_call(_count, "count", returns_scalar=True)
+        return self._from_call(F.count, "count", returns_scalar=True)
 
     def max(self) -> Self:
-        def _max(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.max(_input)
-
-        return self._from_call(_max, "max", returns_scalar=True)
+        return self._from_call(F.max, "max", returns_scalar=True)
 
     def mean(self) -> Self:
-        def _mean(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.mean(_input)
-
-        return self._from_call(_mean, "mean", returns_scalar=True)
+        return self._from_call(F.mean, "mean", returns_scalar=True)
 
     def median(self) -> Self:
-        def _median(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.median(_input)
-
-        return self._from_call(_median, "median", returns_scalar=True)
+        return self._from_call(F.median, "median", returns_scalar=True)
 
     def min(self) -> Self:
-        def _min(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.min(_input)
-
-        return self._from_call(_min, "min", returns_scalar=True)
+        return self._from_call(F.min, "min", returns_scalar=True)
 
     def sum(self) -> Self:
-        def _sum(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.sum(_input)
-
-        return self._from_call(_sum, "sum", returns_scalar=True)
+        return self._from_call(F.sum, "sum", returns_scalar=True)
 
     def std(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -322,12 +301,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self,
         lower_bound: Any,
         upper_bound: Any,
-        closed: str = "both",
+        closed: str,
     ) -> Self:
         def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
             if closed == "both":
                 return (_input >= lower_bound) & (_input <= upper_bound)
-            if closed == "neither":
+            if closed == "none":
                 return (_input > lower_bound) & (_input < upper_bound)
             if closed == "left":
                 return (_input >= lower_bound) & (_input < upper_bound)
@@ -380,16 +359,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def is_nan(self) -> Self:
-        def _is_nan(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            # Need to handle both NaN and NULL values
-            return F.when(
-                F.isnan(_input) | F.isnull(_input),
-                F.lit(1),
-            ).otherwise(F.lit(0))
-
-        return self._from_call(_is_nan, "is_nan", returns_scalar=self._returns_scalar)
+        return self._from_call(F.isnan, "is_nan", returns_scalar=self._returns_scalar)
 
     def is_unique(self) -> Self:
         def _is_unique(_input: Column) -> Column:
@@ -406,17 +378,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _len(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            return F.count(_input)
+            # Use count(*) to count all rows including nulls
+            return F.count("*")
 
         return self._from_call(_len, "len", returns_scalar=True)
 
     def n_unique(self) -> Self:
-        def _n_unique(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.countDistinct(_input)
-
-        return self._from_call(_n_unique, "n_unique", returns_scalar=True)
+        return self._from_call(F.countDistinct, "n_unique", returns_scalar=True)
 
     def round(self, decimals: int) -> Self:
         def _round(_input: Column, decimals: int) -> Column:
@@ -432,9 +402,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def skew(self) -> Self:
-        def _skew(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.skewness(_input)
-
-        return self._from_call(_skew, "skew", returns_scalar=True)
+        return self._from_call(F.skewness, "skew", returns_scalar=True)

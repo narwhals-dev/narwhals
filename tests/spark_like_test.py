@@ -957,15 +957,18 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# Copied from tests/expr_and_series/median_test.py
 @pytest.mark.xfail(
     sys.version_info < (3, 9),
     reason="median() not supported on Python 3.8",
 )
 def test_median(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2, None, float("nan")]}
+    data = {"a": [3, 8, 2, None], "b": [5, 5, None, 7], "z": [7.0, 8, 9, None]}
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(median=nw.col("a").median())
-    expected = {"median": [2.0]}
+    result = df.select(
+        a=nw.col("a").median(), b=nw.col("b").median(), z=nw.col("z").median()
+    )
+    expected = {"a": [3.0], "b": [5.0], "z": [8.0]}
     assert_equal_data(result, expected)
 
 
@@ -985,29 +988,40 @@ def test_clip(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_between(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2, 5, 4]}
+# copied from tests/expr_and_series/is_between_test.py
+@pytest.mark.parametrize(
+    ("closed", "expected"),
+    [
+        ("left", [True, True, True, False]),
+        ("right", [False, True, True, True]),
+        ("both", [True, True, True, True]),
+        ("none", [False, True, True, False]),
+    ],
+)
+def test_is_between(
+    pyspark_constructor: Constructor, closed: str, expected: list[bool]
+) -> None:
+    data = {"a": [1, 4, 2, 5]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.col("a").is_between(1, 5, closed=closed))
+    expected_dict = {"a": expected}
+    assert_equal_data(result, expected_dict)
+
+
+# copied from tests/expr_and_series/is_duplicated_test.py
+def test_is_duplicated(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2], "b": [1, 2, 3], "level_0": [0, 1, 2]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(
-        both=nw.col("a").is_between(2, 4, closed="both"),
-        neither=nw.col("a").is_between(2, 4, closed="neither"),
-        left=nw.col("a").is_between(2, 4, closed="left"),
-        right=nw.col("a").is_between(2, 4, closed="right"),
-    )
+        a=nw.col("a").is_duplicated(),
+        b=nw.col("b").is_duplicated(),
+        level_0=nw.col("level_0"),
+    ).sort("level_0")
     expected = {
-        "both": [False, True, True, False, True],
-        "neither": [False, True, False, False, False],
-        "left": [False, True, True, False, False],
-        "right": [False, True, False, False, True],
+        "a": [True, True, False],
+        "b": [False, False, False],
+        "level_0": [0, 1, 2],
     }
-    assert_equal_data(result, expected)
-
-
-def test_is_duplicated(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 2, 2, 3, 4, 4]}
-    df = nw.from_native(pyspark_constructor(data))
-    result = df.select(duplicated=nw.col("a").is_duplicated())
-    expected = {"duplicated": [False, True, True, False, True, True]}
     assert_equal_data(result, expected)
 
 
@@ -1015,15 +1029,16 @@ def test_is_nan(pyspark_constructor: Constructor) -> None:
     data = {"a": [1.0, float("nan"), 2.0, None, 3.0]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nan=nw.col("a").is_nan())
-    expected = {"nan": [False, True, False, True, False]}
+    expected = {"nan": [False, False, False, False, False]}
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/is_finite_test.py
 def test_is_finite(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1.0, float("inf"), float("-inf"), None, 2.0]}
+    data = {"a": [float("nan"), float("inf"), 2.0, None]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(finite=nw.col("a").is_finite())
-    expected = {"finite": [True, False, False, False, True]}
+    expected = {"finite": [False, False, True, False]}
     assert_equal_data(result, expected)
 
 
@@ -1035,27 +1050,50 @@ def test_is_in(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/is_unique_test.py
 def test_is_unique(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 2, 2, 3, 4, 4]}
+    data = {
+        "a": [1, 1, 2],
+        "b": [1, 2, 3],
+        "level_0": [0, 1, 2],
+    }
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(unique=nw.col("a").is_unique())
-    expected = {"unique": [True, False, False, True, False, False]}
+    result = df.select(
+        a=nw.col("a").is_unique(),
+        b=nw.col("b").is_unique(),
+        level_0=nw.col("level_0"),
+    ).sort("level_0")
+    expected = {
+        "a": [False, False, True],
+        "b": [True, True, True],
+        "level_0": [0, 1, 2],
+    }
     assert_equal_data(result, expected)
 
 
 def test_len(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 2, 3, 4, 5]}
+    data = {"a": [1, 2, float("nan"), 4, None], "b": [None, 3, None, 5, None]}
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(length=nw.col("a").len())
-    expected = {"length": [5]}
+    result = df.select(
+        a=nw.col("a").len(),
+        b=nw.col("b").len(),
+    )
+    expected = {"a": [5], "b": [5]}
     assert_equal_data(result, expected)
 
 
+# copied from tests/expr_and_series/n_unique_test.py
 def test_n_unique(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 2, 2, 3, 4, 4]}
+    data = {
+        "a": [1.0, None, None, 3.0],
+        "b": [1.0, None, 4, 5.0],
+    }
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(n_unique=nw.col("a").n_unique())
-    expected = {"n_unique": [4]}
+    result = df.select(
+        a=nw.col("a").n_unique(),
+        b=nw.col("b").n_unique(),
+    )
+    expected = {"a": [2], "b": [3]}
     assert_equal_data(result, expected)
 
 
@@ -1070,9 +1108,26 @@ def test_round(pyspark_constructor: Constructor, decimals: int) -> None:
     assert_equal_data(result_frame, expected_data)
 
 
-def test_skew(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 2, 3, 2, 1]}
-    df = nw.from_native(pyspark_constructor(data))
+# copied from tests/expr_and_series/skew_test.py
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        pytest.param(
+            [],
+            None,
+            marks=pytest.mark.skip(
+                reason="PySpark cannot infer schema from empty datasets"
+            ),
+        ),
+        ([1], None),
+        ([1, 2], 0.0),
+        ([0.0, 0.0, 0.0], None),
+        ([1, 2, 3, 2, 1], 0.343622),
+    ],
+)
+def test_skew(
+    pyspark_constructor: Constructor, data: list[float], expected: float | None
+) -> None:
+    df = nw.from_native(pyspark_constructor({"a": data}))
     result = df.select(skew=nw.col("a").skew())
-    expected = {"skew": [0.343622]}
-    assert_equal_data(result, expected)
+    assert_equal_data(result, {"skew": [expected]})
