@@ -77,7 +77,11 @@ class DuckDBLazyFrame:
         )
 
     def collect(self) -> Any:
-        import pyarrow as pa  # ignore-banned-import()
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDcollect `LazyFrame` backed by DuckDB"
+            raise ModuleNotFoundError(msg) from exc
 
         from narwhals._arrow.dataframe import ArrowDataFrame
 
