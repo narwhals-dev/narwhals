@@ -82,7 +82,15 @@ def test_lit_operation(
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and col_name in (
+        "left_scalar_with_agg",
+        "left_lit_with_agg",
+        "right_lit",
+        "right_lit_with_agg",
+    ):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

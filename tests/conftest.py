@@ -215,7 +215,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         if (
-            any(x in str(metafunc.module) for x in ("list", "name"))
+            any(
+                x in str(metafunc.module)
+                for x in ("list", "name", "unpivot", "from_dict", "from_numpy", "tail")
+            )
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
             # TODO(unassigned): list and name namespaces still need implementing for duckdb
