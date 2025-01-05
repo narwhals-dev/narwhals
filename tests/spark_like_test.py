@@ -6,7 +6,6 @@ Once we're a bit further along, we can integrate PySpark tests into the main tes
 
 from __future__ import annotations
 
-import sys
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
@@ -958,10 +957,6 @@ def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
 
 
 # Copied from tests/expr_and_series/median_test.py
-@pytest.mark.xfail(
-    sys.version_info < (3, 9),
-    reason="median() not supported on Python 3.8",
-)
 def test_median(pyspark_constructor: Constructor) -> None:
     data = {"a": [3, 8, 2, None], "b": [5, 5, None, 7], "z": [7.0, 8, 9, None]}
     df = nw.from_native(pyspark_constructor(data))

@@ -155,7 +155,11 @@ class Implementation(Enum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+        return self in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }
 
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
@@ -1054,3 +1058,10 @@ def generate_repr(header: str, native_repr: str) -> str:
         "| Use `.to_native` to see native output |\n└"
         f"{'─' * 39}┘"
     )
+
+
+def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
+    try:
+        return parse_version(__import__(module_name).__version__)
+    except ImportError:
+        return (0, 0, 0)
