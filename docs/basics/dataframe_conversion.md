@@ -66,8 +66,9 @@ If you need to ingest the same dataframe multiple times, then you may want to go
 This may be less efficient than the PyCapsule approach above (and always requires PyArrow!), but is more forgiving:
 
 ```python exec="1" source="above" session="conversion" result="python"
-def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
-    return pl.DataFrame(nw.from_native(df).to_arrow())
+def df_to_polars(df_native: IntoDataFrame) -> pl.DataFrame:
+    df = nw.from_native(df_native).lazy().collect()
+    return pl.DataFrame(nw.from_native(df, eager_only=True).to_arrow())
 
 
 df_duckdb = duckdb.sql("SELECT * FROM df_polars")
