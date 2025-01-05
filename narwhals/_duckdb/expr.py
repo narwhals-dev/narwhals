@@ -9,6 +9,7 @@ from typing import Literal
 from typing import NoReturn
 from typing import Sequence
 
+from narwhals._duckdb.utils import binary_operation_returns_scalar
 from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import narwhals_to_native_dtype
@@ -106,6 +107,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 input_col_name = get_column_name(
                     df, _input, returns_scalar=self._returns_scalar
                 )
+                if self._returns_scalar:
+                    # TODO(marco): once WindowExpression is supported, then
+                    # we may need to call it with `over(1)` here,
+                    # depending on the context?
+                    pass
 
                 column_result = call(_input, **_kwargs)
                 column_result = column_result.alias(input_col_name)
@@ -148,7 +154,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             function_name=f"{self._function_name}->{expr_name}",
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=self._returns_scalar or returns_scalar,
+            returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
             kwargs=kwargs,
@@ -159,7 +165,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input & other,
             "__and__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __or__(self, other: DuckDBExpr) -> Self:
@@ -167,7 +173,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input | other,
             "__or__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __add__(self, other: DuckDBExpr) -> Self:
@@ -175,7 +181,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input + other,
             "__add__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __truediv__(self, other: DuckDBExpr) -> Self:
@@ -183,7 +189,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input / other,
             "__truediv__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __floordiv__(self, other: DuckDBExpr) -> Self:
@@ -191,7 +197,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __mod__(self, other: DuckDBExpr) -> Self:
@@ -199,7 +205,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input.__mod__(other),
             "__mod__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __sub__(self, other: DuckDBExpr) -> Self:
@@ -207,7 +213,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input - other,
             "__sub__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __mul__(self, other: DuckDBExpr) -> Self:
@@ -215,7 +221,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input * other,
             "__mul__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __pow__(self, other: DuckDBExpr) -> Self:
@@ -223,7 +229,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input**other,
             "__pow__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __lt__(self, other: DuckDBExpr) -> Self:
@@ -231,7 +237,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input < other,
             "__lt__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __gt__(self, other: DuckDBExpr) -> Self:
@@ -239,7 +245,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input > other,
             "__gt__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __le__(self, other: DuckDBExpr) -> Self:
@@ -247,7 +253,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input <= other,
             "__le__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ge__(self, other: DuckDBExpr) -> Self:
@@ -255,7 +261,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input >= other,
             "__ge__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __eq__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
@@ -263,7 +269,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input == other,
             "__eq__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ne__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
@@ -271,14 +277,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input != other,
             "__ne__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __invert__(self) -> Self:
         return self._from_call(
             lambda _input: ~_input,
             "__invert__",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def alias(self, name: str) -> Self:
@@ -305,7 +311,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("abs", _input),
             "abs",
-            returns_scalar=False,
+            returns_scalar=True,
         )
 
     def mean(self) -> Self:
@@ -361,7 +367,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             func,
             "clip",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def is_between(
@@ -386,7 +392,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             "is_between",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def sum(self) -> Self:
@@ -461,7 +467,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: _input.isnull(),
             "is_null",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def is_in(self, other: Sequence[Any]) -> Self:
@@ -474,7 +480,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 _input.isin(ConstantExpression(other[0])),
             ),
             "is_in",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def round(self, decimals: int) -> Self:
@@ -486,7 +492,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 "round", _input, ConstantExpression(decimals)
             ),
             "round",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
@@ -496,7 +502,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: CoalesceOperator(_input, ConstantExpression(value)),
             "fill_null",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def cast(
@@ -511,7 +517,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             func,
             "cast",
             dtype=dtype,
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     @property
@@ -536,7 +542,7 @@ class DuckDBExprStringNamespace:
                 "starts_with", _input, ConstantExpression(prefix)
             ),
             "starts_with",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def ends_with(self, suffix: str) -> DuckDBExpr:
@@ -548,7 +554,7 @@ class DuckDBExprStringNamespace:
                 "ends_with", _input, ConstantExpression(suffix)
             ),
             "ends_with",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
@@ -565,7 +571,7 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             func,
             "contains",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def slice(self, offset: int, length: int) -> DuckDBExpr:
@@ -587,7 +593,7 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             func,
             "slice",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def to_lowercase(self) -> DuckDBExpr:
@@ -596,7 +602,7 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("lower", _input),
             "to_lowercase",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def to_uppercase(self) -> DuckDBExpr:
@@ -605,7 +611,7 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("upper", _input),
             "to_uppercase",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
@@ -623,7 +629,7 @@ class DuckDBExprStringNamespace:
                 ),
             ),
             "strip_chars",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def replace_all(
@@ -643,7 +649,7 @@ class DuckDBExprStringNamespace:
                 ConstantExpression(value),
             ),
             "replace_all",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> NoReturn:
@@ -661,7 +667,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("year", _input),
             "year",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def month(self) -> DuckDBExpr:
@@ -670,7 +676,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("month", _input),
             "month",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def day(self) -> DuckDBExpr:
@@ -679,7 +685,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("day", _input),
             "day",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def hour(self) -> DuckDBExpr:
@@ -688,7 +694,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("hour", _input),
             "hour",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def minute(self) -> DuckDBExpr:
@@ -697,7 +703,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("minute", _input),
             "minute",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def second(self) -> DuckDBExpr:
@@ -706,7 +712,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("second", _input),
             "second",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def millisecond(self) -> DuckDBExpr:
@@ -716,7 +722,7 @@ class DuckDBExprDateTimeNamespace:
             lambda _input: FunctionExpression("millisecond", _input)
             - FunctionExpression("second", _input) * 1_000,
             "millisecond",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def microsecond(self) -> DuckDBExpr:
@@ -726,7 +732,7 @@ class DuckDBExprDateTimeNamespace:
             lambda _input: FunctionExpression("microsecond", _input)
             - FunctionExpression("second", _input) * 1_000_000,
             "microsecond",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def nanosecond(self) -> DuckDBExpr:
@@ -736,5 +742,5 @@ class DuckDBExprDateTimeNamespace:
             lambda _input: FunctionExpression("nanosecond", _input)
             - FunctionExpression("second", _input) * 1_000_000_000,
             "nanosecond",
-            returns_scalar=False,
+            returns_scalar=self._compliant_expr._returns_scalar,
         )

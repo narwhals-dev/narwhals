@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import duckdb
 
     from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.utils import Version
 
@@ -203,3 +204,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def binary_operation_returns_scalar(lhs: DuckDBExpr, rhs: DuckDBExpr | Any) -> bool:
+    # If `rhs` is a DuckDBExpr, we look at `_returns_scalar`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
+    # to `True`.
+    return lhs._returns_scalar and getattr(rhs, "_returns_scalar", True)
