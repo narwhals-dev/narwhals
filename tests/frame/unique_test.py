@@ -8,6 +8,7 @@ import pytest
 # We use nw instead of nw.stable.v1 to ensure that DuckDBPyRelation
 # becomes LazyFrame instead of DataFrame
 import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -33,7 +34,7 @@ def test_unique(
 ) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    if (isinstance(df, nw.LazyFrame) or nw.get_level(df) == "interchange") and keep in {
+    if isinstance(df, nw.LazyFrame) and keep in {
         "first",
         "last",
     }:
@@ -46,6 +47,13 @@ def test_unique(
     with context:
         result = df.unique(subset, keep=keep).sort("z")  # type: ignore[arg-type]
         assert_equal_data(result, expected)
+
+
+def test_unique_invalid_subset(constructor: Constructor) -> None:
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+    with pytest.raises(ColumnNotFoundError):
+        df.lazy().unique(["fdssfad"]).collect()
 
 
 @pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")
