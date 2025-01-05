@@ -709,8 +709,13 @@ def _from_native_impl(  # noqa: PLR0915
             else:
                 return native_object
             raise TypeError(msg)
+        import duckdb  # ignore-banned-import
+
+        backend_version = parse_version(duckdb.__version__)
         return DataFrame(
-            DuckDBInterchangeFrame(native_object, version=version),
+            DuckDBInterchangeFrame(
+                native_object, version=version, backend_version=backend_version
+            ),
             level="interchange",
         )
 
@@ -726,8 +731,13 @@ def _from_native_impl(  # noqa: PLR0915
                 )
                 raise TypeError(msg)
             return native_object
+        import ibis  # ignore-banned-import
+
+        backend_version = parse_version(ibis.__version__)
         return DataFrame(
-            IbisInterchangeFrame(native_object, version=version),
+            IbisInterchangeFrame(
+                native_object, version=version, backend_version=backend_version
+            ),
             level="interchange",
         )
 

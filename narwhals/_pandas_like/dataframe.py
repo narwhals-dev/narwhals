@@ -27,6 +27,7 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import scale_bytes
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -59,6 +60,7 @@ class PandasLikeDataFrame:
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_dataframe__(self) -> Self:
         return self

@@ -21,15 +21,16 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=24.10.0"]
-modin = ["modin"]
+# these should be aligned with MIN_VERSIONS in narwhals/utils.py
 pandas = ["pandas>=0.25.3"]
-polars = ["polars>=0.20.3"]
-ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+modin = ["modin>=0.25.3"]
+cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
+pyspark = ["pyspark>=3.3.0"]
+polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.10"]
 duckdb = ["duckdb>=1.0"]
-pyspark = ["pyspark>=3.3.0"]
+ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 dev = [
   "covdefaults",
   "pre-commit",

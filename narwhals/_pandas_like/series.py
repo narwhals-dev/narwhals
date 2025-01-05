@@ -24,6 +24,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -94,6 +95,7 @@ class PandasLikeSeries(CompliantSeries):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {

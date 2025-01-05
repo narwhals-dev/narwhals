@@ -11,11 +11,13 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -29,7 +31,6 @@ if TYPE_CHECKING:
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-from narwhals.typing import CompliantLazyFrame
 
 
 class DaskLazyFrame(CompliantLazyFrame):
@@ -44,6 +45,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
