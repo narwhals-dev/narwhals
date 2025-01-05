@@ -170,7 +170,7 @@ class DuckDBLazyFrame:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
     def to_pandas(self: Self) -> pd.DataFrame:
-        # only is version if v1, keep around for backcompat
+        # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd.__version__) >= parse_version("1.0.0"):
@@ -180,7 +180,7 @@ class DuckDBLazyFrame:
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
-        # only is version if v1, keep around for backcompat
+        # only if version is v1, keep around for backcompat
         return self._native_frame.arrow()
 
     def _change_version(self: Self, version: Version) -> Self:
@@ -228,13 +228,14 @@ class DuckDBLazyFrame:
         if how not in ("inner", "left"):
             msg = "Only inner and left join is implemented for DuckDB"
             raise NotImplementedError(msg)
+
+        # help mypy
         assert left_on is not None  # noqa: S101
         assert right_on is not None  # noqa: S101
-        conditions = []
-        lhs = []
-        for left, right in zip(left_on, right_on):
-            conditions.append(f"lhs.{left} = rhs.{right}")
-            lhs.append(left)
+
+        conditions = [
+            f"lhs.{left} = rhs.{right}" for left, right in zip(left_on, right_on)
+        ]
         original_alias = self._native_frame.alias
         condition = " and ".join(conditions)
         rel = self._native_frame.set_alias("lhs").join(
