@@ -704,15 +704,28 @@ def _from_native_impl(  # noqa: PLR0915
             if not pass_through:
                 msg = (
                     "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with DuckDB Relation"
+                    "with DuckDBPyRelation"
                 )
             else:
                 return native_object
             raise TypeError(msg)
-        return DataFrame(
-            DuckDBLazyFrame(native_object, version=version),
-            level="interchange",
-        )
+        import duckdb  # ignore-banned-import
+
+        backend_version = parse_version(duckdb.__version__)
+        if version is Version.V1:
+            return DataFrame(
+                DuckDBLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="interchange",
+            )
+        else:
+            return LazyFrame(
+                DuckDBLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="full",
+            )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover

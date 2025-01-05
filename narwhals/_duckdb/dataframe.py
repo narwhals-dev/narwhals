@@ -11,6 +11,7 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
@@ -33,10 +34,18 @@ if TYPE_CHECKING:
 
 
 class DuckDBLazyFrame:
-    def __init__(self, df: duckdb.DuckDBPyRelation, version: Version) -> None:
+    _implementation = Implementation.DUCKDB
+
+    def __init__(
+        self,
+        df: duckdb.DuckDBPyRelation,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
+    ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
-        self._backend_version = (0, 0, 0)
+        self._backend_version = backend_version
 
     # This one is a historical mistake.
     # Keep around for backcompat, but remove in stable.v2
@@ -168,10 +177,14 @@ class DuckDBLazyFrame:
         return self._native_frame.arrow()
 
     def _change_version(self: Self, version: Version) -> Self:
-        return self.__class__(self._native_frame, version=version)
+        return self.__class__(
+            self._native_frame, version=version, backend_version=self._backend_version
+        )
 
     def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(df, version=self._version)
+        return self.__class__(
+            df, backend_version=self._backend_version, version=self._version
+        )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
