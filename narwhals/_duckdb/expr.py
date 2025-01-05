@@ -323,6 +323,33 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def median(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("median", _input),
+            "median",
+            returns_scalar=True,
+        )
+
+    def all(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("bool_and", _input),
+            "all",
+            returns_scalar=True,
+        )
+
+    def any(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("bool_or", _input),
+            "any",
+            returns_scalar=True,
+        )
+
     def quantile(
         self,
         quantile: float,
@@ -410,18 +437,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("count", _input),
             "count",
-            returns_scalar=True,
-        )
-
-    def n_unique(self) -> Self:
-        from duckdb import FunctionExpression
-
-        return self._from_call(
-            lambda _input: FunctionExpression(
-                "array_unique",
-                FunctionExpression("array_agg", _input),
-            ),
-            "n_unique",
             returns_scalar=True,
         )
 

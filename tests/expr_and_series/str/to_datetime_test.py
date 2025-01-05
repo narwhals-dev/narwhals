@@ -80,6 +80,8 @@ def test_to_datetime_infer_fmt(
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = expected_cudf
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
         .lazy()

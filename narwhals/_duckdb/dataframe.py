@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -131,24 +132,14 @@ class DuckDBInterchangeFrame:
             result.append(value.alias(col))
         return self._from_native_frame(self._native_frame.select(*result))
 
-    def filter(self, *predicates: DuckDBExpr) -> Self:
-        from narwhals._duckdb.namespace import DuckDBNamespace
-
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
-            msg = "`LazyFrame.filter` is not supported for DuckDB backend with boolean masks."
-            raise NotImplementedError(msg)
-        plx = DuckDBNamespace(
-            backend_version=self._backend_version, version=self._version
+    def filter(self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
+        plx = self.__narwhals_namespace__()
+        expr = plx.all_horizontal(
+            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
         )
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        condition = expr._call(self)[0]
-        native_frame = self._native_frame.filter(condition)
-        return self._from_native_frame(native_frame)
+        # `[0]` is safe as all_horizontal's expression only returns a single column
+        mask = expr._call(self)[0]
+        return self._from_native_frame(self._native_frame.filter(mask))
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
