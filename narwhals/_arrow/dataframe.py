@@ -23,6 +23,7 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import scale_bytes
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -57,6 +58,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace

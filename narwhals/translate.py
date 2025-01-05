@@ -719,13 +719,12 @@ def _from_native_impl(  # noqa: PLR0915
                 ),
                 level="interchange",
             )
-        else:
-            return LazyFrame(
-                DuckDBLazyFrame(
-                    native_object, backend_version=backend_version, version=version
-                ),
-                level="full",
-            )
+        return LazyFrame(
+            DuckDBLazyFrame(
+                native_object, backend_version=backend_version, version=version
+            ),
+            level="full",
+        )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
@@ -739,8 +738,13 @@ def _from_native_impl(  # noqa: PLR0915
                 )
                 raise TypeError(msg)
             return native_object
+        import ibis  # ignore-banned-import
+
+        backend_version = parse_version(ibis.__version__)
         return DataFrame(
-            IbisInterchangeFrame(native_object, version=version),
+            IbisInterchangeFrame(
+                native_object, version=version, backend_version=backend_version
+            ),
             level="interchange",
         )
 

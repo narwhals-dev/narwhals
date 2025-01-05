@@ -17,6 +17,7 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -46,6 +47,7 @@ class DuckDBLazyFrame:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = backend_version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_dataframe__(self) -> Any:  # pragma: no cover
         # Keep around for backcompat.

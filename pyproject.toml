@@ -21,15 +21,21 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=24.10.0"]
-modin = ["modin"]
+# These should be aligned with MIN_VERSIONS in narwhals/utils.py
+# Exception: modin, because `modin.__version__` isn't aligned with
+# `modin.pandas.__version__`. The latter is the one that we make
+# API decisions based on, so that's the one we track internally.
+# We have yet to determine the minimum Modin version we support
+# https://github.com/narwhals-dev/narwhals/issues/817 
 pandas = ["pandas>=0.25.3"]
-polars = ["polars>=0.20.3"]
-ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+modin = ["modin"]
+cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
+pyspark = ["pyspark>=3.3.0"]
+polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.10"]
 duckdb = ["duckdb>=1.0"]
-pyspark = ["pyspark>=3.3.0"]
+ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 dev = [
   "covdefaults",
   "pre-commit",
