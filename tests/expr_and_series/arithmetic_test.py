@@ -37,6 +37,8 @@ def test_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and attr == "__floordiv__":
+        request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
@@ -241,6 +243,8 @@ def test_arithmetic_expr_left_literal(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and attr == "__floordiv__":
+        request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):

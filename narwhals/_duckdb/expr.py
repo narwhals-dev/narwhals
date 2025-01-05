@@ -413,6 +413,18 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
+    def n_unique(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression(
+                "array_unique",
+                FunctionExpression("array_agg", _input),
+            ),
+            "n_unique",
+            returns_scalar=True,
+        )
+
     def std(self, ddof: int) -> Self:
         from duckdb import FunctionExpression
 
