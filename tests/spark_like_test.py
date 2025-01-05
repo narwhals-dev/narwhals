@@ -24,6 +24,21 @@ if TYPE_CHECKING:
     from tests.utils import Constructor
 
 
+# Apply filterwarnings to all tests in this module
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning"
+    ),
+    pytest.mark.filterwarnings("ignore: unclosed <socket.socket"),
+    pytest.mark.filterwarnings(
+        "ignore: The distutils package is deprecated and slated for removal in Python 3.12."
+    ),
+]
+
+
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
     # NaN and NULL are not the same in PySpark
     pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
