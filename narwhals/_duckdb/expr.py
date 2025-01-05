@@ -387,10 +387,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         def func(
             _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
-            if lower_bound is None:
-                return FunctionExpression("least", _input, upper_bound)
-            elif upper_bound is None:
-                return FunctionExpression("greatest", _input, lower_bound)
             return FunctionExpression(
                 "greatest",
                 FunctionExpression("least", _input, upper_bound),
