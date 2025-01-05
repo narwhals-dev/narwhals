@@ -82,10 +82,7 @@ def test_lit_operation(
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "dask_lazy_p2" in str(constructor) and "lit_with_agg" in col_name:
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

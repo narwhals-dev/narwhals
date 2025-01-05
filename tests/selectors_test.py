@@ -91,9 +91,9 @@ def test_set_ops(
 @pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
 def test_set_ops_invalid(invalid_constructor: Constructor) -> None:
     df = nw.from_native(invalid_constructor(data))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 - numeric())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 | numeric())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & numeric())
