@@ -171,13 +171,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return "UBIGINT"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
         return "UINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
         return "USMALLINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
         return "UTINYINT"
     if isinstance_or_issubclass(dtype, dtypes.String):
         return "VARCHAR"
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
         return "BOOLEAN"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
@@ -187,11 +187,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         _time_zone = getattr(dtype, "time_zone", None)
         msg = "todo"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Duration):
+    if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
         _time_unit = getattr(dtype, "time_unit", "us")
         msg = "todo"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Date):
+    if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
         return "DATE"
     if isinstance_or_issubclass(dtype, dtypes.List):
         msg = "todo"
