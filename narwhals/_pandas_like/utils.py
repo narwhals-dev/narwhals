@@ -637,6 +637,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             else f"timedelta64[{du_time_unit}]"
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError:  # pragma: no cover
+            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
