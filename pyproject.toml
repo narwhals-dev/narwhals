@@ -152,6 +152,7 @@ filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
+  'ignore:.*You are using pyarrow version',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
