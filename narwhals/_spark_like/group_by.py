@@ -162,6 +162,6 @@ def agg_pyspark(
         result_simple = grouped.agg(*agg_columns)
     except ValueError as exc:  # pragma: no cover
         msg = "Failed to aggregated - does your aggregation function return a scalar? \
-        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/"
+        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
         raise RuntimeError(msg) from exc
     return from_dataframe(result_simple)
