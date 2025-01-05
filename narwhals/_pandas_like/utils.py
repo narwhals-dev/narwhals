@@ -637,10 +637,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             else f"timedelta64[{du_time_unit}]"
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
-        if dtype_backend == "pyarrow-nullable":
-            return "date32[pyarrow]"
-        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
-        raise NotImplementedError(msg)
+        return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)

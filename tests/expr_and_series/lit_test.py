@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -89,3 +90,9 @@ def test_lit_operation(
     result = df.select(expr.alias(col_name))
     expected = {col_name: expected_result}
     assert_equal_data(result, expected)
+
+
+def test_date_lit(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1]}))
+    result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
+    assert result == {"a": nw.Int64, "literal": nw.Date}
