@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import overload
 
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
@@ -27,10 +28,13 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
 
@@ -76,20 +80,67 @@ class DuckDBLazyFrame:
             self._native_frame.select(item), version=self._version
         )
 
-    def collect(self) -> Any:
-        try:
-            import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDcollect `LazyFrame` backed by DuckDB"
-            raise ModuleNotFoundError(msg) from exc
+    @overload
+    def collect(self, return_type: Literal["pyarrow"] = "pyarrow") -> ArrowDataFrame: ...
 
-        from narwhals._arrow.dataframe import ArrowDataFrame
+    @overload
+    def collect(self, return_type: Literal["pandas"]) -> PandasLikeDataFrame: ...
 
-        return ArrowDataFrame(
-            native_dataframe=self._native_frame.arrow(),
-            backend_version=parse_version(pa.__version__),
-            version=self._version,
-        )
+    @overload
+    def collect(self, return_type: Literal["polars"]) -> PolarsDataFrame: ...
+
+    def collect(
+        self,
+        return_type: Literal["pyarrow", "pandas", "polars"] = "pyarrow",
+    ) -> ArrowDataFrame | PandasLikeDataFrame | PolarsDataFrame:
+        if return_type == "pyarrow":
+            try:
+                import pyarrow as pa  # ignore-banned-import
+            except ModuleNotFoundError as exc:  # pragma: no cover
+                msg = (
+                    "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDB"
+                )
+                raise ModuleNotFoundError(msg) from exc
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame.arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        elif return_type == "pandas":
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+            from narwhals.utils import Implementation
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.df(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        elif return_type == "polars":
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+            from narwhals.utils import Implementation
+
+            return PolarsDataFrame(
+                df=self._native_frame.pl(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        else:
+            msg = (
+                "Only the following `return_type`'s are supported: pyarrow, pandas and "
+                f"polars. Found '{return_type}'."
+            )
+            raise ValueError(msg)
 
     def head(self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))

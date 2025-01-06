@@ -3615,6 +3615,7 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         polars_kwargs: dict[str, Any] | None = None,
         dask_kwargs: dict[str, Any] | None = None,
+        duckdb_kwargs: dict[str, str] | None = None,
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
@@ -3629,6 +3630,10 @@ class LazyFrame(BaseFrame[FrameT]):
             dask_kwargs: [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
                 arguments. Used only if the `LazyFrame` is backed by a `dask.dataframe.DataFrame`.
                 If not provided, it uses the dask default values.
+            duckdb_kwargs: Allows to specify in which eager backend to materialize a
+                DuckDBPyRelation backed LazyFrame. It is possible to choose among
+                `pyarrow`, `pandas` or `polars` by declaring
+                `duckdb_kwargs={"return_type": "<eager_backend>"}`.
 
         Returns:
             DataFrame
@@ -3744,6 +3749,8 @@ class LazyFrame(BaseFrame[FrameT]):
             kwargs = polars_kwargs
         elif self.implementation is Implementation.DASK and dask_kwargs is not None:
             kwargs = dask_kwargs
+        elif self.implementation is Implementation.DUCKDB and duckdb_kwargs is not None:
+            kwargs = duckdb_kwargs
         else:
             kwargs = {}
 
