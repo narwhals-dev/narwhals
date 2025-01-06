@@ -267,7 +267,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
-        new: Sequence[Any],
+        new: Sequence[Any] | None = None,
         default: Any | None = None,
         return_dtype: DType | None = None,
     ) -> Self:
