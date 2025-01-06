@@ -333,7 +333,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             from pyspark.sql import Window
             from pyspark.sql import functions as F  # noqa: N812
 
-            return F.count(_input).over(Window.partitionBy(_input)) > 1
+            # Create a window spec that treats each value separately
+            window = Window.partitionBy(
+                F.when(F.isnull(_input), F.lit("NULL"))
+                .when(F.isnan(_input), F.lit("NAN"))
+                .otherwise(_input)
+            )
+
+            # Count occurrences treating NULL and NaN as unique values
+            return F.count(F.lit(1)).over(window) > 1
 
         return self._from_call(
             _is_duplicated, "is_duplicated", returns_scalar=self._returns_scalar
@@ -366,17 +374,20 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def is_nan(self) -> Self:
-        from pyspark.sql import functions as F  # noqa: N812
-
-        return self._from_call(F.isnan, "is_nan", returns_scalar=self._returns_scalar)
-
     def is_unique(self) -> Self:
         def _is_unique(_input: Column) -> Column:
             from pyspark.sql import Window
             from pyspark.sql import functions as F  # noqa: N812
 
-            return F.count(_input).over(Window.partitionBy(_input)) == 1
+            # Create a window spec that treats each value separately
+            window = Window.partitionBy(
+                F.when(F.isnull(_input), F.lit("NULL"))
+                .when(F.isnan(_input), F.lit("NAN"))
+                .otherwise(_input)
+            )
+
+            # Count occurrences treating NULL and NaN as unique values
+            return F.count(F.lit(1)).over(window) == 1
 
         return self._from_call(
             _is_unique, "is_unique", returns_scalar=self._returns_scalar
@@ -392,9 +403,17 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(_len, "len", returns_scalar=True)
 
     def n_unique(self) -> Self:
-        from pyspark.sql import functions as F  # noqa: N812
+        def _n_unique(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
 
-        return self._from_call(F.countDistinct, "n_unique", returns_scalar=True)
+            expr = (
+                F.when(F.isnull(_input), F.lit("NULL"))
+                .when(F.isnan(_input), F.lit("NaN"))
+                .otherwise(_input)
+            )
+            return F.countDistinct(expr)
+
+        return self._from_call(_n_unique, "n_unique", returns_scalar=True)
 
     def round(self, decimals: int) -> Self:
         def _round(_input: Column, decimals: int) -> Column:

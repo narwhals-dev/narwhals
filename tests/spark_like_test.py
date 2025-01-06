@@ -1005,7 +1005,7 @@ def test_is_between(
 
 # copied from tests/expr_and_series/is_duplicated_test.py
 def test_is_duplicated(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2], "b": [1, 2, 3], "level_0": [0, 1, 2]}
+    data = {"a": [1, 1, 2, None], "b": [1, 2, None, None], "level_0": [0, 1, 2, 3]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(
         a=nw.col("a").is_duplicated(),
@@ -1013,18 +1013,10 @@ def test_is_duplicated(pyspark_constructor: Constructor) -> None:
         level_0=nw.col("level_0"),
     ).sort("level_0")
     expected = {
-        "a": [True, True, False],
-        "b": [False, False, False],
-        "level_0": [0, 1, 2],
+        "a": [True, True, False, False],
+        "b": [False, False, True, True],
+        "level_0": [0, 1, 2, 3],
     }
-    assert_equal_data(result, expected)
-
-
-def test_is_nan(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1.0, float("nan"), 2.0, None, 3.0]}
-    df = nw.from_native(pyspark_constructor(data))
-    result = df.select(nan=nw.col("a").is_nan())
-    expected = {"nan": [False, False, False, False, False]}
     assert_equal_data(result, expected)
 
 
@@ -1047,11 +1039,7 @@ def test_is_in(pyspark_constructor: Constructor) -> None:
 
 # copied from tests/expr_and_series/is_unique_test.py
 def test_is_unique(pyspark_constructor: Constructor) -> None:
-    data = {
-        "a": [1, 1, 2],
-        "b": [1, 2, 3],
-        "level_0": [0, 1, 2],
-    }
+    data = {"a": [1, 1, 2, None], "b": [1, 2, None, None], "level_0": [0, 1, 2, 3]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(
         a=nw.col("a").is_unique(),
@@ -1059,9 +1047,9 @@ def test_is_unique(pyspark_constructor: Constructor) -> None:
         level_0=nw.col("level_0"),
     ).sort("level_0")
     expected = {
-        "a": [False, False, True],
-        "b": [True, True, True],
-        "level_0": [0, 1, 2],
+        "a": [False, False, True, True],
+        "b": [True, True, False, False],
+        "level_0": [0, 1, 2, 3],
     }
     assert_equal_data(result, expected)
 
@@ -1088,7 +1076,7 @@ def test_n_unique(pyspark_constructor: Constructor) -> None:
         a=nw.col("a").n_unique(),
         b=nw.col("b").n_unique(),
     )
-    expected = {"a": [2], "b": [3]}
+    expected = {"a": [3], "b": [4]}
     assert_equal_data(result, expected)
 
 
