@@ -505,7 +505,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             1  b  11  10
             2  c   6   1
 
-            Now for whatever reason, let's suppose that we want to run lazily, yet without
+            Now, let's suppose that we want to run lazily, yet without
             query optimization (e.g. for debugging purpose). As this is achieved
             differently in polars and dask, to keep a unified workflow we can specify
             the native kwargs for each backend:
