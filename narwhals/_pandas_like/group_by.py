@@ -337,7 +337,7 @@ def agg_pandas(  # noqa: PLR0915
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
-        "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/",
+        "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/",
         UserWarning,
         stacklevel=find_stacklevel(),
     )
@@ -349,7 +349,7 @@ def agg_pandas(  # noqa: PLR0915
             results_keys = expr(from_dataframe(df))
             if not all(len(x) == 1 for x in results_keys):
                 msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar? \
-                \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/"
+                \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
 
                 raise ValueError(msg)
             for result_keys in results_keys:
