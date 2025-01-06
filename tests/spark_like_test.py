@@ -15,11 +15,13 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
+from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoFrame
     from tests.utils import Constructor
 
@@ -435,6 +437,77 @@ def test_null_count_expr(pyspark_constructor: Constructor) -> None:
         "b": [1],
     }
     assert_equal_data(result, expected)
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
+)
+@pytest.mark.parametrize("return_dtype", [nw.String(), None])
+def test_replace_strict(
+    pyspark_constructor: Constructor,
+    request: pytest.FixtureRequest,
+    return_dtype: DType | None,
+) -> None:
+    if "dask" in str(pyspark_constructor):  # QUESTION: remove?
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(pyspark_constructor({"a": [1, 2, 3]}))
+    result = df.select(
+        nw.col("a").replace_strict(
+            [1, 2, 3], ["one", "two", "three"], return_dtype=return_dtype
+        )
+    )
+    assert_equal_data(result, {"a": ["one", "two", "three"]})
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
+)
+def test_replace_non_full(
+    pyspark_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    from polars.exceptions import PolarsError
+
+    if "dask" in str(pyspark_constructor):  # QUESTION: remove?
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(pyspark_constructor({"a": [1, 2, 3]}))
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises((ValueError, PolarsError)):
+            df.select(
+                nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
+            ).collect()
+    else:
+        with pytest.raises((ValueError, PolarsError)):
+            df.select(nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64))
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
+)
+def test_replace_strict_mapping(
+    pyspark_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(pyspark_constructor):  # QUESTION: remove?
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(pyspark_constructor({"a": [1, 2, 3]}))
+    result = df.select(
+        nw.col("a").replace_strict(
+            {1: "one", 2: "two", 3: "three"}, return_dtype=nw.String()
+        )
+    )
+    assert_equal_data(result, {"a": ["one", "two", "three"]})
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
+)
+def test_replace_strict_invalid(pyspark_constructor: Constructor) -> None:
+    df = nw.from_native(pyspark_constructor({"a": [1, 2, 3]}))
+    with pytest.raises(
+        TypeError,
+        match="`new` argument is required if `old` argument is not a Mapping type",
+    ):
+        df.select(nw.col("a").replace_strict(old=[1, 2, 3]))
 
 
 # copied from tests/expr_and_series/min_test.py
