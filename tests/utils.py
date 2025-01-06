@@ -77,7 +77,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         if result.implementation is Implementation.POLARS and os.environ.get(
             "NARWHALS_POLARS_GPU", False
         ):  # pragma: no cover
-            result = result.to_native().collect(engine="gpu")
+            result.collect(polars_kwargs={"engine": "gpu"})
         else:
             result = result.collect()
 
