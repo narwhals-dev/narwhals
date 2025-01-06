@@ -288,7 +288,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("abs", _input),
             "abs",
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
 
     def mean(self) -> Self:
