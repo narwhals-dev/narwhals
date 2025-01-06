@@ -111,6 +111,10 @@ before making any change.
 
 ### After `stable.v1`
 
+
+- Since Narwhals 1.21, passing a `DuckDBPyRelation` to `from_native` returns a `LazyFrame`. In
+  `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
+
 - Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
   write:
   ```python

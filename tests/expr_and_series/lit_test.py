@@ -87,6 +87,13 @@ def test_lit_operation(
     expected_result: list[int],
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and col_name in (
+        "left_scalar_with_agg",
+        "left_lit_with_agg",
+        "right_lit",
+        "right_lit_with_agg",
+    ):
+        request.applymarker(pytest.mark.xfail)
     if (
         "dask" in str(constructor)
         and col_name in ("left_lit", "left_scalar")

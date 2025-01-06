@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -24,10 +26,27 @@ def test_var(constructor: Constructor, input_data: dict[str, list[float | None]]
     result = df.select(
         nw.col("a").var(ddof=1).alias("a_ddof_1"),
         nw.col("a").var(ddof=0).alias("a_ddof_0"),
-        nw.col("b").var(ddof=2).alias("b_ddof_2"),
         nw.col("z").var(ddof=0).alias("z_ddof_0"),
     )
+    expected_results = {
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.6666666666666666],
+        "z_ddof_0": [0.6666666666666666],
+    }
     assert_equal_data(result, expected_results)
+    context = (
+        pytest.raises(NotImplementedError)
+        if "duckdb" in str(constructor)
+        else does_not_raise()
+    )
+    with context:
+        result = df.select(
+            nw.col("b").var(ddof=2).alias("b_ddof_2"),
+        )
+        expected_results = {
+            "b_ddof_2": [2.666666666666667],
+        }
+        assert_equal_data(result, expected_results)
 
 
 @pytest.mark.parametrize("input_data", [data, data_with_nulls])
