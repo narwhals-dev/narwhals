@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -11,7 +13,9 @@ data = {
 }
 
 
-def test_n_unique(constructor: Constructor) -> None:
+def test_n_unique(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().n_unique())
     expected = {"a": [3], "b": [4]}

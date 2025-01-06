@@ -24,6 +24,8 @@ data_cum = {
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
@@ -39,6 +41,8 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 
 def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -56,6 +60,8 @@ def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor)
 def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     with pytest.raises(ValueError, match="Anonymous expressions"):
@@ -66,6 +72,8 @@ def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_cum))
@@ -84,6 +92,8 @@ def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_cum))
     expected = {
@@ -101,9 +111,11 @@ def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor)
 
 
 def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_cum))
     expected = {
@@ -120,8 +132,9 @@ def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_cum))
@@ -138,10 +151,11 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
 
 
 def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "duckdb")):
         request.applymarker(pytest.mark.xfail)
-
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_cum))
@@ -169,6 +183,8 @@ def test_over_shift(request: pytest.FixtureRequest, constructor: Constructor) ->
     if "pyarrow_table_constructor" in str(
         constructor
     ) or "dask_lazy_p2_constructor" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

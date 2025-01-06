@@ -11,6 +11,7 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -197,6 +198,9 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         keep: Literal["any", "none"] = "any",
     ) -> Self:
+        if subset is not None and any(x not in self.columns for x in subset):
+            msg = f"Column(s) {subset} not found in {self.columns}"
+            raise ColumnNotFoundError(msg)
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns

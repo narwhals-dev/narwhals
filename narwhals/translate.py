@@ -698,13 +698,13 @@ def _from_native_impl(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
-        from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+        from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
                 msg = (
                     "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with DuckDB Relation"
+                    "with DuckDBPyRelation"
                 )
             else:
                 return native_object
@@ -712,11 +712,18 @@ def _from_native_impl(  # noqa: PLR0915
         import duckdb  # ignore-banned-import
 
         backend_version = parse_version(duckdb.__version__)
-        return DataFrame(
-            DuckDBInterchangeFrame(
-                native_object, version=version, backend_version=backend_version
+        if version is Version.V1:
+            return DataFrame(
+                DuckDBLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="interchange",
+            )
+        return LazyFrame(
+            DuckDBLazyFrame(
+                native_object, backend_version=backend_version, version=version
             ),
-            level="interchange",
+            level="full",
         )
 
     # Ibis

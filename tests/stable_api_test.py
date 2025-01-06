@@ -13,7 +13,11 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_renamed_taxicab_norm(constructor: Constructor) -> None:
+def test_renamed_taxicab_norm(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
