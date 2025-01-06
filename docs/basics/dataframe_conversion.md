@@ -53,7 +53,9 @@ which implements `__arrow_c_stream__`:
 def df_to_polars(df_native: Any) -> pl.DataFrame:
     if hasattr(df_native, "__arrow_c_stream__"):
         return nw.from_arrow(df_native, native_namespace=pl).to_native()
-    msg = f"Expected object which implements '__arrow_c_stream__' got: {type(df)}"
+    msg = (
+        f"Expected object which implements '__arrow_c_stream__' got: {type(df_native)}"
+    )
     raise TypeError(msg)
 
 
