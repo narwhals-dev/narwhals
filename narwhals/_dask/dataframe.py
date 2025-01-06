@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -78,12 +79,12 @@ class DaskLazyFrame(CompliantLazyFrame):
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
-    def collect(self) -> Any:
+    def collect(self: Self, **kwargs: Any) -> PandasLikeDataFrame:
         import pandas as pd
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        result = self._native_frame.compute()
+        result = self._native_frame.compute(**kwargs)
         return PandasLikeDataFrame(
             result,
             implementation=Implementation.PANDAS,
