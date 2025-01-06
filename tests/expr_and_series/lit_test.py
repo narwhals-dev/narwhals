@@ -87,6 +87,13 @@ def test_lit_operation(
     expected_result: list[int],
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and col_name in (
+        "left_scalar_with_agg",
+        "left_lit_with_agg",
+        "right_lit",
+        "right_lit_with_agg",
+    ):
+        request.applymarker(pytest.mark.xfail)
     if (
         "dask" in str(constructor)
         and col_name in ("left_lit", "left_scalar")
@@ -108,4 +115,8 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1]}))
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
-    assert result == {"a": nw.Int64, "literal": nw.Date}
+    if df.implementation.is_cudf():
+        # cudf has no date dtype
+        assert result == {"a": nw.Int64, "literal": nw.Datetime}
+    else:
+        assert result == {"a": nw.Int64, "literal": nw.Date}

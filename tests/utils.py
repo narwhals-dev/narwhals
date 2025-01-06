@@ -11,6 +11,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -72,7 +73,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result.implementation is Implementation.PYSPARK
     )
-
+    is_duckdb = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.DUCKDB
+    )
+    if is_duckdb:
+        result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
         if result.implementation is Implementation.POLARS and os.environ.get(
             "NARWHALS_POLARS_GPU", False

@@ -17,7 +17,11 @@ def test_filter(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_filter_with_boolean_list(constructor: Constructor) -> None:
+def test_filter_with_boolean_list(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     context = (

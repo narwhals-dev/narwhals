@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.20.1"
+version = "1.21.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -116,6 +116,7 @@ lint.ignore = [
   "E501",
   "FIX",
   "ISC001",
+  "PD003",
   "PD010",
   "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
   "PLR0911",
@@ -187,6 +188,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation.is_cudf",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor'

@@ -37,9 +37,7 @@ expected_b_c = {
     [("b", expected_b_only), (["b", "c"], expected_b_c), (None, expected_b_c)],
 )
 def test_unpivot_on(
-    constructor: Constructor,
-    on: str | list[str] | None,
-    expected: dict[str, list[float]],
+    constructor: Constructor, on: str | list[str] | None, expected: dict[str, list[float]]
 ) -> None:
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=on, index=["a"]).sort("variable", "a")

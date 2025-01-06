@@ -10,7 +10,9 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_unary(constructor: Constructor) -> None:
+def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -77,7 +79,11 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_unary_two_elements(constructor: Constructor) -> None:
+def test_unary_two_elements(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
         a_nunique=nw.col("a").n_unique(),
@@ -120,7 +126,11 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_unary_one_element(constructor: Constructor) -> None:
+def test_unary_one_element(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
