@@ -187,6 +187,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation.is_cudf",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor'
