@@ -89,12 +89,7 @@ class PolarsExpr:
         return self._from_native_expr(self._native_expr.is_nan())
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_var` not implemented for polars older than 1.0"
@@ -110,12 +105,7 @@ class PolarsExpr:
         )
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_std` not implemented for polars older than 1.0"
@@ -131,9 +121,7 @@ class PolarsExpr:
         )
 
     def map_batches(
-        self,
-        function: Callable[..., Self],
-        return_dtype: DType | None,
+        self, function: Callable[..., Self], return_dtype: DType | None
     ) -> Self:
         if return_dtype is not None:
             return_dtype_pl = narwhals_to_native_dtype(return_dtype, self._version)

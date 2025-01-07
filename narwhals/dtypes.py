@@ -498,10 +498,7 @@ class Duration(TemporalType):
         Duration(time_unit='ms')
     """
 
-    def __init__(
-        self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
-    ) -> None:
+    def __init__(self: Self, time_unit: Literal["us", "ns", "ms", "s"] = "us") -> None:
         if time_unit not in ("s", "ms", "us", "ns"):
             msg = (
                 "invalid `time_unit`"

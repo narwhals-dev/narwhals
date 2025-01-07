@@ -43,14 +43,10 @@ class SparkLikeLazyGroupBy:
             self._grouped = self._df._native_frame.groupBy(*self._keys)
 
     def agg(
-        self,
-        *aggs: IntoSparkLikeExpr,
-        **named_aggs: IntoSparkLikeExpr,
+        self, *aggs: IntoSparkLikeExpr, **named_aggs: IntoSparkLikeExpr
     ) -> SparkLikeLazyFrame:
         exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
+            *aggs, namespace=self._df.__narwhals_namespace__(), **named_aggs
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
@@ -64,12 +60,7 @@ class SparkLikeLazyGroupBy:
 
             output_names.extend(expr._output_names)
 
-        return agg_pyspark(
-            self._grouped,
-            exprs,
-            self._keys,
-            self._from_native_frame,
-        )
+        return agg_pyspark(self._grouped, exprs, self._keys, self._from_native_frame)
 
     def _from_native_frame(self, df: SparkLikeLazyFrame) -> SparkLikeLazyFrame:
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame

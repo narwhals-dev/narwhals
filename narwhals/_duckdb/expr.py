@@ -259,9 +259,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
     def __invert__(self) -> Self:
         return self._from_call(
-            lambda _input: ~_input,
-            "__invert__",
-            returns_scalar=self._returns_scalar,
+            lambda _input: ~_input, "__invert__", returns_scalar=self._returns_scalar
         )
 
     def alias(self, name: str) -> Self:
@@ -295,9 +293,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("mean", _input),
-            "mean",
-            returns_scalar=True,
+            lambda _input: FunctionExpression("mean", _input), "mean", returns_scalar=True
         )
 
     def skew(self) -> Self:
@@ -352,11 +348,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
             raise NotImplementedError(msg)
 
-        return self._from_call(
-            func,
-            "quantile",
-            returns_scalar=True,
-        )
+        return self._from_call(func, "quantile", returns_scalar=True)
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
         from duckdb import FunctionExpression
@@ -510,19 +502,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def cast(
-        self: Self,
-        dtype: DType | type[DType],
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(native_dtype)
 
         return self._from_call(
-            func,
-            "cast",
-            dtype=dtype,
-            returns_scalar=self._returns_scalar,
+            func, "cast", dtype=dtype, returns_scalar=self._returns_scalar
         )
 
     @property

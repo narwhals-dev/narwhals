@@ -354,10 +354,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             backend_version=self._backend_version, version=self._version
         )
 
-    def when(
-        self: Self,
-        *predicates: IntoArrowExpr,
-    ) -> ArrowWhen:
+    def when(self: Self, *predicates: IntoArrowExpr) -> ArrowWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
         return ArrowWhen(condition, self._backend_version, version=self._version)

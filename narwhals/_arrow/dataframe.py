@@ -360,7 +360,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     join_type="inner",
                     right_suffix=suffix,
                 )
-                .drop([key_token]),
+                .drop([key_token])
             )
 
         return self._from_native_frame(
@@ -370,7 +370,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
-            ),
+            )
         )
 
     def join_asof(

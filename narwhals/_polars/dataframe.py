@@ -434,9 +434,7 @@ class PolarsLazyFrame:
             raise ColumnNotFoundError(str(e)) from e
 
         return PolarsDataFrame(
-            result,
-            backend_version=self._backend_version,
-            version=self._version,
+            result, backend_version=self._backend_version, version=self._version
         )
 
     def group_by(self: Self, *by: str, drop_null_keys: bool) -> PolarsLazyGroupBy:

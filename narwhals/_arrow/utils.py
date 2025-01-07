@@ -312,8 +312,7 @@ def floordiv_compat(left: Any, right: Any) -> Any:
             # GH 56676
             has_remainder = pc.not_equal(pc.multiply(divided, right), left)
             has_one_negative_operand = pc.less(
-                pc.bit_wise_xor(left, right),
-                pa.scalar(0, type=divided.type),
+                pc.bit_wise_xor(left, right), pa.scalar(0, type=divided.type)
             )
             result = pc.if_else(
                 pc.and_(

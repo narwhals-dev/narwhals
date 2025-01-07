@@ -84,8 +84,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             except KeyError as e:
                 missing_columns = [x for x in column_names if x not in df.columns]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -360,9 +359,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             raise NotImplementedError(msg)
 
         return self._from_call(
-            lambda _input: _input.cumsum(),
-            "cum_sum",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.cumsum(), "cum_sum", returns_scalar=self._returns_scalar
         )
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
@@ -382,9 +379,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             raise NotImplementedError(msg)
 
         return self._from_call(
-            lambda _input: _input.cummin(),
-            "cum_min",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.cummin(), "cum_min", returns_scalar=self._returns_scalar
         )
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
@@ -393,9 +388,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             raise NotImplementedError(msg)
 
         return self._from_call(
-            lambda _input: _input.cummax(),
-            "cum_max",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.cummax(), "cum_max", returns_scalar=self._returns_scalar
         )
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
@@ -410,10 +403,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def is_between(
-        self,
-        lower_bound: Self | Any,
-        upper_bound: Self | Any,
-        closed: str = "both",
+        self, lower_bound: Self | Any, upper_bound: Self | Any, closed: str = "both"
     ) -> Self:
         if closed == "none":
             closed = "neither"
@@ -537,9 +527,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def clip(
-        self: Self,
-        lower_bound: Self | Any | None,
-        upper_bound: Self | Any | None,
+        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
         return self._from_call(
             lambda _input, lower_bound, upper_bound: _input.clip(
@@ -669,9 +657,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def null_count(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.isna().sum(),
-            "null_count",
-            returns_scalar=True,
+            lambda _input: _input.isna().sum(), "null_count", returns_scalar=True
         )
 
     def tail(self: Self) -> NoReturn:

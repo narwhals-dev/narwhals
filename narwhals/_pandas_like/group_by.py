@@ -64,10 +64,7 @@ class PandasLikeGroupBy:
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
             self._grouped = self._df._native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                observed=True,
+                list(self._keys), sort=False, as_index=True, observed=True
             )
         else:
             self._grouped = self._df._native_frame.groupby(
@@ -79,14 +76,10 @@ class PandasLikeGroupBy:
             )
 
     def agg(
-        self,
-        *aggs: IntoPandasLikeExpr,
-        **named_aggs: IntoPandasLikeExpr,
+        self, *aggs: IntoPandasLikeExpr, **named_aggs: IntoPandasLikeExpr
     ) -> PandasLikeDataFrame:
         exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
+            *aggs, namespace=self._df.__narwhals_namespace__(), **named_aggs
         )
         implementation: Implementation = self._df._implementation
         output_names: list[str] = copy(self._keys)
@@ -355,10 +348,7 @@ def agg_pandas(  # noqa: PLR0915
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)
         return native_series_from_iterable(
-            out_group,
-            index=out_names,
-            name="",
-            implementation=implementation,
+            out_group, index=out_names, name="", implementation=implementation
         )
 
     if implementation is Implementation.PANDAS and backend_version >= (2, 2):

@@ -300,12 +300,7 @@ class PolarsSeries:
         return self._from_native_series(native_result)
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_var` not implemented for polars older than 1.0"
@@ -321,12 +316,7 @@ class PolarsSeries:
         )
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_std` not implemented for polars older than 1.0"
@@ -364,12 +354,7 @@ class PolarsSeries:
         return self._from_native_series(s)
 
     def value_counts(
-        self: Self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self: Self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 

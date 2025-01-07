@@ -20,15 +20,9 @@ class DuckDBGroupBy:
         self._compliant_frame = compliant_frame
         self._keys = keys
 
-    def agg(
-        self,
-        *aggs: IntoDuckDBExpr,
-        **named_aggs: IntoDuckDBExpr,
-    ) -> DuckDBLazyFrame:
+    def agg(self, *aggs: IntoDuckDBExpr, **named_aggs: IntoDuckDBExpr) -> DuckDBLazyFrame:
         exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._compliant_frame.__narwhals_namespace__(),
-            **named_aggs,
+            *aggs, namespace=self._compliant_frame.__narwhals_namespace__(), **named_aggs
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:

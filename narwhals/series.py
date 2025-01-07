@@ -63,10 +63,7 @@ class Series(Generic[IntoSeriesT]):
         return DataFrame
 
     def __init__(
-        self: Self,
-        series: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self: Self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level = level
         if hasattr(series, "__narwhals_series__"):
@@ -404,10 +401,7 @@ class Series(Generic[IntoSeriesT]):
         return arg
 
     def _from_compliant_series(self, series: Any) -> Self:
-        return self.__class__(
-            series,
-            level=self._level,
-        )
+        return self.__class__(series, level=self._level)
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
@@ -789,10 +783,7 @@ class Series(Generic[IntoSeriesT]):
             ----
             : [[1,2]]
         """
-        return self._dataframe(
-            self._compliant_series.to_frame(),
-            level=self._level,
-        )
+        return self._dataframe(self._compliant_series.to_frame(), level=self._level)
 
     def to_list(self) -> list[Any]:
         """Convert to list.

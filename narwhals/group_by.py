@@ -111,7 +111,7 @@ class GroupBy(Generic[DataFrameT]):
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*aggs, **named_aggs)
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
@@ -197,5 +197,5 @@ class LazyGroupBy(Generic[LazyFrameT]):
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*aggs, **named_aggs)
         )

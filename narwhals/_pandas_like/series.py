@@ -225,10 +225,7 @@ class PandasLikeSeries(CompliantSeries):
         s.name = self.name
         return self._from_native_series(s)
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self, dtype: Any) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(
             dtype, ser.dtype, self._implementation, self._backend_version, self._version
@@ -829,8 +826,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)],
-                copy=copy,
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)], copy=copy
             )
         return s.to_numpy(dtype=dtype, copy=copy)
 
@@ -913,9 +909,7 @@ class PandasLikeSeries(CompliantSeries):
         value_name_ = name or ("proportion" if normalize else "count")
 
         val_count = self._native_series.value_counts(
-            dropna=False,
-            sort=False,
-            normalize=normalize,
+            dropna=False, sort=False, normalize=normalize
         ).reset_index()
 
         val_count.columns = [index_name_, value_name_]
@@ -1056,11 +1050,7 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
@@ -1068,11 +1058,7 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
@@ -1080,12 +1066,7 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
@@ -1093,12 +1074,7 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         result = self._native_series.rolling(
             window=window_size, min_periods=min_periods, center=center
@@ -1161,10 +1137,7 @@ class PandasLikeSeries(CompliantSeries):
 
         else:
             ranked_series = native_series.rank(
-                method=pd_method,
-                na_option="keep",
-                ascending=not descending,
-                pct=False,
+                method=pd_method, na_option="keep", ascending=not descending, pct=False
             )
 
         return self._from_native_series(ranked_series)
@@ -1212,7 +1185,7 @@ class PandasLikeSeriesStringNamespace:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.replace(
                 pat=pattern, repl=value, n=n, regex=not literal
-            ),
+            )
         )
 
     def replace_all(
@@ -1245,7 +1218,7 @@ class PandasLikeSeriesStringNamespace:
     def slice(self, offset: int, length: int | None = None) -> PandasLikeSeries:
         stop = offset + length if length else None
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.slice(start=offset, stop=stop),
+            self._compliant_series._native_series.str.slice(start=offset, stop=stop)
         )
 
     def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002

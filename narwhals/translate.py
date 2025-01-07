@@ -52,14 +52,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-NON_TEMPORAL_SCALAR_TYPES = (
-    bool,
-    bytes,
-    str,
-    int,
-    float,
-    complex,
-)
+NON_TEMPORAL_SCALAR_TYPES = (bool, bytes, str, int, float, complex)
 
 
 @overload
@@ -431,10 +424,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with dataframe"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
-            native_object.__narwhals_dataframe__(),
-            level="full",
-        )
+        return DataFrame(native_object.__narwhals_dataframe__(), level="full")
     elif hasattr(native_object, "__narwhals_lazyframe__"):
         if series_only:
             if not pass_through:
@@ -446,20 +436,14 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
                 raise TypeError(msg)
             return native_object
-        return LazyFrame(
-            native_object.__narwhals_lazyframe__(),
-            level="full",
-        )
+        return LazyFrame(native_object.__narwhals_lazyframe__(), level="full")
     elif hasattr(native_object, "__narwhals_series__"):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        return Series(
-            native_object.__narwhals_series__(),
-            level="full",
-        )
+        return Series(native_object.__narwhals_series__(), level="full")
 
     # Polars
     elif is_polars_dataframe(native_object):
@@ -780,8 +764,7 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         return DataFrame(
-            InterchangeFrame(native_object, version=version),
-            level="interchange",
+            InterchangeFrame(native_object, version=version), level="interchange"
         )
 
     elif not pass_through:

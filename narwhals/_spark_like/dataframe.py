@@ -84,9 +84,7 @@ class SparkLikeLazyFrame:
         )
 
     def select(
-        self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
+        self: Self, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple select
@@ -127,9 +125,7 @@ class SparkLikeLazyFrame:
         return self.schema
 
     def with_columns(
-        self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
+        self: Self, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
@@ -195,10 +191,7 @@ class SparkLikeLazyFrame:
         )
 
     def unique(
-        self: Self,
-        subset: str | list[str] | None = None,
-        *,
-        keep: Literal["any", "none"],
+        self: Self, subset: str | list[str] | None = None, *, keep: Literal["any", "none"]
     ) -> Self:
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."

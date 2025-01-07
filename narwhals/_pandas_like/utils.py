@@ -295,10 +295,7 @@ def diagonal_concat(
 
 
 def native_series_from_iterable(
-    data: Iterable[Any],
-    name: str,
-    index: Any,
-    implementation: Implementation,
+    data: Iterable[Any], name: str, index: Any, implementation: Implementation
 ) -> Any:
     """Return native series."""
     if implementation in PANDAS_LIKE_IMPLEMENTATION:

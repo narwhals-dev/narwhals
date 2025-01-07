@@ -244,9 +244,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
 
     def clip(
-        self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        self, lower_bound: Any | None = None, upper_bound: Any | None = None
     ) -> Self:
         def _clip(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
@@ -272,12 +270,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def is_between(
-        self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: str,
-    ) -> Self:
+    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
             if closed == "both":
                 return (_input >= lower_bound) & (_input <= upper_bound)
@@ -328,10 +321,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return _input.isin(values)
 
         return self._from_call(
-            _is_in,
-            "is_in",
-            values=values,
-            returns_scalar=self._returns_scalar,
+            _is_in, "is_in", values=values, returns_scalar=self._returns_scalar
         )
 
     def is_unique(self) -> Self:
@@ -362,10 +352,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.round(_input, decimals)
 
         return self._from_call(
-            _round,
-            "round",
-            decimals=decimals,
-            returns_scalar=self._returns_scalar,
+            _round, "round", decimals=decimals, returns_scalar=self._returns_scalar
         )
 
     def skew(self) -> Self:

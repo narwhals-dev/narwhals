@@ -29,11 +29,7 @@ def n_unique() -> dd.Aggregation:
     def agg(s0: pd.core.groupby.generic.SeriesGroupBy) -> int:
         return s0.sum()  # type: ignore[no-any-return]
 
-    return dd.Aggregation(
-        name="nunique",
-        chunk=chunk,
-        agg=agg,
-    )
+    return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
 def var(
@@ -81,20 +77,12 @@ class DaskLazyGroupBy:
         self._df = df
         self._keys = keys
         self._grouped = self._df._native_frame.groupby(
-            list(self._keys),
-            dropna=drop_null_keys,
-            observed=True,
+            list(self._keys), dropna=drop_null_keys, observed=True
         )
 
-    def agg(
-        self,
-        *aggs: IntoDaskExpr,
-        **named_aggs: IntoDaskExpr,
-    ) -> DaskLazyFrame:
+    def agg(self, *aggs: IntoDaskExpr, **named_aggs: IntoDaskExpr) -> DaskLazyFrame:
         exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
+            *aggs, namespace=self._df.__narwhals_namespace__(), **named_aggs
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
@@ -109,11 +97,7 @@ class DaskLazyGroupBy:
             output_names.extend(expr._output_names)
 
         return agg_dask(
-            self._df,
-            self._grouped,
-            exprs,
-            self._keys,
-            self._from_native_frame,
+            self._df, self._grouped, exprs, self._keys, self._from_native_frame
         )
 
     def _from_native_frame(self, df: DaskLazyFrame) -> DaskLazyFrame:

@@ -159,21 +159,13 @@ def infer_new_root_output_names(
 
 @overload
 def reuse_series_implementation(
-    expr: PandasLikeExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
+    expr: PandasLikeExprT, attr: str, *, returns_scalar: bool = False, **kwargs: Any
 ) -> PandasLikeExprT: ...
 
 
 @overload
 def reuse_series_implementation(
-    expr: ArrowExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
+    expr: ArrowExprT, attr: str, *, returns_scalar: bool = False, **kwargs: Any
 ) -> ArrowExprT: ...
 
 
@@ -254,10 +246,7 @@ def reuse_series_namespace_implementation(
     expr: PandasLikeExprT, series_namespace: str, attr: str, **kwargs: Any
 ) -> PandasLikeExprT: ...
 def reuse_series_namespace_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
-    series_namespace: str,
-    attr: str,
-    **kwargs: Any,
+    expr: ArrowExprT | PandasLikeExprT, series_namespace: str, attr: str, **kwargs: Any
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
 

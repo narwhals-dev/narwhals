@@ -27,7 +27,7 @@ class PolarsGroupBy:
     def agg(self: Self, *aggs: PolarsExpr, **named_aggs: PolarsExpr) -> PolarsDataFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]
         return self._compliant_frame._from_native_frame(
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*aggs, **named_aggs)
         )
 
     def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
@@ -49,5 +49,5 @@ class PolarsLazyGroupBy:
     def agg(self: Self, *aggs: PolarsExpr, **named_aggs: PolarsExpr) -> PolarsLazyFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]
         return self._compliant_frame._from_native_frame(
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*aggs, **named_aggs)
         )

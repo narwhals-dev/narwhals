@@ -364,10 +364,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             )
         raise NotImplementedError
 
-    def when(
-        self,
-        *predicates: IntoPandasLikeExpr,
-    ) -> PandasWhen:
+    def when(self, *predicates: IntoPandasLikeExpr) -> PandasWhen:
         plx = self.__class__(
             self._implementation, self._backend_version, version=self._version
         )

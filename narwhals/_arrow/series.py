@@ -956,11 +956,7 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         import pyarrow.compute as pc
 
@@ -992,11 +988,7 @@ class ArrowSeries(CompliantSeries):
         return result[offset:]
 
     def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         import pyarrow.compute as pc
 
@@ -1031,12 +1023,7 @@ class ArrowSeries(CompliantSeries):
         return result[offset:]
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import
 
@@ -1083,12 +1070,7 @@ class ArrowSeries(CompliantSeries):
         return result[offset:]
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         return (
             self.rolling_var(
@@ -1149,8 +1131,7 @@ class ArrowSeries(CompliantSeries):
                 else pa.scalar(None, type=native_series.type)
             )
             return maybe_extract_py_scalar(  # type: ignore[no-any-return]
-                pc.is_in(other_, native_series),
-                return_py_scalar=True,
+                pc.is_in(other_, native_series), return_py_scalar=True
             )
         except (ArrowInvalid, ArrowNotImplementedError, ArrowTypeError) as exc:
             from narwhals.exceptions import InvalidOperationError
@@ -1553,7 +1534,7 @@ class ArrowSeriesStringNamespace:
         return self._compliant_series._from_native_series(
             pc.utf8_slice_codeunits(
                 self._compliant_series._native_series, start=offset, stop=stop
-            ),
+            )
         )
 
     def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002

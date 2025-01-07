@@ -48,9 +48,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DuckDBLazyFrame,
-    *exprs: IntoDuckDBExpr,
-    **named_exprs: IntoDuckDBExpr,
+    df: DuckDBLazyFrame, *exprs: IntoDuckDBExpr, **named_exprs: IntoDuckDBExpr
 ) -> dict[str, duckdb.Expression]:
     result_columns: dict[str, list[duckdb.Expression]] = {}
     for expr in exprs:
@@ -145,8 +143,7 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
     if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
         return dtypes.Array(
-            native_to_narwhals_dtype(match_.group(1), version),
-            int(match_.group(2)),
+            native_to_narwhals_dtype(match_.group(1), version), int(match_.group(2))
         )
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()

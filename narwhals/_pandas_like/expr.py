@@ -106,8 +106,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             except KeyError as e:
                 missing_columns = [x for x in column_names if x not in df.columns]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -153,10 +152,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={},
         )
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self, dtype: Any) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def __eq__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
@@ -513,9 +509,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         return reuse_series_implementation(self, "mode")
 
     def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
+        self: Self, function: Callable[[Any], Any], return_dtype: DType | None = None
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             input_series_list = self._call(df)
@@ -562,11 +556,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -577,11 +567,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -592,12 +578,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -609,12 +590,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -662,9 +638,7 @@ class PandasLikeExprCatNamespace:
 
     def get_categories(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "cat",
-            "get_categories",
+            self._compliant_expr, "cat", "get_categories"
         )
 
 
@@ -680,12 +654,7 @@ class PandasLikeExprStringNamespace:
         )
 
     def replace(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
-        n: int = 1,
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -698,11 +667,7 @@ class PandasLikeExprStringNamespace:
         )
 
     def replace_all(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
+        self, pattern: str, value: str, *, literal: bool = False
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -715,35 +680,22 @@ class PandasLikeExprStringNamespace:
 
     def strip_chars(self, characters: str | None = None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "strip_chars",
-            characters=characters,
+            self._compliant_expr, "str", "strip_chars", characters=characters
         )
 
     def starts_with(self, prefix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "starts_with",
-            prefix=prefix,
+            self._compliant_expr, "str", "starts_with", prefix=prefix
         )
 
     def ends_with(self, suffix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "ends_with",
-            suffix=suffix,
+            self._compliant_expr, "str", "ends_with", suffix=suffix
         )
 
     def contains(self, pattern: str, *, literal: bool) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "contains",
-            pattern=pattern,
-            literal=literal,
+            self._compliant_expr, "str", "contains", pattern=pattern, literal=literal
         )
 
     def slice(self, offset: int, length: int | None = None) -> PandasLikeExpr:
@@ -753,24 +705,17 @@ class PandasLikeExprStringNamespace:
 
     def to_datetime(self: Self, format: str | None) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_datetime",
-            format=format,
+            self._compliant_expr, "str", "to_datetime", format=format
         )
 
     def to_uppercase(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_uppercase",
+            self._compliant_expr, "str", "to_uppercase"
         )
 
     def to_lowercase(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_lowercase",
+            self._compliant_expr, "str", "to_lowercase"
         )
 
 
@@ -1041,8 +986,4 @@ class PandasLikeExprListNamespace:
         self._expr = expr
 
     def len(self: Self) -> PandasLikeExpr:
-        return reuse_series_namespace_implementation(
-            self._expr,
-            "list",
-            "len",
-        )
+        return reuse_series_namespace_implementation(self._expr, "list", "len")

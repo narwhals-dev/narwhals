@@ -811,9 +811,7 @@ class Expr:
         return self.__class__(lambda plx: self._to_compliant_expr(plx).var(ddof=ddof))
 
     def map_batches(
-        self,
-        function: Callable[[Any], Self],
-        return_dtype: DType | None = None,
+        self, function: Callable[[Any], Self], return_dtype: DType | None = None
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
 

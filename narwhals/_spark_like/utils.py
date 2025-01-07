@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(
-    dtype: pyspark_types.DataType,
-    version: Version,
+    dtype: pyspark_types.DataType, version: Version
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
     from pyspark.sql import types as pyspark_types

@@ -59,8 +59,7 @@ class BaseFrame(Generic[FrameT]):
     def _from_compliant_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
-            df,
-            level=self._level,
+            df, level=self._level
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -120,17 +119,15 @@ class BaseFrame(Generic[FrameT]):
     ) -> Self:
         exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*exprs, **named_exprs),
+            self._compliant_frame.with_columns(*exprs, **named_exprs)
         )
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.select(*exprs, **named_exprs),
+            self._compliant_frame.select(*exprs, **named_exprs)
         )
 
     def rename(self, mapping: dict[str, str]) -> Self:
@@ -159,7 +156,7 @@ class BaseFrame(Generic[FrameT]):
                 *predicates, **constraints
             )
         return self._from_compliant_dataframe(
-            self._compliant_frame.filter(*predicates, **constraints),
+            self._compliant_frame.filter(*predicates, **constraints)
         )
 
     def sort(
@@ -369,12 +366,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
-    def __init__(
-        self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
-    ) -> None:
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
@@ -804,10 +796,7 @@ class DataFrame(BaseFrame[DataFrameT]):
               ]
             ]
         """
-        return self._series(
-            self._compliant_frame.get_column(name),
-            level=self._level,
-        )
+        return self._series(self._compliant_frame.get_column(name), level=self._level)
 
     def estimated_size(self, unit: SizeUnit = "b") -> int | float:
         """Return an estimation of the total (heap) allocated size of the `DataFrame`.
@@ -1002,10 +991,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 return self
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            return self._series(
-                self._compliant_frame[item],
-                level=self._level,
-            )
+            return self._series(self._compliant_frame[item], level=self._level)
 
         elif (
             is_sequence_but_not_str(item)
@@ -1077,10 +1063,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if as_series:
             return {
-                key: self._series(
-                    value,
-                    level=self._level,
-                )
+                key: self._series(value, level=self._level)
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
                 ).items()
@@ -1631,9 +1614,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Select columns from this DataFrame.
 
@@ -2847,10 +2828,7 @@ class DataFrame(BaseFrame[DataFrameT]):
               ]
             ]
         """
-        return self._series(
-            self._compliant_frame.is_duplicated(),
-            level=self._level,
-        )
+        return self._series(self._compliant_frame.is_duplicated(), level=self._level)
 
     def is_empty(self: Self) -> bool:
         r"""Check if the dataframe is empty.
@@ -2948,10 +2926,7 @@ class DataFrame(BaseFrame[DataFrameT]):
               ]
             ]
         """
-        return self._series(
-            self._compliant_frame.is_unique(),
-            level=self._level,
-        )
+        return self._series(self._compliant_frame.is_unique(), level=self._level)
 
     def null_count(self: Self) -> Self:
         r"""Create a new DataFrame that shows the null counts per column.
@@ -3557,12 +3532,7 @@ class LazyFrame(BaseFrame[FrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def __init__(
-        self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
-    ) -> None:
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
@@ -3669,10 +3639,7 @@ class LazyFrame(BaseFrame[FrameT]):
             1  b  11  10
             2  c   6   1
         """
-        return self._dataframe(
-            self._compliant_frame.collect(),
-            level="full",
-        )
+        return self._dataframe(self._compliant_frame.collect(), level="full")
 
     def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.
@@ -4011,9 +3978,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Select columns from this LazyFrame.
 

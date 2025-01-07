@@ -835,9 +835,7 @@ class Series(NwSeries[Any]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
+            window_size=window_size, min_periods=min_periods, center=center
         )
 
     def rolling_mean(
@@ -929,9 +927,7 @@ class Series(NwSeries[Any]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_mean(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
+            window_size=window_size, min_periods=min_periods, center=center
         )
 
     def rolling_var(
@@ -1025,10 +1021,7 @@ class Series(NwSeries[Any]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_var(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
+            window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
         )
 
     def rolling_std(
@@ -1122,10 +1115,7 @@ class Series(NwSeries[Any]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_std(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
+            window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
         )
 
 
@@ -1328,9 +1318,7 @@ class Expr(NwExpr):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
+            window_size=window_size, min_periods=min_periods, center=center
         )
 
     def rolling_mean(
@@ -1421,9 +1409,7 @@ class Expr(NwExpr):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_mean(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
+            window_size=window_size, min_periods=min_periods, center=center
         )
 
     def rolling_var(
@@ -1611,10 +1597,7 @@ class Expr(NwExpr):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_std(
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
+            window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
         )
 
 
@@ -1667,19 +1650,14 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
+            obj._compliant_frame._change_version(Version.V1), level=obj._level
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
+            obj._compliant_frame._change_version(Version.V1), level=obj._level
         )
     if isinstance(obj, NwSeries):
-        return Series(
-            obj._compliant_series._change_version(Version.V1),
-            level=obj._level,
-        )
+        return Series(obj._compliant_series._change_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr)
     return obj

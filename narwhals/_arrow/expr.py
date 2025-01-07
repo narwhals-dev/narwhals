@@ -409,9 +409,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "mode")
 
     def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None,
+        self: Self, function: Callable[[Any], Any], return_dtype: DType | None
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             input_series_list = self._call(df)
@@ -463,11 +461,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -478,11 +472,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         )
 
     def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -493,12 +483,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         )
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -510,12 +495,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         )
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_periods: int | None, center: bool, ddof: int
     ) -> Self:
         return reuse_series_implementation(
             self,

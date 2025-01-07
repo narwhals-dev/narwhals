@@ -67,9 +67,7 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(
-    dtype: pl.DataType,
-    version: Version,
-    backend_version: tuple[int, ...],
+    dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
     import polars as pl
 

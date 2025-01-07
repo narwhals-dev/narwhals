@@ -192,7 +192,7 @@ def concat(
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
     return first_item._from_compliant_dataframe(  # type: ignore[return-value]
-        plx.concat([df._compliant_frame for df in items], how=how),
+        plx.concat([df._compliant_frame for df in items], how=how)
     )
 
 
@@ -264,11 +264,7 @@ def new_series(
         ]
     """
     return _new_series_impl(
-        name,
-        values,
-        dtype,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
+        name, values, dtype, native_namespace=native_namespace, version=Version.MAIN
     )
 
 
@@ -396,10 +392,7 @@ def from_dict(
         d: [[1,4]]
     """
     return _from_dict_impl(
-        data,
-        schema,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
+        data, schema, native_namespace=native_namespace, version=Version.MAIN
     )
 
 
@@ -643,10 +636,7 @@ def from_numpy(
         e: [[1,3]]
     """
     return _from_numpy_impl(
-        data,
-        schema,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
+        data, schema, native_namespace=native_namespace, version=Version.MAIN
     )
 
 
@@ -888,14 +878,7 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    deps = (
-        "pandas",
-        "polars",
-        "cudf",
-        "modin",
-        "pyarrow",
-        "numpy",
-    )
+    deps = ("pandas", "polars", "cudf", "modin", "pyarrow", "numpy")
 
     from . import __version__
 
@@ -953,10 +936,7 @@ def get_level(
 
 
 def read_csv(
-    source: str,
-    *,
-    native_namespace: ModuleType,
-    **kwargs: Any,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1121,10 +1101,7 @@ def _scan_csv_impl(
 
 
 def read_parquet(
-    source: str,
-    *,
-    native_namespace: ModuleType,
-    **kwargs: Any,
+    source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 

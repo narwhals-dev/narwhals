@@ -105,11 +105,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
-    def select(
-        self: Self,
-        *exprs: IntoDaskExpr,
-        **named_exprs: IntoDaskExpr,
-    ) -> Self:
+    def select(self: Self, *exprs: IntoDaskExpr, **named_exprs: IntoDaskExpr) -> Self:
         import dask.dataframe as dd
 
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
@@ -193,10 +189,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
 
     def unique(
-        self: Self,
-        subset: list[str] | None,
-        *,
-        keep: Literal["any", "none"] = "any",
+        self: Self, subset: list[str] | None, *, keep: Literal["any", "none"] = "any"
     ) -> Self:
         if subset is not None and any(x not in self.columns for x in subset):
             msg = f"Column(s) {subset} not found in {self.columns}"
@@ -259,7 +252,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                     right_on=key_token,
                     suffixes=("", suffix),
                 )
-                .drop(columns=key_token),
+                .drop(columns=key_token)
             )
 
         if how == "anti":
@@ -342,7 +335,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 right_on=right_on,
                 how=how,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def join_asof(
@@ -370,7 +363,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 by=by,
                 direction=strategy,
                 suffixes=("", "_right"),
-            ),
+            )
         )
 
     def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:

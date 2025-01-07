@@ -200,10 +200,7 @@ class PandasLikeDataFrame:
             if all(isinstance(x, int) for x in item[1]):
                 return self._from_native_frame(self._native_frame.iloc[item])
             if all(isinstance(x, str) for x in item[1]):
-                indexer = (
-                    item[0],
-                    self._native_frame.columns.get_indexer(item[1]),
-                )
+                indexer = (item[0], self._native_frame.columns.get_indexer(item[1]))
                 return self._from_native_frame(self._native_frame.iloc[indexer])
             msg = (
                 f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
@@ -279,25 +276,13 @@ class PandasLikeDataFrame:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, Any]]: ...
+    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[False] = False,
-    ) -> list[tuple[Any, ...]]: ...
+    def rows(self, *, named: Literal[False] = False) -> list[tuple[Any, ...]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: bool,
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(
         self, *, named: bool = False
@@ -313,10 +298,7 @@ class PandasLikeDataFrame:
         return self._native_frame.to_dict(orient="records")  # type: ignore[no-any-return]
 
     def iter_rows(
-        self,
-        *,
-        named: bool = False,
-        buffer_size: int = 512,
+        self, *, named: bool = False, buffer_size: int = 512
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -343,9 +325,7 @@ class PandasLikeDataFrame:
 
     # --- reshape ---
     def select(
-        self,
-        *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
+        self, *exprs: IntoPandasLikeExpr, **named_exprs: IntoPandasLikeExpr
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
@@ -421,9 +401,7 @@ class PandasLikeDataFrame:
         return self._from_native_frame(self._native_frame.loc[_mask])
 
     def with_columns(
-        self,
-        *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
+        self, *exprs: IntoPandasLikeExpr, **named_exprs: IntoPandasLikeExpr
     ) -> Self:
         index = self._native_frame.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
@@ -502,11 +480,7 @@ class PandasLikeDataFrame:
     def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasLikeGroupBy(
-            self,
-            list(keys),
-            drop_null_keys=drop_null_keys,
-        )
+        return PandasLikeGroupBy(self, list(keys), drop_null_keys=drop_null_keys)
 
     def join(
         self,
@@ -542,7 +516,7 @@ class PandasLikeDataFrame:
                         right_on=key_token,
                         suffixes=("", suffix),
                     )
-                    .drop(columns=key_token),
+                    .drop(columns=key_token)
                 )
             else:
                 return self._from_native_frame(
@@ -550,7 +524,7 @@ class PandasLikeDataFrame:
                         other._native_frame,
                         how="cross",
                         suffixes=("", suffix),
-                    ),
+                    )
                 )
 
         if how == "anti":
@@ -646,7 +620,7 @@ class PandasLikeDataFrame:
                 right_on=right_on,
                 how=how,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def join_asof(
@@ -674,7 +648,7 @@ class PandasLikeDataFrame:
                 by=by,
                 direction=strategy,
                 suffixes=("", "_right"),
-            ),
+            )
         )
 
     # --- partial reduction ---

@@ -55,7 +55,7 @@ class ArrowSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            ]
         )
 
     def categorical(self: Self) -> ArrowSelector:

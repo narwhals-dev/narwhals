@@ -98,11 +98,7 @@ class IbisInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.to_pyarrow()
 
-    def select(
-        self: Self,
-        *exprs: Any,
-        **named_exprs: Any,
-    ) -> Self:
+    def select(self: Self, *exprs: Any, **named_exprs: Any) -> Self:
         if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
             msg = (
                 "`select`-ing not by name is not supported for Ibis backend.\n\n"

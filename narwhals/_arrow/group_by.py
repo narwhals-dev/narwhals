@@ -50,14 +50,10 @@ class ArrowGroupBy:
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
     def agg(
-        self: Self,
-        *aggs: IntoArrowExpr,
-        **named_aggs: IntoArrowExpr,
+        self: Self, *aggs: IntoArrowExpr, **named_aggs: IntoArrowExpr
     ) -> ArrowDataFrame:
         exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
+            *aggs, namespace=self._df.__narwhals_namespace__(), **named_aggs
         )
         for expr in exprs:
             if expr._output_names is None:
