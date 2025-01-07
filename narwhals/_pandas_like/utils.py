@@ -118,7 +118,7 @@ def broadcast_align_and_extract_native(
     lhs_index = lhs._native_series.index
 
     if isinstance(rhs, PandasLikeDataFrame):
-        return NotImplemented
+        return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, PandasLikeSeries):
         rhs_index = rhs._native_series.index
