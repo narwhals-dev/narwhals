@@ -54,11 +54,7 @@ def test_multiple_conditions(
     assert_equal_data(result, expected)
 
 
-def test_no_arg_when_fail(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_no_arg_when_fail(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))
