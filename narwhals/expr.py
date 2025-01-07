@@ -7643,6 +7643,9 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
+        if not self._predicates:
+            msg = "At least one predicate needs to be provided to `narwhals.when`."
+            raise TypeError(msg)
 
     def _extract_predicates(self, plx: Any) -> Any:
         return [extract_compliant(plx, v) for v in self._predicates]

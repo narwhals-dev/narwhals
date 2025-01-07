@@ -359,12 +359,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         *predicates: IntoArrowExpr,
     ) -> ArrowWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        if predicates:
-            condition = plx.all_horizontal(*predicates)
-        else:
-            msg = "at least one predicate needs to be provided"
-            raise TypeError(msg)
-
+        condition = plx.all_horizontal(*predicates)
         return ArrowWhen(condition, self._backend_version, version=self._version)
 
     def concat_str(
