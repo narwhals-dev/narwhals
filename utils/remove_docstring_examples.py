@@ -27,6 +27,23 @@ class Visitor(NodeVisitor):
 
         self.generic_visit(node)
 
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+        if (
+            node.body
+            and isinstance(expr := node.body[0], ast.Expr)
+            and isinstance(value := expr.value, ast.Constant)
+            and isinstance(docstring := value.value, str)
+            and "Examples:" in docstring
+            and value.end_lineno is not None
+        ):
+            examples_line_start = value.lineno + [
+                line.strip() for line in docstring.splitlines()
+            ].index("Examples:")
+            examples_line_end = value.end_lineno
+            self.to_remove.append((examples_line_start, examples_line_end))
+
+        self.generic_visit(node)
+
 
 if __name__ == "__main__":
     files = sys.argv[1:]
