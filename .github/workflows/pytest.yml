@@ -53,7 +53,6 @@ jobs:
             du -c --apparent-size $(git ls-files) | grep total$
             git ls-files narwhals | xargs python utils/remove_docstring_examples.py
             du -c --apparent-size $(git ls-files) | grep total$
-            cat narwhals/expr.py | head -n 100
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
       - name: show-deps
@@ -84,7 +83,6 @@ jobs:
             du -c --apparent-size $(git ls-files) | grep total$
             git ls-files narwhals | xargs python utils/remove_docstring_examples.py
             du -c --apparent-size $(git ls-files) | grep total$
-            cat narwhals/expr.py | head -n 100
         # Don't minify in the job where we run doctests
         if: matrix.python-version != '3.13'
       - name: install-reqs
