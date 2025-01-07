@@ -1,4 +1,5 @@
 from __future__ import annotations
+import duckdb
 
 import argparse
 from importlib import import_module
@@ -26,15 +27,17 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 BACKEND_NAMESPACE_KWARGS_MAP = {
-    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    # "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "polars[lazy]": (pl, {}),
-    "pyarrow": (pa, {}),
-    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    # "pyarrow": (pa, {}),
+    "duckdb": (duckdb, {}),
+    # "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
     "polars[lazy]": lambda x: x.collect(),
-    "dask": lambda x: x.compute(),
+    "duckdb": lambda x: x.pl(),
+    # "dask": lambda x: x.compute(),
 }
 
 QUERY_DATA_PATH_MAP = {
