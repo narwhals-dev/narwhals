@@ -75,7 +75,7 @@ jobs:
           echo "$DEPS" | grep 'polars==0.20.3'
           echo "$DEPS" | grep 'numpy==1.17.5'
           echo "$DEPS" | grep 'pyarrow==11.0.0'
-          echo "$DEPS" | grep 'pyspark==3.3.0'
+          echo "$DEPS" | grep 'pyspark==3.5.0'
           echo "$DEPS" | grep 'scipy==1.5.0'
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
       - name: Run pytest
@@ -111,7 +111,7 @@ jobs:
           echo "$DEPS" | grep 'polars==0.20.8'
           echo "$DEPS" | grep 'numpy==1.24.4'
           echo "$DEPS" | grep 'pyarrow==15.0.0'
-          echo "$DEPS" | grep 'pyspark==3.4.0'
+          echo "$DEPS" | grep 'pyspark==3.5.0'
           echo "$DEPS" | grep 'scipy==1.8.0'
           echo "$DEPS" | grep 'scikit-learn==1.3.0'
           echo "$DEPS" | grep 'dask==2024.10'
