@@ -101,23 +101,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return tuple(col[index] for col in self._native_frame)
 
     @overload
-    def rows(
-        self: Self,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, Any]]: ...
+    def rows(self: Self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(self: Self, *, named: Literal[False]) -> list[tuple[Any, ...]]: ...
 
     @overload
     def rows(
-        self: Self,
-        *,
-        named: Literal[False],
-    ) -> list[tuple[Any, ...]]: ...
-    @overload
-    def rows(
-        self: Self,
-        *,
-        named: bool,
+        self: Self, *, named: bool
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
@@ -126,10 +117,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
-        self: Self,
-        *,
-        named: bool,
-        buffer_size: int,
+        self: Self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         df = self._native_frame
         num_rows = df.num_rows
@@ -263,9 +251,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
             start = item.start or 0
             stop = item.stop if item.stop is not None else len(self._native_frame)
-            return self._from_native_frame(
-                self._native_frame.slice(start, stop - start),
-            )
+            return self._from_native_frame(self._native_frame.slice(start, stop - start))
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
             if (
@@ -301,11 +287,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
-    def select(
-        self: Self,
-        *exprs: IntoArrowExpr,
-        **named_exprs: IntoArrowExpr,
-    ) -> Self:
+    def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
         import pyarrow as pa
 
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
@@ -313,16 +295,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
         names = [s.name for s in new_series]
-        df = pa.Table.from_arrays(
-            broadcast_series(new_series),
-            names=names,
-        )
+        df = pa.Table.from_arrays(broadcast_series(new_series), names=names)
         return self._from_native_frame(df)
 
     def with_columns(
-        self: Self,
-        *exprs: IntoArrowExpr,
-        **named_exprs: IntoArrowExpr,
+        self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr
     ) -> Self:
         native_frame = self._native_frame
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
@@ -334,9 +311,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             col_name = col_value.name
 
             column = validate_dataframe_comparand(
-                length=length,
-                other=col_value,
-                backend_version=self._backend_version,
+                length=length, other=col_value, backend_version=self._backend_version
             )
 
             native_frame = (
@@ -611,12 +586,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         columns = self.columns
         index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         col_token = generate_temporary_column_name(
-            n_bytes=8,
-            columns=[*columns, index_token],
+            n_bytes=8, columns=[*columns, index_token]
         )
-
         df = self.with_row_index(index_token)._native_frame
-
         row_count = (
             df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
             .group_by(columns)

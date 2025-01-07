@@ -87,8 +87,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             except KeyError as e:
                 missing_columns = [x for x in column_names if x not in df.columns]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -564,9 +563,7 @@ class ArrowExprCatNamespace:
 
     def get_categories(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "cat",
-            "get_categories",
+            self._compliant_expr, "cat", "get_categories"
         )
 
 
@@ -676,12 +673,7 @@ class ArrowExprStringNamespace:
         )
 
     def replace(
-        self: Self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool,
-        n: int,
+        self: Self, pattern: str, value: str, *, literal: bool, n: int
     ) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -693,13 +685,7 @@ class ArrowExprStringNamespace:
             n=n,
         )
 
-    def replace_all(
-        self: Self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool,
-    ) -> ArrowExpr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -711,26 +697,17 @@ class ArrowExprStringNamespace:
 
     def strip_chars(self: Self, characters: str | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "strip_chars",
-            characters=characters,
+            self._compliant_expr, "str", "strip_chars", characters=characters
         )
 
     def starts_with(self: Self, prefix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "starts_with",
-            prefix=prefix,
+            self._compliant_expr, "str", "starts_with", prefix=prefix
         )
 
     def ends_with(self: Self, suffix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "ends_with",
-            suffix=suffix,
+            self._compliant_expr, "str", "ends_with", suffix=suffix
         )
 
     def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
@@ -745,24 +722,17 @@ class ArrowExprStringNamespace:
 
     def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_datetime",
-            format=format,
+            self._compliant_expr, "str", "to_datetime", format=format
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_uppercase",
+            self._compliant_expr, "str", "to_uppercase"
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_lowercase",
+            self._compliant_expr, "str", "to_lowercase"
         )
 
 
@@ -931,8 +901,4 @@ class ArrowExprListNamespace:
         self._expr = expr
 
     def len(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(
-            self._expr,
-            "list",
-            "len",
-        )
+        return reuse_series_namespace_implementation(self._expr, "list", "len")
