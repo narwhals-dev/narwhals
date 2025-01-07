@@ -3,10 +3,11 @@ from __future__ import annotations
 import functools
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
@@ -157,6 +158,16 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
+    def when(
+        self,
+        *predicates: IntoDuckDBExpr,
+    ) -> DuckDBWhen:
+        plx = self.__class__(backend_version=self._backend_version, version=self._version)
+        condition = plx.all_horizontal(*predicates)
+        return DuckDBWhen(
+            condition, self._backend_version, returns_scalar=False, version=self._version
+        )
+
     def col(self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
@@ -204,6 +215,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={},
         )
 
+
 class DuckDBWhen:
     def __init__(
         self,
@@ -223,34 +235,35 @@ class DuckDBWhen:
         self._version = version
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
+
         from narwhals._expression_parsing import parse_into_expr
-        from duckdb import FunctionExpression, ColumnExpression, ConstantExpression, CaseExpression
 
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("duckdb.Expression", condition)
 
-        breakpoint()
-
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+            value = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = ConstantExpression(self._then_value)
-        value_series = cast("duckdb.Expression", value_series)
+            value = ConstantExpression(self._then_value)
+        value = cast("duckdb.Expression", value)
 
         if self._otherwise_value is None:
-            return [value_series.where(condition)]
+            return [CaseExpression(condition=condition, value=value)]
         try:
             otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            return [value_series.where(condition, self._otherwise_value)]
-        otherwise_series = otherwise_expr(df)[0]
-
-        if otherwise_expr._returns_scalar:  # type: ignore[attr-defined]
-            return [value_series.where(condition, otherwise_series[0])]
-        return [value_series.where(condition, otherwise_series)]
+            return [
+                CaseExpression(condition=condition, value=value).otherwise(
+                    ConstantExpression(self._otherwise_value)
+                )
+            ]
+        otherwise = otherwise_expr(df)[0]
+        return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
 
     def then(self, value: DuckDBExpr | Any) -> DuckDBThen:
         self._then_value = value

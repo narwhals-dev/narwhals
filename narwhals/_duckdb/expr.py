@@ -31,7 +31,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
     def __init__(
         self,
-        call: Callable[[DuckDBLazyFrame], list[duckdb.Expression]],
+        call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
         *,
         depth: int,
         function_name: str,
