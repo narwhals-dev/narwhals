@@ -1065,21 +1065,6 @@ def test_len(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-# copied from tests/expr_and_series/n_unique_test.py
-def test_n_unique(pyspark_constructor: Constructor) -> None:
-    data = {
-        "a": [1.0, None, None, 3.0],
-        "b": [1.0, None, 4, 5.0],
-    }
-    df = nw.from_native(pyspark_constructor(data))
-    result = df.select(
-        a=nw.col("a").n_unique(),
-        b=nw.col("b").n_unique(),
-    )
-    expected = {"a": [3], "b": [4]}
-    assert_equal_data(result, expected)
-
-
 # Copied from tests/expr_and_series/round_test.py
 @pytest.mark.parametrize("decimals", [0, 1, 2])
 def test_round(pyspark_constructor: Constructor, decimals: int) -> None:

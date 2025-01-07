@@ -300,15 +300,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             from pyspark.sql import Window
             from pyspark.sql import functions as F  # noqa: N812
 
-            # Create a window spec that treats each value separately
-            window = Window.partitionBy(
-                F.when(F.isnull(_input), F.lit("NULL"))
-                .when(F.isnan(_input), F.lit("NAN"))
-                .otherwise(_input)
-            )
-
-            # Count occurrences treating NULL and NaN as unique values
-            return F.count(F.lit(1)).over(window) > 1
+            # Create a window spec that treats each value separately.
+            return F.count("*").over(Window.partitionBy(_input)) > 1
 
         return self._from_call(
             _is_duplicated, "is_duplicated", returns_scalar=self._returns_scalar
@@ -347,14 +340,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             from pyspark.sql import functions as F  # noqa: N812
 
             # Create a window spec that treats each value separately
-            window = Window.partitionBy(
-                F.when(F.isnull(_input), F.lit("NULL"))
-                .when(F.isnan(_input), F.lit("NAN"))
-                .otherwise(_input)
-            )
-
-            # Count occurrences treating NULL and NaN as unique values
-            return F.count(F.lit(1)).over(window) == 1
+            return F.count("*").over(Window.partitionBy(_input)) == 1
 
         return self._from_call(
             _is_unique, "is_unique", returns_scalar=self._returns_scalar
@@ -368,19 +354,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.count("*")
 
         return self._from_call(_len, "len", returns_scalar=True)
-
-    def n_unique(self) -> Self:
-        def _n_unique(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            expr = (
-                F.when(F.isnull(_input), F.lit("NULL"))
-                .when(F.isnan(_input), F.lit("NaN"))
-                .otherwise(_input)
-            )
-            return F.countDistinct(expr)
-
-        return self._from_call(_n_unique, "n_unique", returns_scalar=True)
 
     def round(self, decimals: int) -> Self:
         def _round(_input: Column, decimals: int) -> Column:
