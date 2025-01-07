@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -7,6 +8,8 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DASK_VERSION
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -84,7 +87,18 @@ def test_lit_operation(
     expected_result: list[int],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask_lazy_p2" in str(constructor) and "lit_with_agg" in col_name:
+    if "duckdb" in str(constructor) and col_name in (
+        "left_scalar_with_agg",
+        "left_lit_with_agg",
+        "right_lit",
+        "right_lit_with_agg",
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "dask" in str(constructor)
+        and col_name in ("left_lit", "left_scalar")
+        and DASK_VERSION < (2024, 10)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
@@ -92,3 +106,17 @@ def test_lit_operation(
     result = df.select(expr.alias(col_name))
     expected = {col_name: expected_result}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/11637
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1]}))
+    result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
+    if df.implementation.is_cudf():
+        # cudf has no date dtype
+        assert result == {"a": nw.Int64, "literal": nw.Datetime}
+    else:
+        assert result == {"a": nw.Int64, "literal": nw.Date}

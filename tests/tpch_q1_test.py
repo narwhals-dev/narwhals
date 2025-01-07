@@ -10,6 +10,7 @@ import pyarrow.csv as pa_csv
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import assert_equal_data
 
@@ -20,6 +21,8 @@ from tests.utils import assert_equal_data
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: pytest.FixtureRequest) -> None:
+    if library == "dask" and DASK_VERSION < (2024, 10):
+        request.applymarker(pytest.mark.xfail)
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":

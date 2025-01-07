@@ -18,6 +18,7 @@ from narwhals._arrow.utils import parse_datetime_format
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -54,6 +55,7 @@ class ArrowSeries(CompliantSeries):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -304,7 +306,9 @@ class ArrowSeries(CompliantSeries):
     def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.sum(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.sum(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def drop_nulls(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
@@ -474,12 +478,16 @@ class ArrowSeries(CompliantSeries):
     def any(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.any(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.any(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def all(self: Self, *, _return_py_scalar: bool = True) -> bool:
         import pyarrow.compute as pc
 
-        return maybe_extract_py_scalar(pc.all(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
+            pc.all(self._native_series, min_count=0), _return_py_scalar
+        )
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -519,6 +527,11 @@ class ArrowSeries(CompliantSeries):
     def is_null(self: Self) -> Self:
         ser = self._native_series
         return self._from_native_series(ser.is_null())
+
+    def is_nan(self: Self) -> Self:
+        import pyarrow.compute as pc
+
+        return self._from_native_series(pc.is_nan(self._native_series))
 
     def cast(self: Self, dtype: DType) -> Self:
         import pyarrow.compute as pc
@@ -858,13 +871,20 @@ class ArrowSeries(CompliantSeries):
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series[offset::n])
 
-    def clip(self: Self, lower_bound: Any | None, upper_bound: Any | None) -> Self:
-        import pyarrow as pa
+    def clip(
+        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+    ) -> Self:
         import pyarrow.compute as pc
 
         arr = self._native_series
-        arr = pc.max_element_wise(arr, pa.scalar(lower_bound, type=arr.type))
-        arr = pc.min_element_wise(arr, pa.scalar(upper_bound, type=arr.type))
+        _, lower_bound = broadcast_and_extract_native(
+            self, lower_bound, self._backend_version
+        )
+        _, upper_bound = broadcast_and_extract_native(
+            self, upper_bound, self._backend_version
+        )
+        arr = pc.max_element_wise(arr, lower_bound)
+        arr = pc.min_element_wise(arr, upper_bound)
 
         return self._from_native_series(arr)
 
@@ -1331,6 +1351,13 @@ class ArrowSeriesDateTimeNamespace:
 
         return self._compliant_series._from_native_series(
             pc.day_of_year(self._compliant_series._native_series)
+        )
+
+    def weekday(self: Self) -> ArrowSeries:
+        import pyarrow.compute as pc
+
+        return self._compliant_series._from_native_series(
+            pc.day_of_week(self._compliant_series._native_series, count_from_zero=False)
         )
 
     def total_minutes(self: Self) -> ArrowSeries:

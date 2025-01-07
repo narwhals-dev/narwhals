@@ -12,6 +12,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from pyspark.sql import DataFrame
@@ -37,6 +38,7 @@ class SparkLikeLazyFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.PYSPARK
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:  # pragma: no cover
         if self._implementation is Implementation.PYSPARK:
@@ -48,7 +50,7 @@ class SparkLikeLazyFrame:
     def __narwhals_namespace__(self) -> SparkLikeNamespace:
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
-        return SparkLikeNamespace(
+        return SparkLikeNamespace(  # type: ignore[abstract]
             backend_version=self._backend_version, version=self._version
         )
 
@@ -105,13 +107,6 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def filter(self, *predicates: SparkLikeExpr) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
-            msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
-            raise NotImplementedError(msg)
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         # `[0]` is safe as all_horizontal's expression only returns a single column
@@ -245,4 +240,21 @@ class SparkLikeLazyFrame:
         other = other_native.select(
             [F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
-        return self._from_native_frame(self_native.join(other=other, on=left_on, how=how))
+
+        # If how in {"semi", "anti"}, then resulting columns are same as left columns
+        # Otherwise, we add the right columns with the new mapping, while keeping the
+        # original order of right_columns.
+        col_order = left_columns
+
+        if how in {"inner", "left", "cross"}:
+            col_order.extend(
+                [
+                    rename_mapping[colname]
+                    for colname in right_columns
+                    if colname not in (right_on or [])
+                ]
+            )
+
+        return self._from_native_frame(
+            self_native.join(other=other, on=left_on, how=how).select(col_order)
+        )

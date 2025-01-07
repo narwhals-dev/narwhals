@@ -39,6 +39,7 @@ def test_str_to_uppercase(
             "pandas_pyarrow_constructor",
             "pyarrow_table_constructor",
             "modin_pyarrow_constructor",
+            "duckdb_lazy_constructor",
         )
         or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
@@ -80,6 +81,7 @@ def test_str_to_uppercase_series(
             "pandas_nullable_constructor",
             "polars_eager_constructor",
             "cudf_constructor",
+            "duckdb_lazy_constructor",
             "modin_constructor",
         )
     ):

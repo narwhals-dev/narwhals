@@ -115,6 +115,8 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor) and attr == "n_unique":
+        request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
@@ -134,15 +136,10 @@ def test_group_by_depth_1_agg(
     ],
 )
 def test_group_by_depth_1_std_var(
-    constructor: Constructor,
-    attr: str,
-    ddof: int,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, attr: str, ddof: int, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
-        # Complex aggregation for dask
+    if "duckdb" in str(constructor) and ddof == 2:
         request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
@@ -169,7 +166,11 @@ def test_group_by_median(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+def test_group_by_n_unique_w_missing(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -293,8 +294,10 @@ def test_key_with_nulls(
 
 
 def test_key_with_nulls_ignored(
-    constructor: Constructor,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -346,6 +349,8 @@ def test_group_by_categorical(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
         0,
@@ -371,6 +376,8 @@ def test_group_by_categorical(
 def test_group_by_shift_raises(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         # Polars supports all kinds of crazy group-by aggregations, so
         # we don't check that it errors here.
@@ -410,6 +417,8 @@ def test_all_kind_of_aggs(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]

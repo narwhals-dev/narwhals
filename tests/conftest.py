@@ -13,10 +13,7 @@ import pyarrow as pa
 import pytest
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoFrame
-
-if TYPE_CHECKING:
+    import duckdb
     from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
@@ -109,6 +106,13 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
+def duckdb_lazy_constructor(obj: Any) -> duckdb.DuckDBPyRelation:
+    import duckdb
+
+    _df = pl.LazyFrame(obj)
+    return duckdb.table("_df")
+
+
 def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     import dask.dataframe as dd
 
@@ -168,6 +172,7 @@ EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
 LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
+    "duckdb": duckdb_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -207,4 +212,14 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             "constructor_eager", eager_constructors, ids=eager_constructors_ids
         )
     elif "constructor" in metafunc.fixturenames:
+        if (
+            any(
+                x in str(metafunc.module)
+                for x in ("list", "name", "unpivot", "from_dict", "from_numpy", "tail")
+            )
+            and LAZY_CONSTRUCTORS["duckdb"] in constructors
+        ):
+            # TODO(unassigned): list and name namespaces still need implementing for duckdb
+            constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
+            constructors_ids.remove("duckdb")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

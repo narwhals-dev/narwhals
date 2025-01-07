@@ -16,12 +16,14 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import scale_bytes
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -56,6 +58,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -485,9 +488,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow as pa
 
         df = self._native_frame
+        cols = self.columns
 
         row_indices = pa.array(range(df.num_rows))
-        return self._from_native_frame(df.append_column(name, row_indices))
+        return self._from_native_frame(
+            df.append_column(name, row_indices).select([name, *cols])
+        )
 
     def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
         if (
@@ -664,6 +670,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow.compute as pc
 
         df = self._native_frame
+        if subset is not None and any(x not in self.columns for x in subset):
+            msg = f"Column(s) {subset} not found in {self.columns}"
+            raise ColumnNotFoundError(msg)
         subset = subset or self.columns
 
         if keep in {"any", "first", "last"}:

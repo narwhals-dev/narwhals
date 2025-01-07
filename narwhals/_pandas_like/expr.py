@@ -180,68 +180,31 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __and__(self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
-    def __rand__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__and__(self)  # type: ignore[no-any-return]
-
     def __or__(self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
-
-    def __ror__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__or__(self)  # type: ignore[no-any-return]
 
     def __add__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
-    def __radd__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__add__(self)  # type: ignore[no-any-return]
-
     def __sub__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
-
-    def __rsub__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__sub__(self)  # type: ignore[no-any-return]
 
     def __mul__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
-    def __rmul__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mul__(self)  # type: ignore[no-any-return]
-
     def __truediv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
-
-    def __rtruediv__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__truediv__(self)  # type: ignore[no-any-return]
 
     def __floordiv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
-    def __rfloordiv__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__floordiv__(self)  # type: ignore[no-any-return]
-
     def __pow__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
-
-    def __rpow__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__pow__(self)  # type: ignore[no-any-return]
 
     def __mod__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
 
-    def __rmod__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mod__(self)  # type: ignore[no-any-return]
-
     # Unary
-
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
@@ -311,6 +274,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
+
+    def is_nan(self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
 
     def fill_null(
         self,
@@ -851,6 +817,11 @@ class PandasLikeExprDateTimeNamespace:
     def ordinal_day(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "ordinal_day"
+        )
+
+    def weekday(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
         )
 
     def total_minutes(self) -> PandasLikeExpr:
