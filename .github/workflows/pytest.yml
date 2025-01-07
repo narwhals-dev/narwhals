@@ -48,11 +48,6 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: minify-narwhals
-        run: |
-            du -c --apparent-size $(git ls-files) | grep total$
-            git ls-files narwhals | xargs python utils/remove_docstring_examples.py
-            du -c --apparent-size $(git ls-files) | grep total$
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
       - name: show-deps

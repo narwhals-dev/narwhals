@@ -33,7 +33,9 @@ jobs:
         --user
     - name: minify-narwhals
       run: |
+        du -c --apparent-size $(git ls-files) | grep total$
         git ls-files narwhals | xargs python utils/remove_docstring_examples.py
+        du -c --apparent-size $(git ls-files) | grep total$
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
     - name: Store the distribution packages
