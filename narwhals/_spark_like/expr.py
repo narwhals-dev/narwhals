@@ -228,12 +228,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(
-            _std,
-            ddof=ddof,
-            backend_version=self._backend_version,
-            np_version=parse_version(np.__version__),
-        )
+        func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
 
         return self._from_call(func, "std", returns_scalar=True, ddof=ddof)
 
@@ -244,12 +239,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(
-            _var,
-            ddof=ddof,
-            backend_version=self._backend_version,
-            np_version=parse_version(np.__version__),
-        )
+        func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
 
         return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
 

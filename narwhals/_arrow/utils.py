@@ -184,7 +184,7 @@ def broadcast_and_extract_native(
         rhs = rhs[0]
 
     if isinstance(rhs, ArrowDataFrame):
-        return NotImplemented
+        return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, ArrowSeries):
         if len(rhs) == 1:

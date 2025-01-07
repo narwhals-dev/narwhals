@@ -527,6 +527,16 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             ddof=ddof,
         )
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "rank", method=method, descending=descending
+        )
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

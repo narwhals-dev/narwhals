@@ -54,6 +54,7 @@
         - null_count
         - pipe
         - quantile
+        - rank
         - rename
         - replace_strict
         - rolling_mean
