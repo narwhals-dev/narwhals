@@ -23,34 +23,20 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
 
 
-@pytest.fixture(
-    params=[
-        pandas_constructor,
-        pyarrow_table_constructor,
-    ],
-    scope="module",
-)
+@pytest.fixture(params=[pandas_constructor, pyarrow_table_constructor], scope="module")
 def pandas_or_pyarrow_constructor(
     request: pytest.FixtureRequest,
 ) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
-TEST_DATA = {
-    "a": [1, 2, 3],
-    "b": [4, 5, 6],
-    "c": [7, 8, 9],
-    "d": [1, 4, 2],
-}
+TEST_DATA = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
 TEST_DATA_COLUMNS = list(TEST_DATA.keys())
 TEST_DATA_NUM_ROWS = len(TEST_DATA[TEST_DATA_COLUMNS[0]])
 
 
 @st.composite  # type: ignore[misc]
-def string_slice(
-    draw: st.DrawFn,
-    strs: Sequence[str],
-) -> slice:
+def string_slice(draw: st.DrawFn, strs: Sequence[str]) -> slice:
     """Return slices such as `"a":`, `"a":"c"`, `"a":"c":2`, etc."""
     n_cols = len(strs)
     index_slice = draw(
@@ -58,7 +44,7 @@ def string_slice(
             lambda x: (
                 (x.start is None or 0 <= x.start < n_cols)
                 and (x.stop is None or 0 <= x.stop < n_cols)
-            ),
+            )
         )
     )
     start = strs[index_slice.start] if index_slice.start is not None else None
@@ -71,10 +57,7 @@ single_selector = st.one_of(
     # str selectors: columns:
     st.sampled_from(TEST_DATA_COLUMNS),
     string_slice(TEST_DATA_COLUMNS),
-    st.lists(
-        st.sampled_from(TEST_DATA_COLUMNS),
-        unique=True,
-    ),
+    st.lists(st.sampled_from(TEST_DATA_COLUMNS), unique=True),
     # int selectors: rows:
     st.slices(TEST_DATA_NUM_ROWS),
     st.lists(
@@ -97,7 +80,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
             st.integers(
                 min_value=0,  # pyarrow does not support negative indexing
                 max_value=TEST_DATA_NUM_ROWS - 1,
-            ),
+            )
         ),
         st.integers(
             min_value=0,  # pyarrow does not support negative indexing
@@ -114,10 +97,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
         ),
     )
     columns = st.one_of(
-        st.lists(
-            st.sampled_from(TEST_DATA_COLUMNS),
-            unique=True,
-        ),
+        st.lists(st.sampled_from(TEST_DATA_COLUMNS), unique=True),
         st.lists(
             st.integers(
                 min_value=0,  # pyarrow does not support negative indexing
@@ -134,17 +114,9 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
     return draw(rows), draw(columns)
 
 
-@given(
-    selector=st.one_of(
-        single_selector,
-        tuple_selector(),
-    ),
-)  # type: ignore[misc]
+@given(selector=st.one_of(single_selector, tuple_selector()))  # type: ignore[misc]
 @pytest.mark.slow
-def test_getitem(
-    pandas_or_pyarrow_constructor: Any,
-    selector: Any,
-) -> None:
+def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.
@@ -244,7 +216,4 @@ def test_getitem(
     if isinstance(result_polars, nw.Series):
         assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})
     else:
-        assert_equal_data(
-            result_other,
-            result_polars.to_dict(),
-        )
+        assert_equal_data(result_other, result_polars.to_dict())

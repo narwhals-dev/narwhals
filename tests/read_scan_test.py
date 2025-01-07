@@ -15,8 +15,7 @@ data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
 def test_read_csv(
-    tmpdir: pytest.TempdirFactory,
-    constructor_eager: ConstructorEager,
+    tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
 ) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
@@ -50,10 +49,7 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     assert_equal_data(result, data)
 
 
-def test_scan_csv(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-) -> None:
+def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -64,10 +60,7 @@ def test_scan_csv(
     assert isinstance(result, nw.LazyFrame)
 
 
-def test_scan_csv_v1(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-) -> None:
+def test_scan_csv_v1(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -89,8 +82,7 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet(
-    tmpdir: pytest.TempdirFactory,
-    constructor_eager: ConstructorEager,
+    tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
 ) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
@@ -126,10 +118,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_scan_parquet(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-) -> None:
+def test_scan_parquet(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -141,10 +130,7 @@ def test_scan_parquet(
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_scan_parquet_v1(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-) -> None:
+def test_scan_parquet_v1(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)

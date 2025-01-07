@@ -127,13 +127,7 @@ def test_group_by_depth_1_agg(
 
 
 @pytest.mark.parametrize(
-    ("attr", "ddof"),
-    [
-        ("std", 0),
-        ("var", 0),
-        ("std", 2),
-        ("var", 2),
-    ],
+    ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
 def test_group_by_depth_1_std_var(
     constructor: Constructor, attr: str, ddof: int, request: pytest.FixtureRequest
@@ -214,37 +208,17 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
-        df.group_by("a")
-        .agg(
-            b_min=nw.col("b").min(),
-            b_max=nw.col("b").max(),
-        )
-        .sort("a")
+        df.group_by("a").agg(b_min=nw.col("b").min(), b_max=nw.col("b").max()).sort("a")
     )
-    expected = {
-        "a": [1, 2],
-        "b_min": [4, 6],
-        "b_max": [5, 6],
-    }
+    expected = {"a": [1, 2], "b_min": [4, 6], "b_max": [5, 6]}
     assert_equal_data(result, expected)
 
 
 def test_group_by_simple_unnamed(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
-    result = (
-        df.group_by("a")
-        .agg(
-            nw.col("b").min(),
-            nw.col("c").max(),
-        )
-        .sort("a")
-    )
-    expected = {
-        "a": [1, 2],
-        "b": [4, 6],
-        "c": [7, 1],
-    }
+    result = df.group_by("a").agg(nw.col("b").min(), nw.col("c").max()).sort("a")
+    expected = {"a": [1, 2], "b": [4, 6], "c": [7, 1]}
     assert_equal_data(result, expected)
 
 
@@ -253,25 +227,14 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a", "b")
-        .agg(
-            c_min=nw.col("c").min(),
-            c_max=nw.col("c").max(),
-        )
+        .agg(c_min=nw.col("c").min(), c_max=nw.col("c").max())
         .sort("a")
     )
-    expected = {
-        "a": [1, 2],
-        "b": [4, 6],
-        "c_min": [2, 1],
-        "c_max": [7, 1],
-    }
+    expected = {"a": [1, 2], "b": [4, 6], "c_min": [2, 1], "c_max": [7, 1]}
     assert_equal_data(result, expected)
 
 
-def test_key_with_nulls(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
@@ -311,8 +274,7 @@ def test_key_with_nulls_ignored(
 
 
 def test_key_with_nulls_iter(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
         # Grouping by null values is not supported in pandas < 1.0.0
@@ -346,8 +308,7 @@ def test_no_agg(constructor: Constructor) -> None:
 
 
 def test_group_by_categorical(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -362,8 +323,7 @@ def test_group_by_categorical(
     df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
-            g1=nw.col("g1").cast(nw.Categorical()),
-            g2=nw.col("g2").cast(nw.Categorical()),
+            g1=nw.col("g1").cast(nw.Categorical()), g2=nw.col("g2").cast(nw.Categorical())
         )
         .group_by(["g1", "g2"])
         .agg(nw.col("x").sum())

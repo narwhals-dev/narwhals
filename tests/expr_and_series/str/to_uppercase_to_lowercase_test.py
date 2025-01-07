@@ -110,9 +110,7 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Constructor,
-    data: dict[str, list[str]],
-    expected: dict[str, list[str]],
+    constructor: Constructor, data: dict[str, list[str]], expected: dict[str, list[str]]
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_lowercase())

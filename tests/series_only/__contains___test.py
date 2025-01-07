@@ -29,9 +29,7 @@ def test_contains(
 
 @pytest.mark.parametrize("other", ["foo", [1, 2, 3]])
 def test_contains_invalid_type(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-    other: Any,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, other: Any
 ) -> None:
     if "polars" not in str(constructor_eager) and "pyarrow_table" not in str(
         constructor_eager

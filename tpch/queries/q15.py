@@ -10,10 +10,7 @@ if TYPE_CHECKING:
 
 
 @nw.narwhalify
-def query(
-    lineitem_ds: FrameT,
-    supplier_ds: FrameT,
-) -> FrameT:
+def query(lineitem_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = datetime(1996, 1, 1)
     var2 = datetime(1996, 4, 1)
 

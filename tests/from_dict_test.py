@@ -44,17 +44,13 @@ def test_from_dict_without_namespace(constructor: Constructor) -> None:
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
-def test_from_dict_without_namespace_invalid(
-    constructor: Constructor,
-) -> None:
+def test_from_dict_without_namespace_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     with pytest.raises(TypeError, match="namespace"):
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
 
-def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor,
-) -> None:
+def test_from_dict_one_native_one_narwhals(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
     expected = {"c": [1, 2, 3], "d": [4, 5, 6]}

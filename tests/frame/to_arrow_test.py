@@ -14,8 +14,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_to_arrow(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 0, 0):
         # pyarrow requires pandas>=1.0.0

@@ -28,12 +28,7 @@ def test_lit(
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "lit": expected_lit,
-    }
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "lit": expected_lit}
     assert_equal_data(result, expected)
 
 
@@ -60,10 +55,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2))
-    expected = {
-        "a": [1, 3, 2],
-        "literal": [2, 2, 2],
-    }
+    expected = {"a": [1, 3, 2], "literal": [2, 2, 2]}
     assert_equal_data(result, expected)
 
 

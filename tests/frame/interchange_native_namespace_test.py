@@ -27,9 +27,7 @@ def test_interchange() -> None:
 
 
 @pytest.mark.filterwarnings("ignore:.*The `ArrowDtype` class is not available in pandas")
-def test_ibis(
-    tmpdir: pytest.TempdirFactory,
-) -> None:  # pragma: no cover
+def test_ibis(tmpdir: pytest.TempdirFactory) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df_pl = pl.DataFrame(data)
 

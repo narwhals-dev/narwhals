@@ -44,12 +44,8 @@ def test_sumh_all(constructor: Constructor, request: pytest.FixtureRequest) -> N
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.sum_horizontal(nw.all()))
-    expected = {
-        "a": [11, 22, 33],
-    }
+    expected = {"a": [11, 22, 33]}
     assert_equal_data(result, expected)
     result = df.select(c=nw.sum_horizontal(nw.all()))
-    expected = {
-        "c": [11, 22, 33],
-    }
+    expected = {"c": [11, 22, 33]}
     assert_equal_data(result, expected)

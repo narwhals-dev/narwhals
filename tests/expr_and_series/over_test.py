@@ -8,17 +8,9 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-data = {
-    "a": ["a", "a", "b", "b", "b"],
-    "b": [1, 2, 3, 5, 3],
-    "c": [5, 4, 3, 2, 1],
-}
+data = {"a": ["a", "a", "b", "b", "b"], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
 
-data_cum = {
-    "a": ["a", "a", "b", "b", "b"],
-    "b": [1, 2, None, 5, 3],
-    "c": [5, 4, 3, 2, 1],
-}
+data_cum = {"a": ["a", "a", "b", "b", "b"], "b": [1, 2, None, 5, 3], "c": [5, 4, 3, 2, 1]}
 
 
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:

@@ -34,10 +34,7 @@ def test_nth(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION >= (1, 0, 0),
-    reason="1.0.0",
-)
+@pytest.mark.skipif(POLARS_VERSION >= (1, 0, 0), reason="1.0.0")
 def test_nth_not_supported() -> None:  # pragma: no cover
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(

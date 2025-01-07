@@ -55,28 +55,13 @@ class MockSeries:
         return self
 
 
-eager_frames = [
-    df_pd,
-    df_pl,
-    df_mpd,
-    df_pa,
-    MockDataFrame(),
-]
+eager_frames = [df_pd, df_pl, df_mpd, df_pa, MockDataFrame()]
 
-lazy_frames = [
-    lf_pl,
-    MockLazyFrame(),
-]
+lazy_frames = [lf_pl, MockLazyFrame()]
 
 all_frames = [*eager_frames, *lazy_frames]
 
-all_series = [
-    series_pd,
-    series_pl,
-    series_mpd,
-    series_pa,
-    MockSeries(),
-]
+all_series = [series_pd, series_pl, series_mpd, series_pa, MockSeries()]
 
 
 @pytest.mark.parametrize(

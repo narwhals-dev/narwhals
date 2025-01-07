@@ -10,11 +10,7 @@ if TYPE_CHECKING:
 
 
 @nw.narwhalify
-def query(
-    customer_ds: FrameT,
-    line_item_ds: FrameT,
-    orders_ds: FrameT,
-) -> FrameT:
+def query(customer_ds: FrameT, line_item_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
@@ -22,10 +18,7 @@ def query(
         customer_ds.filter(nw.col("c_mktsegment") == var_3)
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
-        .filter(
-            nw.col("o_orderdate") < var_2,
-            nw.col("l_shipdate") > var_1,
-        )
+        .filter(nw.col("o_orderdate") < var_2, nw.col("l_shipdate") > var_1)
         .with_columns(
             (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).alias("revenue")
         )

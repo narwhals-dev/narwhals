@@ -70,8 +70,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
 
 
 @given(  # type: ignore[misc]
-    center=st.booleans(),
-    values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
+    center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=3, max_size=10)
 )
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.slow

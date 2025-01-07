@@ -25,8 +25,7 @@ def test_sort_expr(
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        "a",
-        nw.col("b").sort(descending=descending, nulls_last=nulls_last),
+        "a", nw.col("b").sort(descending=descending, nulls_last=nulls_last)
     )
     assert_equal_data(result, expected)
 

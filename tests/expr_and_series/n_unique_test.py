@@ -7,10 +7,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [1.0, None, None, 3.0],
-    "b": [1.0, None, 4, 5.0],
-}
+data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4, 5.0]}
 
 
 def test_n_unique(constructor: Constructor, request: pytest.FixtureRequest) -> None:

@@ -13,13 +13,8 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="too old for pandas-pyarrow",
-)
-def test_convert_pandas(
-    constructor_eager: ConstructorEager,
-) -> None:
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pandas-pyarrow")
+def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]

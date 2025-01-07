@@ -12,8 +12,7 @@ data = {"a": ["one", "two", "two"]}
 
 
 def test_get_categories(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         request.applymarker(pytest.mark.xfail)

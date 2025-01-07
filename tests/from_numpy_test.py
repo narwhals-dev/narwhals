@@ -57,11 +57,7 @@ def test_from_numpy_schema_list(
     schema = ["c", "d", "e", "f"]
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
-    result = nw_v1.from_numpy(
-        arr,
-        native_namespace=native_namespace,
-        schema=schema,
-    )
+    result = nw_v1.from_numpy(arr, native_namespace=native_namespace, schema=schema)
     assert result.columns == schema
 
 

@@ -6,10 +6,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": ["foo", "bars"],
-    "ab": ["foo", "bars"],
-}
+data = {"a": ["foo", "bars"], "ab": ["foo", "bars"]}
 
 
 def test_with_columns(constructor_eager: ConstructorEager) -> None:

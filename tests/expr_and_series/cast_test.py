@@ -56,10 +56,7 @@ schema = {
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
@@ -112,8 +109,7 @@ def test_cast(
 
 
 def test_cast_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION <= (
         15,
@@ -237,10 +233,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
 
     data = {
-        "a": [
-            {"movie": "Cars", "rating": 4.5},
-            {"movie": "Toy Story", "rating": 4.9},
-        ]
+        "a": [{"movie": "Cars", "rating": 4.5}, {"movie": "Toy Story", "rating": 4.9}]
     }
 
     dtype = nw.Struct([nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())])

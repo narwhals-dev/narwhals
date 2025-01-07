@@ -160,11 +160,7 @@ def test_collect_schema(pyspark_constructor: Constructor) -> None:
 # copied from tests/frame/drop_test.py
 @pytest.mark.parametrize(
     ("to_drop", "expected"),
-    [
-        ("abc", ["b", "z"]),
-        (["abc"], ["b", "z"]),
-        (["abc", "b"], ["z"]),
-    ],
+    [("abc", ["b", "z"]), (["abc"], ["b", "z"]), (["abc", "b"], ["z"])],
 )
 def test_drop(
     pyspark_constructor: Constructor, to_drop: list[str], expected: list[str]
@@ -178,10 +174,7 @@ def test_drop(
 
 @pytest.mark.parametrize(
     ("strict", "context"),
-    [
-        (True, pytest.raises(ColumnNotFoundError, match="z")),
-        (False, does_not_raise()),
-    ],
+    [(True, pytest.raises(ColumnNotFoundError, match="z")), (False, does_not_raise())],
 )
 def test_drop_strict(
     pyspark_constructor: Constructor, context: Any, *, strict: bool
@@ -220,18 +213,10 @@ def test_sort(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.sort("a", "b")
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 6, 4],
-        "z": [7.0, 9.0, 8.0],
-    }
+    expected = {"a": [1, 2, 3], "b": [4, 6, 4], "z": [7.0, 9.0, 8.0]}
     assert_equal_data(result, expected)
     result = df.sort("a", "b", descending=[True, False]).lazy().collect()
-    expected = {
-        "a": [3, 2, 1],
-        "b": [4, 6, 4],
-        "z": [8.0, 9.0, 7.0],
-    }
+    expected = {"a": [3, 2, 1], "b": [4, 6, 4], "z": [8.0, 9.0, 7.0]}
     assert_equal_data(result, expected)
 
 
@@ -283,10 +268,7 @@ def test_abs(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
 def test_allh(pyspark_constructor: Constructor, expr1: Any, expr2: Any) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(all=nw.all_horizontal(expr1, expr2))
 
@@ -295,10 +277,7 @@ def test_allh(pyspark_constructor: Constructor, expr1: Any, expr2: Any) -> None:
 
 
 def test_allh_all(pyspark_constructor: Constructor) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(all=nw.all_horizontal(nw.all()))
     expected = {"all": [False, False, True]}
@@ -336,14 +315,10 @@ def test_sumh_all(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.sum_horizontal(nw.all()))
-    expected = {
-        "a": [11, 22, 33],
-    }
+    expected = {"a": [11, 22, 33]}
     assert_equal_data(result, expected)
     result = df.select(c=nw.sum_horizontal(nw.all()))
-    expected = {
-        "c": [11, 22, 33],
-    }
+    expected = {"c": [11, 22, 33]}
     assert_equal_data(result, expected)
 
 
@@ -369,12 +344,7 @@ def test_double_alias(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
-    expected = {
-        "a": [2, 6, 4],
-        "b": [8, 8, 12],
-        "z": [14.0, 16.0, 18.0],
-        "o": [1, 3, 2],
-    }
+    expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0], "o": [1, 3, 2]}
     assert_equal_data(result, expected)
 
 
@@ -468,18 +438,11 @@ def test_group_by_simple_named(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data)).lazy()
     result = (
         df.group_by("a")
-        .agg(
-            b_min=nw.col("b").min(),
-            b_max=nw.col("b").max(),
-        )
+        .agg(b_min=nw.col("b").min(), b_max=nw.col("b").max())
         .collect()
         .sort("a")
     )
-    expected = {
-        "a": [1, 2],
-        "b_min": [4, 6],
-        "b_max": [5, 6],
-    }
+    expected = {"a": [1, 2], "b_min": [4, 6], "b_max": [5, 6]}
     assert_equal_data(result, expected)
 
 
@@ -487,19 +450,9 @@ def test_group_by_simple_unnamed(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(pyspark_constructor(data)).lazy()
     result = (
-        df.group_by("a")
-        .agg(
-            nw.col("b").min(),
-            nw.col("c").max(),
-        )
-        .collect()
-        .sort("a")
+        df.group_by("a").agg(nw.col("b").min(), nw.col("c").max()).collect().sort("a")
     )
-    expected = {
-        "a": [1, 2],
-        "b": [4, 6],
-        "c": [7, 1],
-    }
+    expected = {"a": [1, 2], "b": [4, 6], "c": [7, 1]}
     assert_equal_data(result, expected)
 
 
@@ -508,36 +461,20 @@ def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data)).lazy()
     result = (
         df.group_by("a", "b")
-        .agg(
-            c_min=nw.col("c").min(),
-            c_max=nw.col("c").max(),
-        )
+        .agg(c_min=nw.col("c").min(), c_max=nw.col("c").max())
         .collect()
         .sort("a")
     )
-    expected = {
-        "a": [1, 2],
-        "b": [4, 6],
-        "c_min": [2, 1],
-        "c_max": [7, 1],
-    }
+    expected = {"a": [1, 2], "b": [4, 6], "c_min": [2, 1], "c_max": [7, 1]}
     assert_equal_data(result, expected)
 
 
 # copied from tests/group_by_test.py
 @pytest.mark.parametrize(
-    ("attr", "ddof"),
-    [
-        ("std", 0),
-        ("var", 0),
-        ("std", 2),
-        ("var", 2),
-    ],
+    ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
 def test_group_by_depth_1_std_var(
-    pyspark_constructor: Constructor,
-    attr: str,
-    ddof: int,
+    pyspark_constructor: Constructor, attr: str, ddof: int
 ) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
@@ -555,16 +492,10 @@ def test_group_by_depth_1_std_var(
 
 # copied from tests/frame/drop_nulls_test.py
 def test_drop_nulls(pyspark_constructor: Constructor) -> None:
-    data = {
-        "a": [1.0, 2.0, None, 4.0],
-        "b": [None, 3.0, None, 5.0],
-    }
+    data = {"a": [1.0, 2.0, None, 4.0], "b": [None, 3.0, None, 5.0]}
 
     result = nw.from_native(pyspark_constructor(data)).drop_nulls()
-    expected = {
-        "a": [2.0, 4.0],
-        "b": [3.0, 5.0],
-    }
+    expected = {"a": [2.0, 4.0], "b": [3.0, 5.0]}
     assert_equal_data(result, expected)
 
 
@@ -577,14 +508,9 @@ def test_drop_nulls(pyspark_constructor: Constructor) -> None:
     ],
 )
 def test_drop_nulls_subset(
-    pyspark_constructor: Constructor,
-    subset: str | list[str],
-    expected: dict[str, float],
+    pyspark_constructor: Constructor, subset: str | list[str], expected: dict[str, float]
 ) -> None:
-    data = {
-        "a": [1.0, 2.0, None, 4.0],
-        "b": [None, 3.0, None, 5.0],
-    }
+    data = {"a": [1.0, 2.0, None, 4.0], "b": [None, 3.0, None, 5.0]}
 
     result = nw.from_native(pyspark_constructor(data)).drop_nulls(subset=subset)
     assert_equal_data(result, expected)
@@ -730,8 +656,7 @@ def test_cross_join(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
     with pytest.raises(
-        ValueError,
-        match="Can not pass `left_on`, `right_on` or `on` keys for cross join",
+        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
     ):
         df.join(other, how="cross", left_on="antananarivo")  # type: ignore[arg-type]
 
@@ -739,11 +664,7 @@ def test_cross_join(pyspark_constructor: Constructor) -> None:
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
 def test_suffix(pyspark_constructor: Constructor, how: str, suffix: str) -> None:
-    data = {
-        "antananarivo": [1, 3, 2],
-        "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-    }
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
     df_right = nw.from_native(pyspark_constructor(data))
     result = df.join(
@@ -842,16 +763,8 @@ def test_semi_join(
 
 
 def test_left_join(pyspark_constructor: Constructor) -> None:
-    data_left = {
-        "antananarivo": [1.0, 2, 3],
-        "bob": [4.0, 5, 6],
-        "idx": [0.0, 1.0, 2.0],
-    }
-    data_right = {
-        "antananarivo": [1.0, 2, 3],
-        "co": [4.0, 5, 7],
-        "idx": [0.0, 1.0, 2.0],
-    }
+    data_left = {"antananarivo": [1.0, 2, 3], "bob": [4.0, 5, 6], "idx": [0.0, 1.0, 2.0]}
+    data_right = {"antananarivo": [1.0, 2, 3], "co": [4.0, 5, 7], "idx": [0.0, 1.0, 2.0]}
     df_left = nw.from_native(pyspark_constructor(data_left))
     df_right = nw.from_native(pyspark_constructor(data_right))
     result = (
@@ -1039,9 +952,7 @@ def test_is_unique(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 1, 2, None], "b": [1, 2, None, None], "level_0": [0, 1, 2, 3]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(
-        a=nw.col("a").is_unique(),
-        b=nw.col("b").is_unique(),
-        level_0=nw.col("level_0"),
+        a=nw.col("a").is_unique(), b=nw.col("b").is_unique(), level_0=nw.col("level_0")
     ).sort("level_0")
     expected = {
         "a": [False, False, True, True],
@@ -1054,10 +965,7 @@ def test_is_unique(pyspark_constructor: Constructor) -> None:
 def test_len(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 2, float("nan"), 4, None], "b": [None, 3, None, 5, None]}
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(
-        a=nw.col("a").len(),
-        b=nw.col("b").len(),
-    )
+    result = df.select(a=nw.col("a").len(), b=nw.col("b").len())
     expected = {"a": [5], "b": [5]}
     assert_equal_data(result, expected)
 

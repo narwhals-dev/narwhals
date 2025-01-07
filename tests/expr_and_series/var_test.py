@@ -40,12 +40,8 @@ def test_var(constructor: Constructor, input_data: dict[str, list[float | None]]
         else does_not_raise()
     )
     with context:
-        result = df.select(
-            nw.col("b").var(ddof=2).alias("b_ddof_2"),
-        )
-        expected_results = {
-            "b_ddof_2": [2.666666666666667],
-        }
+        result = df.select(nw.col("b").var(ddof=2).alias("b_ddof_2"))
+        expected_results = {"b_ddof_2": [2.666666666666667]}
         assert_equal_data(result, expected_results)
 
 

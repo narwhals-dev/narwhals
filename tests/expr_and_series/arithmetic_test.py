@@ -161,8 +161,7 @@ def test_truediv_same_dims(
 
 @pytest.mark.slow
 @given(  # type: ignore[misc]
-    left=st.integers(-100, 100),
-    right=st.integers(-100, 100),
+    left=st.integers(-100, 100), right=st.integers(-100, 100)
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_floordiv(left: int, right: int) -> None:
@@ -199,8 +198,7 @@ def test_floordiv(left: int, right: int) -> None:
 
 @pytest.mark.slow
 @given(  # type: ignore[misc]
-    left=st.integers(-100, 100),
-    right=st.integers(-100, 100),
+    left=st.integers(-100, 100), right=st.integers(-100, 100)
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_mod(left: int, right: int) -> None:

@@ -58,19 +58,13 @@ with open("pyproject.toml", "w", encoding="utf-8") as f:
 
 with open("narwhals/__init__.py", encoding="utf-8") as f:
     content = f.read()
-content = content.replace(
-    f'__version__ = "{old_version}"',
-    f'__version__ = "{version}"',
-)
+content = content.replace(f'__version__ = "{old_version}"', f'__version__ = "{version}"')
 with open("narwhals/__init__.py", "w", encoding="utf-8") as f:
     f.write(content)
 
 with open("docs/installation.md", encoding="utf-8") as f:
     content = f.read()
-content = content.replace(
-    f"'{old_version}'",
-    f"'{version}'",
-)
+content = content.replace(f"'{old_version}'", f"'{version}'")
 with open("docs/installation.md", "w", encoding="utf-8") as f:
     f.write(content)
 

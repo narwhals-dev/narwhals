@@ -11,18 +11,10 @@ def test_sort(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.sort("a", "b")
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 6, 4],
-        "z": [7.0, 9.0, 8.0],
-    }
+    expected = {"a": [1, 2, 3], "b": [4, 6, 4], "z": [7.0, 9.0, 8.0]}
     assert_equal_data(result, expected)
     result = df.sort("a", "b", descending=[True, False])
-    expected = {
-        "a": [3, 2, 1],
-        "b": [4, 6, 4],
-        "z": [8.0, 9.0, 7.0],
-    }
+    expected = {"a": [3, 2, 1], "b": [4, 6, 4], "z": [8.0, 9.0, 7.0]}
     assert_equal_data(result, expected)
 
 

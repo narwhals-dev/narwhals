@@ -35,8 +35,7 @@ def test_suffix_raise_anonymous(constructor: Constructor) -> None:
         does_not_raise()
         if isinstance(df_raw, (pl.LazyFrame, pl.DataFrame))
         else pytest.raises(
-            ValueError,
-            match="Anonymous expressions are not supported in `.name.suffix`.",
+            ValueError, match="Anonymous expressions are not supported in `.name.suffix`."
         )
     )
 

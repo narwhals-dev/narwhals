@@ -22,9 +22,7 @@ def test_when(constructor: Constructor, request: pytest.FixtureRequest) -> None:
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
-    expected = {
-        "a_when": [3, None, None],
-    }
+    expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
@@ -33,9 +31,7 @@ def test_when_otherwise(constructor: Constructor, request: pytest.FixtureRequest
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
-    expected = {
-        "a_when": [3, 6, 6],
-    }
+    expected = {"a_when": [3, 6, 6]}
     assert_equal_data(result, expected)
 
 
@@ -48,9 +44,7 @@ def test_multiple_conditions(
     result = df.select(
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
     )
-    expected = {
-        "a_when": [3, None, None],
-    }
+    expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
@@ -67,9 +61,7 @@ def test_value_numpy_array(constructor_eager: ConstructorEager) -> None:
     result = df.select(
         nw.when(nw.col("a") == 1).then(np.asanyarray([3, 4, 5])).alias("a_when")
     )
-    expected = {
-        "a_when": [3, None, None],
-    }
+    expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
@@ -79,9 +71,7 @@ def test_value_series(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager(s_data))["s"]
     assert isinstance(s, nw.Series)
     result = df.select(nw.when(nw.col("a") == 1).then(s).alias("a_when"))
-    expected = {
-        "a_when": [3, None, None],
-    }
+    expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
@@ -92,9 +82,7 @@ def test_value_expression(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
-    expected = {
-        "a_when": [10, None, None],
-    }
+    expected = {"a_when": [10, None, None]}
     assert_equal_data(result, expected)
 
 
@@ -104,9 +92,7 @@ def test_otherwise_numpy_array(constructor_eager: ConstructorEager) -> None:
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(np.array([0, 9, 10])).alias("a_when")
     )
-    expected = {
-        "a_when": [-1, 9, 10],
-    }
+    expected = {"a_when": [-1, 9, 10]}
     assert_equal_data(result, expected)
 
 
@@ -116,9 +102,7 @@ def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager(s_data))["s"]
     assert isinstance(s, nw.Series)
     result = df.select(nw.when(nw.col("a") == 1).then(-1).otherwise(s).alias("a_when"))
-    expected = {
-        "a_when": [-1, 9, 10],
-    }
+    expected = {"a_when": [-1, 9, 10]}
     assert_equal_data(result, expected)
 
 
@@ -131,9 +115,7 @@ def test_otherwise_expression(
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(nw.col("a") + 7).alias("a_when")
     )
-    expected = {
-        "a_when": [-1, 9, 10],
-    }
+    expected = {"a_when": [-1, 9, 10]}
     assert_equal_data(result, expected)
 
 

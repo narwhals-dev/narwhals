@@ -17,11 +17,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize(
     ("to_drop", "expected"),
-    [
-        ("abc", ["b", "z"]),
-        (["abc"], ["b", "z"]),
-        (["abc", "b"], ["z"]),
-    ],
+    [("abc", ["b", "z"]), (["abc"], ["b", "z"]), (["abc", "b"], ["z"])],
 )
 def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -34,10 +30,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (
-            True,
-            pytest.raises((ColumnNotFoundError, PlColumnNotFoundError), match="z"),
-        ),
+        (True, pytest.raises((ColumnNotFoundError, PlColumnNotFoundError), match="z")),
         (False, does_not_raise()),
     ],
 )

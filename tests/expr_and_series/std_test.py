@@ -28,11 +28,7 @@ def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]
         nw.col("a").std(ddof=0).alias("a_ddof_0"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    expected_results = {
-        "a_ddof_1": [1.0],
-        "a_ddof_0": [0.816497],
-        "z_ddof_0": [0.816497],
-    }
+    expected_results = {"a_ddof_1": [1.0], "a_ddof_0": [0.816497], "z_ddof_0": [0.816497]}
     assert_equal_data(result, expected_results)
     context = (
         pytest.raises(NotImplementedError)
@@ -40,12 +36,8 @@ def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]
         else does_not_raise()
     )
     with context:
-        result = df.select(
-            nw.col("b").std(ddof=2).alias("b_ddof_2"),
-        )
-        expected_results = {
-            "b_ddof_2": [1.632993],
-        }
+        result = df.select(nw.col("b").std(ddof=2).alias("b_ddof_2"))
+        expected_results = {"b_ddof_2": [1.632993]}
         assert_equal_data(result, expected_results)
 
 

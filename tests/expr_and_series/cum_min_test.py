@@ -11,10 +11,7 @@ from tests.utils import assert_equal_data
 
 data = {"a": [3, 1, None, 2]}
 
-expected = {
-    "cum_min": [3, 1, None, 1],
-    "reverse_cum_min": [1, 1, None, 2],
-}
+expected = {"cum_min": [3, 1, None, 1], "reverse_cum_min": [1, 1, None, 2]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -36,9 +33,7 @@ def test_cum_min_expr(
 
     name = "reverse_cum_min" if reverse else "cum_min"
     df = nw.from_native(constructor(data))
-    result = df.select(
-        nw.col("a").cum_min(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("a").cum_min(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
@@ -56,7 +51,6 @@ def test_cum_min_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_min=df["a"].cum_min(),
-        reverse_cum_min=df["a"].cum_min(reverse=True),
+        cum_min=df["a"].cum_min(), reverse_cum_min=df["a"].cum_min(reverse=True)
     )
     assert_equal_data(result, expected)

@@ -16,8 +16,7 @@ data = {"a": [1, 2, 3]}
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_write_parquet(
-    constructor_eager: ConstructorEager,
-    tmpdir: pytest.TempdirFactory,
+    constructor_eager: ConstructorEager, tmpdir: pytest.TempdirFactory
 ) -> None:
     path = tmpdir / "foo.parquet"  # type: ignore[operator]
     nw.from_native(constructor_eager(data), eager_only=True).write_parquet(str(path))

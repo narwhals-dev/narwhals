@@ -35,10 +35,7 @@ from tests.utils import PANDAS_VERSION
         (np.datetime64("2020-01-01", "ns"), datetime(2020, 1, 1)),
     ],
 )
-def test_to_py_scalar(
-    input_value: Any,
-    expected: Any,
-) -> None:
+def test_to_py_scalar(input_value: Any, expected: Any) -> None:
     output = nw.to_py_scalar(input_value)
     if expected == 1:
         assert not isinstance(output, np.int64)
@@ -52,10 +49,7 @@ def test_na_to_py_scalar() -> None:
     assert nw.to_py_scalar(pd.NA) is None
 
 
-@pytest.mark.parametrize(
-    "input_value",
-    [np.array([1, 2]), [1, 2, 3], {"a": [1, 2, 3]}],
-)
+@pytest.mark.parametrize("input_value", [np.array([1, 2]), [1, 2, 3], {"a": [1, 2, 3]}])
 def test_to_py_scalar_value_error(input_value: Any) -> None:
     with pytest.raises(ValueError, match="Expected object convertible to a scalar"):
         nw.to_py_scalar(input_value)

@@ -24,21 +24,10 @@ import narwhals.stable.v1 as nw
 )  # type: ignore[misc]
 @pytest.mark.slow
 def test_mean(
-    integer: st.SearchStrategy[list[int]],
-    floats: st.SearchStrategy[float],
+    integer: st.SearchStrategy[list[int]], floats: st.SearchStrategy[float]
 ) -> None:
-    df_pandas = pd.DataFrame(
-        {
-            "integer": integer,
-            "floats": floats,
-        }
-    )
-    df_polars = pl.DataFrame(
-        {
-            "integer": integer,
-            "floats": floats,
-        },
-    )
+    df_pandas = pd.DataFrame({"integer": integer, "floats": floats})
+    df_polars = pl.DataFrame({"integer": integer, "floats": floats})
     df_nw1 = nw.from_native(df_pandas, eager_only=True)
     df_nw2 = nw.from_native(df_polars, eager_only=True)
 

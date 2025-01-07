@@ -11,10 +11,7 @@ from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, None, 2]}
 
-expected = {
-    "cum_max": [1, 3, None, 3],
-    "reverse_cum_max": [3, 3, None, 2],
-}
+expected = {"cum_max": [1, 3, None, 3], "reverse_cum_max": [3, 3, None, 2]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -36,9 +33,7 @@ def test_cum_max_expr(
 
     name = "reverse_cum_max" if reverse else "cum_max"
     df = nw.from_native(constructor(data))
-    result = df.select(
-        nw.col("a").cum_max(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("a").cum_max(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
@@ -56,7 +51,6 @@ def test_cum_max_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_max=df["a"].cum_max(),
-        reverse_cum_max=df["a"].cum_max(reverse=True),
+        cum_max=df["a"].cum_max(), reverse_cum_max=df["a"].cum_max(reverse=True)
     )
     assert_equal_data(result, expected)

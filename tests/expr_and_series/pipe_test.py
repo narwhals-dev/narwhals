@@ -15,9 +15,7 @@ def test_pipe_expr(constructor: Constructor) -> None:
     assert_equal_data(e, {"a": expected})
 
 
-def test_pipe_series(
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_pipe_series(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager(input_list), eager_only=True)["a"]
     result = s.pipe(lambda x: x**2)
     assert_equal_data({"a": result}, {"a": expected})

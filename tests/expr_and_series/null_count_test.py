@@ -7,10 +7,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [1.0, None, None, 3.0],
-    "b": [1.0, None, 4, 5.0],
-}
+data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4, 5.0]}
 
 
 def test_null_count_expr(
@@ -20,10 +17,7 @@ def test_null_count_expr(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().null_count())
-    expected = {
-        "a": [2],
-        "b": [1],
-    }
+    expected = {"a": [2], "b": [1]}
     assert_equal_data(result, expected)
 
 

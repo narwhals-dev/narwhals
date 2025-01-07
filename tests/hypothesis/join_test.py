@@ -26,17 +26,8 @@ from tests.utils import assert_equal_data
         min_size=3,
         max_size=3,
     ),
-    st.lists(
-        st.floats(),
-        min_size=3,
-        max_size=3,
-    ),
-    st.lists(
-        st.sampled_from(["a", "b", "c"]),
-        min_size=1,
-        max_size=3,
-        unique=True,
-    ),
+    st.lists(st.floats(), min_size=3, max_size=3),
+    st.lists(st.sampled_from(["a", "b", "c"]), min_size=1, max_size=3, unique=True),
 )  # type: ignore[misc]
 @pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
@@ -89,8 +80,7 @@ def test_join(  # pragma: no cover
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_cross_join(  # pragma: no cover
-    integers: st.SearchStrategy[list[int]],
-    other_integers: st.SearchStrategy[list[int]],
+    integers: st.SearchStrategy[list[int]], other_integers: st.SearchStrategy[list[int]]
 ) -> None:
     data = {"a": integers, "b": other_integers}
 
@@ -177,6 +167,5 @@ def test_left_join(  # pragma: no cover
         .pipe(lambda df: df.sort(df.columns))
     )
     assert_equal_data(
-        result_pa,
-        result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False),
+        result_pa, result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False)
     )

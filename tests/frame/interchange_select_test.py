@@ -42,9 +42,7 @@ def test_interchange() -> None:
     assert result.columns == ["a", "z"]
 
 
-def test_interchange_ibis(
-    tmpdir: pytest.TempdirFactory,
-) -> None:  # pragma: no cover
+def test_interchange_ibis(tmpdir: pytest.TempdirFactory) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df_pl = pl.DataFrame(data)
 

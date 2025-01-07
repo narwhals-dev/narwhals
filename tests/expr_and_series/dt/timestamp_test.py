@@ -19,10 +19,7 @@ from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
 }
 
 
@@ -106,10 +103,7 @@ def test_timestamp_datetimes_tz_aware(
     ):  # pragma: no cover
         # pyarrow-backed timestamps were too inconsistent and unreliable before 2.2
         request.applymarker(pytest.mark.xfail(strict=False))
-    if "dask" in str(constructor) and PANDAS_VERSION < (
-        2,
-        1,
-    ):  # pragma: no cover
+    if "dask" in str(constructor) and PANDAS_VERSION < (2, 1):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
     if original_time_unit == "s" and "polars" in str(constructor):

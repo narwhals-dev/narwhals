@@ -10,10 +10,7 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-@pytest.mark.parametrize(
-    ("row", "column", "expected"),
-    [(0, 2, 7), (1, "z", 8)],
-)
+@pytest.mark.parametrize(("row", "column", "expected"), [(0, 2, 7), (1, "z", 8)])
 def test_item(
     constructor_eager: ConstructorEager,
     row: int | None,
@@ -29,16 +26,8 @@ def test_item(
 @pytest.mark.parametrize(
     ("row", "column", "err_msg"),
     [
-        (
-            0,
-            None,
-            re.escape("cannot call `.item()` with only one of `row` or `column`"),
-        ),
-        (
-            None,
-            0,
-            re.escape("cannot call `.item()` with only one of `row` or `column`"),
-        ),
+        (0, None, re.escape("cannot call `.item()` with only one of `row` or `column`")),
+        (None, 0, re.escape("cannot call `.item()` with only one of `row` or `column`")),
         (
             None,
             None,

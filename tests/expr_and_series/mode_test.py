@@ -8,10 +8,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [1, 1, 2, 2, 3],
-    "b": [1, 2, 3, 3, 4],
-}
+data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 
 
 def test_mode_single_expr(constructor_eager: Constructor) -> None:
@@ -22,8 +19,7 @@ def test_mode_single_expr(constructor_eager: Constructor) -> None:
 
 
 def test_mode_multi_expr(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION >= (1, 7, 0):
         request.applymarker(pytest.mark.xfail)

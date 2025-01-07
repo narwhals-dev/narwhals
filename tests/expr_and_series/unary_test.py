@@ -13,12 +13,7 @@ from tests.utils import assert_equal_data
 def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    data = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "c": [7.0, 8.0, None],
-        "z": [7.0, 8, 9],
-    }
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8, 9]}
     result = nw.from_native(constructor(data)).select(
         a_mean=nw.col("a").mean(),
         a_median=nw.col("a").median(),
@@ -45,12 +40,7 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
 
 
 def test_unary_series(constructor_eager: ConstructorEager) -> None:
-    data = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "c": [7.0, 8.0, None],
-        "z": [7.0, 8, 9],
-    }
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_mean": [df["a"].mean()],

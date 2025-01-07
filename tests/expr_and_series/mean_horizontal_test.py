@@ -28,12 +28,8 @@ def test_meanh_all(constructor: Constructor, request: pytest.FixtureRequest) -> 
     data = {"a": [2, 4, 6], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.mean_horizontal(nw.all()))
-    expected = {
-        "a": [6, 12, 18],
-    }
+    expected = {"a": [6, 12, 18]}
     assert_equal_data(result, expected)
     result = df.select(c=nw.mean_horizontal(nw.all()))
-    expected = {
-        "c": [6, 12, 18],
-    }
+    expected = {"c": [6, 12, 18]}
     assert_equal_data(result, expected)

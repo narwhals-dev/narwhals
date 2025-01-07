@@ -10,10 +10,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-    "b": [11, 12, 13, 14, 15, 16],
-}
+data = {"a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], "b": [11, 12, 13, 14, 15, 16]}
 
 
 def test_slice_column(constructor_eager: ConstructorEager) -> None:
@@ -41,8 +38,7 @@ def test_slice_rows_with_step(
 
 def test_slice_rows_with_step_pyarrow() -> None:
     with pytest.raises(
-        NotImplementedError,
-        match="Slicing with step is not supported on PyArrow tables",
+        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
     ):
         nw.from_native(pa.table(data))[1::2]
 
@@ -67,10 +63,7 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
 def test_gather(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
-    expected = {
-        "a": [1.0, 4.0, 2.0],
-        "b": [11, 14, 12],
-    }
+    expected = {"a": [1.0, 4.0, 2.0], "b": [11, 14, 12]}
     assert_equal_data(result, expected)
     result = df[np.array([0, 3, 1])]
     assert_equal_data(result, expected)
@@ -227,12 +220,7 @@ def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
 
 
 @pytest.mark.parametrize(
-    ("row_idx", "col"),
-    [
-        ([0, 2], slice(1)),
-        ((0, 2), slice(1)),
-        (range(2), slice(1)),
-    ],
+    ("row_idx", "col"), [([0, 2], slice(1)), ((0, 2), slice(1)), (range(2), slice(1))]
 )
 def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
     constructor_eager: ConstructorEager,
@@ -244,17 +232,10 @@ def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col
 
 
 @pytest.mark.parametrize(
-    ("row_idx", "col"),
-    [
-        ([0, 2], "a"),
-        ((0, 2), "a"),
-        (range(2), "a"),
-    ],
+    ("row_idx", "col"), [([0, 2], "a"), ((0, 2), "a"), (range(2), "a")]
 )
 def test_get_item_works_with_tuple_and_list_indexing_and_str(
-    constructor_eager: ConstructorEager,
-    row_idx: list[int] | tuple[int] | range,
-    col: str,
+    constructor_eager: ConstructorEager, row_idx: list[int] | tuple[int] | range, col: str
 ) -> None:
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]

@@ -95,11 +95,7 @@ def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) ->
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
 def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
-    data = {
-        "antananarivo": [1, 3, 2],
-        "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-    }
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(
@@ -361,8 +357,7 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
 
 
 def test_joinasof_numeric(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
@@ -419,10 +414,7 @@ def test_joinasof_numeric(
     assert_equal_data(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_time(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_joinasof_time(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
@@ -500,10 +492,7 @@ def test_joinasof_time(
     assert_equal_data(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_by(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
@@ -575,8 +564,7 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
     ):
         df.join_asof(df)  # type: ignore[arg-type]
     with pytest.raises(
-        ValueError,
-        match="If `on` is specified, `left_on` and `right_on` should be None.",
+        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
         df.join_asof(
             df,  # type: ignore[arg-type]
@@ -585,13 +573,11 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
             on="antananarivo",
         )
     with pytest.raises(
-        ValueError,
-        match="If `on` is specified, `left_on` and `right_on` should be None.",
+        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
         df.join_asof(df, left_on="antananarivo", on="antananarivo")  # type: ignore[arg-type]
     with pytest.raises(
-        ValueError,
-        match="If `on` is specified, `left_on` and `right_on` should be None.",
+        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
         df.join_asof(df, right_on="antananarivo", on="antananarivo")  # type: ignore[arg-type]
 
@@ -600,8 +586,7 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
-        ValueError,
-        match="If `by` is specified, `by_left` and `by_right` should be None.",
+        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
         df.join_asof(df, on="antananarivo", by_left="bob", by_right="bob", by="bob")  # type: ignore[arg-type]
 
@@ -618,13 +603,11 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
         df.join_asof(df, on="antananarivo", by_right="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
-        ValueError,
-        match="If `by` is specified, `by_left` and `by_right` should be None.",
+        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
         df.join_asof(df, on="antananarivo", by_left="bob", by="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
-        ValueError,
-        match="If `by` is specified, `by_left` and `by_right` should be None.",
+        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
         df.join_asof(df, on="antananarivo", by_right="bob", by="bob")  # type: ignore[arg-type]

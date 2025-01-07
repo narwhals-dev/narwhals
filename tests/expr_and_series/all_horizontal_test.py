@@ -14,10 +14,7 @@ from tests.utils import assert_equal_data
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
 def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(all=nw.all_horizontal(expr1, expr2))
 
@@ -26,10 +23,7 @@ def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
 
 
 def test_allh_series(constructor_eager: ConstructorEager) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(all=nw.all_horizontal(df["a"], df["b"]))
 
@@ -38,10 +32,7 @@ def test_allh_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_allh_all(constructor: Constructor) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(all=nw.all_horizontal(nw.all()))
     expected = {"all": [False, False, True]}
@@ -51,18 +42,12 @@ def test_allh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_allh_nth(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.all_horizontal(nw.nth(0, 1)))
     expected = {"a": [False, False, True]}
@@ -73,10 +58,7 @@ def test_allh_nth(
 
 
 def test_horizontal_expressions_empty(constructor: Constructor) -> None:
-    data = {
-        "a": [False, False, True],
-        "b": [False, True, True],
-    }
+    data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
         ValueError, match=r"At least one expression must be passed.*all_horizontal"

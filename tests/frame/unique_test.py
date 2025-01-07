@@ -34,10 +34,7 @@ def test_unique(
 ) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    if isinstance(df, nw.LazyFrame) and keep in {
-        "first",
-        "last",
-    }:
+    if isinstance(df, nw.LazyFrame) and keep in {"first", "last"}:
         context: Any = pytest.raises(ValueError, match="row order")
     elif keep == "foo":
         context = pytest.raises(ValueError, match=": foo")

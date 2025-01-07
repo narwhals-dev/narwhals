@@ -59,10 +59,7 @@ def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> Non
     assert_equal_data(result, expected)
 
 
-def test_categorical(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-) -> None:
+def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover

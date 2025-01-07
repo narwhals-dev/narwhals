@@ -19,10 +19,7 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-data = {
-    "a": [datetime(2020, 1, 1)],
-    "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)],
-}
+data = {"a": [datetime(2020, 1, 1)], "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
@@ -196,8 +193,7 @@ def test_schema_object(method: str, expected: Any) -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < (2,),
-    reason="Before 2.0, pandas would raise on `drop_duplicates`",
+    PANDAS_VERSION < (2,), reason="Before 2.0, pandas would raise on `drop_duplicates`"
 )
 def test_from_non_hashable_column_name() -> None:
     # This is technically super-illegal
@@ -209,10 +205,7 @@ def test_from_non_hashable_column_name() -> None:
     assert df["pizza"].dtype == nw.Int64
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2, 0),
-    reason="too old for pyarrow types",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_nested_dtypes() -> None:
     duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame(
@@ -268,10 +261,7 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2, 0),
-    reason="too old for pyarrow types",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("dask_expr", exc_type=ImportError)

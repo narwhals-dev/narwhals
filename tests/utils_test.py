@@ -63,10 +63,7 @@ def test_maybe_align_index_polars() -> None:
         nw.maybe_align_index(df, s[1:])
 
 
-@pytest.mark.parametrize(
-    "column_names",
-    ["b", ["a", "b"]],
-)
+@pytest.mark.parametrize("column_names", ["b", ["a", "b"]])
 def test_maybe_set_index_pandas_column_names(
     column_names: str | list[str] | None,
 ) -> None:
@@ -76,13 +73,7 @@ def test_maybe_set_index_pandas_column_names(
     assert_frame_equal(nw.to_native(result), expected)
 
 
-@pytest.mark.parametrize(
-    "column_names",
-    [
-        "b",
-        ["a", "b"],
-    ],
-)
+@pytest.mark.parametrize("column_names", ["b", ["a", "b"]])
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
@@ -104,10 +95,7 @@ def test_maybe_set_index_polars_column_names(
                 nw.from_native(pd.Series([0, 1, 2]), series_only=True),
                 nw.from_native(pd.Series([1, 2, 0]), series_only=True),
             ],
-            [
-                pd.Series([0, 1, 2]),
-                pd.Series([1, 2, 0]),
-            ],
+            [pd.Series([0, 1, 2]), pd.Series([1, 2, 0])],
         ),
     ],
 )
@@ -261,8 +249,7 @@ def test_generate_temporary_column_name_raise() -> None:
     columns = [
         "".join(t)
         for t in product(
-            string.ascii_lowercase + string.digits,
-            string.ascii_lowercase + string.digits,
+            string.ascii_lowercase + string.digits, string.ascii_lowercase + string.digits
         )
     ]
 

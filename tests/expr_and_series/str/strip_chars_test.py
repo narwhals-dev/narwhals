@@ -14,10 +14,7 @@ data = {"a": ["foobar", "bar\n", " baz"]}
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [
-        (None, {"a": ["foobar", "bar", "baz"]}),
-        ("foo", {"a": ["bar", "bar\n", " baz"]}),
-    ],
+    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
 )
 def test_str_strip_chars(
     constructor: Constructor, characters: str | None, expected: Any
@@ -29,10 +26,7 @@ def test_str_strip_chars(
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [
-        (None, {"a": ["foobar", "bar", "baz"]}),
-        ("foo", {"a": ["bar", "bar\n", " baz"]}),
-    ],
+    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
 )
 def test_str_strip_chars_series(
     constructor_eager: ConstructorEager, characters: str | None, expected: Any

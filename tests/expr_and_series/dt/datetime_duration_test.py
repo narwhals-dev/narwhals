@@ -14,14 +14,8 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
-    "a": [
-        None,
-        timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
-    ],
-    "b": [
-        timedelta(milliseconds=2),
-        timedelta(milliseconds=1, microseconds=300),
-    ],
+    "a": [None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)],
+    "b": [timedelta(milliseconds=2), timedelta(milliseconds=1, microseconds=300)],
     "c": np.array([None, 20], dtype="timedelta64[ns]"),
 }
 
