@@ -5,7 +5,9 @@ import sys
 from ast import NodeVisitor
 
 
-def process_node(node: ast.FunctionDef | ast.ClassDef) -> tuple[int, int] | None:
+def find_docstring_example(
+    node: ast.FunctionDef | ast.ClassDef,
+) -> tuple[int, int] | None:
     """If node contains a docstring example, return start and end lines."""
     if (
         node.body
@@ -28,12 +30,12 @@ class Visitor(NodeVisitor):
         self.to_remove: list[tuple[int, int]] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
-        if removal := process_node(node):
+        if removal := find_docstring_example(node):
             self.to_remove.append(removal)
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
-        if removal := process_node(node):
+        if removal := find_docstring_example(node):
             self.to_remove.append(removal)
         self.generic_visit(node)
 
