@@ -95,7 +95,7 @@ def execute_query(query_id: str) -> None:
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
-        if backend == "duckdb" in query_id in DUCKDB_XFAILS:
+        if backend == "duckdb" and query_id in DUCKDB_XFAILS:
             print(f"\nSkipping {query_id} for DuckDB")  # noqa: T201
             continue
 
