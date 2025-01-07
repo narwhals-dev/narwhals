@@ -97,10 +97,7 @@ class PolarsExpr:
 
         return self._from_native_expr(
             self._native_expr.rolling_var(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             )
         )
 
@@ -113,10 +110,7 @@ class PolarsExpr:
 
         return self._from_native_expr(
             self._native_expr.rolling_std(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             )
         )
 

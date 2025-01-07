@@ -308,10 +308,7 @@ class PolarsSeries:
 
         return self._from_native_series(
             self._native_series.rolling_var(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             )
         )
 
@@ -324,10 +321,7 @@ class PolarsSeries:
 
         return self._from_native_series(
             self._native_series.rolling_std(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             )
         )
 

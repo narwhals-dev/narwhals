@@ -646,9 +646,7 @@ class PandasLikeExprStringNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
         self._compliant_expr = expr
 
-    def len_chars(
-        self,
-    ) -> PandasLikeExpr:
+    def len_chars(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "str", "len_chars"
         )

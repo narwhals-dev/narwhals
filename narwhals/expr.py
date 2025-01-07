@@ -220,9 +220,7 @@ class Expr:
             bar: [[6,7,8]]
         """
         _validate_dtype(dtype)
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cast(dtype),
-        )
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).cast(dtype))
 
     # --- binary ---
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
@@ -1991,7 +1989,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)],
+                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
             )
         )
 
@@ -2014,15 +2012,9 @@ class Expr:
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "a": [2, 4, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), 3.0, 5.0],
-            ...     }
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
-            >>> data = {
-            ...     "a": [2, 4, None, 3, 5],
-            ...     "b": [2.0, 4.0, None, 3.0, 5.0],
-            ... }
+            >>> data = {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, None, 3.0, 5.0]}
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
 
@@ -2223,10 +2215,7 @@ class Expr:
             ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
             ...     }
             ... )
-            >>> data = {
-            ...     "a": [2, 4, None, None, 3, 5],
-            ...     "b": [2.0, 4.0, None, None, 3.0, 5.0],
-            ... }
+            >>> data = {"a": [2, 4, None, None, 3, 5], "b": [2.0, 4.0, None, None, 3.0, 5.0]}
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
 
@@ -3346,8 +3335,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound), extract_compliant(plx, upper_bound)
             )
         )
 
@@ -3366,10 +3354,7 @@ class Expr:
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "a": [1, 1, 2, 3],
-            ...     "b": [1, 1, 2, 2],
-            ... }
+            >>> data = {"a": [1, 1, 2, 3], "b": [1, 1, 2, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -3821,9 +3806,7 @@ class Expr:
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
+                window_size=window_size, min_periods=min_periods, center=center
             )
         )
 
@@ -3915,9 +3898,7 @@ class Expr:
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
+                window_size=window_size, min_periods=min_periods, center=center
             )
         )
 
@@ -4105,10 +4086,7 @@ class Expr:
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             )
         )
 
@@ -5327,7 +5305,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_month(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.month().alias("month"),
+            ...         nw.col("datetime").dt.month().alias("month")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5395,7 +5373,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_day(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.day().alias("day"),
+            ...         nw.col("datetime").dt.day().alias("day")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5531,7 +5509,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_minute(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.minute().alias("minute")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5597,7 +5575,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_second(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.second().alias("second")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5663,7 +5641,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_millisecond(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.millisecond().alias("millisecond"),
+            ...         nw.col("datetime").dt.millisecond().alias("millisecond")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5729,7 +5707,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_microsecond(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.microsecond().alias("microsecond"),
+            ...         nw.col("datetime").dt.microsecond().alias("microsecond")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -5795,7 +5773,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> def agnostic_dt_nanosecond(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond"),
+            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -6311,11 +6289,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from narwhals.typing import IntoFrameT
             >>>
             >>> data = {
-            ...     "a": [
-            ...         datetime(2020, 3, 1),
-            ...         datetime(2020, 4, 1),
-            ...         datetime(2020, 5, 1),
-            ...     ]
+            ...     "a": [datetime(2020, 3, 1), datetime(2020, 4, 1), datetime(2020, 5, 1)]
             ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -7518,11 +7492,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
 
         We define a dataframe-agnostic function that computes the horizontal min of "a"
         and "b" columns:
@@ -7588,11 +7558,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
 
         We define a dataframe-agnostic function that computes the horizontal max of "a"
         and "b" columns:
@@ -7983,11 +7949,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
         >>> df_pa = pa.table(data)
@@ -8078,12 +8040,7 @@ def concat_str(
         ...     df = nw.from_native(df_native)
         ...     return df.select(
         ...         nw.concat_str(
-        ...             [
-        ...                 nw.col("a") * 2,
-        ...                 nw.col("b"),
-        ...                 nw.col("c"),
-        ...             ],
-        ...             separator=" ",
+        ...             [nw.col("a") * 2, nw.col("b"), nw.col("c")], separator=" "
         ...         ).alias("full_sentence")
         ...     ).to_native()
 
@@ -8124,6 +8081,4 @@ def concat_str(
     )
 
 
-__all__ = [
-    "Expr",
-]
+__all__ = ["Expr"]

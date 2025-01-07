@@ -132,13 +132,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         return pa.struct(
             [
-                (
-                    field.name,
-                    narwhals_to_native_dtype(
-                        field.dtype,
-                        version=version,
-                    ),
-                )
+                (field.name, narwhals_to_native_dtype(field.dtype, version=version))
                 for field in dtype.fields  # type: ignore[union-attr]
             ]
         )
@@ -315,10 +309,7 @@ def floordiv_compat(left: Any, right: Any) -> Any:
                 pc.bit_wise_xor(left, right), pa.scalar(0, type=divided.type)
             )
             result = pc.if_else(
-                pc.and_(
-                    has_remainder,
-                    has_one_negative_operand,
-                ),
+                pc.and_(has_remainder, has_one_negative_operand),
                 # GH: 55561 ruff: ignore
                 pc.subtract(divided, pa.scalar(1, type=divided.type)),
                 divided,

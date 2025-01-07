@@ -199,11 +199,7 @@ class PolarsNamespace:
             )
 
         return PolarsExpr(
-            pl.concat_str(
-                pl_exprs,
-                separator=separator,
-                ignore_nulls=ignore_nulls,
-            ),
+            pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
             backend_version=self._backend_version,
         )

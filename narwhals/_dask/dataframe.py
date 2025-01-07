@@ -304,10 +304,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
             return self._from_native_frame(
                 self._native_frame.merge(
-                    other_native,
-                    how="inner",
-                    left_on=left_on,
-                    right_on=left_on,
+                    other_native, how="inner", left_on=left_on, right_on=left_on
                 )
             )
 

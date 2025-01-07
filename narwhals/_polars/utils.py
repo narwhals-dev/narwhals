@@ -198,8 +198,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
         return pl.Struct(
             fields=[
                 pl.Field(
-                    name=field.name,
-                    dtype=narwhals_to_native_dtype(field.dtype, version),
+                    name=field.name, dtype=narwhals_to_native_dtype(field.dtype, version)
                 )
                 for field in dtype.fields  # type: ignore[union-attr]
             ]

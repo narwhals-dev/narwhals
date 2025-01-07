@@ -152,6 +152,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true
+skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

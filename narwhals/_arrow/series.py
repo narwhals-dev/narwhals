@@ -630,11 +630,7 @@ class ArrowSeries(CompliantSeries):
 
         mask = mask._native_series.combine_chunks()
         return self._from_native_series(
-            pc.if_else(
-                mask,
-                self._native_series,
-                other._native_series,
-            )
+            pc.if_else(mask, self._native_series, other._native_series)
         )
 
     def sample(
@@ -689,10 +685,7 @@ class ArrowSeries(CompliantSeries):
                 )[::-1]
                 distance = valid_index - indices
             return pc.if_else(
-                pc.and_(
-                    pc.is_null(arr),
-                    pc.less_equal(distance, pa.scalar(limit)),
-                ),
+                pc.and_(pc.is_null(arr), pc.less_equal(distance, pa.scalar(limit))),
                 arr.take(valid_index),
                 arr,
             )
@@ -1499,10 +1492,7 @@ class ArrowSeriesStringNamespace:
 
         whitespace = " \t\n\r\v\f"
         return self._compliant_series._from_native_series(
-            pc.utf8_trim(
-                self._compliant_series._native_series,
-                characters or whitespace,
-            )
+            pc.utf8_trim(self._compliant_series._native_series, characters or whitespace)
         )
 
     def starts_with(self: Self, prefix: str) -> ArrowSeries:
@@ -1551,14 +1541,14 @@ class ArrowSeriesStringNamespace:
         import pyarrow.compute as pc
 
         return self._compliant_series._from_native_series(
-            pc.utf8_upper(self._compliant_series._native_series),
+            pc.utf8_upper(self._compliant_series._native_series)
         )
 
     def to_lowercase(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc
 
         return self._compliant_series._from_native_series(
-            pc.utf8_lower(self._compliant_series._native_series),
+            pc.utf8_lower(self._compliant_series._native_series)
         )
 
 

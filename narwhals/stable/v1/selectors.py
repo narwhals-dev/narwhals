@@ -7,11 +7,4 @@ from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
 
-__all__ = [
-    "all",
-    "boolean",
-    "by_dtype",
-    "categorical",
-    "numeric",
-    "string",
-]
+__all__ = ["all", "boolean", "by_dtype", "categorical", "numeric", "string"]

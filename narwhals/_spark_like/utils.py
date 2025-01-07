@@ -45,10 +45,7 @@ def native_to_narwhals_dtype(
         return dtypes.Boolean()
     if isinstance(dtype, pyspark_types.DateType):
         return dtypes.Date()
-    datetime_types = [
-        pyspark_types.TimestampType,
-        pyspark_types.TimestampNTZType,
-    ]
+    datetime_types = [pyspark_types.TimestampType, pyspark_types.TimestampNTZType]
     if any(isinstance(dtype, t) for t in datetime_types):
         return dtypes.Datetime()
     if isinstance(dtype, pyspark_types.DecimalType):  # pragma: no cover

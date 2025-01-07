@@ -282,10 +282,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
+            >>> data = {"a": [1, 2, 3, 1], "b": ["x", "y", "z", "x"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -341,10 +338,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
+            >>> data = {"a": [1, 2, 3, 1], "b": ["x", "y", "z", "x"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -3096,11 +3090,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
         >>> df_pa = pa.table(data)
@@ -3162,11 +3152,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
 
         We define a dataframe-agnostic function that computes the horizontal min of "a"
         and "b" columns:
@@ -3225,11 +3211,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
 
         We define a dataframe-agnostic function that computes the horizontal max of "a"
         and "b" columns:
@@ -3469,12 +3451,7 @@ def concat_str(
         ...     df = nw.from_native(df_native)
         ...     return df.select(
         ...         nw.concat_str(
-        ...             [
-        ...                 nw.col("a") * 2,
-        ...                 nw.col("b"),
-        ...                 nw.col("c"),
-        ...             ],
-        ...             separator=" ",
+        ...             [nw.col("a") * 2, nw.col("b"), nw.col("c")], separator=" "
         ...         ).alias("full_sentence")
         ...     ).to_native()
 
@@ -3636,10 +3613,7 @@ def new_series(
         ...     values = [4, 1, 2, 3]
         ...     native_namespace = nw.get_native_namespace(df_native)
         ...     return nw.new_series(
-        ...         name="a",
-        ...         values=values,
-        ...         dtype=nw.Int32,
-        ...         native_namespace=native_namespace,
+        ...         name="a", values=values, dtype=nw.Int32, native_namespace=native_namespace
         ...     ).to_native()
 
         We can then pass any supported eager library, such as pandas / Polars / PyArrow:
@@ -3672,11 +3646,7 @@ def new_series(
     """
     return _stableify(  # type: ignore[no-any-return]
         _new_series_impl(
-            name,
-            values,
-            dtype,
-            native_namespace=native_namespace,
-            version=Version.V1,
+            name, values, dtype, native_namespace=native_namespace, version=Version.V1
         )
     )
 
@@ -3795,10 +3765,7 @@ def from_dict(
     """
     return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
-            data,
-            schema,
-            native_namespace=native_namespace,
-            version=Version.V1,
+            data, schema, native_namespace=native_namespace, version=Version.V1
         )
     )
 
@@ -3944,10 +3911,7 @@ def from_numpy(
     """
     return _stableify(  # type: ignore[no-any-return]
         _from_numpy_impl(
-            data,
-            schema,
-            native_namespace=native_namespace,
-            version=Version.V1,
+            data, schema, native_namespace=native_namespace, version=Version.V1
         )
     )
 

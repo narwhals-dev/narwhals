@@ -58,8 +58,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Struct(
             [
                 dtypes.Field(
-                    ibis_dtype_name,
-                    native_to_narwhals_dtype(ibis_dtype_field, version),
+                    ibis_dtype_name, native_to_narwhals_dtype(ibis_dtype_field, version)
                 )
                 for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
             ]

@@ -1031,9 +1031,4 @@ def to_py_scalar(scalar_like: Any) -> Any:
     raise ValueError(msg)
 
 
-__all__ = [
-    "get_native_namespace",
-    "narwhalify",
-    "to_native",
-    "to_py_scalar",
-]
+__all__ = ["get_native_namespace", "narwhalify", "to_native", "to_py_scalar"]

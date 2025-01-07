@@ -679,10 +679,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                     [
                         (
                             field.name,
-                            arrow_narwhals_to_native_dtype(
-                                field.dtype,
-                                version=version,
-                            ),
+                            arrow_narwhals_to_native_dtype(field.dtype, version=version),
                         )
                         for field in dtype.fields  # type: ignore[union-attr]
                     ]

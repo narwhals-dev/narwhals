@@ -521,9 +521,7 @@ class PandasLikeDataFrame:
             else:
                 return self._from_native_frame(
                     self._native_frame.merge(
-                        other._native_frame,
-                        how="cross",
-                        suffixes=("", suffix),
+                        other._native_frame, how="cross", suffixes=("", suffix)
                     )
                 )
 
@@ -589,10 +587,7 @@ class PandasLikeDataFrame:
             )
             return self._from_native_frame(
                 self._native_frame.merge(
-                    other_native,
-                    how="inner",
-                    left_on=left_on,
-                    right_on=left_on,
+                    other_native, how="inner", left_on=left_on, right_on=left_on
                 )
             )
 

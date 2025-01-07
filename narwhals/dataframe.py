@@ -101,13 +101,11 @@ class BaseFrame(Generic[FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
-        return self._from_compliant_dataframe(
-            self._compliant_frame.with_row_index(name),
-        )
+        return self._from_compliant_dataframe(self._compliant_frame.with_row_index(name))
 
     def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop_nulls(subset=subset),
+            self._compliant_frame.drop_nulls(subset=subset)
         )
 
     @property
@@ -293,10 +291,7 @@ class BaseFrame(Generic[FrameT]):
     ) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.unpivot(
-                on=on,
-                index=index,
-                variable_name=variable_name,
-                value_name=value_name,
+                on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
 
@@ -324,10 +319,7 @@ class BaseFrame(Generic[FrameT]):
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.explode(
-                columns,
-                *more_columns,
-            )
+            self._compliant_frame.explode(columns, *more_columns)
         )
 
 
@@ -816,11 +808,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -1304,11 +1292,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.schema import Schema
             >>> from narwhals.typing import IntoFrame
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -1344,11 +1328,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.schema import Schema
             >>> from narwhals.typing import IntoFrame
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -1635,11 +1615,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -2137,11 +2113,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -2242,8 +2214,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     dframe = df.filter(
-            ...         nw.col("foo") <= 2,
-            ...         ~nw.col("ham").is_in(["b", "c"]),
+            ...         nw.col("foo") <= 2, ~nw.col("ham").is_in(["b", "c"])
             ...     ).to_native()
             ...     return dframe
             >>> agnostic_filter(df_pd)
@@ -2436,11 +2407,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "a": [1, 2, None],
-            ...     "b": [6.0, 5.0, 4.0],
-            ...     "c": ["a", "c", "b"],
-            ... }
+            >>> data = {"a": [1, 2, None], "b": [6.0, 5.0, 4.0], "c": ["a", "c", "b"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -2519,15 +2486,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> data_other = {
-            ...     "apple": ["x", "y", "z"],
-            ...     "ham": ["a", "b", "d"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> data_other = {"apple": ["x", "y", "z"], "ham": ["a", "b", "d"]}
 
             >>> df_pd = pd.DataFrame(data)
             >>> other_pd = pd.DataFrame(data_other)
@@ -2784,10 +2744,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
+            >>> data = {"a": [1, 2, 3, 1], "b": ["x", "y", "z", "x"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -2882,10 +2839,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoDataFrame
             >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
+            >>> data = {"a": [1, 2, 3, 1], "b": ["x", "y", "z", "x"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -2945,11 +2899,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, None, 3],
-            ...     "bar": [6, 7, None],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, None, 3], "bar": [6, 7, None], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -3399,11 +3349,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "a": ["x", "y", "z"],
-            ...     "b": [1, 3, 5],
-            ...     "c": [2, 4, 6],
-            ... }
+            >>> data = {"a": ["x", "y", "z"], "b": [1, 3, 5], "c": [2, 4, 6]}
 
             We define a library agnostic function:
 
@@ -3831,11 +3777,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import polars as pl
             >>> import dask.dataframe as dd
             >>> import narwhals as nw
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -3859,11 +3801,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import polars as pl
             >>> import dask.dataframe as dd
             >>> import narwhals as nw
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -4003,11 +3941,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -4172,10 +4106,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "a": [1, 2, 3, 4, 5, 6],
-            ...     "b": [7, 8, 9, 10, 11, 12],
-            ... }
+            >>> data = {"a": [1, 2, 3, 4, 5, 6], "b": [7, 8, 9, 10, 11, 12]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -4225,10 +4156,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "a": [1, 2, 3, 4, 5, 6],
-            ...     "b": [7, 8, 9, 10, 11, 12],
-            ... }
+            >>> data = {"a": [1, 2, 3, 4, 5, 6], "b": [7, 8, 9, 10, 11, 12]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=1)
 
@@ -4437,11 +4365,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -4497,10 +4421,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return (
-            ...         df.filter(
-            ...             nw.col("foo") == 1,
-            ...             nw.col("ham") == "a",
-            ...         )
+            ...         df.filter(nw.col("foo") == 1, nw.col("ham") == "a")
             ...         .collect()
             ...         .to_native()
             ...     )
@@ -4712,11 +4633,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "a": [1, 2, None],
-            ...     "b": [6.0, 5.0, 4.0],
-            ...     "c": ["a", "c", "b"],
-            ... }
+            >>> data = {"a": [1, 2, None], "b": [6.0, 5.0, 4.0], "c": ["a", "c", "b"]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
@@ -4784,15 +4701,8 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> data_other = {
-            ...     "apple": ["x", "y", "z"],
-            ...     "ham": ["a", "b", "d"],
-            ... }
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> data_other = {"apple": ["x", "y", "z"], "ham": ["a", "b", "d"]}
 
             >>> lf_pl = pl.LazyFrame(data)
             >>> other_pl = pl.LazyFrame(data_other)
@@ -4802,8 +4712,7 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "ham" column:
 
             >>> def agnostic_join_on_ham(
-            ...     df_native: IntoFrameT,
-            ...     other_native: IntoFrameT,
+            ...     df_native: IntoFrameT, other_native: IntoFrameT
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     other = nw.from_native(other_native)
@@ -4995,8 +4904,7 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "datetime" and by "ticker" columns:
 
             >>> def agnostic_join_asof_datetime_by_ticker(
-            ...     df_native: IntoFrameT,
-            ...     other_native: IntoFrameT,
+            ...     df_native: IntoFrameT, other_native: IntoFrameT
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     other = nw.from_native(other_native)
@@ -5199,11 +5107,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {
-            ...     "a": ["x", "y", "z"],
-            ...     "b": [1, 3, 5],
-            ...     "c": [2, 4, 6],
-            ... }
+            >>> data = {"a": ["x", "y", "z"], "b": [1, 3, 5], "c": [2, 4, 6]}
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 

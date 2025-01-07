@@ -4432,9 +4432,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
+                window_size=window_size, min_periods=min_periods, center=center
             )
         )
 
@@ -4527,9 +4525,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rolling_mean(
-                window_size=window_size,
-                min_periods=min_periods,
-                center=center,
+                window_size=window_size, min_periods=min_periods, center=center
             )
         )
 
@@ -6783,11 +6779,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoSeriesT
 
-            >>> data = [
-            ...     datetime(2020, 3, 1),
-            ...     datetime(2020, 4, 1),
-            ...     datetime(2020, 5, 1),
-            ... ]
+            >>> data = [datetime(2020, 3, 1), datetime(2020, 4, 1), datetime(2020, 5, 1)]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
             >>> s_pa = pa.chunked_array([data])

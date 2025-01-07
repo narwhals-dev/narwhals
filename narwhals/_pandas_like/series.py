@@ -151,10 +151,7 @@ class PandasLikeSeries(CompliantSeries):
     ) -> Self:
         return cls(
             native_series_from_iterable(
-                data,
-                name=name,
-                index=index,
-                implementation=implementation,
+                data, name=name, index=index, implementation=implementation
             ),
             implementation=implementation,
             backend_version=backend_version,
@@ -1195,17 +1192,17 @@ class PandasLikeSeriesStringNamespace:
 
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.strip(characters),
+            self._compliant_series._native_series.str.strip(characters)
         )
 
     def starts_with(self, prefix: str) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.startswith(prefix),
+            self._compliant_series._native_series.str.startswith(prefix)
         )
 
     def ends_with(self, suffix: str) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.endswith(suffix),
+            self._compliant_series._native_series.str.endswith(suffix)
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> PandasLikeSeries:
@@ -1230,12 +1227,12 @@ class PandasLikeSeriesStringNamespace:
 
     def to_uppercase(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.upper(),
+            self._compliant_series._native_series.str.upper()
         )
 
     def to_lowercase(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.lower(),
+            self._compliant_series._native_series.str.lower()
         )
 
 
@@ -1245,7 +1242,7 @@ class PandasLikeSeriesDateTimeNamespace:
 
     def date(self) -> PandasLikeSeries:
         result = self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.date,
+            self._compliant_series._native_series.dt.date
         )
         if str(result.dtype).lower() == "object":
             msg = (
@@ -1260,32 +1257,32 @@ class PandasLikeSeriesDateTimeNamespace:
 
     def year(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.year,
+            self._compliant_series._native_series.dt.year
         )
 
     def month(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.month,
+            self._compliant_series._native_series.dt.month
         )
 
     def day(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.day,
+            self._compliant_series._native_series.dt.day
         )
 
     def hour(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.hour,
+            self._compliant_series._native_series.dt.hour
         )
 
     def minute(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.minute,
+            self._compliant_series._native_series.dt.minute
         )
 
     def second(self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.second,
+            self._compliant_series._native_series.dt.second
         )
 
     def millisecond(self) -> PandasLikeSeries:
@@ -1335,7 +1332,7 @@ class PandasLikeSeriesDateTimeNamespace:
     def weekday(self) -> PandasLikeSeries:
         return (
             self._compliant_series._from_native_series(
-                self._compliant_series._native_series.dt.weekday,
+                self._compliant_series._native_series.dt.weekday
             )
             + 1  # Pandas is 0-6 while Polars is 1-7
         )

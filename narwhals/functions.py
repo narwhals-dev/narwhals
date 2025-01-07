@@ -229,10 +229,7 @@ def new_series(
         ...     values = [4, 1, 2, 3]
         ...     native_namespace = nw.get_native_namespace(df_native)
         ...     return nw.new_series(
-        ...         name="a",
-        ...         values=values,
-        ...         dtype=nw.Int32,
-        ...         native_namespace=native_namespace,
+        ...         name="a", values=values, dtype=nw.Int32, native_namespace=native_namespace
         ...     ).to_native()
 
         We can then pass any supported eager library, such as pandas / Polars / PyArrow:
@@ -882,9 +879,7 @@ def _get_deps_info() -> dict[str, str]:
 
     from . import __version__
 
-    deps_info = {
-        "narwhals": __version__,
-    }
+    deps_info = {"narwhals": __version__}
 
     from importlib.metadata import PackageNotFoundError
     from importlib.metadata import version
