@@ -31,6 +31,10 @@ jobs:
         pip install
         build
         --user
+    - name: minify-narwhals
+      run: |
+        git ls-files narwhals | xargs python utils/remove_docstring_examples.py
+        cat narwhals/expr.py | head -n 100
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
     - name: Store the distribution packages

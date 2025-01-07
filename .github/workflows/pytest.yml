@@ -48,6 +48,10 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: minify-narwhals
+        run: |
+            git ls-files narwhals | xargs python utils/remove_docstring_examples.py
+            cat narwhals/expr.py | head -n 100
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
       - name: show-deps
@@ -73,6 +77,12 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: minify-narwhals
+        run: |
+            git ls-files narwhals | xargs python utils/remove_docstring_examples.py
+            cat narwhals/expr.py | head -n 100
+        # Don't minify in the job where we run doctests
+        if: matrix.python-version != '3.13'
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, modin, dask]" --system
       - name: install pyspark
