@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from typing import Any
 from typing import Literal
 from typing import Sequence
@@ -203,3 +203,99 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             version=self._version,
             kwargs={},
         )
+
+class DuckDBWhen:
+    def __init__(
+        self,
+        condition: DuckDBExpr,
+        backend_version: tuple[int, ...],
+        then_value: Any = None,
+        otherwise_value: Any = None,
+        *,
+        returns_scalar: bool,
+        version: Version,
+    ) -> None:
+        self._backend_version = backend_version
+        self._condition = condition
+        self._then_value = then_value
+        self._otherwise_value = otherwise_value
+        self._returns_scalar = returns_scalar
+        self._version = version
+
+    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+        from narwhals._expression_parsing import parse_into_expr
+        from duckdb import FunctionExpression, ColumnExpression, ConstantExpression, CaseExpression
+
+        plx = df.__narwhals_namespace__()
+        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = cast("duckdb.Expression", condition)
+
+        breakpoint()
+
+        try:
+            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            value_series = ConstantExpression(self._then_value)
+        value_series = cast("duckdb.Expression", value_series)
+
+        if self._otherwise_value is None:
+            return [value_series.where(condition)]
+        try:
+            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            return [value_series.where(condition, self._otherwise_value)]
+        otherwise_series = otherwise_expr(df)[0]
+
+        if otherwise_expr._returns_scalar:  # type: ignore[attr-defined]
+            return [value_series.where(condition, otherwise_series[0])]
+        return [value_series.where(condition, otherwise_series)]
+
+    def then(self, value: DuckDBExpr | Any) -> DuckDBThen:
+        self._then_value = value
+
+        return DuckDBThen(
+            self,
+            depth=0,
+            function_name="whenthen",
+            root_names=None,
+            output_names=None,
+            returns_scalar=self._returns_scalar,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"value": value},
+        )
+
+
+class DuckDBThen(DuckDBExpr):
+    def __init__(
+        self,
+        call: DuckDBWhen,
+        *,
+        depth: int,
+        function_name: str,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
+        returns_scalar: bool,
+        backend_version: tuple[int, ...],
+        version: Version,
+        kwargs: dict[str, Any],
+    ) -> None:
+        self._backend_version = backend_version
+        self._version = version
+        self._call = call
+        self._depth = depth
+        self._function_name = function_name
+        self._root_names = root_names
+        self._output_names = output_names
+        self._returns_scalar = returns_scalar
+        self._kwargs = kwargs
+
+    def otherwise(self, value: DuckDBExpr | Any) -> DuckDBExpr:
+        # type ignore because we are setting the `_call` attribute to a
+        # callable object of type `DuckDBWhen`, base class has the attribute as
+        # only a `Callable`
+        self._call._otherwise_value = value  # type: ignore[attr-defined]
+        self._function_name = "whenotherwise"
+        return self
