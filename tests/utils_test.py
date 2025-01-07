@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import string
+import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import hypothesis.strategies as st
@@ -271,3 +273,36 @@ def test_generate_temporary_column_name_raise() -> None:
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
         nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+
+
+def test_remove_docstring_examples(tmp_path: pytest.TempPathFactory) -> None:
+    src = (
+        "def foo(bar):\n"
+        '    """This is a docstring.\n'
+        "\n"
+        "    Arguments:\n"
+        "        bar\n"
+        "\n"
+        "    Examples:\n"
+        "        >>> foo(3)\n"
+        '    """\n'
+        "    print(bar)\n"
+    )
+    file = tmp_path / "t.py"  # type: ignore[operator]
+    file.write_text(src)
+    subprocess.run(  # noqa: S603
+        ["python", str(Path("utils") / "remove_docstring_examples.py"), str(file)],  # noqa: S607
+        check=False,
+    )
+    result = file.read_text()
+    expected = (
+        "def foo(bar):\n"
+        '    """This is a docstring.\n'
+        "\n"
+        "    Arguments:\n"
+        "        bar\n"
+        "\n"
+        '    """\n'
+        "    print(bar)\n"
+    )
+    assert result == expected

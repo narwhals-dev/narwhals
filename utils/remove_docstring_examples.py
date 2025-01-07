@@ -21,8 +21,8 @@ class Visitor(NodeVisitor):
         ):
             docstring_lines = [line.strip() for line in docstring.splitlines()]
             examples_line_start = value.lineno + docstring_lines.index("Examples:")
-            examples_line_end = value.end_lineno
-            self.to_remove.append((examples_line_start, examples_line_end))
+            # lineno is 1-indexed so we subtract 1.
+            self.to_remove.append((examples_line_start - 1, value.end_lineno - 1))
 
         self.generic_visit(node)
 
@@ -35,10 +35,10 @@ class Visitor(NodeVisitor):
             and "Examples:" in docstring
             and value.end_lineno is not None
         ):
-            stripped_lines = [line.strip() for line in docstring.splitlines()]
-            examples_start = value.lineno + stripped_lines.index("Examples:")
-            # lineno is 1-indexed, so we subtract 1 to have 0-indexed numbers.
-            self.to_remove.append((examples_start - 1, value.end_lineno - 1))
+            docstring_lines = [line.strip() for line in docstring.splitlines()]
+            examples_line_start = value.lineno + docstring_lines.index("Examples:")
+            # lineno is 1-indexed so we subtract 1.
+            self.to_remove.append((examples_line_start, value.end_lineno))
 
         self.generic_visit(node)
 
@@ -59,4 +59,4 @@ if __name__ == "__main__":
             for examples_start, examples_end in removals:
                 del lines[examples_start:examples_end]
             with open(file, "w") as fd:
-                fd.write("\n".join(lines))
+                fd.write("\n".join(lines) + "\n")
