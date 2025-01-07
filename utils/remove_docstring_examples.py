@@ -5,41 +5,36 @@ import sys
 from ast import NodeVisitor
 
 
+def process_node(node: ast.FunctionDef | ast.ClassDef) -> tuple[int, int] | None:
+    """If node contains a docstring example, return start and end lines."""
+    if (
+        node.body
+        and isinstance(expr := node.body[0], ast.Expr)
+        and isinstance(value := expr.value, ast.Constant)
+        and isinstance(docstring := value.value, str)
+        and "Examples:" in docstring
+        and value.end_lineno is not None
+    ):
+        docstring_lines = [line.strip() for line in docstring.splitlines()]
+        examples_line_start = value.lineno + docstring_lines.index("Examples:")
+        # lineno is 1-indexed so we subtract 1.
+        return (examples_line_start - 1, value.end_lineno - 1)
+    return None
+
+
 class Visitor(NodeVisitor):
     def __init__(self, file: str) -> None:
         self.file = file
         self.to_remove: list[tuple[int, int]] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
-        if (
-            node.body
-            and isinstance(expr := node.body[0], ast.Expr)
-            and isinstance(value := expr.value, ast.Constant)
-            and isinstance(docstring := value.value, str)
-            and "Examples:" in docstring
-            and value.end_lineno is not None
-        ):
-            docstring_lines = [line.strip() for line in docstring.splitlines()]
-            examples_line_start = value.lineno + docstring_lines.index("Examples:")
-            # lineno is 1-indexed so we subtract 1.
-            self.to_remove.append((examples_line_start - 1, value.end_lineno - 1))
-
+        if removal := process_node(node):
+            self.to_remove.append(removal)
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
-        if (
-            node.body
-            and isinstance(expr := node.body[0], ast.Expr)
-            and isinstance(value := expr.value, ast.Constant)
-            and isinstance(docstring := value.value, str)
-            and "Examples:" in docstring
-            and value.end_lineno is not None
-        ):
-            docstring_lines = [line.strip() for line in docstring.splitlines()]
-            examples_line_start = value.lineno + docstring_lines.index("Examples:")
-            # lineno is 1-indexed so we subtract 1.
-            self.to_remove.append((examples_line_start, value.end_lineno))
-
+        if removal := process_node(node):
+            self.to_remove.append(removal)
         self.generic_visit(node)
 
 
