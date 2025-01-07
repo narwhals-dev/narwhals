@@ -76,6 +76,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.slow
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
+@pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
     s = pd.Series(values)
     n_missing = random.randint(0, len(s) - 1)  # noqa: S311

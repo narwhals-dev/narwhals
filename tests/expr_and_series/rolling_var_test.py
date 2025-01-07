@@ -105,6 +105,7 @@ def test_rolling_var_series(
 )
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
     s = pd.Series(values)
