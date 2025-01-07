@@ -841,7 +841,6 @@ def test_semi_join(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(pyspark_constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
@@ -885,7 +884,6 @@ def test_left_join(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result_on_list, expected_on_list)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_multiple_column(pyspark_constructor: Constructor) -> None:
     data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
     data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
@@ -905,7 +903,6 @@ def test_left_join_multiple_column(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_overlapping_column(pyspark_constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
