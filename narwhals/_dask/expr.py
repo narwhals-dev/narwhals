@@ -731,8 +731,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    def cast(self: Self, dtype: (DType | type[DType])) -> Self:
-        def func(_input: Any, dtype: (DType | type[DType])) -> Any:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
+        def func(_input: Any, dtype: DType | type[DType]) -> Any:
             dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.astype(dtype)
 
