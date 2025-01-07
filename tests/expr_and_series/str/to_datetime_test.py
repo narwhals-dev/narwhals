@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(constructor: Constructor) -> None:
+def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -78,6 +80,8 @@ def test_to_datetime_infer_fmt(
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = expected_cudf
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
         .lazy()
@@ -126,7 +130,11 @@ def test_to_datetime_series_infer_fmt(
     assert str(result) == expected
 
 
-def test_to_datetime_infer_fmt_from_date(constructor: Constructor) -> None:
+def test_to_datetime_infer_fmt_from_date(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (

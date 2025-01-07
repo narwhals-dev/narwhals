@@ -1102,6 +1102,7 @@ def _scan_csv_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
+        Implementation.DUCKDB,
     ):
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -1190,6 +1191,7 @@ def _read_parquet_impl(
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
+        Implementation.DUCKDB,
     ):
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -1273,6 +1275,7 @@ def _scan_parquet_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
+        Implementation.DUCKDB,
     ):
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:

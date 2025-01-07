@@ -98,18 +98,6 @@ def test_cast_date_datetime_pandas() -> None:
     assert df.schema == {"a": nw.Date}
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="pyarrow dtype not available",
-)
-def test_cast_date_datetime_invalid() -> None:
-    # pandas: pyarrow datetime to date
-    dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
-    df = nw.from_native(dfpd)
-    with pytest.raises(NotImplementedError, match="pyarrow"):
-        df.select(nw.col("a").cast(nw.Date))
-
-
 @pytest.mark.filterwarnings("ignore: casting period")
 def test_unknown_to_int() -> None:
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})

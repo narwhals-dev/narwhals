@@ -11,6 +11,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -72,7 +73,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result.implementation is Implementation.PYSPARK
     )
-
+    is_duckdb = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.DUCKDB
+    )
+    if is_duckdb:
+        result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
         if result.implementation is Implementation.POLARS and os.environ.get(
             "NARWHALS_POLARS_GPU", False
@@ -82,8 +88,8 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
             result = result.collect()
 
     if hasattr(result, "columns"):
-        for key in result.columns:
-            assert key in expected, (key, expected)
+        for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):
+            assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
     if is_pyspark and expected:  # pragma: no cover
         sort_key = next(iter(expected.keys()))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -211,7 +212,16 @@ def horizontal_concat(
 
     Should be in namespace.
     """
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+    if implementation is Implementation.CUDF:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of array concatenation with empty entries is deprecated",
+                category=FutureWarning,
+            )
+            return implementation.to_native_namespace().concat(dfs, axis=1)
+
+    if implementation.is_pandas_like():
         extra_kwargs = (
             {"copy": False}
             if implementation is Implementation.PANDAS and backend_version < (3,)
@@ -293,6 +303,8 @@ def native_series_from_iterable(
     """Return native series."""
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
         extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
+        if len(index) == 0:
+            index = None
         return implementation.to_native_namespace().Series(
             data, name=name, index=index, **extra_kwargs
         )
@@ -624,12 +636,12 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             if dtype_backend == "pyarrow-nullable"
             else f"timedelta64[{du_time_unit}]"
         )
-
     if isinstance_or_issubclass(dtype, dtypes.Date):
-        if dtype_backend == "pyarrow-nullable":
-            return "date32[pyarrow]"
-        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
-        raise NotImplementedError(msg)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError:  # pragma: no cover
+            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
+        return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
@@ -656,9 +668,35 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                 f"{implementation} and version {version}."
             )
             return NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+            try:
+                import pandas as pd
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
+
+            return pd.ArrowDtype(
+                pa.struct(
+                    [
+                        (
+                            field.name,
+                            arrow_narwhals_to_native_dtype(
+                                field.dtype,
+                                version=version,
+                            ),
+                        )
+                        for field in dtype.fields  # type: ignore[union-attr]
+                    ]
+                )
+            )
+        else:  # pragma: no cover
+            msg = (
+                "Converting to Struct dtype is not supported for implementation "
+                f"{implementation} and version {version}."
+            )
+            return NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         return NotImplementedError(msg)

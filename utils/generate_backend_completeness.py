@@ -31,14 +31,16 @@ class Backend(NamedTuple):
 MODULES = ["dataframe", "series", "expr"]
 
 BACKENDS = [
-    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
     Backend(name="arrow", module="_arrow", type_=BackendType.EAGER),
     Backend(name="dask", module="_dask", type_=BackendType.LAZY),
+    Backend(name="duckdb", module="_duckdb", type_=BackendType.LAZY),
+    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
+    Backend(name="spark-like", module="_spark_like", type_=BackendType.LAZY),
 ]
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
-DIRECTLY_IMPLEMENTED_METHODS = ["pipe"]
+DIRECTLY_IMPLEMENTED_METHODS = ["pipe", "implementation", "to_native"]
 
 
 def get_class_methods(kls: type[Any]) -> list[str]:
@@ -54,6 +56,7 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
                 inspect.isclass(c)
                 and c.__name__.endswith(nw_class_name)
                 and not c.__name__.startswith("Compliant")  # Exclude protocols
+                and not c.__name__.startswith("DuckDBInterchange")
             ),
         )
 

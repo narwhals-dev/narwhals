@@ -163,65 +163,29 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def __and__(self: Self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
-    def __rand__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__and__(self)  # type: ignore[return-value]
-
     def __or__(self: Self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
-
-    def __ror__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__or__(self)  # type: ignore[return-value]
 
     def __add__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
-    def __radd__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__add__(self)  # type: ignore[return-value]
-
     def __sub__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
-
-    def __rsub__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__sub__(self)  # type: ignore[return-value]
 
     def __mul__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
-    def __rmul__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mul__(self)  # type: ignore[return-value]
-
     def __pow__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
-
-    def __rpow__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__pow__(self)  # type: ignore[return-value]
 
     def __floordiv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
-    def __rfloordiv__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__floordiv__(self)  # type: ignore[return-value]
-
     def __truediv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
-    def __rtruediv__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__truediv__(self)  # type: ignore[return-value]
-
     def __mod__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
-
-    def __rmod__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mod__(self)  # type: ignore[return-value]
 
     def __invert__(self: Self) -> Self:
         return reuse_series_implementation(self, "__invert__")
@@ -316,6 +280,9 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def is_null(self: Self) -> Self:
         return reuse_series_implementation(self, "is_null")
+
+    def is_nan(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_nan")
 
     def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         return reuse_series_implementation(
@@ -656,6 +623,11 @@ class ArrowExprDateTimeNamespace:
     def ordinal_day(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "ordinal_day"
+        )
+
+    def weekday(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._compliant_expr, "dt", "weekday"
         )
 
     def total_minutes(self: Self) -> ArrowExpr:

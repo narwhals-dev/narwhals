@@ -25,6 +25,8 @@ def test_nth(
     expected: dict[str, list[int]],
     request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

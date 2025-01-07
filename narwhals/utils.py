@@ -16,6 +16,8 @@ from warnings import warn
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_duckdb
+from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -73,6 +75,10 @@ class Implementation(Enum):
     """Polars implementation."""
     DASK = auto()
     """Dask implementation."""
+    DUCKDB = auto()
+    """DuckDB implementation."""
+    IBIS = auto()
+    """Ibis implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -97,6 +103,8 @@ class Implementation(Enum):
             get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
+            get_duckdb(): Implementation.DUCKDB,
+            get_ibis(): Implementation.IBIS,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -244,6 +252,59 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.DASK  # pragma: no cover
+
+    def is_duckdb(self) -> bool:
+        """Return whether implementation is DuckDB.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_duckdb()
+            False
+        """
+        return self is Implementation.DUCKDB  # pragma: no cover
+
+    def is_ibis(self) -> bool:
+        """Return whether implementation is Ibis.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_ibis()
+            False
+        """
+        return self is Implementation.IBIS  # pragma: no cover
+
+
+MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
+    Implementation.PANDAS: (0, 25, 3),
+    Implementation.MODIN: (0, 25, 3),
+    Implementation.CUDF: (24, 10),
+    Implementation.PYARROW: (11,),
+    Implementation.PYSPARK: (3, 3),
+    Implementation.POLARS: (0, 20, 3),
+    Implementation.DASK: (2024, 8),
+    Implementation.DUCKDB: (1,),
+    Implementation.IBIS: (6,),
+}
+
+
+def validate_backend_version(
+    implementation: Implementation, backend_version: tuple[int, ...]
+) -> None:
+    if backend_version < (min_version := MIN_VERSIONS[implementation]):
+        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
+        raise ValueError(msg)
 
 
 def import_dtypes_module(version: Version) -> DTypes:

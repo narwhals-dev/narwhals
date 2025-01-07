@@ -194,12 +194,18 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)
-
     if dtype == dtypes.List:
         return pl.List(narwhals_to_native_dtype(dtype.inner, version))  # type: ignore[union-attr]
-    if dtype == dtypes.Struct:  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        raise NotImplementedError(msg)
+    if dtype == dtypes.Struct:
+        return pl.Struct(
+            fields=[
+                pl.Field(
+                    name=field.name,
+                    dtype=narwhals_to_native_dtype(field.dtype, version),
+                )
+                for field in dtype.fields  # type: ignore[union-attr]
+            ]
+        )
     if dtype == dtypes.Array:  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         raise NotImplementedError(msg)

@@ -13,6 +13,7 @@ import narwhals as nw
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
+pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
@@ -92,7 +93,7 @@ def execute_query(query_id: str) -> None:
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         result = query_module.query(
             *(
-                nw.scan_parquet(path, native_namespace=native_namespace, **kwargs)
+                nw.scan_parquet(str(path), native_namespace=native_namespace, **kwargs)
                 for path in data_paths
             )
         )
