@@ -162,6 +162,8 @@ filterwarnings = [
   'ignore:.*You are using pyarrow version',
   # This warning was temporarily raised by pandas but then reverted.
   'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
+  # This warning was temporarily raised by Polars but then reverted.
+  'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
