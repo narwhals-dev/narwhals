@@ -307,11 +307,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def mean(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.mean(),
-            "mean",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.mean(), "mean", returns_scalar=True)
 
     def median(self) -> Self:
         from narwhals.exceptions import InvalidOperationError
@@ -326,18 +322,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(func, "median", returns_scalar=True)
 
     def min(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.min(),
-            "min",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.min(), "min", returns_scalar=True)
 
     def max(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.max(),
-            "max",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.max(), "max", returns_scalar=True)
 
     def std(self, ddof: int) -> Self:
         return self._from_call(
@@ -356,11 +344,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def skew(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.skew(),
-            "skew",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.skew(), "skew", returns_scalar=True)
 
     def shift(self, n: int) -> Self:
         return self._from_call(
@@ -435,9 +419,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             closed = "neither"
         return self._from_call(
             lambda _input, lower_bound, upper_bound, closed: _input.between(
-                lower_bound,
-                upper_bound,
-                closed,
+                lower_bound, upper_bound, closed
             ),
             "is_between",
             lower_bound=lower_bound,
@@ -447,17 +429,11 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def sum(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.sum(),
-            "sum",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.sum(), "sum", returns_scalar=True)
 
     def count(self) -> Self:
         return self._from_call(
-            lambda _input: _input.count(),
-            "count",
-            returns_scalar=True,
+            lambda _input: _input.count(), "count", returns_scalar=True
         )
 
     def round(self, decimals: int) -> Self:
@@ -510,9 +486,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def abs(self) -> Self:
         return self._from_call(
-            lambda _input: _input.abs(),
-            "abs",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.abs(), "abs", returns_scalar=self._returns_scalar
         )
 
     def all(self) -> Self:
@@ -579,23 +553,17 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def diff(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.diff(),
-            "diff",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.diff(), "diff", returns_scalar=self._returns_scalar
         )
 
     def n_unique(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.nunique(dropna=False),
-            "n_unique",
-            returns_scalar=True,
+            lambda _input: _input.nunique(dropna=False), "n_unique", returns_scalar=True
         )
 
     def is_null(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.isna(),
-            "is_null",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.isna(), "is_null", returns_scalar=self._returns_scalar
         )
 
     def is_nan(self: Self) -> Self:
@@ -606,18 +574,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
-        return self._from_call(
-            func,
-            "is_null",
-            returns_scalar=self._returns_scalar,
-        )
+        return self._from_call(func, "is_null", returns_scalar=self._returns_scalar)
 
     def len(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.size,
-            "len",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.size, "len", returns_scalar=True)
 
     def quantile(
         self: Self,
@@ -633,10 +593,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 return _input.quantile(q=quantile, method="dask")  # pragma: no cover
 
             return self._from_call(
-                func,
-                "quantile",
-                quantile=quantile,
-                returns_scalar=True,
+                func, "quantile", quantile=quantile, returns_scalar=True
             )
         else:
             msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
@@ -655,13 +612,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
-
             return _input[col_token].isin(first_distinct_index)
 
         return self._from_call(
-            func,
-            "is_first_distinct",
-            returns_scalar=self._returns_scalar,
+            func, "is_first_distinct", returns_scalar=self._returns_scalar
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -675,13 +629,10 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 implementation=self._implementation,
             )
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
-
             return _input[col_token].isin(last_distinct_index)
 
         return self._from_call(
-            func,
-            "is_last_distinct",
-            returns_scalar=self._returns_scalar,
+            func, "is_last_distinct", returns_scalar=self._returns_scalar
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -694,11 +645,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 > 1
             )
 
-        return self._from_call(
-            func,
-            "is_duplicated",
-            returns_scalar=self._returns_scalar,
-        )
+        return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
 
     def is_unique(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
@@ -710,11 +657,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 == 1
             )
 
-        return self._from_call(
-            func,
-            "is_unique",
-            returns_scalar=self._returns_scalar,
-        )
+        return self._from_call(func, "is_unique", returns_scalar=self._returns_scalar)
 
     def is_in(self: Self, other: Any) -> Self:
         return self._from_call(
@@ -788,19 +731,13 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    def cast(
-        self: Self,
-        dtype: DType | type[DType],
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
             dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.astype(dtype)
 
         return self._from_call(
-            func,
-            "cast",
-            dtype=dtype,
-            returns_scalar=self._returns_scalar,
+            func, "cast", dtype=dtype, returns_scalar=self._returns_scalar
         )
 
     def is_finite(self: Self) -> Self:
@@ -825,12 +762,7 @@ class DaskExprStringNamespace:
         )
 
     def replace(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
-        n: int = 1,
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal, n: _input.str.replace(
@@ -844,13 +776,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace_all(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
-    ) -> DaskExpr:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal: _input.str.replace(
                 pattern, value, n=-1, regex=not literal
