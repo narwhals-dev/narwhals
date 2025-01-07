@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.21.0"
+version = "1.21.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
