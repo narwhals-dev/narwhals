@@ -19,9 +19,8 @@ class Visitor(NodeVisitor):
             and "Examples:" in docstring
             and value.end_lineno is not None
         ):
-            examples_line_start = value.lineno + [
-                line.strip() for line in docstring.splitlines()
-            ].index("Examples:")
+            docstring_lines = [line.strip() for line in docstring.splitlines()]
+            examples_line_start = value.lineno + docstring_lines.index("Examples:")
             examples_line_end = value.end_lineno
             self.to_remove.append((examples_line_start, examples_line_end))
 
