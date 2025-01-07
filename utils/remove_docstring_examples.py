@@ -19,10 +19,12 @@ class Visitor(NodeVisitor):
             and "Examples:" in docstring
             and value.end_lineno is not None
         ):
-            examples_line_start = value.lineno + [
-                line.strip() for line in docstring.splitlines()
-            ].index("Examples:")
-            examples_line_end = value.end_lineno
+            examples_line_start = (
+                value.lineno
+                + [line.strip() for line in docstring.splitlines()].index("Examples:")
+                - 1
+            )
+            examples_line_end = value.end_lineno - 1
             self.to_remove.append((examples_line_start, examples_line_end))
 
         self.generic_visit(node)
@@ -41,6 +43,6 @@ if __name__ == "__main__":
         if visitor.to_remove:
             lines = content.splitlines()
             for removal in sorted(visitor.to_remove, key=lambda x: -x[0]):
-                del lines[removal[0] - 1 : removal[1] - 1]
+                del lines[removal[0] : removal[1]]
             with open(file, "w") as fd:
                 fd.write("\n".join(lines))
