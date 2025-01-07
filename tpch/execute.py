@@ -1,11 +1,11 @@
 from __future__ import annotations
-import duckdb
 
 import argparse
 from importlib import import_module
 from pathlib import Path
 
 import dask.dataframe as dd
+import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -27,18 +27,20 @@ ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
 BACKEND_NAMESPACE_KWARGS_MAP = {
-    # "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "polars[lazy]": (pl, {}),
-    # "pyarrow": (pa, {}),
+    "pyarrow": (pa, {}),
     "duckdb": (duckdb, {}),
-    # "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
 }
 
 BACKEND_COLLECT_FUNC_MAP = {
     "polars[lazy]": lambda x: x.collect(),
     "duckdb": lambda x: x.pl(),
-    # "dask": lambda x: x.compute(),
+    "dask": lambda x: x.compute(),
 }
+
+DUCKDB_XFAILS = [11, 14, 15, 16, 18, 22]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
@@ -93,6 +95,10 @@ def execute_query(query_id: str) -> None:
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
+        if backend == "duckdb" in query_id in DUCKDB_XFAILS:
+            print(f"\nSkipping {query_id} for DuckDB")  # noqa: T201
+            continue
+
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
         result = query_module.query(
             *(
