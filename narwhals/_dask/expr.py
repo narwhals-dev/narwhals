@@ -413,7 +413,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         self,
         lower_bound: Self | Any,
         upper_bound: Self | Any,
-        closed: Literal["left", "right", "none", "both"] = "both",
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         closed_ = "neither" if closed == "none" else closed
         return self._from_call(
