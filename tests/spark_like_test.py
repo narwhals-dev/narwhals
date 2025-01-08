@@ -21,6 +21,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoFrame
     from tests.utils import Constructor
 
@@ -1146,3 +1147,65 @@ def test_skew(
     df = nw.from_native(pyspark_constructor({"a": data}))
     result = df.select(skew=nw.col("a").skew())
     assert_equal_data(result, {"skew": [expected]})
+
+
+# copied from tests/expr_and_series/list_test.py
+@pytest.mark.parametrize(
+    ("dtype", "expected_lit"),
+    [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
+)
+def test_lit(
+    pyspark_constructor: Constructor,
+    dtype: DType | None,
+    expected_lit: list[Any],
+    request: pytest.FixtureRequest,
+) -> None:
+    if dtype is not None:
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df_raw = pyspark_constructor(data)
+    df = nw.from_native(df_raw).lazy()
+    result = df.with_columns(nw.lit(2, dtype).alias("lit"))
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "lit": expected_lit,
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("col_name", "expr", "expected_result"),
+    [
+        ("left_lit", nw.lit(1) + nw.col("a"), [2, 4, 3]),
+        ("right_lit", nw.col("a") + nw.lit(1), [2, 4, 3]),
+        ("left_lit_with_agg", nw.lit(1) + nw.col("a").mean(), [3]),
+        ("right_lit_with_agg", nw.col("a").mean() - nw.lit(1), [1]),
+        ("left_scalar", 1 + nw.col("a"), [2, 4, 3]),
+        ("right_scalar", nw.col("a") + 1, [2, 4, 3]),
+        ("left_scalar_with_agg", 1 + nw.col("a").mean(), [3]),
+        ("right_scalar_with_agg", nw.col("a").mean() - 1, [1]),
+    ],
+)
+def test_lit_operation(
+    pyspark_constructor: Constructor,
+    col_name: str,
+    expr: nw.Expr,
+    expected_result: list[int],
+    request: pytest.FixtureRequest,
+) -> None:
+    if col_name in (
+        "left_scalar_with_agg",
+        "left_lit_with_agg",
+        "right_lit",
+        "right_lit_with_agg",
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 3, 2]}
+    df_raw = pyspark_constructor(data)
+    df = nw.from_native(df_raw).lazy()
+    result = df.select(expr.alias(col_name))
+    expected = {col_name: expected_result}
+    assert_equal_data(result, expected)

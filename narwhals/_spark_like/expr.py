@@ -59,7 +59,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
-        return SparkLikeNamespace(  # type: ignore[abstract]
+        return SparkLikeNamespace(
             backend_version=self._backend_version, version=self._version
         )
 

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -65,6 +66,28 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def col(self, *column_names: str) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
+        )
+
+    def lit(self, value: object, dtype: DType | None) -> SparkLikeExpr:
+        if dtype is not None:
+            msg = "todo"
+            raise NotImplementedError(msg)
+
+        def _lit(_: SparkLikeLazyFrame) -> list[Column]:
+            import pyspark.sql.functions as F  # noqa: N812
+
+            return [F.lit(value).alias("literal")]
+
+        return SparkLikeExpr(  # type: ignore[abstract]
+            call=_lit,
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["literal"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={},
         )
 
     def sum_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
