@@ -40,7 +40,7 @@ BACKEND_COLLECT_FUNC_MAP = {
     "dask": lambda x: x.compute(),
 }
 
-DUCKDB_XFAILS = ["q11", "q14", "q15", "q16", "q18", "q22"]
+DUCKDB_XFAILS = ["q11", "q14", "q15", "q16", "q22"]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
