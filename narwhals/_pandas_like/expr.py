@@ -262,7 +262,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         return reuse_series_implementation(
             self,

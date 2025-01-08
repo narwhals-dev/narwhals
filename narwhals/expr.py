@@ -1792,10 +1792,10 @@ class Expr:
 
     # --- transform ---
     def is_between(
-        self,
+        self: Self,
         lower_bound: Any | IntoExpr,
         upper_bound: Any | IntoExpr,
-        closed: str = "both",
+        closed: Literal["left", "right", "none", "both"] = "both",
     ) -> Self:
         """Check if this expression is between the given lower and upper bounds.
 

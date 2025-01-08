@@ -263,7 +263,10 @@ class PandasLikeSeries(CompliantSeries):
         return self._native_series.to_list()
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> PandasLikeSeries:
         ser = self._native_series
         _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
