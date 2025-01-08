@@ -414,17 +414,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         def func(_input: duckdb.Expression) -> duckdb.Expression:
-            return (
-                FunctionExpression(
-                    "array_unique", FunctionExpression("array_agg", _input)
-                )
-                + FunctionExpression(
-                    "max",
-                    CaseExpression(
-                        condition=_input.isnotnull(), value=ConstantExpression(0)
-                    ).otherwise(ConstantExpression(1)),
-                )
-            ).alias("result")
+            # https://stackoverflow.com/a/79338887/4451315
+            return FunctionExpression(
+                "array_unique", FunctionExpression("array_agg", _input)
+            ) + FunctionExpression(
+                "max",
+                CaseExpression(
+                    condition=_input.isnotnull(), value=ConstantExpression(0)
+                ).otherwise(ConstantExpression(1)),
+            )
 
         return self._from_call(
             func,
