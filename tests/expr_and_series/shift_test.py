@@ -17,7 +17,7 @@ data = {
 
 
 def test_shift(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)

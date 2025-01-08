@@ -146,6 +146,8 @@ def agg_pyspark(
         simple_aggregations.update(
             {
                 output_name: agg_func(root_name)
+                if function_name != "len"
+                else agg_func("*")
                 for root_name, output_name in zip(expr._root_names, expr._output_names)
             }
         )

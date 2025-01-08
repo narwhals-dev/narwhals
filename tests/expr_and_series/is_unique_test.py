@@ -9,7 +9,7 @@ from tests.utils import assert_equal_data
 
 
 def test_is_unique_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, 1, 2],
@@ -29,7 +29,7 @@ def test_is_unique_expr(constructor: Constructor, request: pytest.FixtureRequest
 def test_is_unique_w_nulls_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [None, 1, 2],

@@ -9,7 +9,10 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_tail(constructor: Constructor) -> None:
+def test_tail(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
 

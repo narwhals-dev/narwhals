@@ -17,7 +17,9 @@ def test_len_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):

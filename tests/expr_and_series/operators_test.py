@@ -21,8 +21,16 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_comparand_operators_scalar_expr(
-    constructor: Constructor, operator: str, expected: list[bool]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    operator: str,
+    expected: list[bool],
 ) -> None:
+    if "pyspark" in str(constructor) and operator in {
+        "__le__",
+        "__ge__",
+    }:
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [0, 1, 2]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(1))
@@ -41,8 +49,16 @@ def test_comparand_operators_scalar_expr(
     ],
 )
 def test_comparand_operators_expr(
-    constructor: Constructor, operator: str, expected: list[bool]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    operator: str,
+    expected: list[bool],
 ) -> None:
+    if "pyspark" in str(constructor) and operator in {
+        "__le__",
+        "__ge__",
+    }:
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
@@ -57,8 +73,13 @@ def test_comparand_operators_expr(
     ],
 )
 def test_logic_operators_expr(
-    constructor: Constructor, operator: str, expected: list[bool]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    operator: str,
+    expected: list[bool],
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor(data))
 
@@ -85,7 +106,7 @@ def test_logic_operators_expr_scalar(
         "dask" in str(constructor)
         and DASK_VERSION < (2024, 10)
         and operator in ("__rand__", "__ror__")
-    ):
+    ) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
     df = nw.from_native(constructor(data))

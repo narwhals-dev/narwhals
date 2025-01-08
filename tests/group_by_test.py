@@ -115,7 +115,9 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and attr == "n_unique":
+    if (
+        "pyspark" in str(constructor) or "duckdb" in str(constructor)
+    ) and attr == "n_unique":
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
@@ -169,7 +171,7 @@ def test_group_by_median(constructor: Constructor) -> None:
 def test_group_by_n_unique_w_missing(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
@@ -275,6 +277,10 @@ def test_key_with_nulls(
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
+
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
@@ -296,7 +302,7 @@ def test_key_with_nulls(
 def test_key_with_nulls_ignored(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
@@ -338,7 +344,9 @@ def test_key_with_nulls_iter(
     assert len(result) == 4
 
 
-def test_no_agg(constructor: Constructor) -> None:
+def test_no_agg(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
@@ -349,7 +357,7 @@ def test_group_by_categorical(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
@@ -376,7 +384,7 @@ def test_group_by_categorical(
 def test_group_by_shift_raises(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         # Polars supports all kinds of crazy group-by aggregations, so
@@ -418,7 +426,7 @@ def test_all_kind_of_aggs(
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]

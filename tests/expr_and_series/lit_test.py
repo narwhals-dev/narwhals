@@ -22,8 +22,13 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    dtype: DType | None,
+    expected_lit: list[Any],
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -55,7 +60,9 @@ def test_lit_error(constructor: Constructor) -> None:
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
 
 
-def test_lit_out_name(constructor: Constructor) -> None:
+def test_lit_out_name(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -100,6 +107,12 @@ def test_lit_operation(
         and DASK_VERSION < (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor) and col_name not in {
+        "right_scalar_with_agg",
+        "right_scalar",
+    }:
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -110,7 +123,7 @@ def test_lit_operation(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         # https://github.com/dask/dask/issues/11637
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1]}))

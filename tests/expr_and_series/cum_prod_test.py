@@ -23,7 +23,7 @@ def test_cum_prod_expr(
 ) -> None:
     if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):

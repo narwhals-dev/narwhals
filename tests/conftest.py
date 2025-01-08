@@ -4,7 +4,6 @@ import os
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Generator
 from typing import Sequence
 
 import pandas as pd
@@ -14,7 +13,6 @@ import pytest
 
 if TYPE_CHECKING:
     import duckdb
-    from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
@@ -129,15 +127,15 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
-@pytest.fixture(scope="session")
-def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
+def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
     try:
         from pyspark.sql import SparkSession
     except ImportError:  # pragma: no cover
         pytest.skip("pyspark is not installed")
-        return
+        return None
 
     import warnings
+    from atexit import register
 
     os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
     with warnings.catch_warnings():
@@ -155,8 +153,19 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
             .config("spark.sql.shuffle.partitions", "2")
             .getOrCreate()
         )
-        yield session
-    session.stop()
+
+        register(session.stop)
+
+        def _constructor(obj: Any) -> IntoFrame:
+            pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+            return (  # type: ignore[no-any-return]
+                session.createDataFrame(pd_df)
+                .repartition(2)
+                .orderBy("index")
+                .drop("index")
+            )
+
+        return _constructor
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
@@ -173,6 +182,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
+    "pyspark": pyspark_lazy_constructor(),
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -222,4 +232,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             # TODO(unassigned): list and name namespaces still need implementing for duckdb
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
             constructors_ids.remove("duckdb")
+
+        if (
+            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
+            and LAZY_CONSTRUCTORS["pyspark"] in constructors
+        ):
+            constructors.remove(LAZY_CONSTRUCTORS["pyspark"])
+            constructors_ids.remove("pyspark")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

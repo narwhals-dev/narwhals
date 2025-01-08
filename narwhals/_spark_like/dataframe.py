@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -8,6 +9,7 @@ from typing import Sequence
 
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
@@ -106,9 +108,11 @@ class SparkLikeLazyFrame:
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
-    def filter(self, *predicates: SparkLikeExpr) -> Self:
+    def filter(self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
+        expr = plx.all_horizontal(
+            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
+        )
         # `[0]` is safe as all_horizontal's expression only returns a single column
         condition = expr._call(self)[0]
         spark_df = self._native_frame.where(condition)
@@ -203,6 +207,11 @@ class SparkLikeLazyFrame:
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
+
+        if subset is not None and any(x not in self.columns for x in subset):
+            msg = f"Column(s) {subset} not found in {self.columns}"
+            raise ColumnNotFoundError(msg)
+
         subset = [subset] if isinstance(subset, str) else subset
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 

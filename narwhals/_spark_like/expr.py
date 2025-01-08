@@ -120,6 +120,22 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             kwargs=kwargs,
         )
 
+    def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__eq__(other),
+            "__eq__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__ne__(other),
+            "__ne__",
+            other=other,
+            returns_scalar=False,
+        )
+
     def __add__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,

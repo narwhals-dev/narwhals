@@ -39,6 +39,11 @@ def test_unique(
         "last",
     }:
         context: Any = pytest.raises(ValueError, match="row order")
+    elif keep == "none" and df.implementation is nw.Implementation.PYSPARK:
+        context = pytest.raises(
+            ValueError,
+            match="`LazyFrame.unique` with PySpark backend only supports `keep='any'`.",
+        )
     elif keep == "foo":
         context = pytest.raises(ValueError, match=": foo")
     else:

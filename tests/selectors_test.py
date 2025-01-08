@@ -24,7 +24,7 @@ data = {
 
 
 def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
@@ -33,7 +33,7 @@ def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> 
 
 
 def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(numeric() + 1)
@@ -42,7 +42,7 @@ def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> No
 
 
 def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(boolean())
@@ -51,7 +51,7 @@ def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> No
 
 
 def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(string())
@@ -67,7 +67,7 @@ def test_categorical(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
@@ -96,7 +96,7 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
