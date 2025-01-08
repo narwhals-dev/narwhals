@@ -144,6 +144,28 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
+        warnings.filterwarnings(
+            "ignore", r"unclosed <socket.socket", category=RuntimeWarning
+        )
+        warnings.filterwarnings(
+            "ignore",
+            r".*The distutils package is deprecated and slated for removal in Python 3.12",
+            module="pyspark",
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            r".*distutils Version classes are deprecated. Use packaging\.version instead.*",
+            module="pyspark",
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            r".*is_datetime64tz_dtype is deprecated and will be removed in a future version.*",
+            module="pyspark",
+            category=DeprecationWarning,
+        )
+
         session = (
             SparkSession.builder.appName("unit-tests")
             .master("local[1]")
