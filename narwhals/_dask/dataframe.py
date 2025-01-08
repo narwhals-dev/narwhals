@@ -11,11 +11,14 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -29,7 +32,6 @@ if TYPE_CHECKING:
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-from narwhals.typing import CompliantLazyFrame
 
 
 class DaskLazyFrame(CompliantLazyFrame):
@@ -44,6 +46,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
@@ -94,17 +97,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            msg = (
-                "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
-            )
-            raise NotImplementedError(msg)
-
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
@@ -186,7 +178,11 @@ class DaskLazyFrame(CompliantLazyFrame):
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._from_native_frame(add_row_index(self._native_frame, name))
+        return self._from_native_frame(
+            add_row_index(
+                self._native_frame, name, self._backend_version, self._implementation
+            )
+        )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))
@@ -202,6 +198,9 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         keep: Literal["any", "none"] = "any",
     ) -> Self:
+        if subset is not None and any(x not in self.columns for x in subset):
+            msg = f"Column(s) {subset} not found in {self.columns}"
+            raise ColumnNotFoundError(msg)
         native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns

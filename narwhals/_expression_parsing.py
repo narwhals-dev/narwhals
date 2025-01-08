@@ -125,6 +125,38 @@ def parse_into_expr(
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
+def infer_new_root_output_names(
+    expr: CompliantExpr[Any], **kwargs: Any
+) -> tuple[list[str] | None, list[str] | None]:
+    """Return new root and output names after chaining expressions.
+
+    Try tracking root and output names by combining them from all expressions appearing in kwargs.
+    If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
+    and just set it to None.
+    """
+    root_names = copy(expr._root_names)
+    output_names = expr._output_names
+    for arg in list(kwargs.values()):
+        if root_names is not None and isinstance(arg, expr.__class__):
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
+            else:
+                root_names = None
+                output_names = None
+                break
+        elif root_names is None:
+            output_names = None
+            break
+
+    if not (
+        (output_names is None and root_names is None)
+        or (output_names is not None and root_names is not None)
+    ):  # pragma: no cover
+        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        raise AssertionError(msg)
+    return root_names, output_names
+
+
 @overload
 def reuse_series_implementation(
     expr: PandasLikeExprT,
@@ -201,30 +233,8 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    # Try tracking root and output names by combining them from all
-    # expressions appearing in args and kwargs. If any anonymous
-    # expression appears (e.g. nw.all()), then give up on tracking root names
-    # and just set it to None.
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
+    root_names, output_names = infer_new_root_output_names(expr, **kwargs)
 
-    if not (
-        (output_names is None and root_names is None)
-        or (output_names is not None and root_names is not None)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        raise AssertionError(msg)
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,

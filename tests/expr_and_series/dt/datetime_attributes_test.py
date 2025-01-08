@@ -32,6 +32,7 @@ data = {
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes(
@@ -47,6 +48,8 @@ def test_datetime_attributes(
     ):
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and attribute in ("date", "weekday", "ordinal_day"):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -68,6 +71,7 @@ def test_datetime_attributes(
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes_series(
@@ -116,6 +120,7 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
             "pandas_nullable_constructor",
             "cudf",
             "modin_constructor",
+            "duckdb",
         )
     ):
         request.applymarker(pytest.mark.xfail)

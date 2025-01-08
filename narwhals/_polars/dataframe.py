@@ -15,6 +15,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -45,6 +46,7 @@ class PolarsDataFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
@@ -343,6 +345,7 @@ class PolarsLazyFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"

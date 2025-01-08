@@ -66,26 +66,30 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
         )
 
     def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
-        def convert_if_dtype(
-            series: dask_expr.Series, dtype: DType | type[DType]
-        ) -> dask_expr.Series:
-            return (
-                series.astype(narwhals_to_native_dtype(dtype, self._version))
-                if dtype
-                else series
-            )
+        import dask.dataframe as dd
+        import pandas as pd
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            return [
+                dd.from_pandas(
+                    pd.Series(
+                        [value],
+                        dtype=narwhals_to_native_dtype(dtype, self._version)
+                        if dtype is not None
+                        else None,
+                        name="literal",
+                    ),
+                    npartitions=df._native_frame.npartitions,
+                )
+            ]
 
         return DaskExpr(
-            lambda df: [
-                df._native_frame.assign(literal=value)["literal"].pipe(
-                    convert_if_dtype, dtype
-                )
-            ],
+            func,
             depth=0,
             function_name="lit",
             root_names=None,
             output_names=["literal"],
-            returns_scalar=False,
+            returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={},
@@ -306,12 +310,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
         *predicates: IntoDaskExpr,
     ) -> DaskWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        if predicates:
-            condition = plx.all_horizontal(*predicates)
-        else:
-            msg = "at least one predicate needs to be provided"
-            raise TypeError(msg)
-
+        condition = plx.all_horizontal(*predicates)
         return DaskWhen(
             condition, self._backend_version, returns_scalar=False, version=self._version
         )
@@ -414,6 +413,9 @@ class DaskWhen:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]
         otherwise_series = otherwise_expr(df)[0]
+
+        if otherwise_expr._returns_scalar:  # type: ignore[attr-defined]
+            return [value_series.where(condition, otherwise_series[0])]
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
 

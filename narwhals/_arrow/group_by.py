@@ -73,6 +73,7 @@ class ArrowGroupBy:
             exprs,
             self._keys,
             self._df._from_native_frame,
+            backend_version=self._df._backend_version,
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
@@ -114,6 +115,7 @@ def agg_arrow(
     exprs: Sequence[CompliantExpr[ArrowSeries]],
     keys: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
+    backend_version: tuple[int, ...],
 ) -> ArrowDataFrame:
     import pyarrow.compute as pc
 
@@ -169,7 +171,7 @@ def agg_arrow(
         function_name = remove_prefix(expr._function_name, "col->")
 
         if function_name in {"std", "var"}:
-            option = pc.VarianceOptions(ddof=expr._kwargs.get("ddof", 1))
+            option = pc.VarianceOptions(ddof=expr._kwargs["ddof"])
         elif function_name in {"len", "n_unique"}:
             option = pc.CountOptions(mode="all")
         elif function_name == "count":
@@ -207,6 +209,10 @@ def agg_arrow(
         expected_old_names_indices[item].pop(0) for item in result_simple.column_names
     ]
     new_column_names = [new_column_names[i] for i in index_map]
-
     result_simple = result_simple.rename_columns(new_column_names)
+    if backend_version < (12, 0, 0):
+        columns = result_simple.column_names
+        result_simple = result_simple.select(
+            [*keys, *[col for col in columns if col not in keys]]
+        )
     return from_dataframe(result_simple)

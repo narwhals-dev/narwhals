@@ -37,8 +37,8 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -65,16 +65,18 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "bob_right": [4, 4, 6],
         "zorro": [7.0, 8, 9],
-        "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
+        "bob_right": [4, 4, 6],
+        "zorro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
 
 
-def test_cross_join(constructor: Constructor) -> None:
+def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
@@ -112,7 +114,11 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
+def test_cross_join_suffix(
+    constructor: Constructor, suffix: str, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
@@ -159,7 +165,10 @@ def test_anti_join(
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
@@ -197,7 +206,10 @@ def test_semi_join(
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
@@ -221,7 +233,6 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
         df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]
 
 
-@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
@@ -241,8 +252,8 @@ def test_left_join(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "antananarivo_right": [1, 2, None],
         "index": [0, 1, 2],
+        "antananarivo_right": [1, 2, None],
     }
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
@@ -260,7 +271,6 @@ def test_left_join(constructor: Constructor) -> None:
     assert_equal_data(result_on_list, expected_on_list)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_multiple_column(constructor: Constructor) -> None:
     data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "index": [0, 1, 2]}
     data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "index": [0, 1, 2]}
@@ -278,7 +288,6 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_overlapping_column(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
@@ -300,9 +309,9 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
+        "index": [0, 1, 2],
         "antananarivo_right": [1, 2, 3],
         "d_right": [1, 4, 2],
-        "index": [0, 1, 2],
     }
     assert_equal_data(result, expected)
     result = df_left.join(
@@ -317,9 +326,9 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
+        "index": [0, 1, 2],
         "antananarivo_right": [1.0, 3.0, None],
         "c": [4.0, 6.0, None],
-        "index": [0, 1, 2],
     }
     assert_equal_data(result, expected)
 
@@ -355,7 +364,7 @@ def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -414,7 +423,7 @@ def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -495,7 +504,7 @@ def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))

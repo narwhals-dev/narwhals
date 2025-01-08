@@ -22,6 +22,8 @@ def test_diff(
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
     expected = {

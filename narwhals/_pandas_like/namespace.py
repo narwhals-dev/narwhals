@@ -371,12 +371,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         plx = self.__class__(
             self._implementation, self._backend_version, version=self._version
         )
-        if predicates:
-            condition = plx.all_horizontal(*predicates)
-        else:
-            msg = "at least one predicate needs to be provided"
-            raise TypeError(msg)
-
+        condition = plx.all_horizontal(*predicates)
         return PandasWhen(
             condition, self._implementation, self._backend_version, version=self._version
         )

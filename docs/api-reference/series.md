@@ -38,6 +38,7 @@
         - is_first_distinct
         - is_in
         - is_last_distinct
+        - is_nan
         - is_null
         - is_sorted
         - is_unique
@@ -53,6 +54,7 @@
         - null_count
         - pipe
         - quantile
+        - rank
         - rename
         - replace_strict
         - rolling_mean

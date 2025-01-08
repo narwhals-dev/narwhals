@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -12,10 +11,12 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -147,30 +148,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 results.append(result)
             return results
 
-        # Try tracking root and output names by combining them from all
-        # expressions appearing in args and kwargs. If any anonymous
-        # expression appears (e.g. nw.all()), then give up on tracking root names
-        # and just set it to None.
-        root_names = copy(self._root_names)
-        output_names = self._output_names
-        for arg in list(kwargs.values()):
-            if root_names is not None and isinstance(arg, self.__class__):
-                if arg._root_names is not None:
-                    root_names.extend(arg._root_names)
-                else:
-                    root_names = None
-                    output_names = None
-                    break
-            elif root_names is None:
-                output_names = None
-                break
-
-        if not (
-            (output_names is None and root_names is None)
-            or (output_names is not None and root_names is not None)
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+        root_names, output_names = infer_new_root_output_names(self, **kwargs)
 
         return self.__class__(
             func,
@@ -209,14 +187,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __radd__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__radd__(other),
-            "__radd__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __sub__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
@@ -224,14 +194,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
-
-    def __rsub__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rsub__(other),
-            "__rsub__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
 
     def __mul__(self, other: Any) -> Self:
         return self._from_call(
@@ -241,14 +203,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __rmul__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmul__(other),
-            "__rmul__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __truediv__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__truediv__(other),
@@ -256,14 +210,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
-
-    def __rtruediv__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rtruediv__(other),
-            "__rtruediv__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
         return self._from_call(
@@ -273,14 +219,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __rfloordiv__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rfloordiv__(other),
-            "__rfloordiv__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __pow__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__pow__(other),
@@ -289,14 +227,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __rpow__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rpow__(other),
-            "__rpow__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __mod__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
@@ -304,14 +234,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
-
-    def __rmod__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmod__(other),
-            "__rmod__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
 
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
@@ -369,14 +291,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __rand__(self, other: DaskExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rand__(other),
-            "__rand__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __or__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__or__(other),
@@ -385,14 +299,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __ror__(self, other: DaskExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__ror__(other),
-            "__ror__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __invert__(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.__invert__(),
@@ -400,20 +306,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
-    ) -> NoReturn:
-        msg = "`Expr.map_batches` is not implemented for Dask yet"
-        raise NotImplementedError(msg)
-
     def mean(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.mean(),
-            "mean",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.mean(), "mean", returns_scalar=True)
 
     def median(self) -> Self:
         from narwhals.exceptions import InvalidOperationError
@@ -428,47 +322,29 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(func, "median", returns_scalar=True)
 
     def min(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.min(),
-            "min",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.min(), "min", returns_scalar=True)
 
     def max(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.max(),
-            "max",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.max(), "max", returns_scalar=True)
 
     def std(self, ddof: int) -> Self:
-        expr = self._from_call(
+        return self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
             ddof=ddof,
             returns_scalar=True,
         )
-        if ddof != 1:
-            expr._depth += 1
-        return expr
 
     def var(self, ddof: int) -> Self:
-        expr = self._from_call(
+        return self._from_call(
             lambda _input, ddof: _input.var(ddof=ddof),
             "var",
             ddof=ddof,
             returns_scalar=True,
         )
-        if ddof != 1:
-            expr._depth += 1
-        return expr
 
     def skew(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.skew(),
-            "skew",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.skew(), "skew", returns_scalar=True)
 
     def shift(self, n: int) -> Self:
         return self._from_call(
@@ -535,37 +411,28 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def is_between(
         self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: str = "both",
+        lower_bound: Self | Any,
+        upper_bound: Self | Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
-        if closed == "none":
-            closed = "neither"
+        closed_ = "neither" if closed == "none" else closed
         return self._from_call(
             lambda _input, lower_bound, upper_bound, closed: _input.between(
-                lower_bound,
-                upper_bound,
-                closed,
+                lower_bound, upper_bound, closed
             ),
             "is_between",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
-            closed=closed,
+            closed=closed_,
             returns_scalar=self._returns_scalar,
         )
 
     def sum(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.sum(),
-            "sum",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.sum(), "sum", returns_scalar=True)
 
     def count(self) -> Self:
         return self._from_call(
-            lambda _input: _input.count(),
-            "count",
-            returns_scalar=True,
+            lambda _input: _input.count(), "count", returns_scalar=True
         )
 
     def round(self, decimals: int) -> Self:
@@ -618,9 +485,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def abs(self) -> Self:
         return self._from_call(
-            lambda _input: _input.abs(),
-            "abs",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.abs(), "abs", returns_scalar=self._returns_scalar
         )
 
     def all(self) -> Self:
@@ -672,8 +537,8 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def clip(
         self: Self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        lower_bound: Self | Any | None,
+        upper_bound: Self | Any | None,
     ) -> Self:
         return self._from_call(
             lambda _input, lower_bound, upper_bound: _input.clip(
@@ -687,31 +552,31 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def diff(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.diff(),
-            "diff",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.diff(), "diff", returns_scalar=self._returns_scalar
         )
 
     def n_unique(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.nunique(dropna=False),
-            "n_unique",
-            returns_scalar=True,
+            lambda _input: _input.nunique(dropna=False), "n_unique", returns_scalar=True
         )
 
     def is_null(self: Self) -> Self:
         return self._from_call(
-            lambda _input: _input.isna(),
-            "is_null",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.isna(), "is_null", returns_scalar=self._returns_scalar
         )
 
+    def is_nan(self: Self) -> Self:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
+            if dtype.is_numeric():
+                return _input != _input  # noqa: PLR0124
+            msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+
+        return self._from_call(func, "is_null", returns_scalar=self._returns_scalar)
+
     def len(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.size,
-            "len",
-            returns_scalar=True,
-        )
+        return self._from_call(lambda _input: _input.size, "len", returns_scalar=True)
 
     def quantile(
         self: Self,
@@ -727,10 +592,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 return _input.quantile(q=quantile, method="dask")  # pragma: no cover
 
             return self._from_call(
-                func,
-                "quantile",
-                quantile=quantile,
-                returns_scalar=True,
+                func, "quantile", quantile=quantile, returns_scalar=True
             )
         else:
             msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
@@ -740,32 +602,36 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
-
             return _input[col_token].isin(first_distinct_index)
 
         return self._from_call(
-            func,
-            "is_first_distinct",
-            returns_scalar=self._returns_scalar,
+            func, "is_first_distinct", returns_scalar=self._returns_scalar
         )
 
     def is_last_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(_input.to_frame(), col_token)
+            _input = add_row_index(
+                _input.to_frame(),
+                col_token,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
-
             return _input[col_token].isin(last_distinct_index)
 
         return self._from_call(
-            func,
-            "is_last_distinct",
-            returns_scalar=self._returns_scalar,
+            func, "is_last_distinct", returns_scalar=self._returns_scalar
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -778,11 +644,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 > 1
             )
 
-        return self._from_call(
-            func,
-            "is_duplicated",
-            returns_scalar=self._returns_scalar,
-        )
+        return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
 
     def is_unique(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
@@ -794,11 +656,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
                 == 1
             )
 
-        return self._from_call(
-            func,
-            "is_unique",
-            returns_scalar=self._returns_scalar,
-        )
+        return self._from_call(func, "is_unique", returns_scalar=self._returns_scalar)
 
     def is_in(self: Self, other: Any) -> Self:
         return self._from_call(
@@ -860,10 +718,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def mode(self: Self) -> Self:
-        msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -876,19 +730,13 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    def cast(
-        self: Self,
-        dtype: DType | type[DType],
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
             dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.astype(dtype)
 
         return self._from_call(
-            func,
-            "cast",
-            dtype=dtype,
-            returns_scalar=self._returns_scalar,
+            func, "cast", dtype=dtype, returns_scalar=self._returns_scalar
         )
 
     def is_finite(self: Self) -> Self:
@@ -897,116 +745,6 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(
             lambda _input: da.isfinite(_input),
             "is_finite",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).sum()
-
-        return self._from_call(
-            func,
-            "rolling_sum",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).mean()
-
-        return self._from_call(
-            func,
-            "rolling_mean",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).var(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_var",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_periods: int | None,
-        center: bool,
-        ddof: int,
-    ) -> Self:
-        def func(
-            _input: dask_expr.Series,
-            window_size: int,
-            min_periods: int | None,
-            center: bool,  # noqa: FBT001
-            ddof: int,
-        ) -> dask_expr.Series:
-            return _input.rolling(
-                window=window_size, min_periods=min_periods, center=center
-            ).std(ddof=ddof)
-
-        return self._from_call(
-            func,
-            "rolling_std",
-            window_size=window_size,
-            min_periods=min_periods,
-            center=center,
-            ddof=ddof,
             returns_scalar=self._returns_scalar,
         )
 
@@ -1023,12 +761,7 @@ class DaskExprStringNamespace:
         )
 
     def replace(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
-        n: int = 1,
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal, n: _input.str.replace(
@@ -1042,13 +775,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace_all(
-        self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool = False,
-    ) -> DaskExpr:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal: _input.str.replace(
                 pattern, value, n=-1, regex=not literal
@@ -1209,6 +936,13 @@ class DaskExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def weekday(self) -> DaskExpr:
+        return self._compliant_expr._from_call(
+            lambda _input: _input.dt.weekday + 1,  # Dask is 0-6
+            "weekday",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 

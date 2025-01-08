@@ -1342,7 +1342,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.var(ddof=ddof)
 
     def clip(
-        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self, lower_bound: Self | Any | None = None, upper_bound: Self | Any | None = None
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -1484,7 +1484,10 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+            self._compliant_series.clip(
+                lower_bound=self._extract_native(lower_bound),
+                upper_bound=self._extract_native(upper_bound),
+            )
         )
 
     def is_in(self, other: Any) -> Self:
@@ -2437,6 +2440,59 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
+    def is_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are NaN.
+
+        Returns:
+            A boolean Series indicating which values are NaN.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
+            >>> data = [0.0, None, 2.0]
+            >>> s_pd = pd.Series(data, dtype="Float64")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data], type=pa.float64())
+
+            >>> def agnostic_self_div_is_nan(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.is_nan().to_native()
+
+            >>> print(agnostic_self_div_is_nan(s_pd))
+            0    False
+            1     <NA>
+            2    False
+            dtype: boolean
+
+            >>> print(agnostic_self_div_is_nan(s_pl))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+                    false
+                    null
+                    false
+            ]
+
+            >>> print(agnostic_self_div_is_nan(s_pa))  # doctest: +NORMALIZE_WHITESPACE
+            [
+              [
+                false,
+                null,
+                false
+              ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.is_nan())
+
     def fill_null(
         self,
         value: Any | None = None,
@@ -2549,7 +2605,10 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def is_between(
-        self, lower_bound: Any | Self, upper_bound: Any | Self, closed: str = "both"
+        self: Self,
+        lower_bound: Any | Self,
+        upper_bound: Any | Self,
+        closed: Literal["left", "right", "none", "both"] = "both",
     ) -> Self:
         """Get a boolean mask of the values that are between the given lower/upper bounds.
 
@@ -4682,6 +4741,101 @@ class Series(Generic[IntoSeriesT]):
     def __contains__(self: Self, other: Any) -> bool:
         return self._compliant_series.__contains__(other)  # type: ignore[no-any-return]
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"] = "average",
+        *,
+        descending: bool = False,
+    ) -> Self:
+        """Assign ranks to data, dealing with ties appropriately.
+
+        Notes:
+            The resulting dtype may differ between backends.
+
+        Arguments:
+            method: The method used to assign ranks to tied elements.
+                The following methods are available (default is 'average'):
+
+                - 'average' : The average of the ranks that would have been assigned to
+                  all the tied values is assigned to each value.
+                - 'min' : The minimum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value. (This is also referred to
+                    as "competition" ranking.)
+                - 'max' : The maximum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value.
+                - 'dense' : Like 'min', but the rank of the next highest element is
+                   assigned the rank immediately after those assigned to the tied
+                   elements.
+                - 'ordinal' : All values are given a distinct rank, corresponding to the
+                    order that the values occur in the Series.
+
+            descending: Rank in descending order.
+
+        Returns:
+            A new series with rank data as values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>>
+            >>> data = [3, 6, 1, 1, 6]
+
+            We define a dataframe-agnostic function that computes the dense rank for
+            the data:
+
+            >>> def agnostic_dense_rank(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rank(method="dense").to_native()
+
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_dense_rank`:
+
+            >>> agnostic_dense_rank(pd.Series(data))
+            0    2.0
+            1    3.0
+            2    1.0
+            3    1.0
+            4    3.0
+            dtype: float64
+
+            >>> agnostic_dense_rank(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               2
+               3
+               1
+               1
+               3
+            ]
+
+            >>> agnostic_dense_rank(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                3,
+                1,
+                1,
+                3
+              ]
+            ]
+        """
+        supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
+        if method not in supported_rank_methods:
+            msg = (
+                "Ranking method must be one of {'average', 'min', 'max', 'dense', 'ordinal'}. "
+                f"Found '{method}'"
+            )
+            raise ValueError(msg)
+
+        return self._from_compliant_series(
+            self._compliant_series.rank(method=method, descending=descending)
+        )
+
     @property
     def str(self: Self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
@@ -6248,6 +6402,58 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.ordinal_day()
+        )
+
+    def weekday(self: Self) -> SeriesT:
+        """Extract the week day in a datetime series.
+
+        Returns:
+            A new Series containing the week day for each datetime value.
+            Returns the ISO weekday number where monday = 1 and sunday = 7
+
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>> data = [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_weekday(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.dt.weekday().to_native()
+
+            We can then pass either pandas, Polars, PyArrow, and other supported libraries to `agnostic_weekday`:
+
+            >>> agnostic_weekday(s_pd)
+            0    3
+            1    1
+            dtype: int32
+            >>> agnostic_weekday(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i8]
+            [
+               3
+               1
+            ]
+            >>> agnostic_weekday(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                3,
+                1
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.weekday()
         )
 
     def total_minutes(self: Self) -> SeriesT:
