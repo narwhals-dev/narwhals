@@ -182,7 +182,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
-    "pyspark": pyspark_lazy_constructor(),
+    "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -211,7 +211,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors.append(EAGER_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
-            constructors.append(LAZY_CONSTRUCTORS[constructor])
+            if constructor == "pyspark":
+                constructors.append(pyspark_lazy_constructor())
+            else:
+                constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
@@ -232,11 +235,4 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             # TODO(unassigned): list and name namespaces still need implementing for duckdb
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
             constructors_ids.remove("duckdb")
-
-        if (
-            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
-            and LAZY_CONSTRUCTORS["pyspark"] in constructors
-        ):
-            constructors.remove(LAZY_CONSTRUCTORS["pyspark"])
-            constructors_ids.remove("pyspark")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
