@@ -2,3 +2,6 @@
 .md-typeset ul li {
   margin-bottom: 0.1em !important;
 }
+.md-main__inner.md-grid {
+  max-width: initial;
+}
