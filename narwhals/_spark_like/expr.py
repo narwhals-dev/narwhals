@@ -129,14 +129,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __radd__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__radd__(other),
-            "__radd__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
-
     def __sub__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
@@ -144,14 +136,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             other=other,
             returns_scalar=False,
         )
-
-    def __rsub__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rsub__(other),
-            "__rsub__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
@@ -161,14 +145,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __rmul__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmul__(other),
-            "__rmul__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
-
     def __truediv__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__truediv__(other),
@@ -176,14 +152,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             other=other,
             returns_scalar=False,
         )
-
-    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rtruediv__(other),
-            "__rtruediv__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(_input: Column, other: Column) -> Column:
@@ -195,16 +163,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             _floordiv, "__floordiv__", other=other, returns_scalar=False
         )
 
-    def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
-        def _rfloordiv(_input: Column, other: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.floor(other / _input)
-
-        return self._from_call(
-            _rfloordiv, "__rfloordiv__", other=other, returns_scalar=False
-        ).alias("literal")
-
     def __pow__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__pow__(other),
@@ -213,14 +171,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __rpow__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rpow__(other),
-            "__rpow__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
-
     def __mod__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
@@ -228,14 +178,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             other=other,
             returns_scalar=False,
         )
-
-    def __rmod__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmod__(other),
-            "__rmod__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
 
     def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
@@ -293,14 +235,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
         )
 
-    def __rand__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rand__(other),
-            "__rand__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
-
     def __or__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__or__(other),
@@ -308,14 +242,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             other=other,
             returns_scalar=False,
         )
-
-    def __ror__(self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__ror__(other),
-            "__ror__",
-            other=other,
-            returns_scalar=False,
-        ).alias("literal")
 
     def __invert__(self) -> Self:
         return self._from_call(
