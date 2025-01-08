@@ -85,7 +85,7 @@ def get_spark_function(function_name: str, **kwargs: Any) -> Column:
 
         return partial(
             _std if function_name == "std" else _var,
-            ddof=kwargs.get("ddof", 1),
+            ddof=kwargs["ddof"],
             np_version=parse_version(np.__version__),
         )
     from pyspark.sql import functions as F  # noqa: N812

@@ -412,12 +412,12 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     df = df.with_columns(~plx.col(*self._root_names).is_null())
 
                 if self._function_name == "col->shift":
-                    kwargs = {"periods": self._kwargs.get("n", 1)}
+                    kwargs = {"periods": self._kwargs["n"]}
                 elif self._function_name == "col->rank":
                     _method = self._kwargs.get("method", "average")
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,
-                        "ascending": not self._kwargs.get("descending", False),
+                        "ascending": not self._kwargs["descending"],
                         "na_option": "keep",
                         "pct": False,
                     }

@@ -220,7 +220,7 @@ jobs:
         run: |
             cd tea-tasting
             pdm remove narwhals
-            pdm add ./..
+            pdm add ./..[dev]
       - name: show-deps
         run: |
             cd tea-tasting

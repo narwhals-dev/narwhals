@@ -209,14 +209,13 @@ def agg_pandas(  # noqa: PLR0915
             is_n_unique = function_name == "nunique"
             is_std = function_name == "std"
             is_var = function_name == "var"
-            ddof = expr._kwargs.get("ddof", 1)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 if is_n_unique:
                     nunique_aggs[output_name] = root_name
-                elif is_std and ddof != 1:
+                elif is_std and (ddof := expr._kwargs["ddof"]) != 1:
                     std_aggs[ddof][0].append(root_name)
                     std_aggs[ddof][1].append(output_name)
-                elif is_var and ddof != 1:
+                elif is_var and (ddof := expr._kwargs["ddof"]) != 1:
                     var_aggs[ddof][0].append(root_name)
                     var_aggs[ddof][1].append(output_name)
                 else:

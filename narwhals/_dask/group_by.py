@@ -178,9 +178,7 @@ def agg_dask(
 
             function_name = remove_prefix(expr._function_name, "col->")
             kwargs = (
-                {"ddof": expr._kwargs.get("ddof", 1)}
-                if function_name in {"std", "var"}
-                else {}
+                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}
             )
 
             agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)

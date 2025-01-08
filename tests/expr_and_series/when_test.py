@@ -59,6 +59,7 @@ def test_no_arg_when_fail(
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))

@@ -365,9 +365,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
             return FunctionExpression(
-                "greatest",
-                FunctionExpression("least", _input, upper_bound),
-                lower_bound,
+                "greatest", FunctionExpression("least", _input, upper_bound), lower_bound
             )
 
         return self._from_call(
@@ -407,9 +405,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("sum", _input),
-            "sum",
-            returns_scalar=True,
+            lambda _input: FunctionExpression("sum", _input), "sum", returns_scalar=True
         )
 
     def count(self) -> Self:
@@ -425,9 +421,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("count"),
-            "len",
-            returns_scalar=True,
+            lambda _input: FunctionExpression("count"), "len", returns_scalar=True
         )
 
     def std(self, ddof: int) -> Self:
@@ -441,9 +435,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             msg = f"std with ddof {ddof} is not supported in DuckDB"
             raise NotImplementedError(msg)
         return self._from_call(
-            lambda _input: FunctionExpression(func, _input),
-            "std",
-            returns_scalar=True,
+            lambda _input: FunctionExpression(func, _input), "std", returns_scalar=True
         )
 
     def var(self, ddof: int) -> Self:
@@ -457,34 +449,26 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             msg = f"var with ddof {ddof} is not supported in DuckDB"
             raise NotImplementedError(msg)
         return self._from_call(
-            lambda _input: FunctionExpression(func, _input),
-            "var",
-            returns_scalar=True,
+            lambda _input: FunctionExpression(func, _input), "var", returns_scalar=True
         )
 
     def max(self) -> Self:
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("max", _input),
-            "max",
-            returns_scalar=True,
+            lambda _input: FunctionExpression("max", _input), "max", returns_scalar=True
         )
 
     def min(self) -> Self:
         from duckdb import FunctionExpression
 
         return self._from_call(
-            lambda _input: FunctionExpression("min", _input),
-            "min",
-            returns_scalar=True,
+            lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
     def is_null(self) -> Self:
         return self._from_call(
-            lambda _input: _input.isnull(),
-            "is_null",
-            returns_scalar=self._returns_scalar,
+            lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
         )
 
     def is_in(self, other: Sequence[Any]) -> Self:
@@ -590,9 +574,7 @@ class DuckDBExprStringNamespace:
             )
 
         return self._compliant_expr._from_call(
-            func,
-            "contains",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            func, "contains", returns_scalar=self._compliant_expr._returns_scalar
         )
 
     def slice(self, offset: int, length: int) -> DuckDBExpr:
@@ -612,9 +594,7 @@ class DuckDBExprStringNamespace:
             )
 
         return self._compliant_expr._from_call(
-            func,
-            "slice",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            func, "slice", returns_scalar=self._compliant_expr._returns_scalar
         )
 
     def to_lowercase(self) -> DuckDBExpr:
@@ -664,10 +644,7 @@ class DuckDBExprStringNamespace:
             raise NotImplementedError(msg)
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
-                "replace",
-                _input,
-                ConstantExpression(pattern),
-                ConstantExpression(value),
+                "replace", _input, ConstantExpression(pattern), ConstantExpression(value)
             ),
             "replace_all",
             returns_scalar=self._compliant_expr._returns_scalar,
