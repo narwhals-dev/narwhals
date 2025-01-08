@@ -4,6 +4,7 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidIntoExprError
@@ -76,7 +77,7 @@ def parse_exprs_and_named_exprs(
 
 def _columns_from_expr(
     df: DuckDBLazyFrame, expr: IntoDuckDBExpr
-) -> list[duckdb.Expression]:
+) -> Sequence[duckdb.Expression]:
     if isinstance(expr, str):  # pragma: no cover
         from duckdb import ColumnExpression
 

@@ -2605,7 +2605,10 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def is_between(
-        self, lower_bound: Any | Self, upper_bound: Any | Self, closed: str = "both"
+        self: Self,
+        lower_bound: Any | Self,
+        upper_bound: Any | Self,
+        closed: Literal["left", "right", "none", "both"] = "both",
     ) -> Self:
         """Get a boolean mask of the values that are between the given lower/upper bounds.
 
@@ -4737,6 +4740,101 @@ class Series(Generic[IntoSeriesT]):
 
     def __contains__(self: Self, other: Any) -> bool:
         return self._compliant_series.__contains__(other)  # type: ignore[no-any-return]
+
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"] = "average",
+        *,
+        descending: bool = False,
+    ) -> Self:
+        """Assign ranks to data, dealing with ties appropriately.
+
+        Notes:
+            The resulting dtype may differ between backends.
+
+        Arguments:
+            method: The method used to assign ranks to tied elements.
+                The following methods are available (default is 'average'):
+
+                - 'average' : The average of the ranks that would have been assigned to
+                  all the tied values is assigned to each value.
+                - 'min' : The minimum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value. (This is also referred to
+                    as "competition" ranking.)
+                - 'max' : The maximum of the ranks that would have been assigned to all
+                    the tied values is assigned to each value.
+                - 'dense' : Like 'min', but the rank of the next highest element is
+                   assigned the rank immediately after those assigned to the tied
+                   elements.
+                - 'ordinal' : All values are given a distinct rank, corresponding to the
+                    order that the values occur in the Series.
+
+            descending: Rank in descending order.
+
+        Returns:
+            A new series with rank data as values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+            >>>
+            >>> data = [3, 6, 1, 1, 6]
+
+            We define a dataframe-agnostic function that computes the dense rank for
+            the data:
+
+            >>> def agnostic_dense_rank(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.rank(method="dense").to_native()
+
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_dense_rank`:
+
+            >>> agnostic_dense_rank(pd.Series(data))
+            0    2.0
+            1    3.0
+            2    1.0
+            3    1.0
+            4    3.0
+            dtype: float64
+
+            >>> agnostic_dense_rank(pl.Series(data))  # doctest:+NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               2
+               3
+               1
+               1
+               3
+            ]
+
+            >>> agnostic_dense_rank(pa.chunked_array([data]))  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2,
+                3,
+                1,
+                1,
+                3
+              ]
+            ]
+        """
+        supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
+        if method not in supported_rank_methods:
+            msg = (
+                "Ranking method must be one of {'average', 'min', 'max', 'dense', 'ordinal'}. "
+                f"Found '{method}'"
+            )
+            raise ValueError(msg)
+
+        return self._from_compliant_series(
+            self._compliant_series.rank(method=method, descending=descending)
+        )
 
     @property
     def str(self: Self) -> SeriesStringNamespace[Self]:

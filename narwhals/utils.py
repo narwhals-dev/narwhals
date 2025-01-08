@@ -155,7 +155,11 @@ class Implementation(Enum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+        return self in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }
 
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
@@ -291,7 +295,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.MODIN: (0, 25, 3),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
-    Implementation.PYSPARK: (3, 3),
+    Implementation.PYSPARK: (3, 5),
     Implementation.POLARS: (0, 20, 3),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
