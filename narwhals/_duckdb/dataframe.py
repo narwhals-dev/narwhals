@@ -225,7 +225,7 @@ class DuckDBLazyFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if how not in ("inner", "left"):
+        if how not in ("inner", "left", "semi"):
             msg = "Only inner and left join is implemented for DuckDB"
             raise NotImplementedError(msg)
 
@@ -242,12 +242,15 @@ class DuckDBLazyFrame:
             other._native_frame.set_alias("rhs"), condition=condition, how=how
         )
 
-        select = [f"lhs.{x}" for x in self._native_frame.columns]
-        for col in other._native_frame.columns:
-            if col in self._native_frame.columns and col not in right_on:
-                select.append(f"rhs.{col} as {col}{suffix}")
-            elif col not in right_on:
-                select.append(col)
+        if how in ("inner", "left"):
+            select = [f"lhs.{x}" for x in self._native_frame.columns]
+            for col in other._native_frame.columns:
+                if col in self._native_frame.columns and col not in right_on:
+                    select.append(f"rhs.{col} as {col}{suffix}")
+                elif col not in right_on:
+                    select.append(col)
+        elif how == "semi":
+            select = [f"lhs.{x}" for x in self._native_frame.columns]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
