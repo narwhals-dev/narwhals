@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -17,7 +19,11 @@ from tests.utils import assert_equal_data
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(constructor: Constructor, closed: str, expected: list[bool]) -> None:
+def test_is_between(
+    constructor: Constructor,
+    closed: Literal["left", "right", "none", "both"],
+    expected: list[bool],
+) -> None:
     data = {"a": [1, 4, 2, 5]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
@@ -43,7 +49,9 @@ def test_is_between_expressified(constructor: Constructor) -> None:
     ],
 )
 def test_is_between_series(
-    constructor_eager: ConstructorEager, closed: str, expected: list[bool]
+    constructor_eager: ConstructorEager,
+    closed: Literal["left", "right", "none", "both"],
+    expected: list[bool],
 ) -> None:
     data = {"a": [1, 4, 2, 5]}
     df = nw.from_native(constructor_eager(data), eager_only=True)

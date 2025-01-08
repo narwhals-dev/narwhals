@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -137,33 +138,11 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
     import warnings
     from atexit import register
 
-    os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
         # Polars is imported in the tests, but not used in the spark operations
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
-        )
-        warnings.filterwarnings(
-            "ignore", r"unclosed <socket.socket", category=RuntimeWarning
-        )
-        warnings.filterwarnings(
-            "ignore",
-            r".*The distutils package is deprecated and slated for removal in Python 3.12",
-            module="pyspark",
-            category=DeprecationWarning,
-        )
-        warnings.filterwarnings(
-            "ignore",
-            r".*distutils Version classes are deprecated. Use packaging\.version instead.*",
-            module="pyspark",
-            category=DeprecationWarning,
-        )
-        warnings.filterwarnings(
-            "ignore",
-            r".*is_datetime64tz_dtype is deprecated and will be removed in a future version.*",
-            module="pyspark",
-            category=DeprecationWarning,
         )
 
         session = (
@@ -179,13 +158,32 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         register(session.stop)
 
         def _constructor(obj: Any) -> IntoFrame:
-            pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
-            return (  # type: ignore[no-any-return]
-                session.createDataFrame(pd_df)
-                .repartition(2)
-                .orderBy("index")
-                .drop("index")
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    r".*The distutils package is deprecated and slated for removal in Python 3.12",
+                    module="pyspark",
+                    category=DeprecationWarning,
+                )
+                warnings.filterwarnings(
+                    "ignore",
+                    r".*distutils Version classes are deprecated. Use packaging\.version instead.*",
+                    module="pyspark",
+                    category=DeprecationWarning,
+                )
+                warnings.filterwarnings(
+                    "ignore",
+                    r".*is_datetime64tz_dtype is deprecated and will be removed in a future version.*",
+                    module="pyspark",
+                    category=DeprecationWarning,
+                )
+                pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+                return (  # type: ignore[no-any-return]
+                    session.createDataFrame(pd_df)
+                    .repartition(2)
+                    .orderBy("index")
+                    .drop("index")
+                )
 
         return _constructor
 
@@ -234,7 +232,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                constructors.append(pyspark_lazy_constructor())
+                if sys.version_info < (3, 12):
+                    constructors.append(pyspark_lazy_constructor())
+                else:
+                    continue
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
