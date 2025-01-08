@@ -490,7 +490,10 @@ class ArrowSeries(CompliantSeries):
         )
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         import pyarrow.compute as pc
 

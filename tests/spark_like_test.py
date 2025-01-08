@@ -9,6 +9,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 
 import pandas as pd
 import pytest
@@ -991,7 +992,9 @@ def test_clip(pyspark_constructor: Constructor) -> None:
     ],
 )
 def test_is_between(
-    pyspark_constructor: Constructor, closed: str, expected: list[bool]
+    pyspark_constructor: Constructor,
+    closed: Literal["left", "right", "none", "both"],
+    expected: list[bool],
 ) -> None:
     data = {"a": [1, 4, 2, 5]}
     df = nw.from_native(pyspark_constructor(data))

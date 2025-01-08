@@ -283,7 +283,12 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_nan(self: Self) -> Self:
         return reuse_series_implementation(self, "is_nan")
 
-    def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
+    def is_between(
+        self: Self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
+    ) -> Self:
         return reuse_series_implementation(
             self,
             "is_between",
