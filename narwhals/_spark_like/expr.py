@@ -221,7 +221,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __lt__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input < other,
+            lambda _input, other: _input.__lt__(other),
             "__lt__",
             other=other,
             returns_scalar=False,
