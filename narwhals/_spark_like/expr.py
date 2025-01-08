@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import infer_new_root_output_names
@@ -276,7 +277,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self,
         lower_bound: Any,
         upper_bound: Any,
-        closed: str,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
             if closed == "both":

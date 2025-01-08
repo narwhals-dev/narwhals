@@ -413,10 +413,9 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         self,
         lower_bound: Self | Any,
         upper_bound: Self | Any,
-        closed: str = "both",
+        closed: Literal["left", "right", "none", "both"] = "both",
     ) -> Self:
-        if closed == "none":
-            closed = "neither"
+        closed_ = "neither" if closed == "none" else closed
         return self._from_call(
             lambda _input, lower_bound, upper_bound, closed: _input.between(
                 lower_bound, upper_bound, closed
@@ -424,7 +423,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             "is_between",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
-            closed=closed,
+            closed=closed_,
             returns_scalar=self._returns_scalar,
         )
 
