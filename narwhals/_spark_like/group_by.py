@@ -80,6 +80,8 @@ class SparkLikeLazyGroupBy:
 
 
 def get_spark_function(function_name: str, **kwargs: Any) -> Column:
+    from pyspark.sql import functions as F  # noqa: N812
+
     if function_name in {"std", "var"}:
         import numpy as np  # ignore-banned-import
 
@@ -88,9 +90,15 @@ def get_spark_function(function_name: str, **kwargs: Any) -> Column:
             ddof=kwargs["ddof"],
             np_version=parse_version(np.__version__),
         )
-    from pyspark.sql import functions as F  # noqa: N812
+    elif function_name == "len":
+        # Use count(*) to count all rows including nulls
+        def _count(*_args: Any, **_kwargs: Any) -> Column:
+            return F.count("*")
 
-    return getattr(F, function_name)
+        return _count
+
+    else:
+        return getattr(F, function_name)
 
 
 def agg_pyspark(
@@ -138,16 +146,11 @@ def agg_pyspark(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        pyspark_function = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-            function_name, function_name
-        )
-        agg_func = get_spark_function(pyspark_function, **expr._kwargs)
+        agg_func = get_spark_function(function_name, **expr._kwargs)
 
         simple_aggregations.update(
             {
                 output_name: agg_func(root_name)
-                if function_name != "len"
-                else agg_func("*")
                 for root_name, output_name in zip(expr._root_names, expr._output_names)
             }
         )

@@ -28,11 +28,21 @@ from tests.utils import assert_equal_data
     ids=range(5),
 )
 def test_scalar_reduction_select(
-    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
+    constructor: Constructor,
+    expr: list[Any],
+    expected: dict[str, list[Any]],
+    request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        # First one passes, the others fail.
-        return
+    if "pyspark" in str(constructor) and request.node.callspec.id in {
+        "pyspark-2",
+        "pyspark-3",
+        "pyspark-4",
+    }:
+        request.applymarker(pytest.mark.xfail)
+
+    if "duckdb" in str(constructor) and request.node.callspec.id not in {"duckdb-0"}:
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.select(*expr)
@@ -62,7 +72,7 @@ def test_scalar_reduction_with_columns(
     expected: dict[str, list[Any]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) or ("pyspark" in str(constructor)):
+    if "duckdb" in str(constructor) or request.node.callspec.id != "pyspark-1":
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
@@ -73,7 +83,7 @@ def test_scalar_reduction_with_columns(
 def test_empty_scalar_reduction_select(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
         "str": [*"abcde"],
@@ -106,7 +116,7 @@ def test_empty_scalar_reduction_select(
 def test_empty_scalar_reduction_with_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     from itertools import chain
 

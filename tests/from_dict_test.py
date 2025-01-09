@@ -38,11 +38,7 @@ def test_from_dict_schema(
     assert result.collect_schema() == schema
 
 
-def test_from_dict_without_namespace(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_from_dict_without_namespace(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
