@@ -12,7 +12,7 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) or "pyarrow_table" in str(constructor):
         expected = {"a": [False, False, True, None]}

@@ -13,7 +13,7 @@ data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", "Parrot|dove", None]
 def test_contains_case_insensitive(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "cudf" in str(constructor):
+    if "cudf" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -40,7 +40,12 @@ def test_contains_series_case_insensitive(
     assert_equal_data(result, expected)
 
 
-def test_contains_case_sensitive(constructor: Constructor) -> None:
+def test_contains_case_sensitive(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("pets").str.contains("parrot|Dove").alias("default_match"))
     expected = {
@@ -58,7 +63,12 @@ def test_contains_series_case_sensitive(constructor_eager: ConstructorEager) -> 
     assert_equal_data(result, expected)
 
 
-def test_contains_literal(constructor: Constructor) -> None:
+def test_contains_literal(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("pets").str.contains("Parrot|dove").alias("default_match"),

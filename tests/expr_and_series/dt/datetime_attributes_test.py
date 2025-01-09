@@ -51,6 +51,8 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and attribute in ("date", "weekday", "ordinal_day"):
         request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
@@ -121,6 +123,7 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
             "cudf",
             "modin_constructor",
             "duckdb",
+            "pyspark",
         )
     ):
         request.applymarker(pytest.mark.xfail)

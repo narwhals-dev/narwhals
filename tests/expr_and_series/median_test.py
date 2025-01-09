@@ -43,7 +43,7 @@ def test_median_series(
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 
