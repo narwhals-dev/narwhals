@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -75,7 +76,7 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
 
 
 def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
@@ -117,7 +118,7 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
 def test_cross_join_suffix(
     constructor: Constructor, suffix: str, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
