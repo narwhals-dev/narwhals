@@ -243,7 +243,7 @@ class DuckDBLazyFrame:
             assert right_on is not None  # noqa: S101
 
             conditions = [
-                f"lhs.{left} = rhs.{right}" for left, right in zip(left_on, right_on)
+                f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
             ]
             condition = " and ".join(conditions)
             rel = self._native_frame.set_alias("lhs").join(
@@ -251,16 +251,16 @@ class DuckDBLazyFrame:
             )
 
         if how in ("inner", "left", "cross"):
-            select = [f"lhs.{x}" for x in self._native_frame.columns]
+            select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
                 if col in self._native_frame.columns and (
                     right_on is None or col not in right_on
                 ):
-                    select.append(f"rhs.{col} as {col}{suffix}")
+                    select.append(f'rhs."{col}" as "{col}{suffix}"')
                 elif right_on is None or col not in right_on:
                     select.append(col)
         else:  # semi
-            select = [f"lhs.{x}" for x in self._native_frame.columns]
+            select = ["lhs.*"]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
@@ -317,9 +317,9 @@ class DuckDBLazyFrame:
         result = self._native_frame.order(
             ",".join(
                 (
-                    f"{col} {desc} nulls last"
+                    f'"{col}" {desc} nulls last'
                     if nulls_last
-                    else f"{col} {desc} nulls first"
+                    else f'"{col}" {desc} nulls first'
                     for col, desc in zip(flat_by, descending_str)
                 )
             )
