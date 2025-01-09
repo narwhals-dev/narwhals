@@ -220,9 +220,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 12):
+                if sys.version_info < (3, 12):  # pragma: no cover
                     constructors.append(pyspark_lazy_constructor())
-                else:
+                else:  # pragma: no cover
                     continue
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
