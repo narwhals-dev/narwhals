@@ -372,7 +372,7 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
+def parse_version(version: str) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
     Arguments:
@@ -382,9 +382,10 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
         Parsed version number.
     """
     # lifted from Polars
-    if isinstance(version, str):  # pragma: no cover
-        version = version.split(".")
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
+    # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
+    # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
+    version = re.sub(r"(\D?dev.*$)", "", version)
+    return tuple(int(re.sub(r"\D", "", str(v))) for v in version.split("."))
 
 
 def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
