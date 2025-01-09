@@ -408,6 +408,28 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression("sum", _input), "sum", returns_scalar=True
         )
 
+    def n_unique(self) -> Self:
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            # https://stackoverflow.com/a/79338887/4451315
+            return FunctionExpression(
+                "array_unique", FunctionExpression("array_agg", _input)
+            ) + FunctionExpression(
+                "max",
+                CaseExpression(
+                    condition=_input.isnotnull(), value=ConstantExpression(0)
+                ).otherwise(ConstantExpression(1)),
+            )
+
+        return self._from_call(
+            func,
+            "n_unique",
+            returns_scalar=True,
+        )
+
     def count(self) -> Self:
         from duckdb import FunctionExpression
 

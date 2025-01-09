@@ -115,9 +115,7 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if (
-        "pyspark" in str(constructor) or "duckdb" in str(constructor)
-    ) and attr == "n_unique":
+    if "pyspark" in str(constructor) and attr == "n_unique":
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
@@ -171,7 +169,7 @@ def test_group_by_median(constructor: Constructor) -> None:
 def test_group_by_n_unique_w_missing(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
