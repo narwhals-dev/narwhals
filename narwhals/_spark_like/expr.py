@@ -59,7 +59,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
-        return SparkLikeNamespace(  # type: ignore[abstract]
+        return SparkLikeNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
@@ -139,7 +139,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __add__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input + other,
+            lambda _input, other: _input.__add__(other),
             "__add__",
             other=other,
             returns_scalar=False,
@@ -147,7 +147,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __sub__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input - other,
+            lambda _input, other: _input.__sub__(other),
             "__sub__",
             other=other,
             returns_scalar=False,
@@ -155,16 +155,50 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input * other,
+            lambda _input, other: _input.__mul__(other),
             "__mul__",
             other=other,
             returns_scalar=False,
         )
 
-    def __lt__(self, other: SparkLikeExpr) -> Self:
+    def __truediv__(self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input < other,
-            "__lt__",
+            lambda _input, other: _input.__truediv__(other),
+            "__truediv__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __floordiv__(self, other: SparkLikeExpr) -> Self:
+        def _floordiv(_input: Column, other: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.floor(_input / other)
+
+        return self._from_call(
+            _floordiv, "__floordiv__", other=other, returns_scalar=False
+        )
+
+    def __pow__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__pow__(other),
+            "__pow__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __mod__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mod__(other),
+            "__mod__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __ge__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__ge__(other),
+            "__ge__",
             other=other,
             returns_scalar=False,
         )
@@ -175,6 +209,45 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             "__gt__",
             other=other,
             returns_scalar=False,
+        )
+
+    def __le__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__le__(other),
+            "__le__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __lt__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__lt__(other),
+            "__lt__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __and__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__and__(other),
+            "__and__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __or__(self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__or__(other),
+            "__or__",
+            other=other,
+            returns_scalar=False,
+        )
+
+    def __invert__(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.__invert__(),
+            "__invert__",
+            returns_scalar=self._returns_scalar,
         )
 
     def abs(self) -> Self:
