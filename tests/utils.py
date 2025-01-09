@@ -33,6 +33,7 @@ def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
 IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
 NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
 PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
+DUCKDB_VERSION: tuple[int, ...] = get_module_version_as_tuple("duckdb")
 POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
 DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
