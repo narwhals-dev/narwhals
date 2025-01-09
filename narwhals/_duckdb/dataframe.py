@@ -317,9 +317,9 @@ class DuckDBLazyFrame:
         result = self._native_frame.order(
             ",".join(
                 (
-                    f"{col} {desc} nulls last"
+                    f'"{col}" {desc} nulls last'
                     if nulls_last
-                    else f"{col} {desc} nulls first"
+                    else f'"{col}" {desc} nulls first'
                     for col, desc in zip(flat_by, descending_str)
                 )
             )
