@@ -40,7 +40,7 @@ BACKEND_COLLECT_FUNC_MAP = {
     "dask": lambda x: x.compute(),
 }
 
-DUCKDB_XFAILS = ["q11", "q14", "q15", "q18", "q22"]
+DUCKDB_SKIPS = ["q11", "q14", "q15", "q22"]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
@@ -95,7 +95,7 @@ def execute_query(query_id: str) -> None:
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
-        if backend == "duckdb" and query_id in DUCKDB_XFAILS:
+        if backend == "duckdb" and query_id in DUCKDB_SKIPS:
             print(f"\nSkipping {query_id} for DuckDB")  # noqa: T201
             continue
 
