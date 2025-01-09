@@ -27,7 +27,7 @@ def test_lit(
     dtype: DType | None,
     expected_lit: list[Any],
 ) -> None:
-    if "pyspark" in str(constructor):
+    if "pyspark" in str(constructor) and dtype is not None:
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
@@ -60,9 +60,7 @@ def test_lit_error(constructor: Constructor) -> None:
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
 
 
-def test_lit_out_name(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_lit_out_name(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -107,9 +105,11 @@ def test_lit_operation(
         and DASK_VERSION < (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and col_name not in {
-        "right_scalar_with_agg",
-        "right_scalar",
+    if "pyspark" in str(constructor) and col_name in {
+        "left_lit_with_agg",
+        "left_scalar_with_agg",
+        "right_lit_with_agg",
+        "right_lit",
     }:
         request.applymarker(pytest.mark.xfail)
 

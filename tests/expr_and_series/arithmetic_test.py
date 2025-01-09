@@ -45,14 +45,6 @@ def test_arithmetic_expr(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor) and attr in {
-        "__pow__",
-        "__mod__",
-        "__truediv__",
-        "__floordiv__",
-    }:
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1.0, 2, 3]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
@@ -83,8 +75,6 @@ def test_right_arithmetic_expr(
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
@@ -255,10 +245,8 @@ def test_arithmetic_expr_left_literal(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if (
-        ("duckdb" in str(constructor) and attr == "__floordiv__")
-        or ("dask" in str(constructor) and DASK_VERSION < (2024, 10))
-        or ("pyspark" in str(constructor))
+    if ("duckdb" in str(constructor) and attr == "__floordiv__") or (
+        "dask" in str(constructor) and DASK_VERSION < (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
