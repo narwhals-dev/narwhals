@@ -209,12 +209,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def all(self) -> Self:
-        def _all(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql import functions as F  # noqa: N812
 
-            return F.bool_and(_input)
-
-        return self._from_call(_all, "all", returns_scalar=True)
+        return self._from_call(F.bool_and, "all", returns_scalar=True)
 
     def any(self) -> Self:
         def _any(_input: Column) -> Column:
