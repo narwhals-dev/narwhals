@@ -115,8 +115,6 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and attr == "n_unique":
-        request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
@@ -166,11 +164,7 @@ def test_group_by_median(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_n_unique_w_missing(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
