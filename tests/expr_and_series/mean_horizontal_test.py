@@ -23,7 +23,7 @@ def test_meanh(
 
 
 def test_meanh_all(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [2, 4, 6], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))

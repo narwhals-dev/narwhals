@@ -462,3 +462,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         from pyspark.sql import functions as F  # noqa: N812
 
         return self._from_call(F.skewness, "skew", returns_scalar=True)
+
+    def n_unique(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql.types import IntegerType
+
+        def _n_unique(_input: Column) -> Column:
+            return F.count_distinct(_input) + F.max(F.isnull(_input).cast(IntegerType()))
+
+        return self._from_call(_n_unique, "n_unique", returns_scalar=self._returns_scalar)
