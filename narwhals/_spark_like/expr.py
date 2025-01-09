@@ -1,21 +1,14 @@
 from __future__ import annotations
 
 from copy import copy
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Mapping
 from typing import Sequence
 
 from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
-from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
-
-if TYPE_CHECKING:
-    from narwhals.dtypes import DType
-
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
@@ -257,42 +250,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.count_if(F.isnull(_input))
 
         return self._from_call(_null_count, "null_count", returns_scalar=True)
-
-    def replace_strict(
-        self,
-        old: Sequence[Any] | Mapping[Any, Any],
-        new: Sequence[Any] | None = None,
-        default: Any | None = None,
-        return_dtype: DType | None = None,
-    ) -> Self:
-        def _replace_strict(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            if isinstance(old, Mapping):
-                mapping = old
-            else:
-                if new is None:
-                    msg = "`new` argument is required if `old` argument is not a Mapping type"
-                    raise InvalidOperationError(msg)
-                mapping = dict(zip(old, new))  # QUESTION: check len(old) == len(new)?
-
-            mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
-            replacements = mapping_expr[_input]
-
-            if default:
-                replacements = F.coalesce(replacements, F.lit(default))
-
-            # QUESTION: check all values mapped?
-            # we can check that all values are mapped using: F.bool_and(replacements.isNotNull())
-            # however, I'm not sure how to validate this as an expression - F.assert_true looked promising
-            # until I realized it will convert the expression to NULL if the condition is True
-
-            if return_dtype:
-                replacements = replacements.cast(return_dtype)
-
-            return replacements
-
-        return self._from_call(_replace_strict, "replace_strict", returns_scalar=False)
 
     def sum(self) -> Self:
         def _sum(_input: Column) -> Column:
