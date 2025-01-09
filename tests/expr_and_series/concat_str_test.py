@@ -21,8 +21,14 @@ data = {
     ],
 )
 def test_concat_str(
-    constructor: Constructor, *, ignore_nulls: bool, expected: list[str]
+    constructor: Constructor,
+    *,
+    ignore_nulls: bool,
+    expected: list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (
         df.select(

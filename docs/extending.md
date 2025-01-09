@@ -15,16 +15,15 @@ Currently, Narwhals has **full API** support for the following libraries:
 It also has **lazy-only** support for [Dask](https://github.com/dask/dask), and **interchange** support
 for [DuckDB](https://github.com/duckdb/duckdb) and [Ibis](https://github.com/ibis-project/ibis).
 
+We are working towards full "lazy-only" support for DuckDB, Ibis, and PySpark.
+
 ### Levels of support
 
 Narwhals comes with three levels of support:
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask
+- **Lazy-only support**: Dask. Work in progress: DuckDB, Ibis, PySpark.
 - **Interchange-level support**: DuckDB, Ibis, Vaex, anything which implements the DataFrame Interchange Protocol
-
-The lazy-only layer is a major item on our 2025 roadmap, and hope to be able to bring libraries currently in
-the "interchange" level into that one.
 
 Libraries for which we have full support can benefit from the whole
 [Narwhals API](./api-reference/index.md).

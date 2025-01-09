@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
+@pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_to_arrow(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,

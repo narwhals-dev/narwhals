@@ -28,7 +28,10 @@ def test_quantile_expr(
     expected: dict[str, list[float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and interpolation != "linear":
+    if (
+        any(x in str(constructor) for x in ("dask", "duckdb"))
+        and interpolation != "linear"
+    ) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3

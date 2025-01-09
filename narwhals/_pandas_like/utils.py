@@ -118,7 +118,7 @@ def broadcast_align_and_extract_native(
     lhs_index = lhs._native_series.index
 
     if isinstance(rhs, PandasLikeDataFrame):
-        return NotImplemented
+        return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, PandasLikeSeries):
         rhs_index = rhs._native_series.index
@@ -637,10 +637,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             else f"timedelta64[{du_time_unit}]"
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
-        if dtype_backend == "pyarrow-nullable":
-            return "date32[pyarrow]"
-        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
-        raise NotImplementedError(msg)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError:  # pragma: no cover
+            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
+        return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)

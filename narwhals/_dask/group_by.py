@@ -12,7 +12,12 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
-    import dask_expr
+
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
+
     import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -43,7 +48,10 @@ def var(
 ]:
     from functools import partial
 
-    import dask_expr as dx
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
 
     return partial(dx._groupby.GroupBy.var, ddof=ddof)
 
@@ -55,7 +63,10 @@ def std(
 ]:
     from functools import partial
 
-    import dask_expr as dx
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
 
     return partial(dx._groupby.GroupBy.std, ddof=ddof)
 
@@ -127,7 +138,7 @@ class DaskLazyGroupBy:
 def agg_dask(
     df: DaskLazyFrame,
     grouped: Any,
-    exprs: Sequence[CompliantExpr[dask_expr.Series]],
+    exprs: Sequence[CompliantExpr[dx.Series]],
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
@@ -178,9 +189,7 @@ def agg_dask(
 
             function_name = remove_prefix(expr._function_name, "col->")
             kwargs = (
-                {"ddof": expr._kwargs.get("ddof", 1)}
-                if function_name in {"std", "var"}
-                else {}
+                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}
             )
 
             agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)

@@ -87,8 +87,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             except KeyError as e:
                 missing_columns = [x for x in column_names if x not in df.columns]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -163,65 +162,29 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def __and__(self: Self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
-    def __rand__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__and__(self)  # type: ignore[return-value]
-
     def __or__(self: Self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
-
-    def __ror__(self: Self, other: ArrowExpr | bool | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__or__(self)  # type: ignore[return-value]
 
     def __add__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
-    def __radd__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__add__(self)  # type: ignore[return-value]
-
     def __sub__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
-
-    def __rsub__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__sub__(self)  # type: ignore[return-value]
 
     def __mul__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
-    def __rmul__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mul__(self)  # type: ignore[return-value]
-
     def __pow__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
-
-    def __rpow__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__pow__(self)  # type: ignore[return-value]
 
     def __floordiv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
-    def __rfloordiv__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__floordiv__(self)  # type: ignore[return-value]
-
     def __truediv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
-    def __rtruediv__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__truediv__(self)  # type: ignore[return-value]
-
     def __mod__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
-
-    def __rmod__(self: Self, other: ArrowExpr | Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mod__(self)  # type: ignore[return-value]
 
     def __invert__(self: Self) -> Self:
         return reuse_series_implementation(self, "__invert__")
@@ -320,7 +283,12 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_nan(self: Self) -> Self:
         return reuse_series_implementation(self, "is_nan")
 
-    def is_between(self: Self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
+    def is_between(
+        self: Self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
+    ) -> Self:
         return reuse_series_implementation(
             self,
             "is_between",
@@ -563,6 +531,16 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             ddof=ddof,
         )
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "rank", method=method, descending=descending
+        )
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
@@ -590,9 +568,7 @@ class ArrowExprCatNamespace:
 
     def get_categories(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "cat",
-            "get_categories",
+            self._compliant_expr, "cat", "get_categories"
         )
 
 
@@ -702,12 +678,7 @@ class ArrowExprStringNamespace:
         )
 
     def replace(
-        self: Self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool,
-        n: int,
+        self: Self, pattern: str, value: str, *, literal: bool, n: int
     ) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -719,13 +690,7 @@ class ArrowExprStringNamespace:
             n=n,
         )
 
-    def replace_all(
-        self: Self,
-        pattern: str,
-        value: str,
-        *,
-        literal: bool,
-    ) -> ArrowExpr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -737,26 +702,17 @@ class ArrowExprStringNamespace:
 
     def strip_chars(self: Self, characters: str | None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "strip_chars",
-            characters=characters,
+            self._compliant_expr, "str", "strip_chars", characters=characters
         )
 
     def starts_with(self: Self, prefix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "starts_with",
-            prefix=prefix,
+            self._compliant_expr, "str", "starts_with", prefix=prefix
         )
 
     def ends_with(self: Self, suffix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "ends_with",
-            suffix=suffix,
+            self._compliant_expr, "str", "ends_with", suffix=suffix
         )
 
     def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
@@ -771,24 +727,17 @@ class ArrowExprStringNamespace:
 
     def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_datetime",
-            format=format,
+            self._compliant_expr, "str", "to_datetime", format=format
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_uppercase",
+            self._compliant_expr, "str", "to_uppercase"
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
-            self._compliant_expr,
-            "str",
-            "to_lowercase",
+            self._compliant_expr, "str", "to_lowercase"
         )
 
 
@@ -957,8 +906,4 @@ class ArrowExprListNamespace:
         self._expr = expr
 
     def len(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(
-            self._expr,
-            "list",
-            "len",
-        )
+        return reuse_series_namespace_implementation(self._expr, "list", "len")

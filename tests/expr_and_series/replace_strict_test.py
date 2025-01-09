@@ -23,6 +23,8 @@ def test_replace_strict(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
         nw.col("a").replace_strict(
@@ -58,6 +60,8 @@ def test_replace_non_full(
 
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises((ValueError, PolarsError)):
@@ -76,6 +80,8 @@ def test_replace_strict_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))

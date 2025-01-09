@@ -14,7 +14,11 @@ from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
-    import dask_expr
+
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
@@ -31,7 +35,8 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
-        validate_comparand(df._native_frame, result)
+        if not obj._returns_scalar:
+            validate_comparand(df._native_frame, result)
         if obj._returns_scalar:
             # Return scalar, let Dask do its broadcasting
             return result[0]
@@ -41,7 +46,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
-) -> dict[str, dask_expr.Series]:
+) -> dict[str, dx.Series]:
     results = {}
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
@@ -81,10 +86,13 @@ def add_row_index(
     )
 
 
-def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
-    import dask_expr
+def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
 
-    if not dask_expr._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
+    if not dx._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions
         # have the same index, and therefore don't require index alignment.
         # If someone only operates on a Dask DataFrame via expressions, then this
@@ -135,6 +143,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return "datetime64[us]"
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return "date32[day][pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
@@ -151,11 +161,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
     raise AssertionError(msg)
 
 
-def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+def name_preserving_sum(s1: dx.Series, s2: dx.Series) -> dx.Series:
     return (s1 + s2).rename(s1.name)
 
 
-def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+def name_preserving_div(s1: dx.Series, s2: dx.Series) -> dx.Series:
     return (s1 / s2).rename(s1.name)
 
 

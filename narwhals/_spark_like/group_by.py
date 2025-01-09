@@ -79,21 +79,26 @@ class SparkLikeLazyGroupBy:
         )
 
 
-def get_spark_function(
-    function_name: str, backend_version: tuple[int, ...], **kwargs: Any
-) -> Column:
+def get_spark_function(function_name: str, **kwargs: Any) -> Column:
+    from pyspark.sql import functions as F  # noqa: N812
+
     if function_name in {"std", "var"}:
         import numpy as np  # ignore-banned-import
 
         return partial(
             _std if function_name == "std" else _var,
-            ddof=kwargs.get("ddof", 1),
-            backend_version=backend_version,
+            ddof=kwargs["ddof"],
             np_version=parse_version(np.__version__),
         )
-    from pyspark.sql import functions as F  # noqa: N812
+    elif function_name == "len":
+        # Use count(*) to count all rows including nulls
+        def _count(*_args: Any, **_kwargs: Any) -> Column:
+            return F.count("*")
 
-    return getattr(F, function_name)
+        return _count
+
+    else:
+        return getattr(F, function_name)
 
 
 def agg_pyspark(
@@ -127,9 +132,7 @@ def agg_pyspark(
             function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(
                 expr._function_name, expr._function_name
             )
-            agg_func = get_spark_function(
-                function_name, backend_version=expr._backend_version, **expr._kwargs
-            )
+            agg_func = get_spark_function(function_name, **expr._kwargs)
             simple_aggregations.update(
                 {output_name: agg_func(keys[0]) for output_name in expr._output_names}
             )
@@ -143,12 +146,7 @@ def agg_pyspark(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        pyspark_function = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-            function_name, function_name
-        )
-        agg_func = get_spark_function(
-            pyspark_function, backend_version=expr._backend_version, **expr._kwargs
-        )
+        agg_func = get_spark_function(function_name, **expr._kwargs)
 
         simple_aggregations.update(
             {
@@ -162,6 +160,6 @@ def agg_pyspark(
         result_simple = grouped.agg(*agg_columns)
     except ValueError as exc:  # pragma: no cover
         msg = "Failed to aggregated - does your aggregation function return a scalar? \
-        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation.md/"
+        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
         raise RuntimeError(msg) from exc
     return from_dataframe(result_simple)

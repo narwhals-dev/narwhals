@@ -50,6 +50,10 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
+      - name: install pyspark
+        run: uv pip install -e ".[pyspark]" --system
+        # PySpark is not yet available on Python3.12+
+        if: matrix.python-version != '3.12'
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -59,7 +63,7 @@ jobs:
   pytest-full-coverage:
     strategy:
       matrix:
-        python-version: ["3.9", "3.11", "3.13"]
+        python-version: ["3.11", "3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -78,7 +82,7 @@ jobs:
       - name: install pyspark
         run: uv pip install -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
-        if: matrix.python-version == '3.9' || matrix.python-version == '3.11'
+        if: matrix.python-version != '3.13'
       - name: install ibis
         run: uv pip install -e ".[ibis]" --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,

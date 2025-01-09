@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.20.1"
+version = "1.21.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -14,22 +14,28 @@ authors = [
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
-license = {file = "LICENSE.md"}
 classifiers = [
+  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Operating System :: OS Independent",
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=24.10.0"]
-modin = ["modin"]
+# These should be aligned with MIN_VERSIONS in narwhals/utils.py
+# Exception: modin, because `modin.__version__` isn't aligned with
+# `modin.pandas.__version__`. The latter is the one that we make
+# API decisions based on, so that's the one we track internally.
+# We have yet to determine the minimum Modin version we support
+# https://github.com/narwhals-dev/narwhals/issues/817 
 pandas = ["pandas>=0.25.3"]
-polars = ["polars>=0.20.3"]
-ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+modin = ["modin"]
+cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
-dask = ["dask[dataframe]>=2024.7"]
+pyspark = ["pyspark>=3.5.0"]
+polars = ["polars>=0.20.3"]
+dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
-pyspark = ["pyspark>=3.3.0"]
+ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 dev = [
   "covdefaults",
   "pre-commit",
@@ -110,6 +116,7 @@ lint.ignore = [
   "E501",
   "FIX",
   "ISC001",
+  "PD003",
   "PD010",
   "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
   "PLR0911",
@@ -150,27 +157,23 @@ docstring-code-format = true
 testpaths = ["tests"]
 filterwarnings = [
   "error",
-  'ignore:distutils Version classes are deprecated:DeprecationWarning',
-  'ignore:In the future `np.bool`',
-  'ignore:make_block is deprecated and will be removed',
-  'ignore:np.find_common_type is deprecated',
-  'ignore:is_sparse is deprecated and will be removed',
-  'ignore:Passing a BlockManager to DataFrame is deprecated',
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
-  'ignore:.*Do not use the `random` module inside strategies',
   'ignore:.*You are using pyarrow version',
-  'ignore:.*but when imported by',
-  'ignore:Distributing .*This may take some time',
-  'ignore:.*The default coalesce behavior',
-  'ignore:is_datetime64tz_dtype is deprecated',
+  # This warning was temporarily raised by pandas but then reverted.
+  'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
+  # This warning was temporarily raised by Polars but then reverted.
+  'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
   'ignore: unclosed <socket.socket',
-  'ignore:The distutils package is deprecated and slated for removal',
+  'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
+  'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
+
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
+  "PYARROW_IGNORE_TIMEZONE=1"
 ]
 
 [tool.coverage.run]
@@ -192,6 +195,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation.is_cudf",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor'

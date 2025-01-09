@@ -11,7 +11,11 @@ data = {"a": list(range(10))}
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every(constructor: Constructor, n: int, offset: int) -> None:
+def test_gather_every(
+    constructor: Constructor, n: int, offset: int, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}

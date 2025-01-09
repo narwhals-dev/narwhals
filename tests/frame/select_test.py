@@ -27,7 +27,9 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor: Constructor) -> None:
+def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
     assert result.collect().shape == (0, 0)
 
@@ -75,7 +77,11 @@ def test_comparison_with_list_error_message() -> None:
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 
-def test_missing_columns(constructor: Constructor) -> None:
+def test_missing_columns(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
@@ -118,7 +124,9 @@ def test_missing_columns(constructor: Constructor) -> None:
 def test_left_to_right_broadcasting(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 9):
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+        request.applymarker(pytest.mark.xfail)
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())

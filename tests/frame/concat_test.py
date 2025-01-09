@@ -7,7 +7,11 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_concat_horizontal(constructor: Constructor) -> None:
+def test_concat_horizontal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_left = nw.from_native(constructor(data)).lazy()
 
@@ -28,7 +32,12 @@ def test_concat_horizontal(constructor: Constructor) -> None:
         nw.concat([])
 
 
-def test_concat_vertical(constructor: Constructor) -> None:
+def test_concat_vertical(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_left = (
         nw.from_native(constructor(data)).lazy().rename({"a": "c", "b": "d"}).drop("z")
@@ -56,7 +65,11 @@ def test_concat_vertical(constructor: Constructor) -> None:
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
 
-def test_concat_diagonal(constructor: Constructor) -> None:
+def test_concat_diagonal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {

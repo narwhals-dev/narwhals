@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -19,8 +20,8 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-        "index": [0, 1, 2],
+        "zor ro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
     }
     df = nw.from_native(constructor(data))
     df_right = df
@@ -31,14 +32,14 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         how="inner",
     )
     result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
-    result = result.sort("index").drop("index_right")
-    result_on = result_on.sort("index").drop("index_right")
+    result = result.sort("idx").drop("idx_right")
+    result_on = result_on.sort("idx").drop("idx_right")
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-        "index": [0, 1, 2],
-        "zorro_right": [7.0, 8, 9],
+        "zor ro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
+        "zor ro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -48,8 +49,8 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-        "index": [0, 1, 2],
+        "zor ro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
     }
     df = nw.from_native(constructor(data))
     df_right = df
@@ -58,23 +59,25 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
         left_on="antananarivo",
         right_on="antananarivo",
         how="inner",
-    ).sort("index")
-    result_on = df.join(df_right, on="antananarivo", how="inner").sort("index")  # type: ignore[arg-type]
-    result = result.drop("index_right")
-    result_on = result_on.drop("index_right")
+    ).sort("idx")
+    result_on = df.join(df_right, on="antananarivo", how="inner").sort("idx")  # type: ignore[arg-type]
+    result = result.drop("idx_right")
+    result_on = result_on.drop("idx_right")
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
-        "index": [0, 1, 2],
+        "zor ro": [7.0, 8, 9],
+        "idx": [0, 1, 2],
         "bob_right": [4, 4, 6],
-        "zorro_right": [7.0, 8, 9],
+        "zor ro_right": [7.0, 8, 9],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
 
 
-def test_cross_join(constructor: Constructor) -> None:
+def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
@@ -96,7 +99,7 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zorro": [7.0, 8, 9],
+        "zor ro": [7.0, 8, 9],
     }
     df = nw.from_native(constructor(data))
     df_right = df
@@ -108,11 +111,15 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
         suffix=suffix,
     )
     result_cols = result.collect_schema().names()
-    assert result_cols == ["antananarivo", "bob", "zorro", f"zorro{suffix}"]
+    assert result_cols == ["antananarivo", "bob", "zor ro", f"zor ro{suffix}"]
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
+def test_cross_join_suffix(
+    constructor: Constructor, suffix: str, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
@@ -144,13 +151,13 @@ def test_cross_join_non_pandas() -> None:
         (
             ["antananarivo", "bob"],
             (nw.col("bob") < 5),
-            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+            {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
-        (["bob"], (nw.col("bob") < 5), {"antananarivo": [2], "bob": [6], "zorro": [9]}),
+        (["bob"], (nw.col("bob") < 5), {"antananarivo": [2], "bob": [6], "zor ro": [9]}),
         (
             ["bob"],
             (nw.col("bob") > 5),
-            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7.0, 8.0]},
+            {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7.0, 8.0]},
         ),
     ],
 )
@@ -159,8 +166,11 @@ def test_anti_join(
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
+    request: pytest.FixtureRequest,
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
@@ -173,22 +183,22 @@ def test_anti_join(
         (
             "antananarivo",
             (nw.col("bob") > 5),
-            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+            {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["antananarivo"],
             (nw.col("bob") > 5),
-            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+            {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["bob"],
             (nw.col("bob") < 5),
-            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
+            {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7, 8]},
         ),
         (
             ["antananarivo", "bob"],
             (nw.col("bob") < 5),
-            {"antananarivo": [1, 3], "bob": [4, 4], "zorro": [7, 8]},
+            {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7, 8]},
         ),
     ],
 )
@@ -198,7 +208,7 @@ def test_semi_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
@@ -209,7 +219,7 @@ def test_semi_join(
 
 @pytest.mark.parametrize("how", ["right", "full"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -221,49 +231,47 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
         df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]
 
 
-@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
-        "index": [0.0, 1.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
         "antananarivo": [1.0, 2, 3],
         "co": [4.0, 5, 7],
-        "index": [0.0, 1.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
     result = df_left.join(df_right, left_on="bob", right_on="co", how="left")  # type: ignore[arg-type]
-    result = result.sort("index")
-    result = result.drop("index_right")
+    result = result.sort("idx")
+    result = result.drop("idx_right")
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "index": [0, 1, 2],
+        "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, None],
     }
     result_on_list = df_left.join(
         df_right,  # type: ignore[arg-type]
-        on=["antananarivo", "index"],
+        on=["antananarivo", "idx"],
         how="left",
     )
-    result_on_list = result_on_list.sort("index")
+    result_on_list = result_on_list.sort("idx")
     expected_on_list = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
-        "index": [0, 1, 2],
+        "idx": [0, 1, 2],
         "co": [4, 5, 7],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on_list, expected_on_list)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_multiple_column(constructor: Constructor) -> None:
-    data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "index": [0, 1, 2]}
-    data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "index": [0, 1, 2]}
+    data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
+    data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
     result = df_left.join(
@@ -272,35 +280,34 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
         right_on=["antananarivo", "c"],
         how="left",
     )
-    result = result.sort("index")
-    result = result.drop("index_right")
-    expected = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "index": [0, 1, 2]}
+    result = result.sort("idx")
+    result = result.drop("idx_right")
+    expected = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_overlapping_column(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
         "d": [1.0, 4, 2],
-        "index": [0.0, 1.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
         "antananarivo": [1.0, 2, 3],
         "c": [4.0, 5, 6],
         "d": [1.0, 4, 2],
-        "index": [0.0, 1.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("index")  # type: ignore[arg-type]
-    result = result.drop("index_right")
+    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")  # type: ignore[arg-type]
+    result = result.drop("idx_right")
     expected: dict[str, list[Any]] = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
-        "index": [0, 1, 2],
+        "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, 3],
         "d_right": [1, 4, 2],
     }
@@ -311,13 +318,13 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         right_on="d",
         how="left",
     )
-    result = result.sort("index")
-    result = result.drop("index_right")
+    result = result.sort("idx")
+    result = result.drop("idx_right")
     expected = {
         "antananarivo": [1, 2, 3],
         "bob": [4, 5, 6],
         "d": [1, 4, 2],
-        "index": [0, 1, 2],
+        "idx": [0, 1, 2],
         "antananarivo_right": [1.0, 3.0, None],
         "c": [4.0, 6.0, None],
     }
@@ -326,7 +333,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
 def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -355,7 +362,7 @@ def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -414,7 +421,7 @@ def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -495,7 +502,7 @@ def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -531,7 +538,7 @@ def test_joinasof_by(
 def test_joinasof_not_implemented(
     constructor: Constructor, strategy: Literal["backward", "forward"]
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -547,7 +554,7 @@ def test_joinasof_not_implemented(
 
 
 def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -588,7 +595,7 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
 
 
 def test_joinasof_by_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
         ValueError,

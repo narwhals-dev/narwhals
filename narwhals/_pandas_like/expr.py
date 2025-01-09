@@ -34,6 +34,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "col->cum_count": "cumsum",
     "col->shift": "shift",
+    "col->rank": "rank",
 }
 
 
@@ -179,68 +180,31 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __and__(self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
-    def __rand__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__and__(self)  # type: ignore[no-any-return]
-
     def __or__(self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
-
-    def __ror__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__or__(self)  # type: ignore[no-any-return]
 
     def __add__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
-    def __radd__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__add__(self)  # type: ignore[no-any-return]
-
     def __sub__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
-
-    def __rsub__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__sub__(self)  # type: ignore[no-any-return]
 
     def __mul__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
-    def __rmul__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mul__(self)  # type: ignore[no-any-return]
-
     def __truediv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
-
-    def __rtruediv__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__truediv__(self)  # type: ignore[no-any-return]
 
     def __floordiv__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
-    def __rfloordiv__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__floordiv__(self)  # type: ignore[no-any-return]
-
     def __pow__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
-
-    def __rpow__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__pow__(self)  # type: ignore[no-any-return]
 
     def __mod__(self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
 
-    def __rmod__(self, other: Any) -> Self:
-        other = self.__narwhals_namespace__().lit(other, dtype=None)
-        return other.__mod__(self)  # type: ignore[no-any-return]
-
     # Unary
-
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
@@ -298,7 +262,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -420,7 +387,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def over(self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str]) -> Self:
         if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -448,9 +415,16 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     df = df.with_columns(~plx.col(*self._root_names).is_null())
 
                 if self._function_name == "col->shift":
-                    kwargs = {"periods": self._kwargs.get("n", 1)}
-                else:
-                    # Cumulative operation
+                    kwargs = {"periods": self._kwargs["n"]}
+                elif self._function_name == "col->rank":
+                    _method = self._kwargs.get("method", "average")
+                    kwargs = {
+                        "method": "first" if _method == "ordinal" else _method,
+                        "ascending": not self._kwargs["descending"],
+                        "na_option": "keep",
+                        "pct": False,
+                    }
+                else:  # Cumulative operation
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
@@ -652,6 +626,16 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             min_periods=min_periods,
             center=center,
             ddof=ddof,
+        )
+
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "rank", method=method, descending=descending
         )
 
     @property

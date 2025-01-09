@@ -18,6 +18,7 @@ from narwhals._arrow.utils import parse_datetime_format
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -54,6 +55,7 @@ class ArrowSeries(CompliantSeries):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -488,7 +490,10 @@ class ArrowSeries(CompliantSeries):
         )
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> Self:
         import pyarrow.compute as pc
 
@@ -1094,6 +1099,36 @@ class ArrowSeries(CompliantSeries):
             )
             ** 0.5
         )
+
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        if method == "average":
+            msg = (
+                "`rank` with `method='average' is not supported for pyarrow backend. "
+                "The available methods are {'min', 'max', 'dense', 'ordinal'}."
+            )
+            raise ValueError(msg)
+
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        sort_keys = "descending" if descending else "ascending"
+        tiebreaker = "first" if method == "ordinal" else method
+
+        native_series = self._native_series
+        if self._backend_version < (14, 0, 0):  # pragma: no cover
+            native_series = native_series.combine_chunks()
+
+        null_mask = pc.is_null(native_series)
+
+        rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
+
+        result = pc.if_else(null_mask, pa.scalar(None), rank)
+        return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from (

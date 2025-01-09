@@ -324,25 +324,6 @@ def test_sumh_all(pyspark_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-# copied from tests/expr_and_series/any_all_test.py
-def test_any_all(pyspark_constructor: Constructor) -> None:
-    df = nw.from_native(
-        pyspark_constructor(
-            {
-                "a": [True, False, True],
-                "b": [True, True, True],
-                "c": [False, False, False],
-            }
-        )
-    )
-    result = df.select(nw.col("a", "b", "c").all())
-    expected = {"a": [False], "b": [True], "c": [False]}
-    assert_equal_data(result, expected)
-    result = df.select(nw.all().any())
-    expected = {"a": [True], "b": [True], "c": [False]}
-    assert_equal_data(result, expected)
-
-
 # copied from tests/expr_and_series/count_test.py
 def test_count(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [4, None, 6], "z": [7.0, None, None]}

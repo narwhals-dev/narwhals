@@ -18,6 +18,8 @@ expected = {
 def test_cum_sum_expr(
     request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
 ) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
 

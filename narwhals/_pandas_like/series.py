@@ -24,6 +24,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -94,6 +95,7 @@ class PandasLikeSeries(CompliantSeries):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
@@ -261,7 +263,10 @@ class PandasLikeSeries(CompliantSeries):
         return self._native_series.to_list()
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> PandasLikeSeries:
         ser = self._native_series
         _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
@@ -298,13 +303,13 @@ class PandasLikeSeries(CompliantSeries):
     def arg_min(self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.values.argmin()  # type: ignore[no-any-return]  # noqa: PD011
+            return ser.values.argmin()  # type: ignore[no-any-return]
         return ser.argmin()  # type: ignore[no-any-return]
 
     def arg_max(self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.values.argmax()  # type: ignore[no-any-return]  # noqa: PD011
+            return ser.values.argmax()  # type: ignore[no-any-return]
         return ser.argmax()  # type: ignore[no-any-return]
 
     # Binary comparisons
@@ -1116,6 +1121,56 @@ class PandasLikeSeries(CompliantSeries):
     def is_finite(self: Self) -> Self:
         s = self._native_series
         return self._from_native_series((s > float("-inf")) & (s < float("inf")))
+
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        pd_method = "first" if method == "ordinal" else method
+        native_series = self._native_series
+        dtypes = import_dtypes_module(self._version)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < (3,)
+            and self.dtype
+            in {
+                dtypes.Int64,
+                dtypes.Int32,
+                dtypes.Int16,
+                dtypes.Int8,
+                dtypes.UInt64,
+                dtypes.UInt32,
+                dtypes.UInt16,
+                dtypes.UInt8,
+            }
+            and (null_mask := native_series.isna()).any()
+        ):
+            # crazy workaround for the case of `na_option="keep"` and nullable
+            # integer dtypes. This should be supported in pandas > 3.0
+            # https://github.com/pandas-dev/pandas/issues/56976
+            ranked_series = (
+                native_series.to_frame()
+                .assign(**{f"{native_series.name}_is_null": null_mask})
+                .groupby(f"{native_series.name}_is_null")
+                .rank(
+                    method=pd_method,
+                    na_option="keep",
+                    ascending=not descending,
+                    pct=False,
+                )[native_series.name]
+            )
+
+        else:
+            ranked_series = native_series.rank(
+                method=pd_method,
+                na_option="keep",
+                ascending=not descending,
+                pct=False,
+            )
+
+        return self._from_native_series(ranked_series)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

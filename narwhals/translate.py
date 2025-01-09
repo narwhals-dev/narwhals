@@ -684,7 +684,10 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
-        if get_dask_expr() is None:  # pragma: no cover
+        if (
+            parse_version(get_dask().__version__) <= (2024, 12, 1)
+            and get_dask_expr() is None
+        ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(
@@ -698,20 +701,32 @@ def _from_native_impl(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
-        from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+        from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
                 msg = (
                     "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with DuckDB Relation"
+                    "with DuckDBPyRelation"
                 )
             else:
                 return native_object
             raise TypeError(msg)
-        return DataFrame(
-            DuckDBInterchangeFrame(native_object, version=version),
-            level="interchange",
+        import duckdb  # ignore-banned-import
+
+        backend_version = parse_version(duckdb.__version__)
+        if version is Version.V1:
+            return DataFrame(
+                DuckDBLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="interchange",
+            )
+        return LazyFrame(
+            DuckDBLazyFrame(
+                native_object, backend_version=backend_version, version=version
+            ),
+            level="full",
         )
 
     # Ibis
@@ -726,8 +741,13 @@ def _from_native_impl(  # noqa: PLR0915
                 )
                 raise TypeError(msg)
             return native_object
+        import ibis  # ignore-banned-import
+
+        backend_version = parse_version(ibis.__version__)
         return DataFrame(
-            IbisInterchangeFrame(native_object, version=version),
+            IbisInterchangeFrame(
+                native_object, version=version, backend_version=backend_version
+            ),
             level="interchange",
         )
 
