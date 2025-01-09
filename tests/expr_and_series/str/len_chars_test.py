@@ -11,7 +11,7 @@ data = {"a": ["foo", "foobar", "Café", "345", "東京"]}
 
 
 def test_str_len_chars(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.len_chars())

@@ -488,6 +488,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
+    def null_count(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
+            "null_count",
+            returns_scalar=True,
+        )
+
     def is_null(self) -> Self:
         return self._from_call(
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
@@ -617,6 +626,15 @@ class DuckDBExprStringNamespace:
 
         return self._compliant_expr._from_call(
             func, "slice", returns_scalar=self._compliant_expr._returns_scalar
+        )
+
+    def len_chars(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("length", _input),
+            "len_chars",
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def to_lowercase(self) -> DuckDBExpr:
