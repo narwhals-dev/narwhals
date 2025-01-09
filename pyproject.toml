@@ -165,8 +165,8 @@ filterwarnings = [
   # This warning was temporarily raised by Polars but then reverted.
   'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
   'ignore: unclosed <socket.socket',
-  'ignore::DeprecationWarning:pyspark.*The distutils package is deprecated and slated for removal in Python 3.12',
-  'ignore::DeprecationWarning:pyspark.*distutils Version classes are deprecated. Use packaging.version instead.',
+  'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
+  'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
 
 ]
 xfail_strict = true
