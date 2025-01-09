@@ -684,7 +684,10 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
-        if get_dask_expr() is None:  # pragma: no cover
+        if (
+            parse_version(get_dask().__version__) <= (2024, 12, 1)
+            and get_dask_expr() is None
+        ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(

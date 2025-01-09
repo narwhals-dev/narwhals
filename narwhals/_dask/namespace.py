@@ -21,14 +21,17 @@ from narwhals._expression_parsing import reduce_output_names
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
-    import dask_expr
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
 
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
+class DaskNamespace(CompliantNamespace["dx.Series"]):
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
@@ -40,7 +43,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
         self._version = version
 
     def all(self) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [df._native_frame[column_name] for column_name in df.columns]
 
         return DaskExpr(
@@ -69,7 +72,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
         import dask.dataframe as dd
         import pandas as pd
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 dd.from_pandas(
                     pd.Series(
@@ -99,7 +102,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
         import dask.dataframe as dd
         import pandas as pd
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             if not df.columns:
                 return [
                     dd.from_pandas(
@@ -125,7 +128,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
 
@@ -144,7 +147,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
 
@@ -163,7 +166,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s.fillna(0) for _expr in parsed_exprs for s in _expr(df)]
             return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
 
@@ -239,7 +242,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = (s.fillna(0) for _expr in parsed_exprs for s in _expr(df))
             non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr(df))
             return [
@@ -266,7 +269,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [dd.concat(series, axis=1).min(axis=1).rename(series[0].name)]
@@ -288,7 +291,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
 
             return [dd.concat(series, axis=1).max(axis=1).rename(series[0].name)]
@@ -327,7 +330,7 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
             *parse_into_exprs(*more_exprs, namespace=self),
         ]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = (s.astype(str) for _expr in parsed_exprs for s in _expr(df))
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
 
@@ -389,12 +392,12 @@ class DaskWhen:
         self._returns_scalar = returns_scalar
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         from narwhals._expression_parsing import parse_into_expr
 
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
-        condition = cast("dask_expr.Series", condition)
+        condition = cast("dx.Series", condition)
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
@@ -402,7 +405,7 @@ class DaskWhen:
             _df = condition.to_frame("a")
             _df["tmp"] = self._then_value
             value_series = _df["tmp"]
-        value_series = cast("dask_expr.Series", value_series)
+        value_series = cast("dx.Series", value_series)
         validate_comparand(condition, value_series)
 
         if self._otherwise_value is None:
