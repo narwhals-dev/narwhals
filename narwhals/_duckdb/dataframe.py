@@ -249,7 +249,7 @@ class DuckDBLazyFrame:
                     select.append(f"rhs.{col} as {col}{suffix}")
                 elif col not in right_on:
                     select.append(col)
-        elif how == "semi":
+        else:  # semi
             select = [f"lhs.{x}" for x in self._native_frame.columns]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)

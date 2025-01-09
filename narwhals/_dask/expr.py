@@ -23,7 +23,11 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    import dask_expr
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
+
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -32,12 +36,12 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["dask_expr.Series"]):
+class DaskExpr(CompliantExpr["dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
         self,
-        call: Callable[[DaskLazyFrame], Sequence[dask_expr.Series]],
+        call: Callable[[DaskLazyFrame], Sequence[dx.Series]],
         *,
         depth: int,
         function_name: str,
@@ -60,7 +64,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
@@ -78,7 +82,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
                 return [df._native_frame[column_name] for column_name in column_names]
             except KeyError as e:
@@ -107,7 +111,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 df._native_frame.iloc[:, column_index] for column_index in column_indices
             ]
@@ -126,14 +130,14 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
 
     def _from_call(
         self,
-        # First argument to `call` should be `dask_expr.Series`
-        call: Callable[..., dask_expr.Series],
+        # First argument to `call` should be `dx.Series`
+        call: Callable[..., dx.Series],
         expr_name: str,
         *,
         returns_scalar: bool,
         **kwargs: Any,
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             results = []
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
@@ -163,7 +167,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def alias(self, name: str) -> Self:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             inputs = self._call(df)
             return [_input.rename(name) for _input in inputs]
 
@@ -312,7 +316,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     def median(self) -> Self:
         from narwhals.exceptions import InvalidOperationError
 
-        def func(s: dask_expr.Series) -> dask_expr.Series:
+        def func(s: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(s, self._version, Implementation.DASK)
             if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
@@ -511,11 +515,11 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         limit: int | None = None,
     ) -> DaskExpr:
         def func(
-            _input: dask_expr.Series,
+            _input: dx.Series,
             value: Any | None,
             strategy: str | None,
             limit: int | None,
-        ) -> dask_expr.Series:
+        ) -> dx.Series:
             if value is not None:
                 res_ser = _input.fillna(value)
             else:
@@ -566,7 +570,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def is_nan(self: Self) -> Self:
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
+        def func(_input: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
             if dtype.is_numeric():
                 return _input != _input  # noqa: PLR0124
@@ -585,7 +589,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
     ) -> Self:
         if interpolation == "linear":
 
-            def func(_input: dask_expr.Series, quantile: float) -> dask_expr.Series:
+            def func(_input: dx.Series, quantile: float) -> dx.Series:
                 if _input.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
@@ -599,7 +603,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
             raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
+        def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(
@@ -618,7 +622,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def is_last_distinct(self: Self) -> Self:
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
+        def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(
@@ -635,7 +639,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         )
 
     def is_duplicated(self: Self) -> Self:
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
+        def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             return (
                 _input.to_frame()
@@ -647,7 +651,7 @@ class DaskExpr(CompliantExpr["dask_expr.Series"]):
         return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
 
     def is_unique(self: Self) -> Self:
-        def func(_input: dask_expr.Series) -> dask_expr.Series:
+        def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             return (
                 _input.to_frame()
@@ -967,7 +971,7 @@ class DaskExprDateTimeNamespace:
         )
 
     def convert_time_zone(self, time_zone: str) -> DaskExpr:
-        def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
+        def func(s: dx.Series, time_zone: str) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s, self._compliant_expr._version, Implementation.DASK
             )
@@ -984,9 +988,7 @@ class DaskExprDateTimeNamespace:
         )
 
     def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
-        def func(
-            s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
-        ) -> dask_expr.Series:
+        def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"] = "us") -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s, self._compliant_expr._version, Implementation.DASK
             )
