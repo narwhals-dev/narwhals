@@ -75,7 +75,9 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     assert_equal_data(result_on, expected)
 
 
-def test_cross_join(constructor: Constructor) -> None:
+def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
