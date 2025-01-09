@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -506,11 +505,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import ConstantExpression
 
         return self._from_call(
-            lambda _input: functools.reduce(
-                lambda x, y: x | _input.isin(ConstantExpression(y)),
-                other[1:],
-                _input.isin(ConstantExpression(other[0])),
-            ),
+            lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
             "is_in",
             returns_scalar=self._returns_scalar,
         )
