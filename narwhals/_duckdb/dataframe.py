@@ -224,30 +224,37 @@ class DuckDBLazyFrame:
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
+        original_alias = self._native_frame.alias
 
-        if how not in ("inner", "left", "semi"):
+        if how not in ("inner", "left", "semi", "cross"):
             msg = "Only inner and left join is implemented for DuckDB"
             raise NotImplementedError(msg)
 
-        # help mypy
-        assert left_on is not None  # noqa: S101
-        assert right_on is not None  # noqa: S101
+        if how == "cross":
+            rel = self._native_frame.set_alias("lhs").cross(
+                other._native_frame.set_alias("rhs")
+            )
+        else:
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
 
-        conditions = [
-            f"lhs.{left} = rhs.{right}" for left, right in zip(left_on, right_on)
-        ]
-        original_alias = self._native_frame.alias
-        condition = " and ".join(conditions)
-        rel = self._native_frame.set_alias("lhs").join(
-            other._native_frame.set_alias("rhs"), condition=condition, how=how
-        )
+            conditions = [
+                f"lhs.{left} = rhs.{right}" for left, right in zip(left_on, right_on)
+            ]
+            condition = " and ".join(conditions)
+            rel = self._native_frame.set_alias("lhs").join(
+                other._native_frame.set_alias("rhs"), condition=condition, how=how
+            )
 
-        if how in ("inner", "left"):
+        if how in ("inner", "left", "cross"):
             select = [f"lhs.{x}" for x in self._native_frame.columns]
             for col in other._native_frame.columns:
-                if col in self._native_frame.columns and col not in right_on:
+                if col in self._native_frame.columns and (
+                    right_on is None or col not in right_on
+                ):
                     select.append(f"rhs.{col} as {col}{suffix}")
-                elif col not in right_on:
+                elif right_on is None or col not in right_on:
                     select.append(col)
         else:  # semi
             select = [f"lhs.{x}" for x in self._native_frame.columns]

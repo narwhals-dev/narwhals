@@ -40,7 +40,7 @@ BACKEND_COLLECT_FUNC_MAP = {
     "dask": lambda x: x.compute(),
 }
 
-DUCKDB_SKIPS = ["q11", "q14", "q15", "q22"]
+DUCKDB_SKIPS = ["q14", "q15"]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
