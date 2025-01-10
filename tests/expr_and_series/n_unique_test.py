@@ -13,7 +13,7 @@ data = {
 
 def test_n_unique(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().n_unique())
+    result = df.select(nw.col("a", "b").n_unique())
     expected = {"a": [3], "b": [4]}
     assert_equal_data(result, expected)
 
