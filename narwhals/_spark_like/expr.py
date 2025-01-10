@@ -102,7 +102,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             for _input in inputs:
                 input_col_name = get_column_name(df, _input)
                 column_result = call(_input, **_kwargs)
-                if not returns_scalar:
+                if not returns_scalar or (
+                    (self._depth == 0) and (self._function_name == "all")
+                ):
                     column_result = column_result.alias(input_col_name)
                 results.append(column_result)
             return results
