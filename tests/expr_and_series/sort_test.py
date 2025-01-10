@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -22,15 +21,9 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     ],
 )
 def test_sort_expr(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    descending: Any,
-    nulls_last: Any,
-    expected: Any,
+    constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         "a",
         nw.col("b").sort(descending=descending, nulls_last=nulls_last),
