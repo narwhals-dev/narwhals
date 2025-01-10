@@ -3306,6 +3306,14 @@ def concat(
 ) -> LazyFrame[Any]: ...
 
 
+@overload
+def concat(
+    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[Any] | LazyFrame[Any]: ...
+
+
 def concat(
     items: Iterable[DataFrame[Any] | LazyFrame[Any]],
     *,

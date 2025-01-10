@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Protocol
 from typing import TypeVar
 from typing import Union
+from typing import overload
 
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
@@ -41,11 +42,35 @@ if TYPE_CHECKING:
         ) -> object: ...
 
 
+@overload
 def concat(
-    items: Iterable[FrameT],
+    items: Iterable[DataFrame[Any]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+) -> DataFrame[Any]: ...
+
+
+@overload
+def concat(
+    items: Iterable[LazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> LazyFrame[Any]: ...
+
+
+@overload
+def concat(
+    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[Any] | LazyFrame[Any]: ...
+
+
+def concat(
+    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[Any] | LazyFrame[Any]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -191,7 +216,7 @@ def concat(
     validate_laziness(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
-    return first_item._from_compliant_dataframe(  # type: ignore[return-value]
+    return first_item._from_compliant_dataframe(
         plx.concat([df._compliant_frame for df in items], how=how),
     )
 
