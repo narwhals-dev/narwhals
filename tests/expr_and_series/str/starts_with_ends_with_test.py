@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -13,10 +11,7 @@ from tests.utils import assert_equal_data
 data = {"a": ["fdas", "edfas"]}
 
 
-def test_ends_with(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_ends_with(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.ends_with("das"))
     expected = {
@@ -34,10 +29,7 @@ def test_ends_with_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_starts_with(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_starts_with(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data)).lazy()
     result = df.select(nw.col("a").str.starts_with("fda"))
     expected = {

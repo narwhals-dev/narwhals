@@ -158,20 +158,13 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         register(session.stop)
 
         def _constructor(obj: Any) -> IntoFrame:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    r".*is_datetime64tz_dtype is deprecated and will be removed in a future version.*",
-                    module="pyspark",
-                    category=DeprecationWarning,
-                )
-                pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
-                return (  # type: ignore[no-any-return]
-                    session.createDataFrame(pd_df)
-                    .repartition(2)
-                    .orderBy("index")
-                    .drop("index")
-                )
+            pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+            return (  # type: ignore[no-any-return]
+                session.createDataFrame(pd_df)
+                .repartition(2)
+                .orderBy("index")
+                .drop("index")
+            )
 
         return _constructor
 
