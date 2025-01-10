@@ -7,7 +7,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypeVar
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import _validate_dtype
@@ -27,8 +26,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
-
-ExprT = TypeVar("ExprT", bound="Expr")
 
 
 def extract_compliant(

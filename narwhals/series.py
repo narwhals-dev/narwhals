@@ -8,7 +8,6 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
@@ -4855,6 +4854,3 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self: Self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
-
-
-SeriesT = TypeVar("SeriesT", bound=Series[Any])
