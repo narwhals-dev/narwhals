@@ -65,7 +65,9 @@ def _sort_dict_by_key(
     data_dict: dict[str, list[Any]], key: str
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
-    sorted_indices = sorted(range(len(sort_list)), key=lambda i: sort_list[i])
+    sorted_indices = sorted(
+        range(len(sort_list)), key=lambda i: (sort_list[i] is None, sort_list[i])
+    )
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
 

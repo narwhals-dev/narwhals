@@ -322,8 +322,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         self,
         exprs: Iterable[IntoDaskExpr],
         *more_exprs: IntoDaskExpr,
-        separator: str = "",
-        ignore_nulls: bool = False,
+        separator: str,
+        ignore_nulls: bool,
     ) -> DaskExpr:
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),

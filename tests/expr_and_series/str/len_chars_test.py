@@ -10,9 +10,7 @@ from tests.utils import assert_equal_data
 data = {"a": ["foo", "foobar", "Café", "345", "東京"]}
 
 
-def test_str_len_chars(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_str_len_chars(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.len_chars())
     expected = {

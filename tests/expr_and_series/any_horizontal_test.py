@@ -11,11 +11,7 @@ from tests.utils import assert_equal_data
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_anyh(
-    request: pytest.FixtureRequest, constructor: Constructor, expr1: Any, expr2: Any
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
@@ -27,9 +23,7 @@ def test_anyh(
     assert_equal_data(result, expected)
 
 
-def test_anyh_all(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_anyh_all(constructor: Constructor) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
