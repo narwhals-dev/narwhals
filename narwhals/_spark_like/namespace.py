@@ -189,6 +189,50 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             kwargs={"exprs": exprs},
         )
 
+    def max_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [F.greatest(*cols).alias(col_name)]
+
+        return SparkLikeExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
+    def min_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [F.least(*cols).alias(col_name)]
+
+        return SparkLikeExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
     def concat(
         self,
         items: Iterable[SparkLikeLazyFrame],
@@ -199,7 +243,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         if how == "horizontal":
             msg = (
                 "Horizontal concatenation is not supported for LazyFrame backed by "
-                "a PySpark DataFrame"
+                "a PySpark DataFrame."
             )
             raise NotImplementedError(msg)
 
@@ -230,3 +274,63 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 version=self._version,
             )
         raise NotImplementedError
+
+    def concat_str(
+        self,
+        exprs: Iterable[IntoSparkLikeExpr],
+        *more_exprs: IntoSparkLikeExpr,
+        separator: str,
+        ignore_nulls: bool,
+    ) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql.types import StringType
+
+        parsed_exprs = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = (s.cast(StringType()) for _expr in parsed_exprs for s in _expr(df))
+            null_mask = [F.isnull(s) for _expr in parsed_exprs for s in _expr(df)]
+
+            if not ignore_nulls:
+                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                result = F.when(
+                    ~null_mask_result,
+                    reduce(lambda x, y: F.format_string(f"%s{separator}%s", x, y), cols),
+                ).otherwise(F.lit(None))
+            else:
+                init_value, *values = [
+                    F.when(~nm, col).otherwise(F.lit(""))
+                    for col, nm in zip(cols, null_mask)
+                ]
+
+                separators = (
+                    F.when(nm, F.lit("")).otherwise(F.lit(separator))
+                    for nm in null_mask[:-1]
+                )
+                result = reduce(
+                    lambda x, y: F.format_string("%s%s", x, y),
+                    (F.format_string("%s%s", s, v) for s, v in zip(separators, values)),
+                    init_value,
+                )
+
+            return [result]
+
+        return SparkLikeExpr(  # type: ignore[abstract]
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
+        )

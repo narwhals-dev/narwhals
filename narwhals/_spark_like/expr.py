@@ -471,3 +471,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.count_distinct(_input) + F.max(F.isnull(_input).cast(IntegerType()))
 
         return self._from_call(_n_unique, "n_unique", returns_scalar=self._returns_scalar)
+
+    def is_null(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        return self._from_call(F.isnull, "is_null", returns_scalar=self._returns_scalar)

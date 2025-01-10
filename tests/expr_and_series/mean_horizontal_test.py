@@ -13,7 +13,7 @@ from tests.utils import assert_equal_data
 def test_meanh(
     constructor: Constructor, col_expr: Any, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, None, None], "b": [4, None, 6, None]}
     df = nw.from_native(constructor(data))

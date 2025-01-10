@@ -14,12 +14,7 @@ expected_values = [1, 1, 6, None]
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_minh(
-    request: pytest.FixtureRequest, constructor: Constructor, col_expr: Any
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_minh(constructor: Constructor, col_expr: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(horizontal_min=nw.min_horizontal(col_expr, nw.col("b"), "z"))
     expected = {"horizontal_min": expected_values}
@@ -27,10 +22,7 @@ def test_minh(
 
 
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_minh_all(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_minh_all(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.min_horizontal(nw.all()), c=nw.min_horizontal(nw.all()))
     expected = {"a": expected_values, "c": expected_values}

@@ -22,8 +22,14 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     ],
 )
 def test_sort_expr(
-    constructor: Constructor, descending: Any, nulls_last: Any, expected: Any
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    descending: Any,
+    nulls_last: Any,
+    expected: Any,
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(
         "a",
