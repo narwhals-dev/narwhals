@@ -20,13 +20,10 @@ data = {"a": ["foobar", "bar\n", " baz"]}
     ],
 )
 def test_str_strip_chars(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
     characters: str | None,
     expected: Any,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.strip_chars(characters))
     assert_equal_data(result_frame, expected)
