@@ -300,13 +300,25 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def skew(self) -> Self:
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        return self._from_call(
-            lambda _input: FunctionExpression("skewness", _input),
-            "skew",
-            returns_scalar=True,
-        )
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            count = FunctionExpression("count", _input)
+            return CaseExpression(
+                condition=count == 0, value=ConstantExpression(None)
+            ).otherwise(
+                CaseExpression(
+                    condition=count == 1, value=ConstantExpression(float("nan"))
+                ).otherwise(
+                    CaseExpression(
+                        condition=count == 2, value=ConstantExpression(0.0)
+                    ).otherwise(FunctionExpression("skewness", _input))
+                )
+            )
+
+        return self._from_call(func, "skew", returns_scalar=True)
 
     def median(self) -> Self:
         from duckdb import FunctionExpression
