@@ -16,10 +16,10 @@ data = {
 def test_null_count_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().null_count())
+    result = df.select(nw.col("a", "b").null_count())
     expected = {
         "a": [2],
         "b": [1],
