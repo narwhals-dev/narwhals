@@ -273,6 +273,16 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             kwargs={**self._kwargs, "name": name},
         )
 
+    def all(self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        return self._from_call(F.bool_and, "all", returns_scalar=True)
+
+    def any(self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        return self._from_call(F.bool_or, "any", returns_scalar=True)
+
     def count(self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812
 
@@ -305,6 +315,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         from pyspark.sql import functions as F  # noqa: N812
 
         return self._from_call(F.min, "min", returns_scalar=True)
+
+    def null_count(self) -> Self:
+        def _null_count(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.count_if(F.isnull(_input))
+
+        return self._from_call(_null_count, "null_count", returns_scalar=True)
 
     def sum(self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812

@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_any_all(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_any_all(constructor: Constructor) -> None:
     df = nw.from_native(
         constructor(
             {
@@ -24,7 +19,7 @@ def test_any_all(request: pytest.FixtureRequest, constructor: Constructor) -> No
     result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
     assert_equal_data(result, expected)
-    result = df.select(nw.all().any())
+    result = df.select(nw.col("a", "b", "c").any())
     expected = {"a": [True], "b": [True], "c": [False]}
     assert_equal_data(result, expected)
 
