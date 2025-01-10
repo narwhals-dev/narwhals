@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrameT
+    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
 
     class ArrowStreamExportable(Protocol):
@@ -44,33 +46,33 @@ if TYPE_CHECKING:
 
 @overload
 def concat(
-    items: Iterable[DataFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any]: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def concat(
-    items: Iterable[LazyFrame[Any]],
+    items: Iterable[LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[Any]: ...
+) -> LazyFrame[IntoFrameT]: ...
 
 
 @overload
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any] | LazyFrame[Any]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any] | LazyFrame[Any]:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:

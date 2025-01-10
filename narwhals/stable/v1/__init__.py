@@ -3292,33 +3292,33 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 @overload
 def concat(
-    items: Iterable[DataFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any]: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def concat(
-    items: Iterable[LazyFrame[Any]],
+    items: Iterable[LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[Any]: ...
+) -> LazyFrame[IntoFrameT]: ...
 
 
 @overload
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any] | LazyFrame[Any]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any] | LazyFrame[Any]:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -3454,7 +3454,7 @@ def concat(
         │ 4   ┆ null ┆ y    │
         └─────┴──────┴──────┘
     """
-    return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
+    return _stableify(nw.concat(items, how=how))
 
 
 def concat_str(
