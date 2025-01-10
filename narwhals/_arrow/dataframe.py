@@ -333,7 +333,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
