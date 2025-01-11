@@ -93,3 +93,12 @@ class DuckDBExprDateTimeNamespace:
             "nanosecond",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
+
+    def ordinal_day(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("dayofyear", _input),
+            "ordinal_day",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
