@@ -40,33 +40,6 @@ class Datetime(NwDatetime):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import pyarrow.compute as pc
-        >>> import narwhals as nw
-        >>> from datetime import datetime, timedelta
-        >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
-        >>> ser_pd = (
-        ...     pd.Series(data)
-        ...     .dt.tz_localize("Africa/Accra")
-        ...     .astype("datetime64[ms, Africa/Accra]")
-        ... )
-        >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
-        ... )
-        >>> ser_pa = pc.assume_timezone(
-        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
-        ... )
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
     def __hash__(self) -> int:
@@ -81,24 +54,6 @@ class Duration(NwDuration):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> from datetime import timedelta
-        >>> data = [timedelta(seconds=d) for d in range(1, 4)]
-        >>> ser_pd = pd.Series(data).astype("timedelta64[ms]")
-        >>> ser_pl = pl.Series(data).cast(pl.Duration("ms"))
-        >>> ser_pa = pa.chunked_array([data], type=pa.duration("ms"))
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Duration(time_unit='ms')
     """
 
     def __hash__(self) -> int:

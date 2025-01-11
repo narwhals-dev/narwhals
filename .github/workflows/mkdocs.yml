@@ -31,5 +31,7 @@ jobs:
         # hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
         run: pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
       - run: pip install -e .[docs]
+      - name: insert-docstrings
+        run: git ls-files narwhals | xargs python utils/add_docstring_examples.py
 
       - run: mkdocs gh-deploy --force

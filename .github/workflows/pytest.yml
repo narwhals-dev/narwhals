@@ -90,6 +90,11 @@ jobs:
         if: matrix.python-version == '3.11'
       - name: show-deps
         run: uv pip freeze
+      - name: insert-docstrings
+        run: |
+          du -c --apparent-size $(git ls-files) | grep total$
+          git ls-files narwhals | xargs python utils/add_docstring_examples.py
+          du -c --apparent-size $(git ls-files) | grep total$
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --all-cpu-constructors
       - name: Run doctests
