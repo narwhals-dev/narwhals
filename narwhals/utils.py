@@ -130,14 +130,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_pandas()
-            True
         """
         return self is Implementation.PANDAS
 
@@ -146,14 +138,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_pandas_like()
-            True
         """
         return self in {
             Implementation.PANDAS,
@@ -166,14 +150,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_polars()
-            True
         """
         return self is Implementation.POLARS
 
@@ -182,14 +158,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_cudf()
-            False
         """
         return self is Implementation.CUDF  # pragma: no cover
 
@@ -198,14 +166,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_modin()
-            False
         """
         return self is Implementation.MODIN  # pragma: no cover
 
@@ -214,14 +174,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_pyspark()
-            False
         """
         return self is Implementation.PYSPARK  # pragma: no cover
 
@@ -230,14 +182,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_pyarrow()
-            False
         """
         return self is Implementation.PYARROW  # pragma: no cover
 
@@ -246,14 +190,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_dask()
-            False
         """
         return self is Implementation.DASK  # pragma: no cover
 
@@ -262,14 +198,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_duckdb()
-            False
         """
         return self is Implementation.DUCKDB  # pragma: no cover
 
@@ -278,14 +206,6 @@ class Implementation(Enum):
 
         Returns:
             Boolean.
-
-        Examples:
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation.is_ibis()
-            False
         """
         return self is Implementation.IBIS  # pragma: no cover
 
@@ -427,19 +347,6 @@ def maybe_align_index(
         rely on the Index.
         For non-pandas-like inputs, this only checks that `lhs` and `rhs`
         are the same length.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({"a": [1, 2]}, index=[3, 4])
-        >>> s_pd = pd.Series([6, 7], index=[4, 3])
-        >>> df = nw.from_native(df_pd)
-        >>> s = nw.from_native(s_pd, series_only=True)
-        >>> nw.to_native(nw.maybe_align_index(df, s))
-           a
-        4  2
-        3  1
     """
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -520,19 +427,6 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
         For non-pandas-like inputs, this returns `None`.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
-        >>> df = nw.from_native(df_pd)
-        >>> nw.maybe_get_index(df)
-        RangeIndex(start=0, stop=2, step=1)
-        >>> series_pd = pd.Series([1, 2])
-        >>> series = nw.from_native(series_pd, series_only=True)
-        >>> nw.maybe_get_index(series)
-        RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
     native_obj = obj_any.to_native()
@@ -575,18 +469,6 @@ def maybe_set_index(
         rely on the Index.
 
         For non-pandas-like inputs, this is a no-op.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
-        >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_set_index(df, "b"))  # doctest: +NORMALIZE_WHITESPACE
-           a
-        b
-        4  1
-        5  2
     """
     from narwhals.translate import to_native
 
@@ -649,21 +531,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
         For non-pandas-like inputs, this is a no-op.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
-        >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_reset_index(df))
-           a  b
-        0  1  4
-        1  2  5
-        >>> series_pd = pd.Series([1, 2])
-        >>> series = nw.from_native(series_pd, series_only=True)
-        >>> nw.maybe_get_index(series)
-        RangeIndex(start=0, stop=2, step=1)
     """
     obj_any = cast(Any, obj)
     native_obj = obj_any.to_native()
@@ -714,23 +581,6 @@ def maybe_convert_dtypes(
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> import numpy as np
-        >>> df_pd = pd.DataFrame(
-        ...     {
-        ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
-        ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
-        ...     }
-        ... )
-        >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
-        a             Int32
-        b           boolean
-        dtype: object
     """
     obj_any = cast(Any, obj)
     native_obj = obj_any.to_native()
@@ -794,27 +644,6 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
     Returns:
         Whether the Series is an ordered categorical.
-
-    Examples:
-        >>> import narwhals as nw
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
-        True
-        >>> func(s_pl)
-        True
     """
     from narwhals._interchange.series import InterchangeSeries
 
@@ -870,12 +699,6 @@ def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
 
     Raises:
         AssertionError: If a unique token cannot be generated after 100 attempts.
-
-    Examples:
-        >>> import narwhals as nw
-        >>> columns = ["abc", "xyz"]
-        >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
-        True
     """
     counter = 0
     while True:

@@ -48,15 +48,7 @@ class TemporalType(DType): ...
 
 
 class Decimal(NumericType):
-    """Decimal type.
-
-    Examples:
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> s = pl.Series(["1.5"], dtype=pl.Decimal)
-        >>> nw.from_native(s, series_only=True).dtype
-        Decimal
-    """
+    """Decimal type."""
 
 
 class Int128(NumericType):
@@ -64,103 +56,19 @@ class Int128(NumericType):
 
 
 class Int64(NumericType):
-    """64-bit signed integer type.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> data = [2, 1, 3, 7]
-        >>> ser_pd = pd.Series(data)
-        >>> ser_pl = pl.Series(data)
-        >>> ser_pa = pa.chunked_array([data])
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Int64
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Int64
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Int64
-    """
+    """64-bit signed integer type."""
 
 
 class Int32(NumericType):
-    """32-bit signed integer type.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> data = [2, 1, 3, 7]
-        >>> ser_pd = pd.Series(data)
-        >>> ser_pl = pl.Series(data)
-        >>> ser_pa = pa.chunked_array([data])
-
-        >>> def func(ser):
-        ...     ser_nw = nw.from_native(ser, series_only=True)
-        ...     return ser_nw.cast(nw.Int32).dtype
-
-        >>> func(ser_pd)
-        Int32
-        >>> func(ser_pl)
-        Int32
-        >>> func(ser_pa)
-        Int32
-    """
+    """32-bit signed integer type."""
 
 
 class Int16(NumericType):
-    """16-bit signed integer type.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> data = [2, 1, 3, 7]
-        >>> ser_pd = pd.Series(data)
-        >>> ser_pl = pl.Series(data)
-        >>> ser_pa = pa.chunked_array([data])
-
-        >>> def func(ser):
-        ...     ser_nw = nw.from_native(ser, series_only=True)
-        ...     return ser_nw.cast(nw.Int16).dtype
-
-        >>> func(ser_pd)
-        Int16
-        >>> func(ser_pl)
-        Int16
-        >>> func(ser_pa)
-        Int16
-    """
+    """16-bit signed integer type."""
 
 
 class Int8(NumericType):
-    """8-bit signed integer type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [2, 1, 3, 7]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.Int8).dtype
-
-       >>> func(ser_pd)
-       Int8
-       >>> func(ser_pl)
-       Int8
-       >>> func(ser_pa)
-       Int8
-    """
+    """8-bit signed integer type."""
 
 
 class UInt128(NumericType):
@@ -168,232 +76,43 @@ class UInt128(NumericType):
 
 
 class UInt64(NumericType):
-    """64-bit unsigned integer type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [2, 1, 3, 7]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.UInt64).dtype
-
-       >>> func(ser_pd)
-       UInt64
-       >>> func(ser_pl)
-       UInt64
-       >>> func(ser_pa)
-       UInt64
-    """
+    """64-bit unsigned integer type."""
 
 
 class UInt32(NumericType):
-    """32-bit unsigned integer type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [2, 1, 3, 7]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.UInt32).dtype
-
-       >>> func(ser_pd)
-       UInt32
-       >>> func(ser_pl)
-       UInt32
-       >>> func(ser_pa)
-       UInt32
-    """
+    """32-bit unsigned integer type."""
 
 
 class UInt16(NumericType):
-    """16-bit unsigned integer type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [2, 1, 3, 7]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.UInt16).dtype
-
-       >>> func(ser_pd)
-       UInt16
-       >>> func(ser_pl)
-       UInt16
-       >>> func(ser_pa)
-       UInt16
-    """
+    """16-bit unsigned integer type."""
 
 
 class UInt8(NumericType):
-    """8-bit unsigned integer type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [2, 1, 3, 7]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.UInt8).dtype
-
-       >>> func(ser_pd)
-       UInt8
-       >>> func(ser_pl)
-       UInt8
-       >>> func(ser_pa)
-       UInt8
-    """
+    """8-bit unsigned integer type."""
 
 
 class Float64(NumericType):
-    """64-bit floating point type.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> data = [0.001, 0.1, 0.01, 0.1]
-        >>> ser_pd = pd.Series(data)
-        >>> ser_pl = pl.Series(data)
-        >>> ser_pa = pa.chunked_array([data])
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Float64
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Float64
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Float64
-    """
+    """64-bit floating point type."""
 
 
 class Float32(NumericType):
-    """32-bit floating point type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [0.001, 0.1, 0.01, 0.1]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> def func(ser):
-       ...     ser_nw = nw.from_native(ser, series_only=True)
-       ...     return ser_nw.cast(nw.Float32).dtype
-
-       >>> func(ser_pd)
-       Float32
-       >>> func(ser_pl)
-       Float32
-       >>> func(ser_pa)
-       Float32
-    """
+    """32-bit floating point type."""
 
 
 class String(DType):
-    """UTF-8 encoded string type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       String
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       String
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       String
-    """
+    """UTF-8 encoded string type."""
 
 
 class Boolean(DType):
-    """Boolean type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [True, False, False, True]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       Boolean
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       Boolean
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       Boolean
-    """
+    """Boolean type."""
 
 
 class Object(DType):
-    """Data type for wrapping arbitrary Python objects.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> class Foo: ...
-       >>> ser_pd = pd.Series([Foo(), Foo()])
-       >>> ser_pl = pl.Series([Foo(), Foo()])
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       Object
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       Object
-    """
+    """Data type for wrapping arbitrary Python objects."""
 
 
 class Unknown(DType):
-    """Type representing DataType values that could not be determined statically.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import narwhals as nw
-       >>> data = pd.period_range("2000-01", periods=4, freq="M")
-       >>> ser_pd = pd.Series(data)
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       Unknown
-    """
+    """Type representing DataType values that could not be determined statically."""
 
 
 class Datetime(TemporalType):
@@ -406,33 +125,6 @@ class Datetime(TemporalType):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import pyarrow.compute as pc
-        >>> import narwhals as nw
-        >>> from datetime import datetime, timedelta
-        >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
-        >>> ser_pd = (
-        ...     pd.Series(data)
-        ...     .dt.tz_localize("Africa/Accra")
-        ...     .astype("datetime64[ms, Africa/Accra]")
-        ... )
-        >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
-        ... )
-        >>> ser_pa = pc.assume_timezone(
-        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
-        ... )
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
     def __init__(
@@ -478,24 +170,6 @@ class Duration(TemporalType):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> from datetime import timedelta
-        >>> data = [timedelta(seconds=d) for d in range(1, 4)]
-        >>> ser_pd = pd.Series(data).astype("timedelta64[ms]")
-        >>> ser_pl = pl.Series(data).cast(pl.Duration("ms"))
-        >>> ser_pa = pa.chunked_array([data], type=pa.duration("ms"))
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Duration(time_unit='ms')
     """
 
     def __init__(
@@ -529,40 +203,13 @@ class Duration(TemporalType):
 
 
 class Categorical(DType):
-    """A categorical encoding of a set of strings.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
-       >>> ser_pd = pd.Series(data)
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pd, series_only=True).cast(nw.Categorical).dtype
-       Categorical
-       >>> nw.from_native(ser_pl, series_only=True).cast(nw.Categorical).dtype
-       Categorical
-       >>> nw.from_native(ser_pa, series_only=True).cast(nw.Categorical).dtype
-       Categorical
-    """
+    """A categorical encoding of a set of strings."""
 
 
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
     Polars has an Enum data type, while pandas and PyArrow do not.
-
-    Examples:
-       >>> import polars as pl
-       >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca", "vaquita"]
-       >>> ser_pl = pl.Series(data, dtype=pl.Enum(data))
-
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       Enum
     """
 
 
@@ -598,19 +245,6 @@ class Struct(DType):
     Arguments:
         fields: The fields that make up the struct. Can be either a sequence of Field
             objects or a mapping of column names to data types.
-
-    Examples:
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [{"a": 1, "b": ["narwhal", "beluga"]}, {"a": 2, "b": ["orca"]}]
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       Struct({'a': Int64, 'b': List(String)})
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       Struct({'a': Int64, 'b': List(String)})
     """
 
     fields: list[Field]
@@ -660,25 +294,7 @@ class Struct(DType):
 
 
 class List(DType):
-    """Variable length list type.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> data = [["narwhal", "orca"], ["beluga", "vaquita"]]
-       >>> ser_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.large_list(pa.large_string())))
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       List(String)
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       List(String)
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       List(String)
-    """
+    """Variable length list type."""
 
     def __init__(self, inner: DType | type[DType]) -> None:
         self.inner = inner
@@ -712,23 +328,6 @@ class Array(DType):
     Arguments:
         inner: The datatype of the values within each array.
         width: the length of each array.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> data = [[1, 2], [3, 4], [5, 6]]
-        >>> ser_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.list_(pa.int32(), 2)))
-        >>> ser_pl = pl.Series(data, dtype=pl.Array(pl.Int32, 2))
-        >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Array(Int32, 2)
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Array(Int32, 2)
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Array(Int32, 2)
     """
 
     def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
@@ -762,23 +361,4 @@ class Array(DType):
 
 
 class Date(TemporalType):
-    """Data type representing a calendar date.
-
-    Examples:
-       >>> import pandas as pd
-       >>> import polars as pl
-       >>> import pyarrow as pa
-       >>> import narwhals as nw
-       >>> from datetime import date, timedelta
-       >>> data = [date(2024, 12, 1) + timedelta(days=d) for d in range(4)]
-       >>> ser_pd = pd.Series(data, dtype="date32[pyarrow]")
-       >>> ser_pl = pl.Series(data)
-       >>> ser_pa = pa.chunked_array([data])
-
-       >>> nw.from_native(ser_pd, series_only=True).dtype
-       Date
-       >>> nw.from_native(ser_pl, series_only=True).dtype
-       Date
-       >>> nw.from_native(ser_pa, series_only=True).dtype
-       Date
-    """
+    """Data type representing a calendar date."""
