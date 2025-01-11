@@ -28,7 +28,20 @@ class Backend(NamedTuple):
     type_: BackendType
 
 
-MODULES = ["dataframe", "series", "expr", "expr_dt"]
+MODULES = [
+    "dataframe",
+    "series",
+    "expr",
+    "expr_dt",
+    "expr_cat",
+    "expr_str",
+    "expr_list",
+    "expr_name",
+    "series_dt",
+    "series_cat",
+    "series_str",
+    "series_list",
+]
 
 BACKENDS = [
     Backend(name="arrow", module="_arrow", type_=BackendType.EAGER),
