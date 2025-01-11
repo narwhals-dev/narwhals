@@ -103,6 +103,7 @@ class DuckDBExprDateTimeNamespace:
                 "strftime", _input, ConstantExpression(format)
             ),
             "to_string",
+            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def weekday(self) -> DuckDBExpr:
