@@ -71,7 +71,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[2012-01-07,2023-03-10]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.date()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.date(),
+            self._expr._is_order_dependent,
         )
 
     def year(self: Self) -> ExprT:
@@ -139,7 +140,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             year: [[1978,2024,2065]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.year()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.year(),
+            self._expr._is_order_dependent,
         )
 
     def month(self: Self) -> ExprT:
@@ -207,7 +209,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             month: [[6,12,1]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.month()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.month(),
+            self._expr._is_order_dependent,
         )
 
     def day(self: Self) -> ExprT:
@@ -275,7 +278,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             day: [[1,13,1]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.day()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.day(),
+            self._expr._is_order_dependent,
         )
 
     def hour(self: Self) -> ExprT:
@@ -343,7 +347,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             hour: [[1,5,10]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.hour()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.hour(),
+            self._expr._is_order_dependent,
         )
 
     def minute(self: Self) -> ExprT:
@@ -411,7 +416,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             minute: [[1,30,20]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.minute()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.minute(),
+            self._expr._is_order_dependent,
         )
 
     def second(self: Self) -> ExprT:
@@ -477,7 +483,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             second: [[1,14,30]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.second()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.second(),
+            self._expr._is_order_dependent,
         )
 
     def millisecond(self: Self) -> ExprT:
@@ -543,7 +550,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             millisecond: [[0,505,67]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond(),
+            self._expr._is_order_dependent,
         )
 
     def microsecond(self: Self) -> ExprT:
@@ -609,7 +617,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             microsecond: [[0,505000,67000]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond(),
+            self._expr._is_order_dependent,
         )
 
     def nanosecond(self: Self) -> ExprT:
@@ -675,7 +684,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             nanosecond: [[0,500000000,60000000]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond(),
+            self._expr._is_order_dependent,
         )
 
     def ordinal_day(self: Self) -> ExprT:
@@ -733,7 +743,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_ordinal_day: [[1,216]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day(),
+            self._expr._is_order_dependent,
         )
 
     def weekday(self: Self) -> ExprT:
@@ -789,7 +800,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_weekday: [[3,1]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.weekday(),
+            self._expr._is_order_dependent,
         )
 
     def total_minutes(self: Self) -> ExprT:
@@ -852,7 +864,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_total_minutes: [[10,20]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes(),
+            self._expr._is_order_dependent,
         )
 
     def total_seconds(self: Self) -> ExprT:
@@ -915,7 +928,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_total_seconds: [[10,20]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds(),
+            self._expr._is_order_dependent,
         )
 
     def total_milliseconds(self: Self) -> ExprT:
@@ -983,7 +997,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_total_milliseconds: [[10,20]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds(),
+            self._expr._is_order_dependent,
         )
 
     def total_microseconds(self: Self) -> ExprT:
@@ -1051,7 +1066,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a_total_microseconds: [[10,1200]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds(),
+            self._expr._is_order_dependent,
         )
 
     def total_nanoseconds(self: Self) -> ExprT:
@@ -1106,7 +1122,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └───────────────────────────────┴──────────────────────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds()
+            lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds(),
+            self._expr._is_order_dependent,
         )
 
     def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
@@ -1204,7 +1221,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [["2020/03/01 00:00:00.000000","2020/04/01 00:00:00.000000","2020/05/01 00:00:00.000000"]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format),
+            self._expr._is_order_dependent,
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
@@ -1268,7 +1286,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[2023-12-31 18:15:00.000000Z,2024-01-01 18:15:00.000000Z]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(time_zone)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(
+                time_zone
+            ),
+            self._expr._is_order_dependent,
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ExprT:
@@ -1338,7 +1359,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(time_zone)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(
+                time_zone
+            ),
+            self._expr._is_order_dependent,
         )
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
@@ -1411,5 +1435,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             )
             raise ValueError(msg)
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit)
+            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
+            self._expr._is_order_dependent,
         )

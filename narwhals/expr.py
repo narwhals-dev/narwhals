@@ -36,7 +36,9 @@ def binary_operation_is_order_dependent(lhs: Expr, rhs: Expr | Any) -> bool:
 
 class Expr:
     def __init__(
-        self, to_compliant_expr: Callable[[Any], Any], is_order_dependent: bool  # noqa: FBT001
+        self,
+        to_compliant_expr: Callable[[Any], Any],
+        is_order_dependent: bool,  # noqa: FBT001
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         self._to_compliant_expr = to_compliant_expr

@@ -1681,7 +1681,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr)
+        return Expr(obj._to_compliant_expr, is_order_dependent=obj._is_order_dependent)
     return obj
 
 
