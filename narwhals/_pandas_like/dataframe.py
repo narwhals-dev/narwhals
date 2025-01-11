@@ -20,8 +20,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -695,9 +695,7 @@ class PandasLikeDataFrame:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        if subset is not None and any(x not in self.columns for x in subset):
-            msg = f"Column(s) {subset} not found in {self.columns}"
-            raise ColumnNotFoundError(msg)
+        check_column_exists(self.columns, subset)
         return self._from_native_frame(
             self._native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
         )

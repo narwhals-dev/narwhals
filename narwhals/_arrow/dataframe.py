@@ -16,8 +16,8 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
@@ -642,9 +642,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         import pyarrow.compute as pc
 
         df = self._native_frame
-        if subset is not None and any(x not in self.columns for x in subset):
-            msg = f"Column(s) {subset} not found in {self.columns}"
-            raise ColumnNotFoundError(msg)
+        check_column_exists(self.columns, subset)
         subset = subset or self.columns
 
         if keep in {"any", "first", "last"}:
