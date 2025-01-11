@@ -40,7 +40,7 @@ def test_validate_laziness() -> None:
         TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
 
 
 @pytest.mark.slow

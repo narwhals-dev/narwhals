@@ -10,6 +10,7 @@ from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
+from typing import overload
 
 from narwhals._expression_parsing import extract_compliant
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
@@ -38,7 +39,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
 
     class ArrowStreamExportable(Protocol):
@@ -47,11 +50,35 @@ if TYPE_CHECKING:
         ) -> object: ...
 
 
+@overload
 def concat(
-    items: Iterable[FrameT],
+    items: Iterable[DataFrame[IntoDataFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+) -> DataFrame[IntoDataFrameT]: ...
+
+
+@overload
+def concat(
+    items: Iterable[LazyFrame[IntoFrameT]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> LazyFrame[IntoFrameT]: ...
+
+
+@overload
+def concat(
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
+
+
+def concat(
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -197,7 +224,7 @@ def concat(
     validate_laziness(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
-    return first_item._from_compliant_dataframe(  # type: ignore[return-value]
+    return first_item._from_compliant_dataframe(
         plx.concat([df._compliant_frame for df in items], how=how),
     )
 
