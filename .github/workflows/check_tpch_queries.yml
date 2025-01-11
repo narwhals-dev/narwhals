@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: local-install
-        run: uv pip install -e ".[dev, core, dask]" --system
+        run: uv pip install -U --pre -e ".[dev, core, dask]" --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 

@@ -80,7 +80,7 @@ def test_comparison_with_list_error_message() -> None:
 def test_missing_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
@@ -126,7 +126,7 @@ def test_left_to_right_broadcasting(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())

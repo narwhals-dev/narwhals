@@ -134,7 +134,6 @@ def test_cross_join(  # pragma: no cover
     ),
 )
 @pytest.mark.slow
-@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(  # pragma: no cover
     a_left_data: list[int],
     b_left_data: list[int],

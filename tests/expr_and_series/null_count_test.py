@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -13,13 +11,9 @@ data = {
 }
 
 
-def test_null_count_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_null_count_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().null_count())
+    result = df.select(nw.col("a", "b").null_count())
     expected = {
         "a": [2],
         "b": [1],

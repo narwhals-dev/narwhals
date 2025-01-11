@@ -21,7 +21,7 @@ def test_cum_count_expr(
 ) -> None:
     if "dask" in str(constructor) and reverse:
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_count" if reverse else "cum_count"

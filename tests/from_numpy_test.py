@@ -19,7 +19,7 @@ expected = {
 
 
 def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     native_namespace = nw.get_native_namespace(df)
@@ -31,7 +31,7 @@ def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) ->
 def test_from_numpy_schema_dict(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = {
         "c": nw_v1.Int16(),
@@ -52,7 +52,7 @@ def test_from_numpy_schema_dict(
 def test_from_numpy_schema_list(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = ["c", "d", "e", "f"]
     df = nw_v1.from_native(constructor(data))
@@ -68,7 +68,7 @@ def test_from_numpy_schema_list(
 def test_from_numpy_schema_notvalid(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
@@ -79,7 +79,7 @@ def test_from_numpy_schema_notvalid(
 
 
 def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw_v1.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)

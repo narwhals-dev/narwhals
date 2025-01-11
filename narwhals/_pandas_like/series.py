@@ -8,17 +8,17 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
+from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
+from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
+from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
-from narwhals._pandas_like.utils import calculate_timestamp_date
-from narwhals._pandas_like.utils import calculate_timestamp_datetime
-from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
-from narwhals._pandas_like.utils import to_datetime
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
@@ -263,7 +263,10 @@ class PandasLikeSeries(CompliantSeries):
         return self._native_series.to_list()
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: Literal["left", "right", "none", "both"],
     ) -> PandasLikeSeries:
         ser = self._native_series
         _, lower_bound = broadcast_align_and_extract_native(self, lower_bound)
@@ -1119,6 +1122,56 @@ class PandasLikeSeries(CompliantSeries):
         s = self._native_series
         return self._from_native_series((s > float("-inf")) & (s < float("inf")))
 
+    def rank(
+        self: Self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        pd_method = "first" if method == "ordinal" else method
+        native_series = self._native_series
+        dtypes = import_dtypes_module(self._version)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < (3,)
+            and self.dtype
+            in {
+                dtypes.Int64,
+                dtypes.Int32,
+                dtypes.Int16,
+                dtypes.Int8,
+                dtypes.UInt64,
+                dtypes.UInt32,
+                dtypes.UInt16,
+                dtypes.UInt8,
+            }
+            and (null_mask := native_series.isna()).any()
+        ):
+            # crazy workaround for the case of `na_option="keep"` and nullable
+            # integer dtypes. This should be supported in pandas > 3.0
+            # https://github.com/pandas-dev/pandas/issues/56976
+            ranked_series = (
+                native_series.to_frame()
+                .assign(**{f"{native_series.name}_is_null": null_mask})
+                .groupby(f"{native_series.name}_is_null")
+                .rank(
+                    method=pd_method,
+                    na_option="keep",
+                    ascending=not descending,
+                    pct=False,
+                )[native_series.name]
+            )
+
+        else:
+            ranked_series = native_series.rank(
+                method=pd_method,
+                na_option="keep",
+                ascending=not descending,
+                pct=False,
+            )
+
+        return self._from_native_series(ranked_series)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
@@ -1134,339 +1187,3 @@ class PandasLikeSeries(CompliantSeries):
     @property
     def list(self) -> PandasLikeSeriesListNamespace:
         return PandasLikeSeriesListNamespace(self)
-
-
-class PandasLikeSeriesCatNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
-        self._compliant_series = series
-
-    def get_categories(self) -> PandasLikeSeries:
-        s = self._compliant_series._native_series
-        return self._compliant_series._from_native_series(
-            s.__class__(s.cat.categories, name=s.name)
-        )
-
-
-class PandasLikeSeriesStringNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
-        self._compliant_series = series
-
-    def len_chars(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.len()
-        )
-
-    def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.replace(
-                pat=pattern, repl=value, n=n, regex=not literal
-            ),
-        )
-
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> PandasLikeSeries:
-        return self.replace(pattern, value, literal=literal, n=-1)
-
-    def strip_chars(self, characters: str | None) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.strip(characters),
-        )
-
-    def starts_with(self, prefix: str) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.startswith(prefix),
-        )
-
-    def ends_with(self, suffix: str) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.endswith(suffix),
-        )
-
-    def contains(self, pattern: str, *, literal: bool = False) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.contains(
-                pat=pattern, regex=not literal
-            )
-        )
-
-    def slice(self, offset: int, length: int | None = None) -> PandasLikeSeries:
-        stop = offset + length if length else None
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.slice(start=offset, stop=stop),
-        )
-
-    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
-        return self._compliant_series._from_native_series(
-            to_datetime(self._compliant_series._implementation)(
-                self._compliant_series._native_series, format=format
-            )
-        )
-
-    def to_uppercase(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.upper(),
-        )
-
-    def to_lowercase(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.str.lower(),
-        )
-
-
-class PandasLikeSeriesDateTimeNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
-        self._compliant_series = series
-
-    def date(self) -> PandasLikeSeries:
-        result = self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.date,
-        )
-        if str(result.dtype).lower() == "object":
-            msg = (
-                "Accessing `date` on the default pandas backend "
-                "will return a Series of type `object`."
-                "\nThis differs from polars API and will prevent `.dt` chaining. "
-                "Please switch to the `pyarrow` backend:"
-                '\ndf.convert_dtypes(dtype_backend="pyarrow")'
-            )
-            raise NotImplementedError(msg)
-        return result
-
-    def year(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.year,
-        )
-
-    def month(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.month,
-        )
-
-    def day(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.day,
-        )
-
-    def hour(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.hour,
-        )
-
-    def minute(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.minute,
-        )
-
-    def second(self) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.second,
-        )
-
-    def millisecond(self) -> PandasLikeSeries:
-        return self.microsecond() // 1000
-
-    def microsecond(self) -> PandasLikeSeries:
-        if self._compliant_series._backend_version < (3, 0, 0) and "pyarrow" in str(
-            self._compliant_series._native_series.dtype
-        ):
-            # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
-            import pyarrow.compute as pc  # ignore-banned-import()
-
-            native_series = self._compliant_series._native_series
-            arr = native_series.array.__arrow_array__()
-            result_arr = pc.add(
-                pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
-            )
-            result = native_series.__class__(
-                native_series.array.__class__(result_arr), name=native_series.name
-            )
-            return self._compliant_series._from_native_series(result)
-
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.microsecond
-        )
-
-    def nanosecond(self) -> PandasLikeSeries:
-        return (  # type: ignore[no-any-return]
-            self.microsecond() * 1_000
-            + self._compliant_series._native_series.dt.nanosecond
-        )
-
-    def ordinal_day(self) -> PandasLikeSeries:
-        ser = self._compliant_series._native_series
-        year_start = ser.dt.year
-        result = (
-            ser.to_numpy().astype("datetime64[D]")
-            - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
-        ).astype("int32") + 1
-        dtype = "Int64[pyarrow]" if "pyarrow" in str(ser.dtype) else "int32"
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.__class__(
-                result, dtype=dtype, name=year_start.name
-            )
-        )
-
-    def weekday(self) -> PandasLikeSeries:
-        return (
-            self._compliant_series._from_native_series(
-                self._compliant_series._native_series.dt.weekday,
-            )
-            + 1  # Pandas is 0-6 while Polars is 1-7
-        )
-
-    def _get_total_seconds(self) -> Any:
-        if hasattr(self._compliant_series._native_series.dt, "total_seconds"):
-            return self._compliant_series._native_series.dt.total_seconds()
-        else:  # pragma: no cover
-            return (
-                self._compliant_series._native_series.dt.days * 86400
-                + self._compliant_series._native_series.dt.seconds
-                + (self._compliant_series._native_series.dt.microseconds / 1e6)
-                + (self._compliant_series._native_series.dt.nanoseconds / 1e9)
-            )
-
-    def total_minutes(self) -> PandasLikeSeries:
-        s = self._get_total_seconds()
-        s_sign = (
-            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        )  # this calculates the sign of each series element
-        s_abs = s.abs() // 60
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._compliant_series._from_native_series(s_abs * s_sign)
-
-    def total_seconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds()
-        s_sign = (
-            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        )  # this calculates the sign of each series element
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._compliant_series._from_native_series(s_abs * s_sign)
-
-    def total_milliseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e3
-        s_sign = (
-            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        )  # this calculates the sign of each series element
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._compliant_series._from_native_series(s_abs * s_sign)
-
-    def total_microseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e6
-        s_sign = (
-            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        )  # this calculates the sign of each series element
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._compliant_series._from_native_series(s_abs * s_sign)
-
-    def total_nanoseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e9
-        s_sign = (
-            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
-        )  # this calculates the sign of each series element
-        s_abs = s.abs() // 1
-        if ~s.isna().any():
-            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._compliant_series._from_native_series(s_abs * s_sign)
-
-    def to_string(self, format: str) -> PandasLikeSeries:  # noqa: A002
-        # Polars' parser treats `'%.f'` as pandas does `'.%f'`
-        # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
-        # and doesn't support `%f`
-        if "pyarrow" not in str(self._compliant_series._native_series.dtype):
-            format = format.replace("%S%.f", "%S.%f")
-        else:
-            format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.dt.strftime(format)
-        )
-
-    def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:
-        if time_zone is not None:
-            result = self._compliant_series._native_series.dt.tz_localize(
-                None
-            ).dt.tz_localize(time_zone)
-        else:
-            result = self._compliant_series._native_series.dt.tz_localize(None)
-        return self._compliant_series._from_native_series(result)
-
-    def convert_time_zone(self, time_zone: str) -> PandasLikeSeries:
-        if self._compliant_series.dtype.time_zone is None:  # type: ignore[attr-defined]
-            result = self._compliant_series._native_series.dt.tz_localize(
-                "UTC"
-            ).dt.tz_convert(time_zone)
-        else:
-            result = self._compliant_series._native_series.dt.tz_convert(time_zone)
-        return self._compliant_series._from_native_series(result)
-
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeSeries:
-        s = self._compliant_series._native_series
-        dtype = self._compliant_series.dtype
-        is_pyarrow_dtype = "pyarrow" in str(self._compliant_series._native_series.dtype)
-        mask_na = s.isna()
-        dtypes = import_dtypes_module(self._compliant_series._version)
-        if dtype == dtypes.Date:
-            # Date is only supported in pandas dtypes if pyarrow-backed
-            s_cast = s.astype("Int32[pyarrow]")
-            result = calculate_timestamp_date(s_cast, time_unit)
-        elif dtype == dtypes.Datetime:
-            original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
-            if (
-                self._compliant_series._implementation is Implementation.PANDAS
-                and self._compliant_series._backend_version < (2,)
-            ):  # pragma: no cover
-                s_cast = s.view("Int64[pyarrow]") if is_pyarrow_dtype else s.view("int64")
-            else:
-                s_cast = (
-                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
-                )
-            result = calculate_timestamp_datetime(s_cast, original_time_unit, time_unit)
-        else:
-            msg = "Input should be either of Date or Datetime type"
-            raise TypeError(msg)
-        result[mask_na] = None
-        return self._compliant_series._from_native_series(result)
-
-
-class PandasLikeSeriesListNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
-        self._compliant_series = series
-
-    def len(self: Self) -> PandasLikeSeries:
-        from narwhals.utils import import_dtypes_module
-
-        native_series = self._compliant_series._native_series
-        native_result = native_series.list.len()
-
-        if (
-            self._compliant_series._implementation is Implementation.PANDAS
-            and self._compliant_series._backend_version < (3, 0)
-        ):  # pragma: no cover
-            native_result = set_index(
-                rename(
-                    native_result,
-                    native_series.name,
-                    implementation=self._compliant_series._implementation,
-                    backend_version=self._compliant_series._backend_version,
-                ),
-                index=native_series.index,
-                implementation=self._compliant_series._implementation,
-                backend_version=self._compliant_series._backend_version,
-            )
-        dtype = narwhals_to_native_dtype(
-            dtype=import_dtypes_module(self._compliant_series._version).UInt32(),
-            starting_dtype=native_result.dtype,
-            implementation=self._compliant_series._implementation,
-            backend_version=self._compliant_series._backend_version,
-            version=self._compliant_series._version,
-        )
-        return self._compliant_series._from_native_series(native_result.astype(dtype))

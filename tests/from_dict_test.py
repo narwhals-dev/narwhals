@@ -12,7 +12,7 @@ from tests.utils import assert_equal_data
 
 
 def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     native_namespace = nw.get_native_namespace(df)
@@ -25,7 +25,7 @@ def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> 
 def test_from_dict_schema(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
     df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
@@ -62,7 +62,7 @@ def test_from_dict_one_native_one_narwhals(
 
 
 def test_from_dict_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     native_namespace = nw_v1.get_native_namespace(df)

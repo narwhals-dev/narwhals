@@ -76,7 +76,6 @@ def test_right_arithmetic_expr(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
         request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))

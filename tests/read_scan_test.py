@@ -52,8 +52,11 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 def test_scan_csv(
     tmpdir: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -66,8 +69,11 @@ def test_scan_csv(
 
 def test_scan_csv_v1(
     tmpdir: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -128,8 +134,11 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet(
     tmpdir: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -143,8 +152,11 @@ def test_scan_parquet(
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_v1(
     tmpdir: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)

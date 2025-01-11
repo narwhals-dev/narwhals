@@ -31,7 +31,7 @@ def test_quantile_expr(
     if (
         any(x in str(constructor) for x in ("dask", "duckdb"))
         and interpolation != "linear"
-    ):
+    ) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3

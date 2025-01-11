@@ -9,7 +9,9 @@ from tests.utils import assert_equal_data
 
 
 def test_expr_binary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if ("dask" in str(constructor) and DASK_VERSION < (2024, 10)) or "pyspark" in str(
+        constructor
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)

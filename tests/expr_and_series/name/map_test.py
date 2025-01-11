@@ -16,21 +16,34 @@ def map_func(s: str | None) -> str:
     return str(s)[::-1].lower()
 
 
-def test_map(constructor: Constructor) -> None:
+def test_map(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.map(function=map_func))
     expected = {map_func(k): [e * 2 for e in v] for k, v in data.items()}
     assert_equal_data(result, expected)
 
 
-def test_map_after_alias(constructor: Constructor) -> None:
+def test_map_after_alias(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
     expected = {map_func("foo"): data["foo"]}
     assert_equal_data(result, expected)
 
 
-def test_map_raise_anonymous(constructor: Constructor) -> None:
+def test_map_raise_anonymous(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

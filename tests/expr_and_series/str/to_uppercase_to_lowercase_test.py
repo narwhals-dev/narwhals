@@ -30,9 +30,6 @@ def test_str_to_uppercase(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    df = nw.from_native(constructor(data))
-    result_frame = df.select(nw.col("a").str.to_uppercase())
-
     if any("ß" in s for value in data.values() for s in value) & (
         constructor.__name__
         in (
@@ -47,6 +44,9 @@ def test_str_to_uppercase(
         # since the pyarrow backend will convert
         # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
         request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    result_frame = df.select(nw.col("a").str.to_uppercase())
 
     assert_equal_data(result_frame, expected)
 

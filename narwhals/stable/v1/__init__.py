@@ -18,9 +18,8 @@ from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.expr import Expr as NwExpr
-from narwhals.expr import Then as NwThen
-from narwhals.expr import When as NwWhen
-from narwhals.expr import when as nw_when
+from narwhals.functions import Then as NwThen
+from narwhals.functions import When as NwWhen
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
@@ -31,6 +30,7 @@ from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
+from narwhals.functions import when as nw_when
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -3370,25 +3370,33 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 @overload
 def concat(
-    items: Iterable[DataFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any]: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def concat(
-    items: Iterable[LazyFrame[Any]],
+    items: Iterable[LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[Any]: ...
+) -> LazyFrame[IntoFrameT]: ...
+
+
+@overload
+def concat(
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
+    *,
+    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 def concat(
-    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[Any] | LazyFrame[Any]:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -3524,7 +3532,7 @@ def concat(
         │ 4   ┆ null ┆ y    │
         └─────┴──────┴──────┘
     """
-    return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
+    return _stableify(nw.concat(items, how=how))
 
 
 def concat_str(

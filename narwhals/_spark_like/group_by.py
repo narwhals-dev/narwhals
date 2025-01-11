@@ -80,17 +80,25 @@ class SparkLikeLazyGroupBy:
 
 
 def get_spark_function(function_name: str, **kwargs: Any) -> Column:
+    from pyspark.sql import functions as F  # noqa: N812
+
     if function_name in {"std", "var"}:
         import numpy as np  # ignore-banned-import
 
         return partial(
             _std if function_name == "std" else _var,
-            ddof=kwargs.get("ddof", 1),
+            ddof=kwargs["ddof"],
             np_version=parse_version(np.__version__),
         )
-    from pyspark.sql import functions as F  # noqa: N812
+    elif function_name == "len":
+        # Use count(*) to count all rows including nulls
+        def _count(*_args: Any, **_kwargs: Any) -> Column:
+            return F.count("*")
 
-    return getattr(F, function_name)
+        return _count
+
+    else:
+        return getattr(F, function_name)
 
 
 def agg_pyspark(
@@ -120,11 +128,7 @@ def agg_pyspark(
             if expr._output_names is None:  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
-
-            function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-                expr._function_name, expr._function_name
-            )
-            agg_func = get_spark_function(function_name, **expr._kwargs)
+            agg_func = get_spark_function(expr._function_name, **expr._kwargs)
             simple_aggregations.update(
                 {output_name: agg_func(keys[0]) for output_name in expr._output_names}
             )
@@ -138,10 +142,7 @@ def agg_pyspark(
             raise AssertionError(msg)
 
         function_name = remove_prefix(expr._function_name, "col->")
-        pyspark_function = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-            function_name, function_name
-        )
-        agg_func = get_spark_function(pyspark_function, **expr._kwargs)
+        agg_func = get_spark_function(function_name, **expr._kwargs)
 
         simple_aggregations.update(
             {

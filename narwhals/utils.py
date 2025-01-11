@@ -155,7 +155,11 @@ class Implementation(Enum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+        return self in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }
 
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
@@ -291,7 +295,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.MODIN: (0, 25, 3),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
-    Implementation.PYSPARK: (3, 3),
+    Implementation.PYSPARK: (3, 5),
     Implementation.POLARS: (0, 20, 3),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
@@ -368,7 +372,7 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
+def parse_version(version: str) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
     Arguments:
@@ -378,9 +382,10 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
         Parsed version number.
     """
     # lifted from Polars
-    if isinstance(version, str):  # pragma: no cover
-        version = version.split(".")
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
+    # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
+    # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
+    version = re.sub(r"(\D?dev.*$)", "", version)
+    return tuple(int(re.sub(r"\D", "", str(v))) for v in version.split("."))
 
 
 def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:

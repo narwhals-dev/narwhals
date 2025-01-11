@@ -50,6 +50,10 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[dev, core, extra, dask, modin]" --system
+      - name: install pyspark
+        run: uv pip install -e ".[pyspark]" --system
+        # PySpark is not yet available on Python3.12+
+        if: matrix.python-version != '3.12'
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
