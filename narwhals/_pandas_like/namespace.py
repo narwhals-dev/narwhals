@@ -380,8 +380,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         self,
         exprs: Iterable[IntoPandasLikeExpr],
         *more_exprs: IntoPandasLikeExpr,
-        separator: str = "",
-        ignore_nulls: bool = False,
+        separator: str,
+        ignore_nulls: bool,
     ) -> PandasLikeExpr:
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -488,6 +487,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
+    def null_count(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
+            "null_count",
+            returns_scalar=True,
+        )
+
     def is_null(self) -> Self:
         return self._from_call(
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
@@ -497,11 +505,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import ConstantExpression
 
         return self._from_call(
-            lambda _input: functools.reduce(
-                lambda x, y: x | _input.isin(ConstantExpression(y)),
-                other[1:],
-                _input.isin(ConstantExpression(other[0])),
-            ),
+            lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
             "is_in",
             returns_scalar=self._returns_scalar,
         )
@@ -619,6 +623,15 @@ class DuckDBExprStringNamespace:
             func, "slice", returns_scalar=self._compliant_expr._returns_scalar
         )
 
+    def len_chars(self) -> DuckDBExpr:
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("length", _input),
+            "len_chars",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
     def to_lowercase(self) -> DuckDBExpr:
         from duckdb import FunctionExpression
 
@@ -662,8 +675,17 @@ class DuckDBExprStringNamespace:
         from duckdb import FunctionExpression
 
         if literal is False:
-            msg = "`replace_all` for DuckDB currently only supports `literal=True`."
-            raise NotImplementedError(msg)
+            return self._compliant_expr._from_call(
+                lambda _input: FunctionExpression(
+                    "regexp_replace",
+                    _input,
+                    ConstantExpression(pattern),
+                    ConstantExpression(value),
+                    ConstantExpression("g"),
+                ),
+                "replace_all",
+                returns_scalar=self._compliant_expr._returns_scalar,
+            )
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "replace", _input, ConstantExpression(pattern), ConstantExpression(value)

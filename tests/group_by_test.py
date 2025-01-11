@@ -300,8 +300,12 @@ def test_key_with_nulls(
 def test_key_with_nulls_ignored(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))
