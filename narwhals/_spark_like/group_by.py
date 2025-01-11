@@ -128,11 +128,7 @@ def agg_pyspark(
             if expr._output_names is None:  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
-
-            function_name = POLARS_TO_PYSPARK_AGGREGATIONS.get(
-                expr._function_name, expr._function_name
-            )
-            agg_func = get_spark_function(function_name, **expr._kwargs)
+            agg_func = get_spark_function(expr._function_name, **expr._kwargs)
             simple_aggregations.update(
                 {output_name: agg_func(keys[0]) for output_name in expr._output_names}
             )

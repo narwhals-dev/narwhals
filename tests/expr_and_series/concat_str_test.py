@@ -27,7 +27,7 @@ def test_concat_str(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (

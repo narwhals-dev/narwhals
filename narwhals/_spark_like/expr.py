@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals.typing import CompliantExpr
@@ -480,3 +481,21 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         from pyspark.sql import functions as F  # noqa: N812
 
         return self._from_call(F.skewness, "skew", returns_scalar=True)
+
+    def n_unique(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+        from pyspark.sql.types import IntegerType
+
+        def _n_unique(_input: Column) -> Column:
+            return F.count_distinct(_input) + F.max(F.isnull(_input).cast(IntegerType()))
+
+        return self._from_call(_n_unique, "n_unique", returns_scalar=True)
+
+    def is_null(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        return self._from_call(F.isnull, "is_null", returns_scalar=self._returns_scalar)
+
+    @property
+    def str(self: Self) -> SparkLikeExprStringNamespace:
+        return SparkLikeExprStringNamespace(self)

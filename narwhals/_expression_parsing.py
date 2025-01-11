@@ -321,3 +321,16 @@ def reduce_output_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str]
         if parsed_exprs[0]._output_names is not None
         else None
     )
+
+
+def extract_compliant(
+    plx: CompliantNamespace[CompliantSeriesT_co], other: Any
+) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    if isinstance(other, Expr):
+        return other._to_compliant_expr(plx)
+    if isinstance(other, Series):
+        return other._compliant_series
+    return other

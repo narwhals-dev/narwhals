@@ -166,10 +166,7 @@ def test_anti_join(
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)

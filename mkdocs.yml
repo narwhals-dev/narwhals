@@ -29,7 +29,16 @@ nav:
     - Supported DataFrame methods: api-completeness/dataframe.md
     - Supported LazyFrame methods: api-completeness/lazyframe.md
     - Supported Expr methods: api-completeness/expr.md
+    - Supported Expr.cat methods: api-completeness/expr_cat.md
+    - Supported Expr.dt methods: api-completeness/expr_dt.md
+    - Supported Expr.list methods: api-completeness/expr_list.md
+    - Supported Expr.name methods: api-completeness/expr_name.md
+    - Supported Expr.str methods: api-completeness/expr_str.md
     - Supported Series methods: api-completeness/series.md
+    - Supported Series.cat methods: api-completeness/series_cat.md
+    - Supported Series.dt methods: api-completeness/series_dt.md
+    - Supported Series.list methods: api-completeness/series_list.md
+    - Supported Series.str methods: api-completeness/series_str.md
   - API Reference:
     - api-reference/index.md
     - api-reference/narwhals.md
