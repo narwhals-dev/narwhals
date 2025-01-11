@@ -18,9 +18,8 @@ from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.expr import Expr as NwExpr
-from narwhals.expr import Then as NwThen
-from narwhals.expr import When as NwWhen
-from narwhals.expr import when as nw_when
+from narwhals.functions import Then as NwThen
+from narwhals.functions import When as NwWhen
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
@@ -31,6 +30,7 @@ from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
+from narwhals.functions import when as nw_when
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
