@@ -291,9 +291,9 @@ def test_parse_version(version: str, expected: tuple[int, ...]) -> None:
 
 def test_check_column_exists() -> None:
     columns = ["a", "b", "c"]
-    subset = ["a", "d"]
+    subset = ["d", "f"]
     with pytest.raises(
         ColumnNotFoundError,
-        match=re.escape("Column(s) ['a', 'd'] not found in ['a', 'b', 'c']"),
+        match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
     ):
         check_column_exists(columns, subset)
