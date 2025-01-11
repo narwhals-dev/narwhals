@@ -49,7 +49,7 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and attribute in ("date", "ordinal_day"):
+    if "duckdb" in str(constructor) and attribute in ("date"):
         request.applymarker(pytest.mark.xfail)
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
