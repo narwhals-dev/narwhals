@@ -1063,5 +1063,5 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
-        msg = f"Column(s) {missing} not found in {columns}"
+        msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
