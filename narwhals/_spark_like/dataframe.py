@@ -200,7 +200,7 @@ class SparkLikeLazyFrame:
 
     def unique(
         self: Self,
-        subset: str | list[str] | None = None,
+        subset: list[str] | None = None,
         *,
         keep: Literal["any", "none"],
     ) -> Self:
@@ -208,7 +208,6 @@ class SparkLikeLazyFrame:
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
-        subset = [subset] if isinstance(subset, str) else subset
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(

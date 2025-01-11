@@ -1061,7 +1061,7 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: list[str], subset: str | list[str] | None) -> None:
+def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and any(x not in columns for x in subset):
         msg = f"Column(s) {subset} not found in {columns}"
         raise ColumnNotFoundError(msg)
