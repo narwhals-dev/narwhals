@@ -34,35 +34,35 @@ from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
-from narwhals.expr import all_ as all
-from narwhals.expr import all_horizontal
-from narwhals.expr import any_horizontal
-from narwhals.expr import col
-from narwhals.expr import concat_str
-from narwhals.expr import len_ as len
-from narwhals.expr import lit
-from narwhals.expr import max
-from narwhals.expr import max_horizontal
-from narwhals.expr import mean
-from narwhals.expr import mean_horizontal
-from narwhals.expr import median
-from narwhals.expr import min
-from narwhals.expr import min_horizontal
-from narwhals.expr import nth
-from narwhals.expr import sum
-from narwhals.expr import sum_horizontal
-from narwhals.expr import when
+from narwhals.functions import all_ as all
+from narwhals.functions import all_horizontal
+from narwhals.functions import any_horizontal
+from narwhals.functions import col
 from narwhals.functions import concat
+from narwhals.functions import concat_str
 from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
 from narwhals.functions import from_numpy
 from narwhals.functions import get_level
+from narwhals.functions import len_ as len
+from narwhals.functions import lit
+from narwhals.functions import max
+from narwhals.functions import max_horizontal
+from narwhals.functions import mean
+from narwhals.functions import mean_horizontal
+from narwhals.functions import median
+from narwhals.functions import min
+from narwhals.functions import min_horizontal
 from narwhals.functions import new_series
+from narwhals.functions import nth
 from narwhals.functions import read_csv
 from narwhals.functions import read_parquet
 from narwhals.functions import scan_csv
 from narwhals.functions import scan_parquet
 from narwhals.functions import show_versions
+from narwhals.functions import sum
+from narwhals.functions import sum_horizontal
+from narwhals.functions import when
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
