@@ -23,7 +23,7 @@ def test_collect_kwargs(constructor: Constructor) -> None:
         .collect(
             polars_kwargs={"no_optimization": True},
             dask_kwargs={"optimize_graph": False},
-            duckdb_kwargs={"return_type": "pyarrow"},
+            duckdb_kwargs={"eager_backend": "pyarrow"},
         )
     )
 
@@ -32,7 +32,7 @@ def test_collect_kwargs(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
-    ("return_type", "expected_cls"),
+    ("eager_backend", "expected_cls"),
     [
         ("pyarrow", pa.Table),
         ("polars", pl.DataFrame),
@@ -40,7 +40,7 @@ def test_collect_kwargs(constructor: Constructor) -> None:
     ],
 )
 def test_collect_duckdb(
-    return_type: Literal["pyarrow", "polars", "pandas"], expected_cls: type
+    eager_backend: Literal["pyarrow", "polars", "pandas"], expected_cls: type
 ) -> None:
     duckdb = pytest.importorskip("duckdb")
 
@@ -48,7 +48,7 @@ def test_collect_duckdb(
     df_pl = pl.DataFrame(data)  # noqa: F841
     df = nw.from_native(duckdb.sql("select * from df_pl"))
 
-    result = df.lazy().collect(duckdb_kwargs={"return_type": return_type}).to_native()
+    result = df.lazy().collect(duckdb_kwargs={"eager_backend": eager_backend}).to_native()
     assert isinstance(result, expected_cls)
 
 
@@ -62,8 +62,8 @@ def test_collect_duckdb_raise() -> None:
     with pytest.raises(
         ValueError,
         match=(
-            "Only the following `return_type`'s are supported: pyarrow, pandas and "
+            "Only the following `eager_backend`'s are supported: pyarrow, pandas and "
             "polars. Found 'foo'."
         ),
     ):
-        df.lazy().collect(duckdb_kwargs={"return_type": "foo"})
+        df.lazy().collect(duckdb_kwargs={"eager_backend": "foo"})

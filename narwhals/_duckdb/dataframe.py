@@ -81,19 +81,21 @@ class DuckDBLazyFrame:
         )
 
     @overload
-    def collect(self, return_type: Literal["pyarrow"] = "pyarrow") -> ArrowDataFrame: ...
+    def collect(
+        self, eager_backend: Literal["pyarrow"] = "pyarrow"
+    ) -> ArrowDataFrame: ...
 
     @overload
-    def collect(self, return_type: Literal["pandas"]) -> PandasLikeDataFrame: ...
+    def collect(self, eager_backend: Literal["pandas"]) -> PandasLikeDataFrame: ...
 
     @overload
-    def collect(self, return_type: Literal["polars"]) -> PolarsDataFrame: ...
+    def collect(self, eager_backend: Literal["polars"]) -> PolarsDataFrame: ...
 
     def collect(
         self,
-        return_type: Literal["pyarrow", "pandas", "polars"] = "pyarrow",
+        eager_backend: Literal["pyarrow", "pandas", "polars"] = "pyarrow",
     ) -> ArrowDataFrame | PandasLikeDataFrame | PolarsDataFrame:
-        if return_type == "pyarrow":
+        if eager_backend == "pyarrow":
             try:
                 import pyarrow as pa  # ignore-banned-import
             except ModuleNotFoundError as exc:  # pragma: no cover
@@ -110,7 +112,7 @@ class DuckDBLazyFrame:
                 version=self._version,
             )
 
-        elif return_type == "pandas":
+        elif eager_backend == "pandas":
             import pandas as pd  # ignore-banned-import
 
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -123,7 +125,7 @@ class DuckDBLazyFrame:
                 version=self._version,
             )
 
-        elif return_type == "polars":
+        elif eager_backend == "polars":
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -137,8 +139,8 @@ class DuckDBLazyFrame:
 
         else:
             msg = (
-                "Only the following `return_type`'s are supported: pyarrow, pandas and "
-                f"polars. Found '{return_type}'."
+                "Only the following `eager_backend`'s are supported: pyarrow, pandas and "
+                f"polars. Found '{eager_backend}'."
             )
             raise ValueError(msg)
 

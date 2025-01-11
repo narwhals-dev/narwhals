@@ -436,7 +436,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             duckdb_kwargs: Allows to specify in which eager backend to materialize a
                 DuckDBPyRelation backed LazyFrame. It is possible to choose among
                 `pyarrow`, `pandas` or `polars` by declaring
-                `duckdb_kwargs={"return_type": "<eager_backend>"}`.
+                `duckdb_kwargs={"eager_backend": "<eager_backend>"}`.
 
         Returns:
             DataFrame
