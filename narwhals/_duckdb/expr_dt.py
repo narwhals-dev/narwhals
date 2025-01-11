@@ -123,3 +123,10 @@ class DuckDBExprDateTimeNamespace:
             "ordinal_day",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
+
+    def date(self) -> DuckDBExpr:
+        return self._compliant_expr._from_call(
+            lambda _input: _input.cast("date"),
+            "date",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
