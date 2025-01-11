@@ -93,3 +93,15 @@ class DuckDBExprDateTimeNamespace:
             "nanosecond",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
+
+    def to_string(self, format: str) -> DuckDBExpr:  # noqa: A002
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "strftime", _input, ConstantExpression(format)
+            ),
+            "to_string",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
