@@ -215,7 +215,7 @@ class DuckDBLazyFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -225,10 +225,6 @@ class DuckDBLazyFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
         original_alias = self._native_frame.alias
-
-        if how not in ("inner", "left", "semi", "cross"):
-            msg = "Only inner and left join is implemented for DuckDB"
-            raise NotImplementedError(msg)
 
         if how == "cross":
             if self._backend_version < (1, 1, 4):

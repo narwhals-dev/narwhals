@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import NoReturn
 from typing import Sequence
 
+from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
+from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import binary_operation_returns_scalar
 from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
@@ -301,13 +301,25 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def skew(self) -> Self:
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        return self._from_call(
-            lambda _input: FunctionExpression("skewness", _input),
-            "skew",
-            returns_scalar=True,
-        )
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            count = FunctionExpression("count", _input)
+            return CaseExpression(
+                condition=count == 0, value=ConstantExpression(None)
+            ).otherwise(
+                CaseExpression(
+                    condition=count == 1, value=ConstantExpression(float("nan"))
+                ).otherwise(
+                    CaseExpression(
+                        condition=count == 2, value=ConstantExpression(0.0)
+                    ).otherwise(FunctionExpression("skewness", _input))
+                )
+            )
+
+        return self._from_call(func, "skew", returns_scalar=True)
 
     def median(self) -> Self:
         from duckdb import FunctionExpression
@@ -488,6 +500,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
+    def null_count(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
+            "null_count",
+            returns_scalar=True,
+        )
+
     def is_null(self) -> Self:
         return self._from_call(
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
@@ -497,11 +518,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import ConstantExpression
 
         return self._from_call(
-            lambda _input: functools.reduce(
-                lambda x, y: x | _input.isin(ConstantExpression(y)),
-                other[1:],
-                _input.isin(ConstantExpression(other[0])),
-            ),
+            lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
             "is_in",
             returns_scalar=self._returns_scalar,
         )
@@ -554,213 +571,3 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     @property
     def dt(self: Self) -> DuckDBExprDateTimeNamespace:
         return DuckDBExprDateTimeNamespace(self)
-
-
-class DuckDBExprStringNamespace:
-    def __init__(self, expr: DuckDBExpr) -> None:
-        self._compliant_expr = expr
-
-    def starts_with(self, prefix: str) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "starts_with", _input, ConstantExpression(prefix)
-            ),
-            "starts_with",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def ends_with(self, suffix: str) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "ends_with", _input, ConstantExpression(suffix)
-            ),
-            "ends_with",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
-            if literal:
-                return FunctionExpression("contains", _input, ConstantExpression(pattern))
-            return FunctionExpression(
-                "regexp_matches", _input, ConstantExpression(pattern)
-            )
-
-        return self._compliant_expr._from_call(
-            func, "contains", returns_scalar=self._compliant_expr._returns_scalar
-        )
-
-    def slice(self, offset: int, length: int) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
-            return FunctionExpression(
-                "array_slice",
-                _input,
-                ConstantExpression(offset + 1)
-                if offset >= 0
-                else FunctionExpression("length", _input) + offset + 1,
-                FunctionExpression("length", _input)
-                if length is None
-                else ConstantExpression(length) + offset,
-            )
-
-        return self._compliant_expr._from_call(
-            func, "slice", returns_scalar=self._compliant_expr._returns_scalar
-        )
-
-    def to_lowercase(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("lower", _input),
-            "to_lowercase",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def to_uppercase(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("upper", _input),
-            "to_uppercase",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def strip_chars(self, characters: str | None) -> DuckDBExpr:
-        import string
-
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "trim",
-                _input,
-                ConstantExpression(
-                    string.whitespace if characters is None else characters
-                ),
-            ),
-            "strip_chars",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
-        if literal is False:
-            msg = "`replace_all` for DuckDB currently only supports `literal=True`."
-            raise NotImplementedError(msg)
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "replace", _input, ConstantExpression(pattern), ConstantExpression(value)
-            ),
-            "replace_all",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> NoReturn:
-        msg = "`replace` is currently not supported for DuckDB"
-        raise NotImplementedError(msg)
-
-
-class DuckDBExprDateTimeNamespace:
-    def __init__(self, expr: DuckDBExpr) -> None:
-        self._compliant_expr = expr
-
-    def year(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("year", _input),
-            "year",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def month(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("month", _input),
-            "month",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def day(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("day", _input),
-            "day",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def hour(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("hour", _input),
-            "hour",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def minute(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("minute", _input),
-            "minute",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def second(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("second", _input),
-            "second",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def millisecond(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("millisecond", _input)
-            - FunctionExpression("second", _input) * 1_000,
-            "millisecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def microsecond(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("microsecond", _input)
-            - FunctionExpression("second", _input) * 1_000_000,
-            "microsecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
-
-    def nanosecond(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("nanosecond", _input)
-            - FunctionExpression("second", _input) * 1_000_000_000,
-            "nanosecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
-        )
