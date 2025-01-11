@@ -294,6 +294,6 @@ def test_check_column_exists() -> None:
     subset = ["d", "f"]
     with pytest.raises(
         ColumnNotFoundError,
-        match=re.escape("Column(s) f, d not found in ['a', 'b', 'c']"),
+        match=re.escape("Column(s) {'f', 'd'} not found in ['a', 'b', 'c']"),
     ):
         check_column_exists(columns, subset)
