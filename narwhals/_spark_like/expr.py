@@ -291,9 +291,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def drop_nulls(self) -> Self:
         def _drop_nulls(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.explode(F.filter(F.array(_input), F.isnotnull))
+            return _input.isNotNull()
 
         return self._from_call(_drop_nulls, "drop_nulls", returns_scalar=True)
 
@@ -303,11 +301,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
-        def _fill_null(_input: Column) -> Column:
+        def _fill_null(
+            _input: Column,
+            value: Any | None = None,
+            strategy: Literal["forward", "backward"] | None = None,
+            limit: int | None = None,
+        ) -> Column:
             from pyspark.sql import Window
             from pyspark.sql import functions as F  # noqa: N812
-
-            fill_value: Column | Any
 
             if strategy is not None:
                 match strategy:
@@ -332,7 +333,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             return F.ifnull(_input, fill_value)
 
-        return self._from_call(_fill_null, "fill_null", returns_scalar=True)
+        return self._from_call(
+            _fill_null,
+            "fill_null",
+            value=value,
+            strategy=strategy,
+            limit=limit,
+            returns_scalar=True,
+        )
 
     def max(self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812
