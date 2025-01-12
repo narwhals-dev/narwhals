@@ -300,37 +300,37 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def fill_null(
         self,
         value: Any | None = None,
-        strategy: Literal["zero", "one"] | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
         def _fill_null(_input: Column) -> Column:
+            from pyspark.sql import Window
             from pyspark.sql import functions as F  # noqa: N812
-
-            if (value is not None) and (strategy is not None):
-                msg = "cannot specify both `value` and `strategy`"
-                raise ValueError(msg)
-
-            if (value is None) and (strategy is None):
-                msg = "must specify either a fill `value` or `strategy`"
-                raise ValueError(msg)
-
-            # TODO(unauthored): can only specify `limit` when strategy is set to 'backward' or 'forward'
 
             fill_value: Column | Any
 
             if strategy is not None:
                 match strategy:
-                    case "zero":
-                        fill_value = 0
-                    case "one":
-                        fill_value = 1
-                    case _:
-                        msg = f"strategy not supported: {strategy}"
-                        raise ValueError(msg)
+                    case "forward":
+                        lower_limit = (
+                            Window.unboundedPreceding if limit is None else -limit
+                        )
+                        window_spec = Window.orderBy(
+                            F.monotonically_increasing_id()
+                        ).rowsBetween(lower_limit, 0)
+                        fill_value = F.last(_input, ignorenulls=True).over(window_spec)
+                    case "backward":
+                        upper_limit = (
+                            Window.unboundedFollowing if limit is None else limit
+                        )
+                        window_spec = Window.orderBy(
+                            F.monotonically_increasing_id()
+                        ).rowsBetween(0, upper_limit)
+                        fill_value = F.first(_input, ignorenulls=True).over(window_spec)
             else:
-                fill_value = value
+                fill_value = F.lit(value)
 
-            return F.ifnull(_input, F.lit(fill_value))
+            return F.ifnull(_input, fill_value)
 
         return self._from_call(_fill_null, "fill_null", returns_scalar=True)
 
