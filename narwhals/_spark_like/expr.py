@@ -370,8 +370,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(
             _filter,
             "filter",
-            predicates=predicates,
-            constraints=constraints,
             returns_scalar=self._returns_scalar,
         )
 
