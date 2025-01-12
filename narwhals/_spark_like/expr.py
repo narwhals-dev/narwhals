@@ -295,7 +295,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def drop_nulls(self) -> Self:
         def _drop_nulls(_input: Column) -> Column:
-            return _input.isNotNull()
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.explode(F.filter(F.array(_input), F.isnotnull))
 
         return self._from_call(_drop_nulls, "drop_nulls", returns_scalar=True)
 
