@@ -352,7 +352,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> Self:
         def _filter(
-            _input: Column, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
+            _input: Column, predicates: Iterable[IntoExpr], constraints: Any
         ) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
@@ -370,7 +370,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(
             _filter,
             "filter",
-            returns_scalar=True,
+            predicates=predicates,
+            constraints=constraints,
+            returns_scalar=self._returns_scalar,
         )
 
     def max(self) -> Self:
