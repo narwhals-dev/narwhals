@@ -488,6 +488,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
         )
 
+    def is_nan(self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        return self._from_call(F.isnan, "is_nan", returns_scalar=True)
+
     def is_unique(self) -> Self:
         def _is_unique(_input: Column) -> Column:
             from pyspark.sql import Window
