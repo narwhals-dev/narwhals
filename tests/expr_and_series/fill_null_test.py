@@ -12,9 +12,7 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2, 3, 4],
         "b": [1.0, None, None, 5, 3],
