@@ -25,7 +25,7 @@ NON_NULLABLE_CONSTRUCTORS = [
 
 
 def test_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_na = {"int": [0, 1, None]}
     df = nw.from_native(constructor(data_na)).with_columns(
@@ -96,7 +96,7 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     from polars.exceptions import InvalidOperationError as PlInvalidOperationError
     from pyarrow.lib import ArrowNotImplementedError
