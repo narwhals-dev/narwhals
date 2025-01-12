@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -28,6 +31,9 @@ def test_drop_nulls(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result_b, expected_b)
     assert_equal_data(result_c, expected_c)
     assert_equal_data(result_d, expected_d)
+
+    with pytest.deprecated_call():
+        df.select(nw_main.col("A").drop_nulls())
 
 
 def test_drop_nulls_series(constructor_eager: ConstructorEager) -> None:

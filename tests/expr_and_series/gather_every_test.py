@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -20,6 +21,9 @@ def test_gather_every_expr(
     expected = {"a": data["a"][offset::n]}
 
     assert_equal_data(result, expected)
+
+    with pytest.deprecated_call():
+        df.select(nw_main.col("a").gather_every(n=n, offset=offset))
 
 
 @pytest.mark.parametrize("n", [1, 2, 3])

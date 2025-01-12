@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -13,6 +16,9 @@ def test_unique_expr(constructor_eager: ConstructorEager) -> None:
     result = df.select(nw.col("a").unique())
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
+
+    with pytest.deprecated_call():
+        df.select(nw_main.col("a").unique())
 
 
 def test_unique_series(constructor_eager: ConstructorEager) -> None:

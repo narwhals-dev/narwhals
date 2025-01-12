@@ -17,6 +17,7 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
+from narwhals.utils import issue_deprecation_warning
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -1286,6 +1287,13 @@ class Expr:
     def unique(self, *, maintain_order: bool = False) -> Self:
         """Return unique values of this expression.
 
+        !!! warning
+            `Expr.unique` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').unique())`, use
+            `df.select(nw.col('a')).unique()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             maintain_order: Keep the same order as the original expression. This may be more
                 expensive to compute. Settings this to `True` blocks the possibility
@@ -1293,54 +1301,14 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import polars as pl
-            >>> import pandas as pd
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").unique(maintain_order=True)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_unique`:
-
-            >>> agnostic_unique(df_pd)
-               a  b
-            0  1  2
-            1  3  4
-            2  5  6
-
-            >>> agnostic_unique(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            │ 3   ┆ 4   │
-            │ 5   ┆ 6   │
-            └─────┴─────┘
-
-            >>> agnostic_unique(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1,3,5]]
-            b: [[2,4,6]]
         """
+        msg = (
+            "`Expr.unique` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').unique())`, use `df.select(nw.col('a')).unique()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(maintain_order=maintain_order)
         )
@@ -2328,6 +2296,13 @@ class Expr:
     def drop_nulls(self) -> Self:
         """Drop null values.
 
+        !!! warning
+            `Expr.drop_nulls` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').drop_nulls())`, use
+            `df.select(nw.col('a')).drop_nulls()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Returns:
             A new expression.
 
@@ -2335,53 +2310,14 @@ class Expr:
             pandas handles null values differently from Polars and PyArrow.
             See [null_handling](../pandas_like_concepts/null_handling.md/)
             for reference.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
-            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
-            >>> df_pa = pa.table({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_drop_nulls(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").drop_nulls()).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_drop_nulls`:
-
-            >>> agnostic_drop_nulls(df_pd)
-                 a
-            0  2.0
-            1  4.0
-            3  3.0
-            5  5.0
-
-            >>> agnostic_drop_nulls(df_pl)
-            shape: (4, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 2.0 │
-            │ 4.0 │
-            │ 3.0 │
-            │ 5.0 │
-            └─────┘
-
-            >>> agnostic_drop_nulls(df_pa)
-            pyarrow.Table
-            a: double
-            ----
-            a: [[2,4,3,5]]
         """
+        msg = (
+            "`Expr.drop_nulls` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').drop_nulls())`, use `df.select(nw.col('a')).drop_nulls()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(lambda plx: self._to_compliant_expr(plx).drop_nulls())
 
     def sample(
@@ -2394,6 +2330,13 @@ class Expr:
     ) -> Self:
         """Sample randomly from this expression.
 
+        !!! warning
+            `Expr.sample` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sample())`, use
+            `df.select(nw.col('a')).sample()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
             fraction: Fraction of items to return. Cannot be used with n.
@@ -2403,54 +2346,14 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_sample(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a").sample(fraction=1.0, with_replacement=True)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_sample`:
-
-            >>> agnostic_sample(df_pd)  # doctest: +SKIP
-               a
-            2  3
-            0  1
-            2  3
-
-            >>> agnostic_sample(df_pl)  # doctest: +SKIP
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 2   │
-            │ 3   │
-            │ 3   │
-            └─────┘
-
-            >>> agnostic_sample(df_pa)  # doctest: +SKIP
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1,3,3]]
         """
+        msg = (
+            "`Expr.sample` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').sample())`, use `df.select(nw.col('a')).sample()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
@@ -2907,113 +2810,51 @@ class Expr:
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
+        !!! warning
+            `Expr.head` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').head())`, use
+            `df.select(nw.col('a')).head()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of rows to return.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": list(range(10))}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns the first 3 rows:
-
-            >>> def agnostic_head(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").head(3)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_head`:
-
-            >>> agnostic_head(df_pd)
-               a
-            0  0
-            1  1
-            2  2
-
-            >>> agnostic_head(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 0   │
-            │ 1   │
-            │ 2   │
-            └─────┘
-
-            >>> agnostic_head(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[0,1,2]]
         """
+        msg = (
+            "`Expr.head` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').head())`, use `df.select(nw.col('a')).head()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
+        !!! warning
+            `Expr.tail` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').tail())`, use
+            `df.select(nw.col('a')).tail()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of rows to return.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": list(range(10))}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns the last 3 rows:
-
-            >>> def agnostic_tail(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").tail(3)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_tail`:
-
-            >>> agnostic_tail(df_pd)
-               a
-            7  7
-            8  8
-            9  9
-
-            >>> agnostic_tail(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 7   │
-            │ 8   │
-            │ 9   │
-            └─────┘
-
-            >>> agnostic_tail(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[7,8,9]]
         """
+        msg = (
+            "`Expr.tail` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').tail())`, use `df.select(nw.col('a')).tail()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
@@ -3141,57 +2982,27 @@ class Expr:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
+        !!! warning
+            `Expr.gather_every` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').gather_every())`, use
+            `df.select(nw.col('a')).gather_every()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function in which gather every 2 rows,
-            starting from a offset of 1:
-
-            >>> def agnostic_gather_every(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").gather_every(n=2, offset=1)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_gather_every`:
-
-            >>> agnostic_gather_every(df_pd)
-               a
-            1  2
-            3  4
-
-            >>> agnostic_gather_every(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 2   │
-            │ 4   │
-            └─────┘
-
-            >>> agnostic_gather_every(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[2,4]]
         """
+        msg = (
+            "`Expr.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').gather_every())`, use `df.select(nw.col('a')).gather_every()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
