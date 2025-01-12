@@ -365,7 +365,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                     ],
                 )
             query = reduce(operator.and_, predicates)
-            return F.explode(F.filter(F.array(_input), lambda _: query))
+            return F.explode(
+                F.filter(F.array(_input), lambda _: query)
+            )  # TODO (unauthored): resolve PySparkValueError: [HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN] Function `<lambda>` should return Column, got SparkLikeExpr.
 
         return self._from_call(
             _filter,
