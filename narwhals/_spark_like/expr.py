@@ -316,19 +316,21 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             # TODO(unauthored): can only specify `limit` when strategy is set to 'backward' or 'forward'
 
+            fill_value: Column | Any
+
             if strategy is not None:
                 match strategy:
                     case "zero":
-                        fill_value = F.lit(0)
+                        fill_value = 0
                     case "one":
-                        fill_value = F.lit(1)
+                        fill_value = 1
                     case _:
                         msg = f"strategy not supported: {strategy}"
                         raise ValueError(msg)
             else:
                 fill_value = value
 
-            return F.ifnull(_input, fill_value)
+            return F.ifnull(_input, F.lit(fill_value))
 
         return self._from_call(_fill_null, "fill_null", returns_scalar=True)
 
