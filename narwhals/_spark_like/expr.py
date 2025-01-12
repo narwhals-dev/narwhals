@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import operator
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -11,6 +14,7 @@ from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals.typing import CompliantExpr
+from narwhals.typing import IntoExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
@@ -339,6 +343,33 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             value=value,
             strategy=strategy,
             limit=limit,
+            returns_scalar=True,
+        )
+
+    def filter(
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
+    ) -> Self:
+        def _filter(
+            _input: Column, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
+        ) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            if constraints:
+                predicates = (
+                    *predicates,
+                    *[
+                        operator.eq(F.col(key), value)
+                        for key, value in constraints.items()
+                    ],
+                )
+            query = reduce(operator.and_, predicates)
+            return F.explode(F.filter(F.array(_input), lambda _: query))
+
+        return self._from_call(
+            _filter,
+            "filter",
+            predicates=predicates,
+            constraints=constraints,
             returns_scalar=True,
         )
 
