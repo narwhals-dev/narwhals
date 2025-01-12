@@ -314,15 +314,19 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                 msg = "must specify either a fill `value` or `strategy`"
                 raise ValueError(msg)
 
-            fill_value = value
-            match strategy:
-                case "zero":
-                    fill_value = F.lit(0)
-                case "one":
-                    fill_value = F.lit(1)
-                case _:
-                    msg = f"strategy not supported: {strategy}"
-                    raise ValueError(msg)
+            # TODO(unauthored): can only specify `limit` when strategy is set to 'backward' or 'forward'
+
+            if strategy is not None:
+                match strategy:
+                    case "zero":
+                        fill_value = F.lit(0)
+                    case "one":
+                        fill_value = F.lit(1)
+                    case _:
+                        msg = f"strategy not supported: {strategy}"
+                        raise ValueError(msg)
+            else:
+                fill_value = value
 
             return F.ifnull(_input, fill_value)
 
