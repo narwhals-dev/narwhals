@@ -289,6 +289,45 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(F.count, "count", returns_scalar=True)
 
+    def drop_nulls(self) -> Self:
+        def _drop_nulls(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.explode(F.filter(F.array(_input), F.isnotnull))
+
+        return self._from_call(_drop_nulls, "drop_nulls", returns_scalar=True)
+
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["zero", "one"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        def _fill_null(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            if (value is not None) and (strategy is not None):
+                msg = "cannot specify both `value` and `strategy`"
+                raise ValueError(msg)
+
+            if (value is None) and (strategy is None):
+                msg = "must specify either a fill `value` or `strategy`"
+                raise ValueError(msg)
+
+            fill_value = value
+            match strategy:
+                case "zero":
+                    fill_value = F.lit(0)
+                case "one":
+                    fill_value = F.lit(1)
+                case _:
+                    msg = f"strategy not supported: {strategy}"
+                    raise ValueError(msg)
+
+            return F.ifnull(_input, fill_value)
+
+        return self._from_call(_fill_null, "fill_null", returns_scalar=True)
+
     def max(self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812
 
