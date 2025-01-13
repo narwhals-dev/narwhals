@@ -104,6 +104,8 @@ def render_table_and_write_to_output(
         .sort("Method")
     )
 
+    results = results.with_columns(polars=pl.lit(":white_check_mark:"))
+
     with pl.Config(
         tbl_formatting="ASCII_MARKDOWN",
         tbl_hide_column_data_types=True,
