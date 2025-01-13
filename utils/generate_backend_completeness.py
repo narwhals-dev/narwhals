@@ -49,7 +49,6 @@ BACKENDS = [
     Backend(name="duckdb", module="_duckdb", type_=BackendType.LAZY),
     Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
     Backend(name="spark-like", module="_spark_like", type_=BackendType.LAZY),
-    Backend(name="polars", module="_polars", type_=BackendType.EAGER),
 ]
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
