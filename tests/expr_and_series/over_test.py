@@ -5,6 +5,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -21,9 +22,7 @@ data_cum = {
 }
 
 
-def test_over_single(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
-) -> None:
+def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
@@ -41,9 +40,7 @@ def test_over_single(
     assert_equal_data(result, expected)
 
 
-def test_over_multiple(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
-) -> None:
+def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
@@ -61,9 +58,7 @@ def test_over_multiple(
     assert_equal_data(result, expected)
 
 
-def test_over_invalid(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
-) -> None:
+def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):

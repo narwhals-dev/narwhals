@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -91,7 +92,7 @@ def test_str_replace_all_series(
     replace_data,
 )
 def test_str_replace_expr(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
@@ -114,7 +115,7 @@ def test_str_replace_expr(
     replace_all_data,
 )
 def test_str_replace_all_expr(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     data: dict[str, list[str]],
     pattern: str,
     value: str,

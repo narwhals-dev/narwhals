@@ -5,6 +5,7 @@ from typing import Literal
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -19,7 +20,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_is_between(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     closed: Literal["left", "right", "none", "both"],
     expected: list[bool],
 ) -> None:
@@ -30,7 +31,7 @@ def test_is_between(
     assert_equal_data(result, expected_dict)
 
 
-def test_is_between_expressified(constructor: ConstructorEager) -> None:
+def test_is_between_expressified(constructor: Constructor) -> None:
     data = {"a": [1, 4, 2, 5], "b": [0, 5, 2, 4], "c": [9, 9, 9, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(nw.col("b") * 0.9, nw.col("c") - 1))

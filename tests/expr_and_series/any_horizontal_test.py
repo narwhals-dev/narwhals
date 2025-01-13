@@ -5,13 +5,13 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_anyh(constructor: ConstructorEager, expr1: Any, expr2: Any) -> None:
+def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
@@ -23,7 +23,7 @@ def test_anyh(constructor: ConstructorEager, expr1: Any, expr2: Any) -> None:
     assert_equal_data(result, expected)
 
 
-def test_anyh_all(constructor: ConstructorEager) -> None:
+def test_anyh_all(constructor: Constructor) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],

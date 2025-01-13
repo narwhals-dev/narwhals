@@ -12,6 +12,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -56,7 +57,7 @@ schema = {
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
@@ -177,7 +178,7 @@ def test_cast_string() -> None:
 
 
 def test_cast_raises_for_unknown_dtype(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -196,7 +197,7 @@ def test_cast_raises_for_unknown_dtype(
 
 
 def test_cast_datetime_tz_aware(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         "dask" in str(constructor)
@@ -227,9 +228,7 @@ def test_cast_datetime_tz_aware(
     assert_equal_data(result, expected)
 
 
-def test_cast_struct(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
-) -> None:
+def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "duckdb", "pyspark")
@@ -255,7 +254,7 @@ def test_cast_struct(
 
 
 @pytest.mark.parametrize("dtype", [pl.String, pl.String()])
-def test_raise_if_polars_dtype(constructor: ConstructorEager, dtype: Any) -> None:
+def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
         df.select(nw.col("a").cast(dtype))

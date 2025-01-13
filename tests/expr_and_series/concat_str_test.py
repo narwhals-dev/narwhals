@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 data = {
@@ -21,7 +21,7 @@ data = {
     ],
 )
 def test_concat_str(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     *,
     ignore_nulls: bool,
     expected: list[str],

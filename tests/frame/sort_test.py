@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_sort(constructor: ConstructorEager) -> None:
+def test_sort(constructor: Constructor) -> None:
     data = {"an tan": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.sort("an tan", "b")
@@ -34,7 +34,7 @@ def test_sort(constructor: ConstructorEager) -> None:
     ],
 )
 def test_sort_nulls(
-    constructor: ConstructorEager, *, nulls_last: bool, expected: dict[str, float]
+    constructor: Constructor, *, nulls_last: bool, expected: dict[str, float]
 ) -> None:
     data = {"antan desc": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     df = nw.from_native(constructor(data))

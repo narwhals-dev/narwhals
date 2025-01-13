@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -20,9 +21,7 @@ expected_results = {
 
 
 @pytest.mark.parametrize("input_data", [data, data_with_nulls])
-def test_std(
-    constructor: ConstructorEager, input_data: dict[str, list[float | None]]
-) -> None:
+def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]) -> None:
     df = nw.from_native(constructor(input_data))
     result = df.select(
         nw.col("a").std(ddof=1).alias("a_ddof_1"),

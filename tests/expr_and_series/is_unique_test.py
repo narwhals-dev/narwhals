@@ -3,13 +3,12 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_is_unique_expr(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_is_unique_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -28,7 +27,7 @@ def test_is_unique_expr(
 
 
 def test_is_unique_w_nulls_expr(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

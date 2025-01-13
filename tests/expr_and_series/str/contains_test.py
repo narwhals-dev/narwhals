@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -10,7 +11,7 @@ data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", "Parrot|dove", None]
 
 
 def test_contains_case_insensitive(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -39,7 +40,7 @@ def test_contains_series_case_insensitive(
     assert_equal_data(result, expected)
 
 
-def test_contains_case_sensitive(constructor: ConstructorEager) -> None:
+def test_contains_case_sensitive(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("pets").str.contains("parrot|Dove").alias("default_match"))
     expected = {
@@ -57,7 +58,7 @@ def test_contains_series_case_sensitive(constructor_eager: ConstructorEager) -> 
     assert_equal_data(result, expected)
 
 
-def test_contains_literal(constructor: ConstructorEager) -> None:
+def test_contains_literal(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("pets").str.contains("Parrot|dove").alias("default_match"),

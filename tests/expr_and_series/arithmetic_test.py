@@ -13,6 +13,7 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -34,7 +35,7 @@ def test_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if "duckdb" in str(constructor) and attr == "__floordiv__":
@@ -66,7 +67,7 @@ def test_right_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
@@ -241,7 +242,7 @@ def test_arithmetic_expr_left_literal(
     attr: str,
     lhs: Any,
     expected: list[Any],
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if ("duckdb" in str(constructor) and attr == "__floordiv__") or (

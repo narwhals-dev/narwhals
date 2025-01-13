@@ -4,6 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -19,7 +20,7 @@ data = {
     "expr", [nw.col("a", "b", "z").median(), nw.median("a", "b", "z")]
 )
 def test_median_expr(
-    constructor: ConstructorEager, expr: nw.Expr, request: pytest.FixtureRequest
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -40,7 +41,7 @@ def test_median_series(
 
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
-    constructor: ConstructorEager, expr: nw.Expr, request: pytest.FixtureRequest
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

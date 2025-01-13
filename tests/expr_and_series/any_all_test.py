@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_any_all(constructor: ConstructorEager) -> None:
+def test_any_all(constructor: Constructor) -> None:
     df = nw.from_native(
         constructor(
             {

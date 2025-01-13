@@ -5,7 +5,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}
@@ -18,9 +18,7 @@ expected = {
 }
 
 
-def test_from_numpy(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -31,7 +29,7 @@ def test_from_numpy(
 
 
 def test_from_numpy_schema_dict(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -52,7 +50,7 @@ def test_from_numpy_schema_dict(
 
 
 def test_from_numpy_schema_list(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -68,7 +66,7 @@ def test_from_numpy_schema_list(
 
 
 def test_from_numpy_schema_notvalid(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -80,9 +78,7 @@ def test_from_numpy_schema_notvalid(
         nw.from_numpy(arr, schema="a", native_namespace=native_namespace)  # type: ignore[arg-type]
 
 
-def test_from_numpy_v1(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw_v1.from_native(constructor(data))
@@ -92,7 +88,7 @@ def test_from_numpy_v1(
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_from_numpy_not2d(constructor: ConstructorEager) -> None:
+def test_from_numpy_not2d(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     native_namespace = nw_v1.get_native_namespace(df)
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):

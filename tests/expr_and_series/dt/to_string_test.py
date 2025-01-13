@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -59,7 +60,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_expr(
-    constructor: ConstructorEager, fmt: str, request: pytest.FixtureRequest
+    constructor: Constructor, fmt: str, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -135,7 +136,7 @@ def test_dt_to_string_iso_local_datetime_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime_expr(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     data: datetime,
     expected: str,
     request: pytest.FixtureRequest,
@@ -174,7 +175,7 @@ def test_dt_to_string_iso_local_date_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     data: datetime,
     expected: str,
     request: pytest.FixtureRequest,

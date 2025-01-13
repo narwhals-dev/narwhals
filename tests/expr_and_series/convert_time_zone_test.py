@@ -10,6 +10,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 
 def test_convert_time_zone(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if (
@@ -77,7 +78,7 @@ def test_convert_time_zone_series(
 
 
 def test_convert_time_zone_from_none(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
@@ -111,7 +112,7 @@ def test_convert_time_zone_from_none(
     assert_equal_data(result_str, expected)
 
 
-def test_convert_time_zone_to_none(constructor: ConstructorEager) -> None:
+def test_convert_time_zone_to_none(constructor: Constructor) -> None:
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),

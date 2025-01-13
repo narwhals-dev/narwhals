@@ -13,6 +13,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -44,7 +45,7 @@ data = {
 )
 def test_timestamp_datetimes(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     original_time_unit: Literal["us", "ns", "ms", "s"],
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
@@ -86,7 +87,7 @@ def test_timestamp_datetimes(
 )
 def test_timestamp_datetimes_tz_aware(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     original_time_unit: Literal["us", "ns", "ms", "s"],
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
@@ -135,7 +136,7 @@ def test_timestamp_datetimes_tz_aware(
 )
 def test_timestamp_dates(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
@@ -164,7 +165,7 @@ def test_timestamp_dates(
 
 
 def test_timestamp_invalid_date(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
@@ -181,7 +182,7 @@ def test_timestamp_invalid_date(
         df_num.select(nw.col("a").dt.timestamp())
 
 
-def test_timestamp_invalid_unit_expr(constructor: ConstructorEager) -> None:
+def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:
     time_unit_invalid = "i"
     msg = (
         "invalid `time_unit`"

@@ -5,13 +5,13 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
 def test_meanh(
-    constructor: ConstructorEager, col_expr: Any, request: pytest.FixtureRequest
+    constructor: Constructor, col_expr: Any, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -22,7 +22,7 @@ def test_meanh(
     assert_equal_data(result, expected)
 
 
-def test_meanh_all(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
+def test_meanh_all(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [2, 4, 6], "b": [10, 20, 30]}

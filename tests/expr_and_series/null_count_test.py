@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -10,7 +11,7 @@ data = {
 }
 
 
-def test_null_count_expr(constructor: ConstructorEager) -> None:
+def test_null_count_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").null_count())
     expected = {

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_abs(constructor: ConstructorEager) -> None:
+def test_abs(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.select(b=nw.col("a").abs())
     expected = {"b": [1, 2, 3, 4, 5]}

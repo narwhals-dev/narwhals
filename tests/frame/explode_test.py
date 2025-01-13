@@ -11,7 +11,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 # For context, polars allows to explode multiple columns only if the columns
@@ -34,7 +34,7 @@ data = {
 )
 def test_explode_single_col(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     column: str,
     expected_values: list[int | None],
 ) -> None:
@@ -82,7 +82,7 @@ def test_explode_single_col(
 )
 def test_explode_multiple_cols(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     columns: str | Sequence[str],
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
@@ -106,7 +106,7 @@ def test_explode_multiple_cols(
 
 
 def test_explode_shape_error(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(
         backend in str(constructor)
@@ -131,7 +131,7 @@ def test_explode_shape_error(
 
 
 def test_explode_invalid_operation_error(
-    request: pytest.FixtureRequest, constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)

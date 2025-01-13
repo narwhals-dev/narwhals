@@ -6,15 +6,13 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
-def test_to_uppercase(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_to_uppercase(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -24,7 +22,7 @@ def test_to_uppercase(
 
 
 def test_to_uppercase_after_alias(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
@@ -35,7 +33,7 @@ def test_to_uppercase_after_alias(
 
 
 def test_to_uppercase_raise_anonymous(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)

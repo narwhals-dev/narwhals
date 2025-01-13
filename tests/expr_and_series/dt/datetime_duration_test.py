@@ -9,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -37,7 +38,7 @@ data = {
 )
 def test_duration_attributes(
     request: pytest.FixtureRequest,
-    constructor: ConstructorEager,
+    constructor: Constructor,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],

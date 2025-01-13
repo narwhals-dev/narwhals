@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": ["foo", "bars"]}
 
 
-def test_str_head(constructor: ConstructorEager) -> None:
+def test_str_head(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.head(3))
     expected = {

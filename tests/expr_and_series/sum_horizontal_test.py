@@ -5,13 +5,13 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
 def test_sumh(
-    constructor: ConstructorEager, col_expr: Any, request: pytest.FixtureRequest
+    constructor: Constructor, col_expr: Any, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -27,9 +27,7 @@ def test_sumh(
     assert_equal_data(result, expected)
 
 
-def test_sumh_nullable(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_sumh_nullable(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 8, 3], "b": [4, 5, None]}
@@ -40,7 +38,7 @@ def test_sumh_nullable(
     assert_equal_data(result, expected)
 
 
-def test_sumh_all(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
+def test_sumh_all(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}

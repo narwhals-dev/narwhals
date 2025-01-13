@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import timedelta
+from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -59,6 +60,7 @@ NON_TEMPORAL_SCALAR_TYPES = (
     int,
     float,
     complex,
+    Decimal,
 )
 
 

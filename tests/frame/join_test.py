@@ -12,11 +12,11 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_inner_join_two_keys(constructor: ConstructorEager) -> None:
+def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
@@ -45,7 +45,7 @@ def test_inner_join_two_keys(constructor: ConstructorEager) -> None:
     assert_equal_data(result_on, expected)
 
 
-def test_inner_join_single_key(constructor: ConstructorEager) -> None:
+def test_inner_join_single_key(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
@@ -75,9 +75,7 @@ def test_inner_join_single_key(constructor: ConstructorEager) -> None:
     assert_equal_data(result_on, expected)
 
 
-def test_cross_join(
-    constructor: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_cross_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
@@ -97,7 +95,7 @@ def test_cross_join(
 
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_suffix(constructor: ConstructorEager, how: str, suffix: str) -> None:
+def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
@@ -118,7 +116,7 @@ def test_suffix(constructor: ConstructorEager, how: str, suffix: str) -> None:
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
 def test_cross_join_suffix(
-    constructor: ConstructorEager, suffix: str, request: pytest.FixtureRequest
+    constructor: Constructor, suffix: str, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         request.applymarker(pytest.mark.xfail)
@@ -164,7 +162,7 @@ def test_cross_join_non_pandas() -> None:
     ],
 )
 def test_anti_join(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
@@ -202,7 +200,7 @@ def test_anti_join(
     ],
 )
 def test_semi_join(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
@@ -217,7 +215,7 @@ def test_semi_join(
 
 
 @pytest.mark.parametrize("how", ["right", "full"])
-def test_join_not_implemented(constructor: ConstructorEager, how: str) -> None:
+def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
@@ -230,7 +228,7 @@ def test_join_not_implemented(constructor: ConstructorEager, how: str) -> None:
         df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]
 
 
-def test_left_join(constructor: ConstructorEager) -> None:
+def test_left_join(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
@@ -268,7 +266,7 @@ def test_left_join(constructor: ConstructorEager) -> None:
     assert_equal_data(result_on_list, expected_on_list)
 
 
-def test_left_join_multiple_column(constructor: ConstructorEager) -> None:
+def test_left_join_multiple_column(constructor: Constructor) -> None:
     data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
     data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
     df_left = nw.from_native(constructor(data_left))
@@ -285,7 +283,7 @@ def test_left_join_multiple_column(constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_left_join_overlapping_column(constructor: ConstructorEager) -> None:
+def test_left_join_overlapping_column(constructor: Constructor) -> None:
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
@@ -331,7 +329,7 @@ def test_left_join_overlapping_column(constructor: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
-def test_join_keys_exceptions(constructor: ConstructorEager, how: str) -> None:
+def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
@@ -358,7 +356,7 @@ def test_join_keys_exceptions(constructor: ConstructorEager, how: str) -> None:
 
 
 def test_joinasof_numeric(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
@@ -417,7 +415,7 @@ def test_joinasof_numeric(
 
 
 def test_joinasof_time(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
@@ -498,7 +496,7 @@ def test_joinasof_time(
 
 
 def test_joinasof_by(
-    constructor: ConstructorEager,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
@@ -535,7 +533,7 @@ def test_joinasof_by(
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
 def test_joinasof_not_implemented(
-    constructor: ConstructorEager, strategy: Literal["backward", "forward"]
+    constructor: Constructor, strategy: Literal["backward", "forward"]
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
@@ -552,7 +550,7 @@ def test_joinasof_not_implemented(
         )
 
 
-def test_joinasof_keys_exceptions(constructor: ConstructorEager) -> None:
+def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
@@ -593,7 +591,7 @@ def test_joinasof_keys_exceptions(constructor: ConstructorEager) -> None:
         df.join_asof(df, right_on="antananarivo", on="antananarivo")  # type: ignore[arg-type]
 
 
-def test_joinasof_by_exceptions(constructor: ConstructorEager) -> None:
+def test_joinasof_by_exceptions(constructor: Constructor) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
