@@ -29,6 +29,8 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import pandas as pd
+    import polars as pl
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -303,13 +305,13 @@ class PandasLikeSeries(CompliantSeries):
     def arg_min(self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.values.argmin()  # type: ignore[no-any-return]
+            return ser.to_numpy().argmin()  # type: ignore[no-any-return]
         return ser.argmin()  # type: ignore[no-any-return]
 
     def arg_max(self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.values.argmax()  # type: ignore[no-any-return]
+            return ser.to_numpy().argmax()  # type: ignore[no-any-return]
         return ser.argmax()  # type: ignore[no-any-return]
 
     # Binary comparisons
@@ -837,7 +839,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         return s.to_numpy(dtype=dtype, copy=copy)
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self: Self) -> pd.Series:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
         elif self._implementation is Implementation.CUDF:
@@ -846,6 +848,16 @@ class PandasLikeSeries(CompliantSeries):
             return self._native_series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
+
+    def to_polars(self: Self) -> pl.DataFrame:
+        import polars as pl  # ignore-banned-import
+
+        if self._implementation is Implementation.PANDAS:
+            return pl.from_pandas(self._native_series)
+        if self._implementation is Implementation.MODIN:
+            return self._native_series._to_polars()  # type: ignore[no-any-return]
+
+        raise NotImplementedError
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:

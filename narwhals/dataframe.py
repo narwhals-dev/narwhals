@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -580,6 +581,72 @@ class DataFrame(BaseFrame[DataFrameT]):
             2    3  8.0   c
         """
         return self._compliant_frame.to_pandas()
+
+    def to_polars(self) -> pl.DataFrame:
+        """Convert this DataFrame to a polars DataFrame.
+
+        Returns:
+            A polars DataFrame.
+
+        Examples:
+            Construct pandas, Polars (eager) and PyArrow DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> def agnostic_to_polars(df_native: IntoDataFrame) -> pl.DataFrame:
+            ...     df = nw.from_native(df_native)
+            ...     return df.to_polars()
+
+            We can then pass any supported library such as pandas, Polars (eager), or
+            PyArrow to `agnostic_to_polars`:
+
+            >>> agnostic_to_polars(df_pd)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+
+            >>> agnostic_to_polars(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+
+            >>> agnostic_to_polars(df_pa)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+        """
+        return self._compliant_frame.to_polars()  # type: ignore[no-any-return]
 
     @overload
     def write_csv(self, file: None = None) -> str: ...
