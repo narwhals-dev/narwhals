@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -2764,8 +2765,8 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_numpy()
 
-    def to_pandas(self) -> pd.Series:
-        """Convert to pandas.
+    def to_pandas(self: Self) -> pd.Series:
+        """Convert to pandas Series.
 
         Returns:
             A pandas Series containing the data from this Series.
@@ -2810,6 +2811,62 @@ class Series(Generic[IntoSeriesT]):
             Name: , dtype: int64
         """
         return self._compliant_series.to_pandas()
+
+    def to_polars(self: Self) -> pl.Series:
+        """Convert to polars Series.
+
+        Returns:
+            A polars Series containing the data from this Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeries
+
+            >>> data = [1, 2, 3]
+            >>> s_pd = pd.Series(data, name="a")
+            >>> s_pl = pl.Series("a", data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> def agnostic_to_polars(s_native: IntoSeries) -> pd.Series:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.to_polars()
+
+            We can then pass any supported library such as pandas, Polars, or
+            PyArrow to `agnostic_to_polars`:
+
+            >>> agnostic_to_polars(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+                3
+            ]
+
+            >>> agnostic_to_polars(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+                3
+            ]
+
+            >>> agnostic_to_polars(s_pa)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                1
+                2
+                3
+            ]
+        """
+        return self._compliant_series.to_polars()  # type: ignore[no-any-return]
 
     def __add__(self, other: object) -> Self:
         return self._from_compliant_series(

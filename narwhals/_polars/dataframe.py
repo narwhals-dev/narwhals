@@ -332,6 +332,9 @@ class PolarsDataFrame:
         )
         return self._from_native_object(result)
 
+    def to_polars(self: Self) -> pl.DataFrame:
+        return self._native_frame
+
 
 class PolarsLazyFrame:
     def __init__(

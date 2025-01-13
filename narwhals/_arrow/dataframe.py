@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -426,6 +427,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
+
+    def to_polars(self: Self) -> pl.DataFrame:
+        import polars as pl  # ignore-banned-import
+
+        return pl.from_arrow(self._native_frame)  # type: ignore[return-value]
 
     def to_numpy(self: Self) -> np.ndarray:
         import numpy as np  # ignore-banned-import

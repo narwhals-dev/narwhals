@@ -77,6 +77,7 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_polars
         - to_native
         - unique
         - value_counts

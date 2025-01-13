@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -732,6 +733,11 @@ class ArrowSeries(CompliantSeries):
         import pandas as pd  # ignore-banned-import()
 
         return pd.Series(self._native_series, name=self.name)
+
+    def to_polars(self: Self) -> pl.Series:
+        import polars as pl  # ignore-banned-import
+
+        return pl.from_arrow(self._native_series)  # type: ignore[return-value]
 
     def is_duplicated(self: Self) -> ArrowSeries:
         return self.to_frame().is_duplicated().alias(self.name)

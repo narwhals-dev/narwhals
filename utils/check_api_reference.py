@@ -30,6 +30,7 @@ SERIES_ONLY_METHODS = {
     "to_native",
     "to_numpy",
     "to_pandas",
+    "to_polars",
     "value_counts",
     "zip_with",
     "__iter__",
