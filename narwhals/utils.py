@@ -1165,7 +1165,11 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
         raise ValueError(msg) from e
 
     _, _, module_name = nw_cls.__module__.partition(".")
-    module_ = import_module(f"narwhals.{backend}.{module_name}")
+    try:
+        module_ = import_module(f"narwhals.{backend}.{module_name}")
+    except ModuleNotFoundError:
+        return False
+
     classes_ = getmembers(
         module_,
         predicate=lambda c: (
