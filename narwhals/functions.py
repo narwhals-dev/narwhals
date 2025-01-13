@@ -2060,11 +2060,14 @@ class When:
         return [extract_compliant(plx, v) for v in self._predicates]
 
     def then(self, value: Any) -> Then:
+        is_order_dependent = any(
+            getattr(x, "_is_order_dependent", False) for x in self._predicates
+        )
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
                 extract_compliant(plx, value)
             ),
-            is_order_dependent=False,
+            is_order_dependent=is_order_dependent,
         )
 
 

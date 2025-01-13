@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -17,7 +16,7 @@ data = {"a": ["fdas", "edfas"]}
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     offset: int,
     length: int | None,
     expected: Any,

@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -28,7 +27,7 @@ from tests.utils import assert_equal_data
     ids=range(5),
 )
 def test_scalar_reduction_select(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     expr: list[Any],
     expected: dict[str, list[Any]],
     request: pytest.FixtureRequest,
@@ -67,7 +66,7 @@ def test_scalar_reduction_select(
     ids=range(5),
 )
 def test_scalar_reduction_with_columns(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     expr: list[Any],
     expected: dict[str, list[Any]],
     request: pytest.FixtureRequest,
@@ -83,7 +82,7 @@ def test_scalar_reduction_with_columns(
 
 
 def test_empty_scalar_reduction_select(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -116,7 +115,7 @@ def test_empty_scalar_reduction_select(
 
 
 def test_empty_scalar_reduction_with_columns(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

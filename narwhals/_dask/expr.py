@@ -350,69 +350,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
     def skew(self: Self) -> Self:
         return self._from_call(lambda _input: _input.skew(), "skew", returns_scalar=True)
 
-    def shift(self, n: int) -> Self:
-        return self._from_call(
-            lambda _input, n: _input.shift(n),
-            "shift",
-            n=n,
-            returns_scalar=self._returns_scalar,
-        )
-
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
-            raise NotImplementedError(msg)
-
-        return self._from_call(
-            lambda _input: _input.cumsum(),
-            "cum_sum",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def cum_count(self: Self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
-            raise NotImplementedError(msg)
-
-        return self._from_call(
-            lambda _input: (~_input.isna()).astype(int).cumsum(),
-            "cum_count",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def cum_min(self: Self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
-            raise NotImplementedError(msg)
-
-        return self._from_call(
-            lambda _input: _input.cummin(),
-            "cum_min",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def cum_max(self: Self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
-            raise NotImplementedError(msg)
-
-        return self._from_call(
-            lambda _input: _input.cummax(),
-            "cum_max",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
-            raise NotImplementedError(msg)
-
-        return self._from_call(
-            lambda _input: _input.cumprod(),
-            "cum_prod",
-            returns_scalar=self._returns_scalar,
-        )
-
     def is_between(
         self,
         lower_bound: Self | Any,
@@ -552,11 +489,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             lower_bound=lower_bound,
             upper_bound=upper_bound,
             returns_scalar=self._returns_scalar,
-        )
-
-    def diff(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.diff(), "diff", returns_scalar=self._returns_scalar
         )
 
     def n_unique(self: Self) -> Self:

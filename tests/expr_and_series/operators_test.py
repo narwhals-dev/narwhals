@@ -4,7 +4,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import DASK_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -21,7 +20,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_comparand_operators_scalar_expr(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     operator: str,
     expected: list[bool],
 ) -> None:
@@ -43,7 +42,7 @@ def test_comparand_operators_scalar_expr(
     ],
 )
 def test_comparand_operators_expr(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     operator: str,
     expected: list[bool],
 ) -> None:
@@ -61,7 +60,7 @@ def test_comparand_operators_expr(
     ],
 )
 def test_logic_operators_expr(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     operator: str,
     expected: list[bool],
 ) -> None:
@@ -82,7 +81,7 @@ def test_logic_operators_expr(
     ],
 )
 def test_logic_operators_expr_scalar(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     operator: str,
     expected: list[bool],
     request: pytest.FixtureRequest,

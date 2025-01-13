@@ -5,7 +5,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
@@ -20,7 +20,7 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
     ],
 )
 def test_nth(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     idx: int | list[int],
     expected: dict[str, list[int]],
     request: pytest.FixtureRequest,

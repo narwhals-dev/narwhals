@@ -3,14 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 4, 2, 5]}
 
 
-def test_expr_is_in(constructor: Constructor) -> None:
+def test_expr_is_in(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
@@ -26,7 +25,7 @@ def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_in_other(constructor: Constructor) -> None:
+def test_is_in_other(constructor: ConstructorEager) -> None:
     df_raw = constructor(data)
     with pytest.raises(
         NotImplementedError,

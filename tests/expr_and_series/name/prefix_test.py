@@ -6,14 +6,14 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"
 
 
-def test_prefix(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_prefix(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -24,7 +24,7 @@ def test_prefix(request: pytest.FixtureRequest, constructor: Constructor) -> Non
 
 
 def test_suffix_after_alias(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, constructor: ConstructorEager
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -36,7 +36,7 @@ def test_suffix_after_alias(
 
 
 def test_prefix_raise_anonymous(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, constructor: ConstructorEager
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)

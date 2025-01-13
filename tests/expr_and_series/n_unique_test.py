@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -11,7 +10,7 @@ data = {
 }
 
 
-def test_n_unique(constructor: Constructor) -> None:
+def test_n_unique(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").n_unique())
     expected = {"a": [3], "b": [4]}

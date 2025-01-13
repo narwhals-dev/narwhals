@@ -9,12 +9,12 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
 def test_renamed_taxicab_norm(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -47,7 +47,7 @@ def test_renamed_taxicab_norm(
 
 
 def test_renamed_taxicab_norm_dataframe(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, constructor: ConstructorEager
 ) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
@@ -66,7 +66,7 @@ def test_renamed_taxicab_norm_dataframe(
 
 
 def test_renamed_taxicab_norm_dataframe_narwhalify(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, constructor: ConstructorEager
 ) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
@@ -147,7 +147,7 @@ def test_series_docstrings() -> None:
         ), item
 
 
-def test_dtypes(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_dtypes(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

@@ -5,12 +5,11 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_unary(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -79,7 +78,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_unary_two_elements(constructor: Constructor) -> None:
+def test_unary_two_elements(constructor: ConstructorEager) -> None:
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
         a_nunique=nw.col("a").n_unique(),
@@ -123,7 +122,7 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_unary_one_element(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)

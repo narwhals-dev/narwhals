@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -53,7 +52,7 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 def test_scan_csv(
     tmpdir: pytest.TempdirFactory,
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -70,7 +69,7 @@ def test_scan_csv(
 def test_scan_csv_v1(
     tmpdir: pytest.TempdirFactory,
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -135,7 +134,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 def test_scan_parquet(
     tmpdir: pytest.TempdirFactory,
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -153,7 +152,7 @@ def test_scan_parquet(
 def test_scan_parquet_v1(
     tmpdir: pytest.TempdirFactory,
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)

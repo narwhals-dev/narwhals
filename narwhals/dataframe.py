@@ -63,31 +63,14 @@ class BaseFrame(Generic[FrameT]):
             level=self._level,
         )
 
+    def _extract_compliant(self, arg: Any) -> Any:
+        raise NotImplementedError
+
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
         args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
         return args, kwargs
-
-    def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):
-            return arg._compliant_series
-        if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        return arg
 
     @property
     def schema(self) -> Schema:
@@ -358,6 +341,26 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             ```
     """
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):
+            return arg._compliant_series
+        if isinstance(arg, Expr):
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        return arg
 
     @property
     def _series(self) -> type[Series[Any]]:
@@ -3552,6 +3555,38 @@ class LazyFrame(BaseFrame[FrameT]):
         narwhals.from_native(native_lazyframe)
         ```
     """
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):
+            msg = "Mixing Series with LazyFrame is not supported."
+            raise TypeError(msg)
+        if isinstance(arg, Expr):
+            if arg._is_order_dependent:
+                msg = (
+                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                    "Hints:\n"
+                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()\n"
+                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                    "- `Expr.cum_sum`, and other such expressions, are not currently supported.\n"
+                    "  In a future version of Narwhals, a `order_by` argument will be added and \n"
+                    "  they will be supported."
+                )
+                raise TypeError(msg)
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        return arg
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:

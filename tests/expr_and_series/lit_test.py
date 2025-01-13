@@ -10,7 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 )
 def test_lit(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     dtype: DType | None,
     expected_lit: list[Any],
 ) -> None:
@@ -42,7 +42,7 @@ def test_lit(
     assert_equal_data(result, expected)
 
 
-def test_lit_error(constructor: Constructor) -> None:
+def test_lit_error(constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -60,7 +60,7 @@ def test_lit_error(constructor: Constructor) -> None:
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
 
 
-def test_lit_out_name(constructor: Constructor) -> None:
+def test_lit_out_name(constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -86,7 +86,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     ],
 )
 def test_lit_operation(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
@@ -122,7 +122,7 @@ def test_lit_operation(
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_date_lit(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         # https://github.com/dask/dask/issues/11637
         request.applymarker(pytest.mark.xfail)

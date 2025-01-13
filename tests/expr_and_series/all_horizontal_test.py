@@ -6,14 +6,13 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
+def test_allh(constructor: ConstructorEager, expr1: Any, expr2: Any) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
@@ -37,7 +36,7 @@ def test_allh_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_allh_all(constructor: Constructor) -> None:
+def test_allh_all(constructor: ConstructorEager) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
@@ -52,7 +51,7 @@ def test_allh_all(constructor: Constructor) -> None:
 
 
 def test_allh_nth(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
@@ -72,7 +71,7 @@ def test_allh_nth(
     assert_equal_data(result, expected)
 
 
-def test_horizontal_expressions_empty(constructor: Constructor) -> None:
+def test_horizontal_expressions_empty(constructor: ConstructorEager) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],

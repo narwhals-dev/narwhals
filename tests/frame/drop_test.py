@@ -12,7 +12,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,9 @@ if TYPE_CHECKING:
         (["abc", "b"], ["z"]),
     ],
 )
-def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
+def test_drop(
+    constructor: ConstructorEager, to_drop: list[str], expected: list[str]
+) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
@@ -43,7 +45,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
 )
 def test_drop_strict(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     context: Any,
     *,
     strict: bool,

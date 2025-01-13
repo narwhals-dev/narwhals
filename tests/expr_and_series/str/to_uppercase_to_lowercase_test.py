@@ -4,7 +4,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -25,7 +24,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_str_to_uppercase(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
@@ -110,7 +109,7 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:

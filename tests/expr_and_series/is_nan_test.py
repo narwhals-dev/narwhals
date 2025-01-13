@@ -12,7 +12,6 @@ from tests.conftest import dask_lazy_p1_constructor
 from tests.conftest import dask_lazy_p2_constructor
 from tests.conftest import modin_constructor
 from tests.conftest import pandas_constructor
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -24,7 +23,7 @@ NON_NULLABLE_CONSTRUCTORS = [
 ]
 
 
-def test_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_nan(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_na = {"int": [0, 1, None]}
@@ -95,7 +94,9 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_nan_non_float(
+    constructor: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     from polars.exceptions import InvalidOperationError as PlInvalidOperationError

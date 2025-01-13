@@ -6,7 +6,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -19,7 +18,9 @@ if TYPE_CHECKING:
 )
 @pytest.mark.parametrize("return_dtype", [nw.String(), None])
 def test_replace_strict(
-    constructor: Constructor, request: pytest.FixtureRequest, return_dtype: DType | None
+    constructor: ConstructorEager,
+    request: pytest.FixtureRequest,
+    return_dtype: DType | None,
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -54,7 +55,7 @@ def test_replace_strict_series(
     POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
 )
 def test_replace_non_full(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     from polars.exceptions import PolarsError
 
@@ -77,7 +78,7 @@ def test_replace_non_full(
     POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
 )
 def test_replace_strict_mapping(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -107,7 +108,7 @@ def test_replace_strict_series_mapping(constructor_eager: ConstructorEager) -> N
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 0), reason="replace_strict only available after 1.0"
 )
-def test_replace_strict_invalid(constructor: Constructor) -> None:
+def test_replace_strict_invalid(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     with pytest.raises(
         TypeError,

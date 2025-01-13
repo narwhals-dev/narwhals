@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": ["foo", "foobar", "Café", "345", "東京"]}
 
 
-def test_str_len_chars(constructor: Constructor) -> None:
+def test_str_len_chars(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.len_chars())
     expected = {

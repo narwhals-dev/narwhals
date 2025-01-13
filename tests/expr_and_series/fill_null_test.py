@@ -7,12 +7,11 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_fill_null(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -31,7 +30,7 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
     assert_equal_data(result, expected)
 
 
-def test_fill_null_exceptions(constructor: Constructor) -> None:
+def test_fill_null_exceptions(constructor: ConstructorEager) -> None:
     data = {
         "a": [0.0, None, 2, 3, 4],
     }
@@ -50,7 +49,7 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
 
 
 def test_fill_null_strategies_with_limit_as_none(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -120,7 +119,7 @@ def test_fill_null_strategies_with_limit_as_none(
 
 
 def test_fill_null_limits(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

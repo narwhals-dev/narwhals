@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -20,7 +19,7 @@ data = {"a": ["foobar", "bar\n", " baz"]}
     ],
 )
 def test_str_strip_chars(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     characters: str | None,
     expected: Any,
 ) -> None:

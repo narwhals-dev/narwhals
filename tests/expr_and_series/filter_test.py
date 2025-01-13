@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -30,7 +29,7 @@ def test_filter_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result_s}, expected)
 
 
-def test_filter_constraints(constructor: Constructor) -> None:
+def test_filter_constraints(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor(data))
     result_added = df.filter(nw.col("i") < 4, b=3)
     expected = {"i": [2], "a": [2], "b": [3], "c": [3]}

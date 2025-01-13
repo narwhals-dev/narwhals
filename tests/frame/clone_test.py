@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_clone(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_clone(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):

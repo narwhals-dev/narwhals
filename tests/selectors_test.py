@@ -12,7 +12,7 @@ from narwhals.stable.v1.selectors import categorical
 from narwhals.stable.v1.selectors import numeric
 from narwhals.stable.v1.selectors import string
 from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -23,7 +23,7 @@ data = {
 }
 
 
-def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_selectors(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -32,7 +32,7 @@ def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> 
     assert_equal_data(result, expected)
 
 
-def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_numeric(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -41,7 +41,7 @@ def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> No
     assert_equal_data(result, expected)
 
 
-def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_boolean(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -50,7 +50,7 @@ def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> No
     assert_equal_data(result, expected)
 
 
-def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_string(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -61,7 +61,7 @@ def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> Non
 
 def test_categorical(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
@@ -91,7 +91,7 @@ def test_categorical(
     ],
 )
 def test_set_ops(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     selector: nw.selectors.Selector,
     expected: list[str],
     request: pytest.FixtureRequest,
@@ -105,7 +105,7 @@ def test_set_ops(
 
 @pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
 def test_set_ops_invalid(
-    invalid_constructor: Constructor, request: pytest.FixtureRequest
+    invalid_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(invalid_constructor):
         request.applymarker(pytest.mark.xfail)

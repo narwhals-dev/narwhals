@@ -12,14 +12,14 @@ from narwhals.exceptions import InvalidIntoExprError
 from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
 class Foo: ...
 
 
-def test_select(constructor: Constructor) -> None:
+def test_select(constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select("a")
@@ -27,7 +27,9 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_empty_select(
+    constructor: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
@@ -49,7 +51,7 @@ def test_int_select_pandas() -> None:
 
 @pytest.mark.parametrize("invalid_select", [None, 0, Foo()])
 def test_invalid_select(
-    constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
+    constructor: ConstructorEager, invalid_select: Any, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and not isinstance(invalid_select, Foo):
         # https://github.com/narwhals-dev/narwhals/issues/1390
@@ -78,7 +80,7 @@ def test_comparison_with_list_error_message() -> None:
 
 
 def test_missing_columns(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -122,7 +124,7 @@ def test_missing_columns(
 
 
 def test_left_to_right_broadcasting(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         request.applymarker(pytest.mark.xfail)

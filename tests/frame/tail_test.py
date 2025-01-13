@@ -5,11 +5,11 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_tail(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_tail(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

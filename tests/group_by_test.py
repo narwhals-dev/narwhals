@@ -10,7 +10,6 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -110,7 +109,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_group_by_depth_1_agg(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     attr: str,
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
@@ -136,7 +135,7 @@ def test_group_by_depth_1_agg(
     ],
 )
 def test_group_by_depth_1_std_var(
-    constructor: Constructor, attr: str, ddof: int, request: pytest.FixtureRequest
+    constructor: ConstructorEager, attr: str, ddof: int, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor) and ddof == 2:
         request.applymarker(pytest.mark.xfail)
@@ -154,7 +153,7 @@ def test_group_by_depth_1_std_var(
     assert_equal_data(result, expected)
 
 
-def test_group_by_median(constructor: Constructor) -> None:
+def test_group_by_median(constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
     result = (
         nw.from_native(constructor(data))
@@ -167,7 +166,7 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -210,7 +209,7 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Constructor) -> None:
+def test_group_by_simple_named(constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -229,7 +228,7 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Constructor) -> None:
+def test_group_by_simple_unnamed(constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -248,7 +247,7 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Constructor) -> None:
+def test_group_by_multiple_keys(constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -269,7 +268,7 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
 
 
 def test_key_with_nulls(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if "modin" in str(constructor):
@@ -298,7 +297,7 @@ def test_key_with_nulls(
 
 
 def test_key_with_nulls_ignored(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -346,7 +345,7 @@ def test_key_with_nulls_iter(
     assert len(result) == 4
 
 
-def test_no_agg(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_no_agg(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
@@ -356,7 +355,7 @@ def test_no_agg(request: pytest.FixtureRequest, constructor: Constructor) -> Non
 
 
 def test_group_by_categorical(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
@@ -384,7 +383,7 @@ def test_group_by_categorical(
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_group_by_shift_raises(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -405,7 +404,7 @@ def test_group_by_shift_raises(
 
 
 def test_double_same_aggregation(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("dask", "modin", "cudf")):
         # bugged in dask https://github.com/dask/dask/issues/11612
@@ -421,7 +420,7 @@ def test_double_same_aggregation(
 
 
 def test_all_kind_of_aggs(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("dask", "cudf", "modin")):
         # bugged in dask https://github.com/dask/dask/issues/11612
@@ -462,7 +461,7 @@ def test_all_kind_of_aggs(
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr(constructor: Constructor) -> None:
+def test_group_by_expr(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
         df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]

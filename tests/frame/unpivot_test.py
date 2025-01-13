@@ -7,7 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ expected_b_c = {
 )
 def test_unpivot_on(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     on: str | list[str] | None,
     expected: dict[str, list[float]],
 ) -> None:
@@ -60,7 +60,7 @@ def test_unpivot_on(
 )
 def test_unpivot_var_value_names(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     variable_name: str | None,
     value_name: str | None,
 ) -> None:
@@ -76,7 +76,7 @@ def test_unpivot_var_value_names(
 
 
 def test_unpivot_default_var_value_names(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, constructor: ConstructorEager
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -98,7 +98,7 @@ def test_unpivot_default_var_value_names(
 )
 def test_unpivot_mixed_types(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:

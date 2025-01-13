@@ -7,11 +7,11 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_from_dict(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
@@ -23,7 +23,7 @@ def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> 
 
 
 def test_from_dict_schema(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -38,14 +38,14 @@ def test_from_dict_schema(
     assert result.collect_schema() == schema
 
 
-def test_from_dict_without_namespace(constructor: Constructor) -> None:
+def test_from_dict_without_namespace(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
 def test_from_dict_without_namespace_invalid(
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     with pytest.raises(TypeError, match="namespace"):
@@ -53,7 +53,7 @@ def test_from_dict_without_namespace_invalid(
 
 
 def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor,
+    constructor: ConstructorEager,
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
@@ -61,7 +61,9 @@ def test_from_dict_one_native_one_narwhals(
     assert_equal_data(result, expected)
 
 
-def test_from_dict_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_from_dict_v1(
+    constructor: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "dask" in str(constructor) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))

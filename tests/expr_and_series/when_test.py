@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -17,7 +16,7 @@ data = {
 }
 
 
-def test_when(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_when(constructor: ConstructorEager, request: pytest.FixtureRequest) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -28,7 +27,9 @@ def test_when(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_otherwise(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_when_otherwise(
+    constructor: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -40,7 +41,7 @@ def test_when_otherwise(constructor: Constructor, request: pytest.FixtureRequest
 
 
 def test_multiple_conditions(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -54,7 +55,7 @@ def test_multiple_conditions(
     assert_equal_data(result, expected)
 
 
-def test_no_arg_when_fail(constructor: Constructor) -> None:
+def test_no_arg_when_fail(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))
@@ -86,7 +87,7 @@ def test_value_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_value_expression(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -123,7 +124,7 @@ def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_otherwise_expression(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -138,7 +139,7 @@ def test_otherwise_expression(
 
 
 def test_when_then_otherwise_into_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -149,7 +150,7 @@ def test_when_then_otherwise_into_expr(
 
 
 def test_when_then_otherwise_lit_str(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

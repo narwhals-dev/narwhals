@@ -6,7 +6,6 @@ from datetime import datetime
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -37,7 +36,7 @@ data = {
 )
 def test_datetime_attributes(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     attribute: str,
     expected: list[int],
 ) -> None:
@@ -112,7 +111,7 @@ def test_datetime_chained_attributes(
     assert_equal_data(result, {"a": [2021, 2020]})
 
 
-def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_to_date(request: pytest.FixtureRequest, constructor: ConstructorEager) -> None:
     if any(
         x in str(constructor)
         for x in (

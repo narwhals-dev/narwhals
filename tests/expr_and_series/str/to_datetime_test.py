@@ -11,13 +11,14 @@ from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_to_datetime(
+    constructor: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
@@ -71,7 +72,7 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
 )
 def test_to_datetime_infer_fmt(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    constructor: ConstructorEager,
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
@@ -131,7 +132,7 @@ def test_to_datetime_series_infer_fmt(
 
 
 def test_to_datetime_infer_fmt_from_date(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

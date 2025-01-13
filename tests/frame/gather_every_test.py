@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": list(range(10))}
@@ -12,7 +12,7 @@ data = {"a": list(range(10))}
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
 def test_gather_every(
-    constructor: Constructor, n: int, offset: int, request: pytest.FixtureRequest
+    constructor: ConstructorEager, n: int, offset: int, request: pytest.FixtureRequest
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)

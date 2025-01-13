@@ -15,7 +15,6 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 
@@ -26,7 +25,7 @@ data = {
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor: Constructor) -> None:
+def test_schema(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -37,7 +36,7 @@ def test_schema(constructor: Constructor) -> None:
     assert result == expected
 
 
-def test_collect_schema(constructor: Constructor) -> None:
+def test_collect_schema(constructor: ConstructorEager) -> None:
     df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 

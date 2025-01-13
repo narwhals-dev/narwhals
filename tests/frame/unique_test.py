@@ -9,7 +9,7 @@ import pytest
 # becomes LazyFrame instead of DataFrame
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -27,7 +27,7 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     ],
 )
 def test_unique(
-    constructor: Constructor,
+    constructor: ConstructorEager,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
@@ -56,7 +56,7 @@ def test_unique(
         assert_equal_data(result, expected)
 
 
-def test_unique_invalid_subset(constructor: Constructor) -> None:
+def test_unique_invalid_subset(constructor: ConstructorEager) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
     with pytest.raises(ColumnNotFoundError):
@@ -64,7 +64,7 @@ def test_unique_invalid_subset(constructor: Constructor) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")
-def test_unique_none(constructor: Constructor) -> None:
+def test_unique_none(constructor: ConstructorEager) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
