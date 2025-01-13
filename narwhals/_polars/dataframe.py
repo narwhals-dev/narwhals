@@ -425,11 +425,11 @@ class PolarsLazyFrame:
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
-    def collect(self: Self) -> PolarsDataFrame:
+    def collect(self: Self, **kwargs: Any) -> PolarsDataFrame:
         import polars as pl
 
         try:
-            result = self._native_frame.collect()
+            result = self._native_frame.collect(**kwargs)
         except pl.exceptions.ColumnNotFoundError as e:
             raise ColumnNotFoundError(str(e)) from e
 

@@ -238,13 +238,39 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def collect(self) -> DataFrame[Any]:
+    def collect(
+        self: Self,
+        *,
+        polars_kwargs: dict[str, Any] | None = None,
+        dask_kwargs: dict[str, Any] | None = None,
+        duckdb_kwargs: dict[str, str] | None = None,
+    ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
+
+        As each underlying lazyframe has different arguments to set when materializing
+        the lazyframe into a dataframe, we allow to pass them separately into its own
+        keyword argument.
+
+        Arguments:
+            polars_kwargs: [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                arguments. Used only if the `LazyFrame` is backed by a `polars.LazyFrame`.
+                If not provided, it uses the polars default values.
+            dask_kwargs: [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
+                arguments. Used only if the `LazyFrame` is backed by a `dask.dataframe.DataFrame`.
+                If not provided, it uses the dask default values.
+            duckdb_kwargs: Allows to specify in which eager backend to materialize a
+                DuckDBPyRelation backed LazyFrame. It is possible to choose among
+                `pyarrow`, `pandas` or `polars` by declaring
+                `duckdb_kwargs={"eager_backend": "<eager_backend>"}`.
 
         Returns:
             DataFrame
         """
-        return super().collect()  # type: ignore[return-value]
+        return super().collect(
+            polars_kwargs=polars_kwargs,
+            dask_kwargs=dask_kwargs,
+            duckdb_kwargs=duckdb_kwargs,
+        )  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API.
