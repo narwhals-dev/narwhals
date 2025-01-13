@@ -9,8 +9,8 @@ from typing import Sequence
 
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -200,19 +200,14 @@ class SparkLikeLazyFrame:
 
     def unique(
         self: Self,
-        subset: str | list[str] | None = None,
+        subset: list[str] | None = None,
         *,
         keep: Literal["any", "none"],
     ) -> Self:
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
-
-        if subset is not None and any(x not in self.columns for x in subset):
-            msg = f"Column(s) {subset} not found in {self.columns}"
-            raise ColumnNotFoundError(msg)
-
-        subset = [subset] if isinstance(subset, str) else subset
+        check_column_exists(self.columns, subset)
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(

@@ -1059,3 +1059,9 @@ def generate_repr(header: str, native_repr: str) -> str:
         "| Use `.to_native` to see native output |\n└"
         f"{'─' * 39}┘"
     )
+
+
+def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
+    if subset is not None and (missing := set(subset).difference(columns)):
+        msg = f"Column(s) {sorted(missing)} not found in {columns}"
+        raise ColumnNotFoundError(msg)

@@ -62,7 +62,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
 def test_dt_to_string_expr(
     constructor: Constructor, fmt: str, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     input_frame = nw.from_native(constructor(data))
 
@@ -180,7 +180,7 @@ def test_dt_to_string_iso_local_date_expr(
     expected: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
     result = nw.from_native(df).with_columns(

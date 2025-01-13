@@ -19,7 +19,7 @@ def test_collect_kwargs(constructor: Constructor) -> None:
 
     result = (
         df.lazy()
-        .select(nw_v1.all().sum())
+        .select(nw_v1.col("a", "b").sum())
         .collect(
             polars_kwargs={"no_optimization": True},
             dask_kwargs={"optimize_graph": False},
