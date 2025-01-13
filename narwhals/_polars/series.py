@@ -417,6 +417,9 @@ class PolarsSeries:
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
 
+    def to_polars(self: Self) -> pl.Series:
+        return self._native_series
+
     @property
     def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
