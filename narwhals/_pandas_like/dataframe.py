@@ -767,19 +767,24 @@ class PandasLikeDataFrame:
     def to_pandas(self: Self) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
             return self._native_frame
-        if self._implementation is Implementation.MODIN:
+        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+            return self._native_frame.to_pandas()
+        elif self._implementation is Implementation.MODIN:
             return self._native_frame._to_pandas()
-        return self._native_frame.to_pandas()  # pragma: no cover
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def to_polars(self: Self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
 
         if self._implementation is Implementation.PANDAS:
             return pl.from_pandas(self._native_frame)
-        if self._implementation is Implementation.MODIN:
-            return self._native_frame._to_polars()  # type: ignore[no-any-return]
-
-        raise NotImplementedError
+        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+            return pl.from_pandas(self._native_frame.to_pandas())
+        elif self._implementation is Implementation.MODIN:
+            return pl.from_pandas(self._native_frame._to_pandas())
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def write_parquet(self, file: Any) -> Any:
         self._native_frame.to_parquet(file)

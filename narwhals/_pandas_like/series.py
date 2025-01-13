@@ -842,7 +842,7 @@ class PandasLikeSeries(CompliantSeries):
     def to_pandas(self: Self) -> pd.Series:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation is Implementation.CUDF:
+        elif self._implementation is Implementation.CUDF:  # pragma: no cover
             return self._native_series.to_pandas()
         elif self._implementation is Implementation.MODIN:
             return self._native_series._to_pandas()
@@ -854,10 +854,12 @@ class PandasLikeSeries(CompliantSeries):
 
         if self._implementation is Implementation.PANDAS:
             return pl.from_pandas(self._native_series)
-        if self._implementation is Implementation.MODIN:
-            return self._native_series._to_polars()  # type: ignore[no-any-return]
-
-        raise NotImplementedError
+        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+            return pl.from_pandas(self._native_series.to_pandas())
+        elif self._implementation is Implementation.MODIN:
+            return pl.from_pandas(self._native_series._to_pandas())
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
