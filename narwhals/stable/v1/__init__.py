@@ -69,6 +69,7 @@ from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import has_operation
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -4263,6 +4264,7 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "has_operation",
     "is_ordered_categorical",
     "len",
     "lit",

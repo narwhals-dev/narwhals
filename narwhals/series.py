@@ -19,6 +19,7 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
+from narwhals.utils import metaproperty
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -4839,18 +4840,18 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.rank(method=method, descending=descending)
         )
 
-    @property
+    @metaproperty(SeriesStringNamespace)
     def str(self: Self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
 
-    @property
+    @metaproperty(SeriesDateTimeNamespace)
     def dt(self: Self) -> SeriesDateTimeNamespace[Self]:
         return SeriesDateTimeNamespace(self)
 
-    @property
+    @metaproperty(SeriesCatNamespace)
     def cat(self: Self) -> SeriesCatNamespace[Self]:
         return SeriesCatNamespace(self)
 
-    @property
+    @metaproperty(SeriesListNamespace)
     def list(self: Self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)

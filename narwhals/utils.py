@@ -4,9 +4,18 @@ import os
 import re
 from enum import Enum
 from enum import auto
+from importlib import import_module
+from inspect import getmembers
+from inspect import getmodule
+from inspect import getmro
+from inspect import isclass
+from inspect import isfunction
+from inspect import ismethod
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Generic
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
@@ -122,6 +131,8 @@ class Implementation(Enum):
             Implementation.PYSPARK: get_pyspark_sql(),
             Implementation.POLARS: get_polars(),
             Implementation.DASK: get_dask_dataframe(),
+            Implementation.DUCKDB: get_duckdb(),
+            Implementation.IBIS: get_ibis(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 
@@ -1065,3 +1076,165 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
+
+
+def get_class_that_defines_method(method: Callable[..., Any]) -> Any:
+    if ismethod(method):
+        for cls in getmro(method.__self__.__class__):
+            if method.__name__ in cls.__dict__:
+                return cls
+
+    elif isfunction(method):
+        return getattr(
+            getmodule(method),
+            method.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
+        )
+    msg = f"Unable to parse the owners type of {method}"
+    raise TypeError(msg)
+
+
+def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
+    """Indicate whether a provided operation is available within a native namespace.
+
+    Arguments:
+        native_namespace: module to check against, any
+        operation: an unbound narwhals function, reached from the class implementation.
+
+    Returns:
+        boolean indicating whether the provided operation is a
+
+    Raises:
+        ValueError: `native_namespace` could not be mapped to a narwhals implementation.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+
+        >>> nw.has_operation(pd, nw.Expr.mean)
+        True
+
+        >>> nw.has_operation(pd, nw.Expr.dt.date)
+        True
+
+        >>> nw.has_operation(pd, nw.Series.mean)
+        True
+
+        >>> nw.has_operation(pd, nw.Series.dt.date)
+        True
+
+        >>> nw.has_operation(pd, nw.DataFrame.join_asof)
+        True
+
+        >>> import duckdb
+        >>> nw.has_operation(duckdb, nw.Expr.mean)
+        True
+
+        >>> nw.has_operation(duckdb, nw.Series.mean)
+        False
+
+    """
+    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation is Implementation.POLARS:
+        return True
+
+    nw_cls = get_class_that_defines_method(operation)
+    backend_mapping = {
+        Implementation.PANDAS: "_pandas_like",
+        Implementation.MODIN: "_pandas_like",
+        Implementation.CUDF: "_pandas_like",
+        Implementation.PYARROW: "_arrow",
+        Implementation.PYSPARK: "_spark_like",
+        Implementation.DASK: "_dask",
+        Implementation.DUCKDB: "_duckdb",
+        Implementation.IBIS: "_ibis",
+    }
+    try:
+        backend = backend_mapping[implementation]
+    except KeyError as e:
+        msg = f"Unknown namespace {native_namespace.__name__!r}"
+        for impl in Implementation:
+            if impl is Implementation.UNKNOWN:
+                continue
+
+            ns = impl.to_native_namespace()
+            if ns is None:
+                continue
+            if native_namespace.__name__ in ns.__name__:
+                msg += f", did you mean {ns.__name__!r}?"
+                break
+        raise ValueError(msg) from e
+
+    _, _, module_name = nw_cls.__module__.partition(".")
+    module_ = import_module(f"narwhals.{backend}.{module_name}")
+    classes_ = getmembers(
+        module_,
+        predicate=lambda c: (
+            isclass(c)
+            and c.__name__.endswith(nw_cls.__name__)
+            and not c.__name__.startswith("Compliant")  # Exclude protocols
+            and not c.__name__.startswith("DuckDBInterchange")
+        ),
+    )
+    if not classes_:
+        return False
+    _, cls = classes_[0]
+    return hasattr(cls, operation.__name__)
+
+
+Inst = TypeVar("Inst", bound="object")
+ClsReturns = TypeVar("ClsReturns")
+InstReturns = TypeVar("InstReturns")
+
+
+class MetaProperty(Generic[InstReturns, ClsReturns, Inst]):
+    def __init__(
+        self, func: Callable[[Inst], InstReturns], class_value: ClsReturns
+    ) -> None:
+        self._class_value = class_value
+        self._inst_method = func
+
+    def __get__(
+        self, instance: Inst | None, owner: Any | None
+    ) -> InstReturns | ClsReturns:
+        if instance is None:
+            return self._class_value
+        return self._inst_method(instance)
+
+
+def metaproperty(
+    returns: ClsReturns,
+) -> Callable[
+    [Callable[[Inst], InstReturns]], MetaProperty[InstReturns, ClsReturns, Inst]
+]:
+    """Property decorator that changes the returned value when accessing from the class.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        metaproperty descriptor.
+
+    Examples:
+        >>> from narwhals.utils import metaproperty
+        >>> class T:
+        ...     @property
+        ...     def f(self):
+        ...         return 5
+        ...
+        ...     @metaproperty(str)
+        ...     def g(self):
+        ...         return 5
+
+        >>> t = T()
+        >>> assert t.f == t.g  # 5
+        >>> assert isinstance(t.f, property)
+        >>> assert t.g is str
+
+    """
+
+    def decorator(
+        func: Callable[[Inst], InstReturns],
+    ) -> MetaProperty[InstReturns, ClsReturns, Inst]:
+        return MetaProperty(func, returns)
+
+    return decorator
