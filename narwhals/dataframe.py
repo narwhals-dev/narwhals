@@ -3629,7 +3629,7 @@ class LazyFrame(BaseFrame[FrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):  # pragma: no cover
+        if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
@@ -3655,7 +3655,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        return arg
+        # TODO(unassigned): should this line even be reachable? Should we
+        # be raising here?
+        return arg  # pragma: no cover
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
