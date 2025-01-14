@@ -24,7 +24,7 @@ data_cum = {
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -42,25 +42,25 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
-        "c": [5, 4, 3, 2, 1],
-        "c_min": [5, 4, 1, 2, 1],
+        "b": [1, 2, 3, 3, 5],
+        "c": [5, 4, 3, 1, 2],
+        "c_min": [5, 4, 1, 1, 2],
     }
 
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("a", "b")
     assert_equal_data(result, expected)
 
 
 def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
