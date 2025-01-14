@@ -3629,7 +3629,7 @@ class LazyFrame(BaseFrame[FrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
+        if isinstance(arg, BaseFrame):  # pragma: no cover
             return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
@@ -3647,7 +3647,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 )
                 raise TypeError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"
