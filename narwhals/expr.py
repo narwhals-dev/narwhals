@@ -17,6 +17,7 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
+from narwhals.utils import metaproperty
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -4201,23 +4202,23 @@ class Expr:
             )
         )
 
-    @property
+    @metaproperty(ExprStringNamespace)
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)
 
-    @property
+    @metaproperty(ExprDateTimeNamespace)
     def dt(self: Self) -> ExprDateTimeNamespace[Self]:
         return ExprDateTimeNamespace(self)
 
-    @property
+    @metaproperty(ExprCatNamespace)
     def cat(self: Self) -> ExprCatNamespace[Self]:
         return ExprCatNamespace(self)
 
-    @property
+    @metaproperty(ExprNameNamespace)
     def name(self: Self) -> ExprNameNamespace[Self]:
         return ExprNameNamespace(self)
 
-    @property
+    @metaproperty(ExprListNamespace)
     def list(self: Self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
 

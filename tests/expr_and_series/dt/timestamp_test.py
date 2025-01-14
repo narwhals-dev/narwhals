@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from typing import Literal
 
 import hypothesis.strategies as st
@@ -221,7 +222,7 @@ def test_timestamp_hypothesis(
     import polars as pl
 
     @nw.narwhalify
-    def func(s: nw.Series) -> nw.Series:
+    def func(s: nw.Series) -> Any:
         return s.dt.timestamp(time_unit)
 
     result_pl = func(pl.Series([inputs], dtype=pl.Datetime(starting_time_unit)))

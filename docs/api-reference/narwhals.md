@@ -19,6 +19,7 @@ Here are the top-level functions available in Narwhals.
         - generate_temporary_column_name
         - get_level
         - get_native_namespace
+        - has_operation
         - is_ordered_categorical
         - len
         - lit
