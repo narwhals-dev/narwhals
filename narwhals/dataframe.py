@@ -3629,10 +3629,11 @@ class LazyFrame(BaseFrame[FrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
+        if isinstance(arg, BaseFrame):  # pragma: no cover
+            msg = "Binary operations between LazyFrames are not supported"
+            raise TypeError(msg)
         if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
+            msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
             if arg._is_order_dependent:

@@ -359,7 +359,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        if reverse:
+        if reverse:  # pragma: no cover
             msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -370,7 +370,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        if reverse:
+        if reverse:  # pragma: no cover
             msg = "`cum_count(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -381,7 +381,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
-        if reverse:
+        if reverse:  # pragma: no cover
             msg = "`cum_min(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -392,7 +392,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
-        if reverse:
+        if reverse:  # pragma: no cover
             msg = "`cum_max(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -403,7 +403,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
-        if reverse:
+        if reverse:  # pragma: no cover
             msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 

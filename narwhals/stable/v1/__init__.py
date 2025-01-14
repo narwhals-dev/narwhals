@@ -254,7 +254,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         if isinstance(arg, Expr):
             # After stable.v1, we raise if arg._is_order_dependent
             return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"

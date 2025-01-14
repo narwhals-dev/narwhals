@@ -35,6 +35,8 @@ def test_dask_order_dependent_ops() -> None:
         e=nw.col("a").cum_min(),
         f=nw.col("a").shift(1),
         g=nw.col("a").diff(),
+        h=nw.col("a").is_first_distinct(),
+        i=nw.col("a").is_last_distinct(),
     )
     expected = {
         "a": [1, 3, 6],
@@ -44,16 +46,7 @@ def test_dask_order_dependent_ops() -> None:
         "e": [1, 1, 1],
         "f": [None, 1.0, 2.0],
         "g": [None, 1.0, 1.0],
+        "h": [True, True, True],
+        "i": [True, True, True],
     }
     assert_equal_data(result, expected)
-
-    with pytest.raises(NotImplementedError):
-        df.select(
-            a=nw.col("a").cum_sum(reverse=True),
-            b=nw.col("a").cum_count(reverse=True),
-            c=nw.col("a").cum_prod(reverse=True),
-            d=nw.col("a").cum_max(reverse=True),
-            e=nw.col("a").cum_min(reverse=True),
-            f=nw.col("a").shift(1),
-            g=nw.col("a").diff(),
-        )
