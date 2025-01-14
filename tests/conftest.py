@@ -232,7 +232,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             any(
                 x in str(metafunc.module)
-                for x in ("list", "name", "unpivot", "from_dict", "from_numpy", "tail")
+                for x in ("list", "unpivot", "from_dict", "from_numpy", "tail")
             )
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
