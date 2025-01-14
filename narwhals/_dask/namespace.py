@@ -401,7 +401,7 @@ class DaskWhen:
 
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
-            if self._then_value._function_name == "lit":
+            if getattr(self._then_value, "_function_name", None) == "lit":
                 _df = condition.to_frame("a")
                 _df["tmp"] = value_series[0]
                 value_series = _df["tmp"]
