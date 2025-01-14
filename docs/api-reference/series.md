@@ -54,6 +54,7 @@
         - null_count
         - pipe
         - quantile
+        - rank
         - rename
         - replace_strict
         - rolling_mean
@@ -76,6 +77,7 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_polars
         - to_native
         - unique
         - value_counts

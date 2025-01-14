@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.8.1'
+  rev: 'v0.8.6'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -14,7 +14,7 @@ repos:
       alias: check-docstrings
       entry: python utils/check_docstrings.py
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v1.13.0'
+  rev: 'v1.14.1'
   hooks:
     - id: mypy
       additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']

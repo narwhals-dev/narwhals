@@ -20,7 +20,9 @@ data = {"a": ["foobar", "bar\n", " baz"]}
     ],
 )
 def test_str_strip_chars(
-    constructor: Constructor, characters: str | None, expected: Any
+    constructor: Constructor,
+    characters: str | None,
+    expected: Any,
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.strip_chars(characters))

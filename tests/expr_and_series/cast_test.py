@@ -60,7 +60,7 @@ def test_cast(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
@@ -180,7 +180,7 @@ def test_cast_string() -> None:
 def test_cast_raises_for_unknown_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         # Unsupported cast from string to dictionary using function cast_dictionary
@@ -204,6 +204,7 @@ def test_cast_datetime_tz_aware(
         or "duckdb" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
+        or ("pyspark" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -229,7 +230,8 @@ def test_cast_datetime_tz_aware(
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "duckdb")
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "duckdb", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 

@@ -13,10 +13,16 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
+def remove_docstring_examples(doc: str) -> str:
+    if "Examples:" in doc:
+        return doc[: doc.find("Examples:")].rstrip()
+    return doc.rstrip()
+
+
 def test_renamed_taxicab_norm(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
@@ -46,10 +52,15 @@ def test_renamed_taxicab_norm(
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+def test_renamed_taxicab_norm_dataframe(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     def func(df_any: Any) -> Any:
         df = nw_v1.from_native(df_any)
         df = df._l1_norm()
@@ -60,10 +71,16 @@ def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+def test_renamed_taxicab_norm_dataframe_narwhalify(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.
+
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     @nw_v1.narwhalify
     def func(df: Any) -> Any:
         return df._l1_norm()
@@ -87,8 +104,8 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
-        v1_doc = getattr(nw_v1, item).__doc__
-        nw_doc = getattr(nw, item).__doc__
+        v1_doc = remove_docstring_examples(getattr(nw_v1, item).__doc__)
+        nw_doc = remove_docstring_examples(getattr(nw, item).__doc__)
         assert v1_doc == nw_doc, item
 
 
@@ -97,12 +114,11 @@ def test_dataframe_docstrings() -> None:
     df = nw.from_native(pl.DataFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
-        assert (
+        assert remove_docstring_examples(
             getattr(stable_df, item).__doc__.replace(
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
-            == getattr(df, item).__doc__
-        ), item
+        ) == remove_docstring_examples(getattr(df, item).__doc__), item
 
 
 def test_lazyframe_docstrings() -> None:
@@ -113,12 +129,11 @@ def test_lazyframe_docstrings() -> None:
         if item in ("schema", "columns"):
             # to avoid performance warning
             continue
-        assert (
+        assert remove_docstring_examples(
             getattr(stable_df, item).__doc__.replace(
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
-            == getattr(df, item).__doc__
-        )
+        ) == remove_docstring_examples(getattr(df, item).__doc__)
 
 
 def test_series_docstrings() -> None:
@@ -128,15 +143,17 @@ def test_series_docstrings() -> None:
     for item in api:
         if getattr(df, item).__doc__ is None:
             continue
-        assert (
+        assert remove_docstring_examples(
             getattr(stable_df, item).__doc__.replace(
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
             )
-            == getattr(df, item).__doc__
-        ), item
+        ) == remove_docstring_examples(getattr(df, item).__doc__), item
 
 
-def test_dtypes(constructor: Constructor) -> None:
+def test_dtypes(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw_v1.from_native(
         constructor({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )

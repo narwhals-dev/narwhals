@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import string
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,9 @@ from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import check_column_exists
+from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
@@ -271,3 +275,25 @@ def test_generate_temporary_column_name_raise() -> None:
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
         nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("2020.1.2", (2020, 1, 2)),
+        ("2020.1.2-dev123", (2020, 1, 2)),
+        ("3.0.0.dev0+618.gb552dc95c9", (3, 0, 0)),
+    ],
+)
+def test_parse_version(version: str, expected: tuple[int, ...]) -> None:
+    assert parse_version(version) == expected
+
+
+def test_check_column_exists() -> None:
+    columns = ["a", "b", "c"]
+    subset = ["d", "f"]
+    with pytest.raises(
+        ColumnNotFoundError,
+        match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
+    ):
+        check_column_exists(columns, subset)

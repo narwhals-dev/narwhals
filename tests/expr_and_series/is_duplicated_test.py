@@ -11,7 +11,7 @@ from tests.utils import assert_equal_data
 def test_is_duplicated_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [1, 2, 3], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -23,7 +23,7 @@ def test_is_duplicated_expr(
 def test_is_duplicated_w_nulls_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, None], "b": [1, None, None], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))

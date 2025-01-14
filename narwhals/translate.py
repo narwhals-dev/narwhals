@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import timedelta
+from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -59,6 +60,7 @@ NON_TEMPORAL_SCALAR_TYPES = (
     int,
     float,
     complex,
+    Decimal,
 )
 
 
@@ -684,7 +686,10 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
-        if get_dask_expr() is None:  # pragma: no cover
+        if (
+            parse_version(get_dask().__version__) <= (2024, 12, 1)
+            and get_dask_expr() is None
+        ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Generator
 from typing import Sequence
 
 import pandas as pd
@@ -14,7 +14,6 @@ import pytest
 
 if TYPE_CHECKING:
     import duckdb
-    from pyspark.sql import SparkSession
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
@@ -129,23 +128,23 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
-@pytest.fixture(scope="session")
-def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
+def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
     try:
         from pyspark.sql import SparkSession
     except ImportError:  # pragma: no cover
         pytest.skip("pyspark is not installed")
-        return
+        return None
 
     import warnings
+    from atexit import register
 
-    os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
         # Polars is imported in the tests, but not used in the spark operations
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
+
         session = (
             SparkSession.builder.appName("unit-tests")
             .master("local[1]")
@@ -155,8 +154,19 @@ def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
             .config("spark.sql.shuffle.partitions", "2")
             .getOrCreate()
         )
-        yield session
-    session.stop()
+
+        register(session.stop)
+
+        def _constructor(obj: Any) -> IntoFrame:
+            pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+            return (  # type: ignore[no-any-return]
+                session.createDataFrame(pd_df)
+                .repartition(2)
+                .orderBy("index")
+                .drop("index")
+            )
+
+        return _constructor
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
@@ -173,6 +183,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
+    "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -201,7 +212,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors.append(EAGER_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
-            constructors.append(LAZY_CONSTRUCTORS[constructor])
+            if constructor == "pyspark":
+                if sys.version_info < (3, 12):  # pragma: no cover
+                    constructors.append(pyspark_lazy_constructor())
+                else:  # pragma: no cover
+                    continue
+            else:
+                constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"

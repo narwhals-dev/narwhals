@@ -215,7 +215,7 @@ class DuckDBLazyFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -224,30 +224,39 @@ class DuckDBLazyFrame:
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
-
-        if how not in ("inner", "left"):
-            msg = "Only inner and left join is implemented for DuckDB"
-            raise NotImplementedError(msg)
-
-        # help mypy
-        assert left_on is not None  # noqa: S101
-        assert right_on is not None  # noqa: S101
-
-        conditions = [
-            f"lhs.{left} = rhs.{right}" for left, right in zip(left_on, right_on)
-        ]
         original_alias = self._native_frame.alias
-        condition = " and ".join(conditions)
-        rel = self._native_frame.set_alias("lhs").join(
-            other._native_frame.set_alias("rhs"), condition=condition, how=how
-        )
 
-        select = [f"lhs.{x}" for x in self._native_frame.columns]
-        for col in other._native_frame.columns:
-            if col in self._native_frame.columns and col not in right_on:
-                select.append(f"rhs.{col} as {col}{suffix}")
-            elif col not in right_on:
-                select.append(col)
+        if how == "cross":
+            if self._backend_version < (1, 1, 4):
+                msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
+                raise NotImplementedError(msg)
+            rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
+                other._native_frame.set_alias("rhs")
+            )
+        else:
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            conditions = [
+                f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
+            ]
+            condition = " and ".join(conditions)
+            rel = self._native_frame.set_alias("lhs").join(
+                other._native_frame.set_alias("rhs"), condition=condition, how=how
+            )
+
+        if how in ("inner", "left", "cross"):
+            select = [f'lhs."{x}"' for x in self._native_frame.columns]
+            for col in other._native_frame.columns:
+                if col in self._native_frame.columns and (
+                    right_on is None or col not in right_on
+                ):
+                    select.append(f'rhs."{col}" as "{col}{suffix}"')
+                elif right_on is None or col not in right_on:
+                    select.append(col)
+        else:  # semi
+            select = ["lhs.*"]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
@@ -304,9 +313,9 @@ class DuckDBLazyFrame:
         result = self._native_frame.order(
             ",".join(
                 (
-                    f"{col} {desc} nulls last"
+                    f'"{col}" {desc} nulls last'
                     if nulls_last
-                    else f"{col} {desc} nulls first"
+                    else f'"{col}" {desc} nulls first'
                     for col, desc in zip(flat_by, descending_str)
                 )
             )
