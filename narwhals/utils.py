@@ -21,6 +21,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
+from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
@@ -1185,31 +1186,30 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
     return hasattr(cls, operation.__name__)
 
 
-Inst = TypeVar("Inst", bound="object")
-ClsReturns = TypeVar("ClsReturns")
-InstReturns = TypeVar("InstReturns")
+T = TypeVar("T")  # Expression/Series/DataFrame/LazyFrame instance
+Namespace = TypeVar("Namespace")  # {String,Datetime,Cat,...}Namespace instance
 
 
-class MetaProperty(Generic[InstReturns, ClsReturns, Inst]):
+class MetaProperty(Generic[T, Namespace]):
     def __init__(
-        self, func: Callable[[Inst], InstReturns], class_value: ClsReturns
+        self, func: Callable[[T], Namespace], class_value: type[Namespace]
     ) -> None:
         self._class_value = class_value
         self._inst_method = func
 
-    def __get__(
-        self, instance: Inst | None, owner: Any | None
-    ) -> InstReturns | ClsReturns:
+    @overload
+    def __get__(self, instance: None, owner: type[T]) -> type[Namespace]: ...
+    @overload
+    def __get__(self, instance: T, owner: type[T]) -> Namespace: ...
+    def __get__(self, instance: T | None, owner: type[T]) -> Namespace | type[Namespace]:
         if instance is None:
             return self._class_value
         return self._inst_method(instance)
 
 
 def metaproperty(
-    returns: ClsReturns,
-) -> Callable[
-    [Callable[[Inst], InstReturns]], MetaProperty[InstReturns, ClsReturns, Inst]
-]:
+    returns: type[Namespace],
+) -> Callable[[Callable[[T], Namespace]], Namespace]:  # TODO(Unassigned): Fix typing
     """Property decorator that changes the returned value when accessing from the class.
 
     Arguments:
@@ -1217,6 +1217,12 @@ def metaproperty(
 
     Returns:
         metaproperty descriptor.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        A decorator that applies the custom metaproperty behavior.
 
     Examples:
         >>> from narwhals.utils import metaproperty
@@ -1231,14 +1237,14 @@ def metaproperty(
 
         >>> t = T()
         >>> assert t.f == t.g  # 5
-        >>> assert isinstance(t.f, property)
-        >>> assert t.g is str
+        >>> assert isinstance(T.f, property)
+        >>> assert T.g is str
 
     """
 
-    def decorator(
-        func: Callable[[Inst], InstReturns],
-    ) -> MetaProperty[InstReturns, ClsReturns, Inst]:
-        return MetaProperty(func, returns)
+    def wrapper(
+        func: Callable[[T], Namespace],
+    ) -> Namespace:  # TODO(Unassigned): Fix typing
+        return MetaProperty(func, returns)  # type: ignore[return-value]
 
-    return decorator
+    return wrapper
