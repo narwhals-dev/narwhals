@@ -338,7 +338,7 @@ def extract_compliant(
 
 
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If `rhs` is a Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
-    # to `False`.
+    # If any arg is an Expr, we look at `_is_order_dependent`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
+    # neither of which is order-dependent, so we default to `False`.
     return any(getattr(x, "_is_order_dependent", False) for x in args)
