@@ -17,6 +17,7 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dependencies import get_polars
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
@@ -237,6 +238,31 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        # After v1, we raise when passing order-dependent
+        # expressions to LazyFrame
+        from narwhals.dataframe import BaseFrame
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):  # pragma: no cover
+            msg = "Mixing Series with LazyFrame is not supported."
+            raise TypeError(msg)
+        if isinstance(arg, Expr):
+            # After stable.v1, we raise if arg._is_order_dependent
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        return arg
 
     def collect(self) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
