@@ -12,9 +12,7 @@ data = {
 }
 
 
-def test_drop_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_drop_nulls(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).drop_nulls()
     expected = {
         "a": [2.0, 4.0],
@@ -35,9 +33,6 @@ def test_drop_nulls_subset(
     constructor: Constructor,
     subset: str | list[str],
     expected: dict[str, float],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data)).drop_nulls(subset=subset)
     assert_equal_data(result, expected)
