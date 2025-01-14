@@ -184,7 +184,9 @@ if extra := set(documented).difference(expr_methods):
 for namespace in NAMESPACES:
     expr_methods = [
         i
-        for i in getattr(nw.Expr(lambda: 0, is_order_dependent=True), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(lambda: 0, is_order_dependent=False), namespace
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
@@ -226,7 +228,7 @@ if extra := set(documented).difference(dtypes):
 # Check Expr vs Series
 expr = [
     i
-    for i in nw.Expr(lambda: 0, is_order_dependent=True).__dir__()
+    for i in nw.Expr(lambda: 0, is_order_dependent=False).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 series = [
@@ -247,7 +249,9 @@ if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
 for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
-        for i in getattr(nw.Expr(lambda: 0, is_order_dependent=True), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(lambda: 0, is_order_dependent=False), namespace
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     series_internal = [

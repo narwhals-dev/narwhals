@@ -13,9 +13,9 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
 
 if TYPE_CHECKING:
+    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 

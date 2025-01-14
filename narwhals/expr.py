@@ -36,10 +36,6 @@ class Expr:
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         self._to_compliant_expr = to_compliant_expr
-
-        # For binary operations, need to do "or".
-        # For transforms, preserve.
-        # For aggs, preserve.
         self._is_order_dependent = is_order_dependent
 
     def _taxicab_norm(self) -> Self:
@@ -1236,8 +1232,7 @@ class Expr:
             b_arg_min: [[1]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_min(),
-            is_order_dependent=self._is_order_dependent,
+            lambda plx: self._to_compliant_expr(plx).arg_min(), is_order_dependent=True
         )
 
     def arg_max(self) -> Self:
@@ -2524,7 +2519,8 @@ class Expr:
             a: [[2,4,3,5]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).drop_nulls(), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).drop_nulls(),
+            self._is_order_dependent,
         )
 
     def sample(
@@ -2598,7 +2594,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            is_order_dependent=True,
+            self._is_order_dependent,
         )
 
     def over(self, *keys: str | Iterable[str]) -> Self:
@@ -3567,7 +3563,7 @@ class Expr:
             a: [[1]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).mode(), is_order_dependent=False
+            lambda plx: self._to_compliant_expr(plx).mode(), self._is_order_dependent
         )
 
     def is_finite(self: Self) -> Self:

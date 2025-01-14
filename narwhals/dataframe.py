@@ -65,15 +65,15 @@ class BaseFrame(Generic[FrameT]):
             level=self._level,
         )
 
-    @abstractmethod
-    def _extract_compliant(self, arg: Any) -> Any:
-        raise NotImplementedError
-
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
         args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
         return args, kwargs
+
+    @abstractmethod
+    def _extract_compliant(self, arg: Any) -> Any:
+        raise NotImplementedError
 
     @property
     def schema(self) -> Schema:

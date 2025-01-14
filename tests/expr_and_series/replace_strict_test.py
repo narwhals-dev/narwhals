@@ -19,9 +19,7 @@ if TYPE_CHECKING:
 )
 @pytest.mark.parametrize("return_dtype", [nw.String(), None])
 def test_replace_strict(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    return_dtype: DType | None,
+    constructor: Constructor, request: pytest.FixtureRequest, return_dtype: DType | None
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)

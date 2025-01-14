@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
@@ -9,7 +10,9 @@ from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor
 
 
 @pytest.mark.parametrize(

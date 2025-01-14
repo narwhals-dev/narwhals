@@ -8,10 +8,10 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
-from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
+    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
