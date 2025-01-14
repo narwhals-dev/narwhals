@@ -13,7 +13,7 @@ data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
 def test_to_uppercase(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb",)):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.to_uppercase())
@@ -24,7 +24,7 @@ def test_to_uppercase(constructor: Constructor, request: pytest.FixtureRequest) 
 def test_to_uppercase_after_alias(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb",)):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.to_uppercase())
@@ -35,7 +35,7 @@ def test_to_uppercase_after_alias(
 def test_to_uppercase_raise_anonymous(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb",)):
         request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
