@@ -141,3 +141,13 @@ def test_when_then_otherwise_lit_str(
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
     assert_equal_data(result, expected)
+
+
+def test_when_then_otherwise_both_lit(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        x1=nw.when(nw.col("a") > 1).then(nw.lit(42)).otherwise(nw.lit(-1)),
+        x2=nw.when(nw.col("a") > 2).then(nw.lit(42)).otherwise(nw.lit(-1)),
+    )
+    expected = {"x1": [-1, 42, 42], "x2": [-1, -1, 42]}
+    assert_equal_data(result, expected)

@@ -398,8 +398,13 @@ class DaskWhen:
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("dx.Series", condition)
+
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+            if self._then_value._function_name == "lit":
+                _df = condition.to_frame("a")
+                _df["tmp"] = value_series[0]
+                value_series = _df["tmp"]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             _df = condition.to_frame("a")
