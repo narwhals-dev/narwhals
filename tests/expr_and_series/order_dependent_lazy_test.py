@@ -23,7 +23,6 @@ def test_dask_order_dependent_ops() -> None:
     # Preserve these for narwhals.stable.v1, even though they
     # raise after stable.v1.
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
