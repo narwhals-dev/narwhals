@@ -13,6 +13,7 @@ from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -1899,11 +1900,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `sum_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.sum_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.sum_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -1970,11 +1970,10 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `min_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.min_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.min_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -2041,11 +2040,10 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `max_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.max_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.max_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -2059,25 +2057,22 @@ class When:
     def _extract_predicates(self, plx: Any) -> Any:
         return [extract_compliant(plx, v) for v in self._predicates]
 
-    def then(self, value: Any) -> Then:
-        is_order_dependent = any(
-            getattr(x, "_is_order_dependent", False) for x in self._predicates
-        )
+    def then(self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
                 extract_compliant(plx, value)
             ),
-            is_order_dependent=is_order_dependent,
+            is_order_dependent=operation_is_order_dependent(*self._predicates, value),
         )
 
 
 class Then(Expr):
-    def otherwise(self, value: Any) -> Expr:
+    def otherwise(self, value: IntoExpr | Any) -> Expr:
         return Expr(
             lambda plx: self._to_compliant_expr(plx).otherwise(
                 extract_compliant(plx, value)
             ),
-            is_order_dependent=False,
+            is_order_dependent=operation_is_order_dependent(self, value),
         )
 
 
@@ -2227,11 +2222,10 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.all_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.all_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -2376,11 +2370,10 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.any_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.any_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -2447,11 +2440,10 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `mean_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.mean_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        ),
-        is_order_dependent=False,
+        lambda plx: plx.mean_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
     )
 
 
@@ -2533,12 +2525,13 @@ def concat_str(
         ----
         full_sentence: [["2 dogs play","4 cats swim",null]]
     """
+    flat_exprs = flatten([exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            [extract_compliant(plx, v) for v in flatten([exprs])],
+            [extract_compliant(plx, v) for v in flat_exprs],
             *[extract_compliant(plx, v) for v in more_exprs],
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
-        is_order_dependent=False,
+        is_order_dependent=operation_is_order_dependent(*flat_exprs, *more_exprs),
     )

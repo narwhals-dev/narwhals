@@ -9,6 +9,7 @@ from typing import Mapping
 from typing import Sequence
 
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
@@ -25,13 +26,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
-
-
-def binary_operation_is_order_dependent(lhs: Expr, rhs: Expr | Any) -> bool:
-    # If `rhs` is a Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
-    # to `False`.
-    return lhs._is_order_dependent or getattr(rhs, "_is_order_dependent", False)
 
 
 class Expr:
@@ -242,7 +236,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__eq__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
@@ -250,7 +244,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ne__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __and__(self, other: Any) -> Self:
@@ -258,7 +252,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__and__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rand__(self, other: Any) -> Self:
@@ -269,7 +263,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __or__(self, other: Any) -> Self:
@@ -277,7 +271,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__or__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __ror__(self, other: Any) -> Self:
@@ -288,7 +282,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __add__(self, other: Any) -> Self:
@@ -296,7 +290,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__add__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __radd__(self, other: Any) -> Self:
@@ -307,7 +301,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __sub__(self, other: Any) -> Self:
@@ -315,7 +309,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__sub__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rsub__(self, other: Any) -> Self:
@@ -326,7 +320,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __truediv__(self, other: Any) -> Self:
@@ -334,7 +328,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__truediv__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rtruediv__(self, other: Any) -> Self:
@@ -345,7 +339,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __mul__(self, other: Any) -> Self:
@@ -353,7 +347,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__mul__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rmul__(self, other: Any) -> Self:
@@ -364,7 +358,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __le__(self, other: Any) -> Self:
@@ -372,7 +366,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__le__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __lt__(self, other: Any) -> Self:
@@ -380,7 +374,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__lt__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __gt__(self, other: Any) -> Self:
@@ -388,7 +382,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__gt__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __ge__(self, other: Any) -> Self:
@@ -396,7 +390,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ge__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __pow__(self, other: Any) -> Self:
@@ -404,7 +398,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__pow__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rpow__(self, other: Any) -> Self:
@@ -415,7 +409,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __floordiv__(self, other: Any) -> Self:
@@ -423,7 +417,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rfloordiv__(self, other: Any) -> Self:
@@ -434,7 +428,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __mod__(self, other: Any) -> Self:
@@ -442,7 +436,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__mod__(
                 extract_compliant(plx, other)
             ),
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     def __rmod__(self, other: Any) -> Self:
@@ -453,7 +447,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=binary_operation_is_order_dependent(self, other),
+            is_order_dependent=operation_is_order_dependent(self, other),
         )
 
     # --- unary ---
@@ -1986,7 +1980,9 @@ class Expr:
                 extract_compliant(plx, upper_bound),
                 closed,
             ),
-            self._is_order_dependent,
+            is_order_dependent=operation_is_order_dependent(
+                self, lower_bound, upper_bound
+            ),
         )
 
     def is_in(self, other: Any) -> Self:
@@ -2117,11 +2113,12 @@ class Expr:
             a: [[5,6,7]]
             b: [[10,11,12]]
         """
+        flat_predicates = flatten(predicates)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)],
+                *[extract_compliant(plx, pred) for pred in flat_predicates],
             ),
-            is_order_dependent=True,
+            is_order_dependent=operation_is_order_dependent(*flat_predicates),
         )
 
     def is_null(self) -> Self:
@@ -3512,7 +3509,9 @@ class Expr:
                 extract_compliant(plx, lower_bound),
                 extract_compliant(plx, upper_bound),
             ),
-            self._is_order_dependent,
+            is_order_dependent=operation_is_order_dependent(
+                self, lower_bound, upper_bound
+            ),
         )
 
     def mode(self: Self) -> Self:
@@ -3568,7 +3567,7 @@ class Expr:
             a: [[1]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).mode(), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).mode(), is_order_dependent=False
         )
 
     def is_finite(self: Self) -> Self:

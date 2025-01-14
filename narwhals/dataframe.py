@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -64,6 +65,7 @@ class BaseFrame(Generic[FrameT]):
             level=self._level,
         )
 
+    @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
 
@@ -3629,7 +3631,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
-        if isinstance(arg, Series):
+        if isinstance(arg, Series):  # pragma: no cover
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):

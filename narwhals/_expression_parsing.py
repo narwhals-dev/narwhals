@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
+    from narwhals.typing import IntoExpr
 
     IntoCompliantExpr: TypeAlias = (
         CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
@@ -334,3 +335,10 @@ def extract_compliant(
     if isinstance(other, Series):
         return other._compliant_series
     return other
+
+
+def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
+    # If `rhs` is a Expr, we look at `_is_order_dependent`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
+    # to `False`.
+    return any(getattr(x, "_is_order_dependent", False) for x in args)
