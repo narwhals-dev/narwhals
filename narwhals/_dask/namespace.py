@@ -402,7 +402,8 @@ class DaskWhen:
         try:
             then_expr = parse_into_expr(self._then_value, namespace=plx)
             value_series = then_expr(df)[0]
-            if getattr(then_expr, "_returns_scalar", False):  # literal or reduction case
+            # literal or reduction case
+            if then_expr._returns_scalar:  # type: ignore[attr-defined]
                 _df = condition.to_frame("a")
                 _df["tmp"] = value_series[0]
                 value_series = _df["tmp"]
