@@ -62,7 +62,9 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
+def narwhals_to_native_dtype(
+    dtype: DType | type[DType], version: Version
+) -> pyspark_types.DataType:
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pyspark_types.DoubleType()

@@ -36,7 +36,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
             return [F.col(col_name) for col_name in df.columns]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=_all,
             depth=0,
             function_name="all",
@@ -63,7 +63,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
             return [F.lit(value).alias("literal")]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=_lit,
             depth=0,
             function_name="lit",
@@ -81,7 +81,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
             return [F.count("*").alias("len")]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             func,
             depth=0,
             function_name="len",
@@ -101,7 +101,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
@@ -121,7 +121,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.or_, cols).alias(col_name)]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="any_horizontal",
@@ -148,7 +148,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 ).alias(col_name)
             ]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
@@ -179,7 +179,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 ).alias(col_name)
             ]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="mean_horizontal",
@@ -201,7 +201,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             col_name = get_column_name(df, cols[0])
             return [F.greatest(*cols).alias(col_name)]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="max_horizontal",
@@ -223,7 +223,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             col_name = get_column_name(df, cols[0])
             return [F.least(*cols).alias(col_name)]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="min_horizontal",
@@ -320,7 +320,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
             return [result]
 
-        return SparkLikeExpr(  # type: ignore[abstract]
+        return SparkLikeExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="concat_str",
@@ -392,7 +392,7 @@ class SparkLikeWhen:
     def then(self, value: SparkLikeExpr | Any) -> SparkLikeThen:
         self._then_value = value
 
-        return SparkLikeThen(  # type: ignore[abstract]
+        return SparkLikeThen(
             self,
             depth=0,
             function_name="whenthen",

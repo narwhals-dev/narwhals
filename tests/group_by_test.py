@@ -276,9 +276,6 @@ def test_key_with_nulls(
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
 
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
@@ -301,9 +298,6 @@ def test_key_with_nulls_ignored(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
