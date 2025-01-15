@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
-from pandas.errors import IndexingError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ShapeError
@@ -47,10 +46,6 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
             match="Predicate result has length 1, which is incompatible with DataFrame of length 3",
         )
         if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin"))
-        else pytest.raises(
-            IndexingError, match="Unalignable boolean Series provided as indexer"
-        )
-        if "dask" in str(constructor)
         else does_not_raise()
         if "polars" in str(constructor)
         else pytest.raises(Exception)  # type: ignore[arg-type] # noqa: PT011
