@@ -4,14 +4,13 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
-from pyspark.sql import types as pyspark_types
-
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
+    from pyspark.sql import types as pyspark_types
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.typing import IntoSparkLikeExpr
@@ -24,8 +23,9 @@ def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
 ) -> DType:  # pragma: no cover
-    dtypes = import_dtypes_module(version=version)
     from pyspark.sql import types as pyspark_types
+
+    dtypes = import_dtypes_module(version=version)
 
     if isinstance(dtype, pyspark_types.DoubleType):
         return dtypes.Float64()
@@ -65,7 +65,10 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> pyspark_types.DataType:
+    from pyspark.sql import types as pyspark_types
+
     dtypes = import_dtypes_module(version)
+
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pyspark_types.DoubleType()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
