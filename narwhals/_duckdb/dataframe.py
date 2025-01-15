@@ -83,10 +83,8 @@ class DuckDBLazyFrame:
             from collections import Counter
 
             counter = Counter(columns)
-            msg = ""
-            for key, value in counter.items():
-                if value > 1:
-                    msg += f"\n- '{key}' {value} times"
+            duplicates = {k: v for k, v in counter.items() if v > 1}
+            msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
             msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
