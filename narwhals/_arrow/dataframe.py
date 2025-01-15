@@ -16,6 +16,7 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
@@ -493,6 +494,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]._native_series
+
+            if len(mask) != len(self):
+                msg = (
+                    f"Predicate result has length {len(mask)}, which is incompatible with "
+                    f"DataFrame of length {len(self)}"
+                )
+                raise ShapeError(msg)
+
         return self._from_native_frame(self._native_frame.filter(mask))
 
     def null_count(self: Self) -> Self:
