@@ -85,8 +85,9 @@ def narwhals_to_native_dtype(
         return pyspark_types.StringType()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return pyspark_types.BooleanType()
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return pyspark_types.TimestampType()
+    if any(isinstance_or_issubclass(dtype, t) for t in [dtypes.Date, dtypes.Datetime]):
+        msg = "Converting to Date or Datetime dtype is not supported yet"
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
         raise NotImplementedError(msg)
@@ -95,6 +96,12 @@ def narwhals_to_native_dtype(
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
+        raise NotImplementedError(msg)
+    if any(
+        isinstance_or_issubclass(dtype, t)
+        for t in [dtypes.UInt64, dtypes.UInt32, dtypes.UInt16, dtypes.UInt8]
+    ):  # pragma: no cover
+        msg = "Unsigned integer types are not supported by PySpark"
         raise NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

@@ -54,7 +54,7 @@ SCHEMA = {
     "p": nw.Int64,
 }
 
-SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
+SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
