@@ -872,6 +872,22 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        """Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sort(
+                descending=descending, nulls_last=nulls_last
+            )
+        )
+
 
 class Schema(NwSchema):
     """Ordered mapping of column names to their data type.
