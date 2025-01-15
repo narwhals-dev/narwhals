@@ -1691,90 +1691,27 @@ class Expr:
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
+        !!! warning
+            `Expr.sort` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sort())`, use
+            `df.select(nw.col('a')).sort()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             descending: Sort in descending order.
             nulls_last: Place null values last instead of first.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [5, None, 1, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define dataframe-agnostic functions:
-
-            >>> def agnostic_sort(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").sort()).to_native()
-
-            >>> def agnostic_sort_descending(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").sort(descending=True)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_sort` and `agnostic_sort_descending`:
-
-            >>> agnostic_sort(df_pd)
-                 a
-            1  NaN
-            2  1.0
-            3  2.0
-            0  5.0
-
-            >>> agnostic_sort(df_pl)
-            shape: (4, 1)
-            ┌──────┐
-            │ a    │
-            │ ---  │
-            │ i64  │
-            ╞══════╡
-            │ null │
-            │ 1    │
-            │ 2    │
-            │ 5    │
-            └──────┘
-
-            >>> agnostic_sort(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[null,1,2,5]]
-
-            >>> agnostic_sort_descending(df_pd)
-                 a
-            1  NaN
-            0  5.0
-            3  2.0
-            2  1.0
-
-            >>> agnostic_sort_descending(df_pl)
-            shape: (4, 1)
-            ┌──────┐
-            │ a    │
-            │ ---  │
-            │ i64  │
-            ╞══════╡
-            │ null │
-            │ 5    │
-            │ 2    │
-            │ 1    │
-            └──────┘
-
-            >>> agnostic_sort_descending(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[null,5,2,1]]
         """
+        msg = (
+            "`Expr.sort` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').sort())`, use `df.select(nw.col('a')).sort()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See [stable api](../backcompat.md/) for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
