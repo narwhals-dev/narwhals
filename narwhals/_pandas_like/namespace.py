@@ -463,7 +463,7 @@ class PandasWhen:
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
-            if len(value_series) == 1:  # literal case
+            if len(value_series) == 1:  # literal or reduction case
                 value_series = condition.__class__._from_iterable(
                     [value_series[0]] * len(condition),
                     name="literal",
