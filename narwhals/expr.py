@@ -1709,7 +1709,7 @@ class Expr:
             "`Expr.sort` is deprecated and will be removed in a future version.\n\n"
             "Hint: instead of `df.select(nw.col('a').sort())`, use `df.select(nw.col('a')).sort()`.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See [stable api](../backcompat.md/) for more information.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
@@ -2353,7 +2353,7 @@ class Expr:
             "`Expr.sample` is deprecated and will be removed in a future version.\n\n"
             "Hint: instead of `df.select(nw.col('a').sample())`, use `df.select(nw.col('a')).sample()`.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See [stable api](../backcompat.md/) for more information.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
@@ -2829,7 +2829,7 @@ class Expr:
             "`Expr.head` is deprecated and will be removed in a future version.\n\n"
             "Hint: instead of `df.select(nw.col('a').head())`, use `df.select(nw.col('a')).head()`.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See [stable api](../backcompat.md/) for more information.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
@@ -2854,7 +2854,7 @@ class Expr:
             "`Expr.tail` is deprecated and will be removed in a future version.\n\n"
             "Hint: instead of `df.select(nw.col('a').tail())`, use `df.select(nw.col('a')).tail()`.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See [stable api](../backcompat.md/) for more information.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
@@ -3002,7 +3002,7 @@ class Expr:
             "`Expr.gather_every` is deprecated and will be removed in a future version.\n\n"
             "Hint: instead of `df.select(nw.col('a').gather_every())`, use `df.select(nw.col('a')).gather_every()`.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See [stable api](../backcompat.md/) for more information.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(

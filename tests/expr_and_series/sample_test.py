@@ -23,20 +23,16 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
         df.select(nw_main.col("a").sample(n=2))
 
 
-def test_expr_sample_fraction(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
+def test_expr_sample_fraction(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10})
-    ).lazy()
+        constructor_eager({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10}), eager_only=True
+    )
 
-    result_expr = df.select(nw.col("a").sample(fraction=0.1)).collect().shape
+    result_expr = df.select(nw.col("a").sample(fraction=0.1)).shape
     expected_expr = (3, 1)
     assert result_expr == expected_expr
 
-    result_series = df.collect()["a"].sample(fraction=0.1).shape
+    result_series = df["a"].sample(fraction=0.1).shape
     expected_series = (3,)
     assert result_series == expected_series
 

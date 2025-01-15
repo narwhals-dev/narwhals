@@ -888,6 +888,39 @@ class Expr(NwExpr):
             )
         )
 
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        """Sample randomly from this expression.
+
+        !!! warning
+            `Expr.sample` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sample())`, use
+            `df.select(nw.col('a')).sample()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+            fraction: Fraction of items to return. Cannot be used with n.
+            with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sample(
+                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            )
+        )
+
 
 class Schema(NwSchema):
     """Ordered mapping of column names to their data type.
