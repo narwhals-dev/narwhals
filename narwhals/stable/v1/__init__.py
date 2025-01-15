@@ -836,6 +836,42 @@ class Expr(NwExpr):
             ddof=ddof,
         )
 
+    def head(self, n: int = 10) -> Self:
+        r"""Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
+
+    def tail(self, n: int = 10) -> Self:
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""Take every nth value in the Series and return as new Series.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+        )
+
 
 class Schema(NwSchema):
     """Ordered mapping of column names to their data type.
