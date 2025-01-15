@@ -77,11 +77,11 @@ def test_cast(
     else:
         incompatible_columns = set()
 
-    data = {k: v for k, v in DATA.items() if k not in incompatible_columns}
-    schema = {k: v for k, v in SCHEMA.items() if k not in incompatible_columns}
+    data = {c: v for c, v in DATA.items() if c not in incompatible_columns}
+    schema = {c: t for c, t in SCHEMA.items() if c not in incompatible_columns}
 
     df = nw.from_native(constructor(data)).select(
-        nw.col(key).cast(value) for key, value in schema.items()
+        nw.col(col_).cast(dtype) for col_, dtype in schema.items()
     )
 
     cast_map = {
@@ -102,9 +102,9 @@ def test_cast(
         "o": nw.String,
         "p": nw.Duration,
     }
-    cast_map = {k: v for k, v in cast_map.items() if k not in incompatible_columns}
+    cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
 
-    result = df.select(*[nw.col(key).cast(value) for key, value in cast_map.items()])
+    result = df.select(*[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()])
     assert dict(result.collect_schema()) == cast_map
 
 
