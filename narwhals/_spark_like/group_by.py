@@ -17,18 +17,16 @@ from narwhals.utils import remove_prefix
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import GroupedData
+    from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.typing import CompliantExpr
 
 
-POLARS_TO_PYSPARK_AGGREGATIONS = {"len": "count"}
-
-
 class SparkLikeLazyGroupBy:
     def __init__(
-        self,
+        self: Self,
         df: SparkLikeLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
@@ -43,7 +41,7 @@ class SparkLikeLazyGroupBy:
             self._grouped = self._df._native_frame.groupBy(*self._keys)
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoSparkLikeExpr,
         **named_aggs: IntoSparkLikeExpr,
     ) -> SparkLikeLazyFrame:
@@ -65,13 +63,14 @@ class SparkLikeLazyGroupBy:
             output_names.extend(expr._output_names)
 
         return agg_pyspark(
+            self._df,
             self._grouped,
             exprs,
             self._keys,
             self._from_native_frame,
         )
 
-    def _from_native_frame(self, df: SparkLikeLazyFrame) -> SparkLikeLazyFrame:
+    def _from_native_frame(self: Self, df: SparkLikeLazyFrame) -> SparkLikeLazyFrame:
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
         return SparkLikeLazyFrame(
@@ -90,6 +89,7 @@ def get_spark_function(function_name: str, **kwargs: Any) -> Column:
             ddof=kwargs["ddof"],
             np_version=parse_version(np.__version__),
         )
+
     elif function_name == "len":
         # Use count(*) to count all rows including nulls
         def _count(*_args: Any, **_kwargs: Any) -> Column:
@@ -97,16 +97,29 @@ def get_spark_function(function_name: str, **kwargs: Any) -> Column:
 
         return _count
 
+    elif function_name == "n_unique":
+        from pyspark.sql.types import IntegerType
+
+        def _n_unique(_input: Column) -> Column:
+            return F.count_distinct(_input) + F.max(F.isnull(_input).cast(IntegerType()))
+
+        return _n_unique
+
     else:
         return getattr(F, function_name)
 
 
 def agg_pyspark(
+    df: SparkLikeLazyFrame,
     grouped: GroupedData,
     exprs: Sequence[CompliantExpr[Column]],
     keys: list[str],
     from_dataframe: Callable[[Any], SparkLikeLazyFrame],
 ) -> SparkLikeLazyFrame:
+    if not exprs:
+        # No aggregation provided
+        return from_dataframe(df._native_frame.select(*keys).dropDuplicates(subset=keys))
+
     for expr in exprs:
         if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (
@@ -128,12 +141,12 @@ def agg_pyspark(
             if expr._output_names is None:  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
+
             agg_func = get_spark_function(expr._function_name, **expr._kwargs)
             simple_aggregations.update(
                 {output_name: agg_func(keys[0]) for output_name in expr._output_names}
             )
             continue
-
         # e.g. agg(nw.mean('a')) # noqa: ERA001
         if (
             expr._depth != 1 or expr._root_names is None or expr._output_names is None
