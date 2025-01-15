@@ -73,7 +73,7 @@ def test_cast(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS
+        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -184,7 +184,7 @@ def test_cast_raises_for_unknown_dtype(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS
+        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
