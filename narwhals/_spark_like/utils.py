@@ -89,13 +89,13 @@ def narwhals_to_native_dtype(
         return pyspark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
