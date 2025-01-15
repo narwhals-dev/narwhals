@@ -152,6 +152,8 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             # executing one task at a time makes the tests faster
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
             .getOrCreate()
         )
 
