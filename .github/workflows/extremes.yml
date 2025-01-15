@@ -3,7 +3,7 @@ name: Min, old, and nightly versions
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev/validate…column_names]
 
 jobs:
   minimum_versions:

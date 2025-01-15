@@ -3,7 +3,7 @@ name: PyTest
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev/validate…column_names]
 
 jobs:
   pytest-38:
