@@ -55,6 +55,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
+        self._validate_columns(native_dataframe.column_names)
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
@@ -80,6 +81,20 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def __narwhals_lazyframe__(self: Self) -> Self:
         return self
+
+    def _validate_columns(self, columns: Iterable[str]) -> None:
+        columns_list = list(columns)
+        len_unique_columns = len(set(columns_list))
+        if len(columns_list) != len_unique_columns:
+            from collections import Counter
+
+            counter = Counter(columns)
+            msg = ""
+            for key, value in counter.items():
+                if value > 1:
+                    msg += f"\n- '{key}' {value} times"
+            msg = f"Expected unique column names, got:{msg}"
+            raise ValueError(msg)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
