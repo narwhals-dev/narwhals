@@ -373,6 +373,8 @@ jobs:
           git clone https://github.com/matthewwardrop/formulaic.git --depth=1
           cd formulaic
           git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools --system
       - name: create-hatch-env
         run: |
           cd formulaic
@@ -388,6 +390,8 @@ jobs:
           uv pip uninstall narwhals --system
           uv pip install -e ./.. --system
       - name: show-deps
+        run: uv pip freeze
+      - name: run test
         run: |
           cd formulaic
           pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=formulaic --cov-report=xml -vv tests
