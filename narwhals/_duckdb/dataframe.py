@@ -147,7 +147,7 @@ class DuckDBLazyFrame:
             result.append(value.alias(col))
         return self._from_native_frame(self._native_frame.select(*result))
 
-    def filter(self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
