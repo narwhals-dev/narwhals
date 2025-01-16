@@ -389,4 +389,4 @@ jobs:
       - name: show-deps
         run: |
           cd formulaic
-          hatch run tests
+          pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=formulaic --cov-report=xml -vv tests
