@@ -461,29 +461,17 @@ class PandasWhen:
 
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
-            if len(value_series) == 1:  # literal or reduction case
-                value_series = condition.__class__._from_iterable(
-                    [value_series[0]] * len(condition),
-                    name="literal",
-                    index=condition._native_series.index,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(
-                [self._then_value] * len(condition),
-                name="literal",
-                index=condition._native_series.index,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
+            # `self._then_value` is a scalar and can't be converted to an expression
+            value_series = plx._create_series_from_scalar(
+                self._then_value, reference_series=condition
             )
-        value_series_native, condition_native = broadcast_align_and_extract_native(
-            value_series, condition
+
+        condition_native, value_series_native = broadcast_align_and_extract_native(
+            condition, value_series
         )
 
         if self._otherwise_value is None:
@@ -493,7 +481,9 @@ class PandasWhen:
                 )
             ]
         try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
+            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx)(df)[
+                0
+            ]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
@@ -502,8 +492,14 @@ class PandasWhen:
                 )
             ]
         else:
-            otherwise_series = otherwise_expr(df)[0]
-            return [value_series.zip_with(condition, otherwise_series)]
+            _, otherwise_native = broadcast_align_and_extract_native(
+                condition, otherwise_series
+            )
+            return [
+                value_series._from_native_series(
+                    value_series_native.where(condition_native, otherwise_native)
+                )
+            ]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value

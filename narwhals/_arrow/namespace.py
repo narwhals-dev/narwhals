@@ -439,8 +439,7 @@ class ArrowWhen:
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            plx = condition.__narwhals_namespace__()
+            # `self._then_value` is a scalar and can't be converted to an expression
             value_series = plx._create_series_from_scalar(
                 self._then_value, reference_series=condition
             )

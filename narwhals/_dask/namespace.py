@@ -402,16 +402,19 @@ class DaskWhen:
         try:
             then_expr = parse_into_expr(self._then_value, namespace=plx)
             value_series = then_expr(df)[0]
+
             # literal or reduction case
-            if then_expr._returns_scalar:  # type: ignore[attr-defined]
-                _df = condition.to_frame("a")
-                _df["tmp"] = value_series[0]
-                value_series = _df["tmp"]
+            is_scalar = then_expr._returns_scalar  # type: ignore[attr-defined]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            # `self._then_value` is a scalar and can't be converted to an expression
+            value_series = [self._then_value]
+            is_scalar = True
+
+        if is_scalar:
             _df = condition.to_frame("a")
-            _df["tmp"] = self._then_value
+            _df["tmp"] = value_series[0]
             value_series = _df["tmp"]
+
         value_series = cast("dx.Series", value_series)
         validate_comparand(condition, value_series)
 
