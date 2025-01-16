@@ -386,4 +386,5 @@ jobs:
         run: uv pip freeze
       - name: Run test
         run: |
+          cd formulaic
           hatch run tests
