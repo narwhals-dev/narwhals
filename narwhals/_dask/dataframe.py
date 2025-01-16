@@ -150,10 +150,9 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna())
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 

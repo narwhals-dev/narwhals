@@ -372,10 +372,9 @@ class PandasLikeDataFrame:
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna(axis=0))
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
