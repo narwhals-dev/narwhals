@@ -379,19 +379,16 @@ jobs:
         run: |
           cd formulaic
           uv pip install hatch hatch-vcs --system
-          hatch env create
       - name: install-formulaic-dev
         run: |
           cd formulaic
-          uv pip install -e ".[arrow,calculus]" --system
+          hatch run uv pip install -e ".[arrow,calculus]"
       - name: install-narwhals-dev
         run: |
           cd formulaic
-          uv pip uninstall narwhals --system
-          uv pip install -e ./.. --system
-      - name: show-deps
-        run: uv pip freeze
+          hatch run uv pip uninstall narwhals
+          hatch run uv pip install -e ./..
       - name: run test
         run: |
           cd formulaic
-          pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=formulaic --cov-report=xml -vv tests
+          hatch run tests
