@@ -334,5 +334,5 @@ class DuckDBLazyFrame:
             else subset
         )
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
-        query = f"""select * from rel where {keep_condition}"""  # noqa: S608
+        query = f"select * from rel where {keep_condition}"  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
