@@ -389,8 +389,4 @@ jobs:
       - name: show-deps
         run: |
           cd formulaic
-          uv pip freeze
-      - name: Run tests
-        run: |
-          cd formulaic
-          pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=formulaic --cov-report=xml -vv tests
+          hatch run tests
