@@ -20,7 +20,6 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
@@ -409,7 +408,7 @@ class PandasLikeDataFrame:
             and all(isinstance(x, bool) for x in predicates[0])
             and not constraints
         ):
-            _mask = predicates[0]
+            mask_native = predicates[0]
         else:
             expr = plx.all_horizontal(
                 *chain(
@@ -418,16 +417,14 @@ class PandasLikeDataFrame:
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            if len(mask) != len(self):
-                msg = (
-                    f"Predicate result has length {len(mask)}, which is incompatible with "
-                    f"DataFrame of length {len(self)}"
-                )
-                raise ShapeError(msg)
+            mask_native = validate_dataframe_comparand(
+                self._native_frame.index,
+                mask,
+                allow_broadcast=False,
+                method_name="filter",
+            )
 
-            _mask = validate_dataframe_comparand(self._native_frame.index, mask)
-
-        return self._from_native_frame(self._native_frame.loc[_mask])
+        return self._from_native_frame(self._native_frame.loc[mask_native])
 
     def with_columns(
         self,
@@ -446,13 +443,21 @@ class PandasLikeDataFrame:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name)
+                        index,
+                        new_column_name_to_new_column_map.pop(name),
+                        allow_broadcast=True,
+                        method_name="with_columns",
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            validate_dataframe_comparand(
+                index,
+                new_column_name_to_new_column_map[s],
+                allow_broadcast=True,
+                method_name="with_columns",
+            )
             for s in new_column_name_to_new_column_map
         )
 

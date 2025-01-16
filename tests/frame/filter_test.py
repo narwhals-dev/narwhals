@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ShapeError
@@ -43,7 +44,7 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
     context = (
         pytest.raises(
             ShapeError,
-            match="Predicate result has length 1, which is incompatible with DataFrame of length 3",
+            match="filter's length: 1 differs from that of the series: 3",
         )
         if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin"))
         else does_not_raise()
@@ -52,3 +53,22 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
     )
     with context:
         df.filter(nw.col("a").max() > 2).lazy().collect()
+
+
+def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    context = (
+        pytest.raises(
+            ShapeError, match="filter's length: 2 differs from that of the series: 3"
+        )
+        if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin"))
+        else pytest.raises(
+            PlShapeError, match="filter's length: 2 differs from that of the series: 3"
+        )
+        if "polars" in str(constructor)
+        else pytest.raises(Exception)  # type: ignore[arg-type] # noqa: PT011
+    )
+    with context:
+        df.filter(nw.col("b").unique() > 2).lazy().collect()

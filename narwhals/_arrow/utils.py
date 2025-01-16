@@ -6,6 +6,7 @@ from typing import Any
 from typing import Sequence
 from typing import overload
 
+from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -212,7 +213,12 @@ def broadcast_and_extract_native(
 
 
 def validate_dataframe_comparand(
-    length: int, other: Any, backend_version: tuple[int, ...]
+    length: int,
+    other: Any,
+    backend_version: tuple[int, ...],
+    *,
+    allow_broadcast: bool,
+    method_name: str,
 ) -> Any:
     """Validate RHS of binary operation.
 
@@ -222,7 +228,14 @@ def validate_dataframe_comparand(
     from narwhals._arrow.series import ArrowSeries
 
     if isinstance(other, ArrowSeries):
-        if len(other) == 1:
+        len_other = len(other)
+        if len_other == 1:
+            if length > 1 and not allow_broadcast:
+                msg = (
+                    f"{method_name}'s length: 1 differs from that of the series: {length}"
+                )
+                raise ShapeError(msg)
+
             import numpy as np  # ignore-banned-import
             import pyarrow as pa
 
@@ -230,6 +243,11 @@ def validate_dataframe_comparand(
             if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
+
+        if length != len_other:
+            msg = f"{method_name}'s length: {len_other} differs from that of the series: {length}"
+            raise ShapeError(msg)
+
         return other._native_series
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover

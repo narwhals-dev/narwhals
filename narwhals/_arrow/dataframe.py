@@ -16,7 +16,6 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import flatten
@@ -313,7 +312,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             col_name = col_value.name
 
             column = validate_dataframe_comparand(
-                length=length, other=col_value, backend_version=self._backend_version
+                length=length,
+                other=col_value,
+                backend_version=self._backend_version,
+                allow_broadcast=True,
+                method_name="with_columns",
             )
 
             native_frame = (
@@ -483,7 +486,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             and all(isinstance(x, bool) for x in predicates[0])
             and not constraints
         ):
-            mask = predicates[0]
+            mask_native = predicates[0]
         else:
             plx = self.__narwhals_namespace__()
             expr = plx.all_horizontal(
@@ -492,16 +495,15 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]._native_series
-
-            if len(mask) != len(self):
-                msg = (
-                    f"Predicate result has length {len(mask)}, which is incompatible with "
-                    f"DataFrame of length {len(self)}"
-                )
-                raise ShapeError(msg)
-
-        return self._from_native_frame(self._native_frame.filter(mask))
+            mask = expr._call(self)[0]
+            mask_native = validate_dataframe_comparand(
+                length=len(self),
+                other=mask,
+                backend_version=self._backend_version,
+                allow_broadcast=False,
+                method_name="filter",
+            )
+        return self._from_native_frame(self._native_frame.filter(mask_native))
 
     def null_count(self: Self) -> Self:
         import pyarrow as pa
