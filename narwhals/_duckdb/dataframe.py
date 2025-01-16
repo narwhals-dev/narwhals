@@ -326,7 +326,13 @@ class DuckDBLazyFrame:
         import duckdb
 
         rel = self._native_frame
-        subset_ = subset if subset is not None else rel.columns
-        keep_condition = " and ".join(f"{col} is not null" for col in subset_)
+        subset_ = (
+            [subset]
+            if isinstance(subset, str)
+            else rel.columns
+            if subset is None
+            else subset
+        )
+        keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"""select * from rel where {keep_condition}"""  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
