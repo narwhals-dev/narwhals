@@ -376,6 +376,7 @@ jobs:
       - name: create-hatch-env
         run: |
           cd formulaic
+          uv pip install hatch hatch-vcs --system
           hatch env create
       - name: install-formulaic-dev
         run: |
