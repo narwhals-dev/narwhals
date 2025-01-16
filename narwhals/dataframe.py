@@ -92,7 +92,8 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.with_row_index(name),
         )
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+        subset = [subset] if isinstance(subset, str) else subset
         return self._from_compliant_dataframe(
             self._compliant_frame.drop_nulls(subset=subset),
         )

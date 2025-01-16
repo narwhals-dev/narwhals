@@ -398,13 +398,24 @@ class DaskWhen:
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
         condition = cast("dx.Series", condition)
+
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+            then_expr = parse_into_expr(self._then_value, namespace=plx)
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            # `self._then_value` is a scalar and can't be converted to an expression
+            value_sequence: Sequence[Any] = [self._then_value]
+            is_scalar = True
+        else:
+            is_scalar = then_expr._returns_scalar  # type: ignore[attr-defined]
+            value_sequence = then_expr(df)[0]
+
+        if is_scalar:
             _df = condition.to_frame("a")
-            _df["tmp"] = self._then_value
+            _df["tmp"] = value_sequence[0]
             value_series = _df["tmp"]
+        else:
+            value_series = value_sequence
+
         value_series = cast("dx.Series", value_series)
         validate_comparand(condition, value_series)
 

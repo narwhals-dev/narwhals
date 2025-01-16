@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -17,6 +20,9 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     result_series = df["a"].sample(n=2).shape
     expected_series = (2,)
     assert result_series == expected_series
+
+    with pytest.deprecated_call():
+        df.select(nw_main.col("a").sample(n=2))
 
 
 def test_expr_sample_fraction(constructor_eager: ConstructorEager) -> None:
