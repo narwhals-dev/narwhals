@@ -83,5 +83,9 @@ class AnonymousExprError(ValueError):
         return AnonymousExprError(message)
 
 
+class UnsupportedDTypeError(ValueError):
+    """Exception raised when trying to convert to a DType which is not supported by the given backend."""
+
+
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""

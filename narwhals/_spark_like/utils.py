@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -102,7 +103,7 @@ def narwhals_to_native_dtype(
         for t in [dtypes.UInt64, dtypes.UInt32, dtypes.UInt16, dtypes.UInt8]
     ):  # pragma: no cover
         msg = "Unsigned integer types are not supported by PySpark"
-        raise NotImplementedError(msg)
+        raise UnsupportedDTypeError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
