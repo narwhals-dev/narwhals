@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
+from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
@@ -92,12 +93,9 @@ class PandasLikeGroupBy:
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in group_by.agg.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+                msg = "group_by.agg"
+                raise AnonymousExprError.from_expr_name(msg)
+
             output_names.extend(expr._output_names)
 
         return agg_pandas(

@@ -6,6 +6,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import AnonymousExprError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -35,7 +36,7 @@ def test_prefix_raise_anonymous(constructor: Constructor) -> None:
         does_not_raise()
         if isinstance(df_raw, (pl.LazyFrame, pl.DataFrame))
         else pytest.raises(
-            ValueError,
+            AnonymousExprError,
             match="Anonymous expressions are not supported in `.name.prefix`.",
         )
     )

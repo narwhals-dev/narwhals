@@ -108,7 +108,7 @@ class SparkLikeLazyFrame:
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
-    def filter(self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
@@ -183,7 +183,7 @@ class SparkLikeLazyFrame:
         sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
