@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Callable
+from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,15 +16,9 @@ class DuckDBExprNameNamespace:
 
     def keep(self: Self) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
-
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.keep`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
+            msg = ".name.keep"
+            raise AnonymousExprError.from_expr_name(msg)
         return self._compliant_expr.__class__(
             lambda df: [
                 expr.alias(name)
@@ -41,14 +36,9 @@ class DuckDBExprNameNamespace:
 
     def map(self: Self, function: Callable[[str], str]) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
-
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.map`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
+            msg = ".name.map"
+            raise AnonymousExprError.from_expr_name(msg)
 
         output_names = [function(str(name)) for name in root_names]
 
@@ -70,12 +60,8 @@ class DuckDBExprNameNamespace:
     def prefix(self: Self, prefix: str) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.prefix`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
+            msg = ".name.prefix"
+            raise AnonymousExprError.from_expr_name(msg)
 
         output_names = [prefix + str(name) for name in root_names]
         return self._compliant_expr.__class__(
@@ -96,12 +82,8 @@ class DuckDBExprNameNamespace:
     def suffix(self: Self, suffix: str) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.suffix`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
+            msg = ".name.suffix"
+            raise AnonymousExprError.from_expr_name(msg)
 
         output_names = [str(name) + suffix for name in root_names]
 
@@ -122,14 +104,10 @@ class DuckDBExprNameNamespace:
 
     def to_lowercase(self: Self) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
-
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
+            msg = ".name.to_lowercase"
+            raise AnonymousExprError.from_expr_name(msg)
+
         output_names = [str(name).lower() for name in root_names]
 
         return self._compliant_expr.__class__(
@@ -149,14 +127,9 @@ class DuckDBExprNameNamespace:
 
     def to_uppercase(self: Self) -> DuckDBExpr:
         root_names = self._compliant_expr._root_names
-
         if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
+            msg = ".name.to_uppercase"
+            raise AnonymousExprError.from_expr_name(msg)
         output_names = [str(name).upper() for name in root_names]
 
         return self._compliant_expr.__class__(
