@@ -3678,16 +3678,40 @@ class LazyFrame(BaseFrame[FrameT]):
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
-    def collect(self) -> DataFrame[Any]:
+    def collect(
+        self: Self,
+        *,
+        polars_kwargs: dict[str, Any] | None = None,
+        dask_kwargs: dict[str, Any] | None = None,
+        duckdb_kwargs: dict[str, str] | None = None,
+    ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
+
+        As each underlying lazyframe has different arguments to set when materializing
+        the lazyframe into a dataframe, we allow to pass them separately into its own
+        keyword argument.
+
+        Arguments:
+            polars_kwargs: [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                arguments. Used only if the `LazyFrame` is backed by a `polars.LazyFrame`.
+                If not provided, it uses the polars default values.
+            dask_kwargs: [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
+                arguments. Used only if the `LazyFrame` is backed by a `dask.dataframe.DataFrame`.
+                If not provided, it uses the dask default values.
+            duckdb_kwargs: Allows to specify in which eager backend to materialize a
+                DuckDBPyRelation backed LazyFrame. It is possible to choose among
+                `pyarrow`, `pandas` or `polars` by declaring
+                `duckdb_kwargs={"eager_backend": "<eager_backend>"}`.
 
         Returns:
             DataFrame
 
         Examples:
-            >>> import narwhals as nw
             >>> import polars as pl
             >>> import dask.dataframe as dd
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame, IntoFrame
+            >>>
             >>> data = {
             ...     "a": ["a", "b", "a", "b", "b", "c"],
             ...     "b": [1, 2, 3, 4, 5, 6],
@@ -3696,28 +3720,14 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf  # doctest:+ELLIPSIS
+            >>> nw.from_native(lf_pl)  # doctest:+ELLIPSIS
             ┌─────────────────────────────┐
             |     Narwhals LazyFrame      |
             |-----------------------------|
             |<LazyFrame at ...
             └─────────────────────────────┘
-            >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> df.to_native().sort("a")
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
-            │ --- ┆ --- ┆ --- │
-            │ str ┆ i64 ┆ i64 │
-            ╞═════╪═════╪═════╡
-            │ a   ┆ 4   ┆ 10  │
-            │ b   ┆ 11  ┆ 10  │
-            │ c   ┆ 6   ┆ 1   │
-            └─────┴─────┴─────┘
 
-            >>> lf = nw.from_native(lf_dask)
-            >>> lf
+            >>> nw.from_native(lf_dask)
             ┌───────────────────────────────────┐
             |        Narwhals LazyFrame         |
             |-----------------------------------|
@@ -3730,15 +3740,90 @@ class LazyFrame(BaseFrame[FrameT]):
             |Dask Name: frompandas, 1 expression|
             |Expr=df                            |
             └───────────────────────────────────┘
-            >>> df = lf.group_by("a").agg(nw.col("b", "c").sum()).collect()
-            >>> df.to_native()
+
+            Let's define a dataframe-agnostic that does some grouping computation and
+            finally collects to a DataFrame:
+
+            >>> def agnostic_group_by_and_collect(lf_native: IntoFrame) -> IntoDataFrame:
+            ...     lf = nw.from_native(lf_native)
+            ...     return (
+            ...         lf.group_by("a")
+            ...         .agg(nw.col("b", "c").sum())
+            ...         .sort("a")
+            ...         .collect()
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as Polars or Dask
+            to `agnostic_group_by_and_collect`:
+
+            >>> agnostic_group_by_and_collect(lf_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 4   ┆ 10  │
+            │ b   ┆ 11  ┆ 10  │
+            │ c   ┆ 6   ┆ 1   │
+            └─────┴─────┴─────┘
+
+            >>> agnostic_group_by_and_collect(lf_dask)
+               a   b   c
+            0  a   4  10
+            1  b  11  10
+            2  c   6   1
+
+            Now, let's suppose that we want to run lazily, yet without
+            query optimization (e.g. for debugging purpose). As this is achieved
+            differently in polars and dask, to keep a unified workflow we can specify
+            the native kwargs for each backend:
+
+            >>> def agnostic_collect_no_opt(lf_native: IntoFrame) -> IntoDataFrame:
+            ...     lf = nw.from_native(lf_native)
+            ...     return (
+            ...         lf.group_by("a")
+            ...         .agg(nw.col("b", "c").sum())
+            ...         .sort("a")
+            ...         .collect(
+            ...             polars_kwargs={"no_optimization": True},
+            ...             dask_kwargs={"optimize_graph": False},
+            ...         )
+            ...         .to_native()
+            ...     )
+
+            >>> agnostic_collect_no_opt(lf_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 4   ┆ 10  │
+            │ b   ┆ 11  ┆ 10  │
+            │ c   ┆ 6   ┆ 1   │
+            └─────┴─────┴─────┘
+
+            >>> agnostic_collect_no_opt(lf_dask)
                a   b   c
             0  a   4  10
             1  b  11  10
             2  c   6   1
         """
+        from narwhals.utils import Implementation
+
+        if self.implementation is Implementation.POLARS and polars_kwargs is not None:
+            kwargs = polars_kwargs
+        elif self.implementation is Implementation.DASK and dask_kwargs is not None:
+            kwargs = dask_kwargs
+        elif self.implementation is Implementation.DUCKDB and duckdb_kwargs is not None:
+            kwargs = duckdb_kwargs
+        else:
+            kwargs = {}
+
         return self._dataframe(
-            self._compliant_frame.collect(),
+            self._compliant_frame.collect(**kwargs),
             level="full",
         )
 
