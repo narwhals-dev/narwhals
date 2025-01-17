@@ -99,7 +99,7 @@ class DaskSelectorNamespace:
         self: Self,
         time_unit: TimeUnit | Collection[TimeUnit] | None,
         time_zone: str | timezone | Collection[str | timezone | None] | None,
-    ) -> DaskSelector:
+    ) -> DaskSelector:  # pragma: no cover
         from narwhals.utils import _parse_datetime_selector_to_datetimes
 
         datetime_dtypes = _parse_datetime_selector_to_datetimes(
