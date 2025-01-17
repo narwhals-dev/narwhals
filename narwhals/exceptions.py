@@ -66,5 +66,26 @@ class InvalidIntoExprError(TypeError):
         return InvalidIntoExprError(message)
 
 
+class AnonymousExprError(ValueError):
+    """Exception raised when trying to perform operations on anonymous expressions."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+    @classmethod
+    def from_expr_name(cls, expr_name: str) -> AnonymousExprError:
+        message = (
+            f"Anonymous expressions are not supported in `{expr_name}`.\n"
+            "Instead of `nw.all()`, try using a named expression, such as "
+            "`nw.col('a', 'b')`"
+        )
+        return AnonymousExprError(message)
+
+
+class UnsupportedDTypeError(ValueError):
+    """Exception raised when trying to convert to a DType which is not supported by the given backend."""
+
+
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""

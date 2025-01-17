@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
+from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import binary_operation_returns_scalar
 from narwhals._duckdb.utils import get_column_name
@@ -571,3 +572,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     @property
     def dt(self: Self) -> DuckDBExprDateTimeNamespace:
         return DuckDBExprDateTimeNamespace(self)
+
+    @property
+    def name(self: Self) -> DuckDBExprNameNamespace:
+        return DuckDBExprNameNamespace(self)

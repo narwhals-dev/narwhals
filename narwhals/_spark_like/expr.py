@@ -7,9 +7,11 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
+from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -284,6 +287,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(F.bool_or, "any", returns_scalar=True)
 
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
+        def _cast(_input: Column, dtype: DType | type[DType]) -> Column:
+            spark_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return _input.cast(spark_dtype)
+
+        return self._from_call(
+            _cast, "cast", dtype=dtype, returns_scalar=self._returns_scalar
+        )
+
     def count(self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812
 
@@ -499,3 +511,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
+
+    @property
+    def name(self: Self) -> SparkLikeExprNameNamespace:
+        return SparkLikeExprNameNamespace(self)

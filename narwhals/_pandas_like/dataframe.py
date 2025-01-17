@@ -371,10 +371,9 @@ class PandasLikeDataFrame:
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna(axis=0))
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
@@ -401,7 +400,7 @@ class PandasLikeDataFrame:
     def row(self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         if (
             len(predicates) == 1
@@ -409,7 +408,7 @@ class PandasLikeDataFrame:
             and all(isinstance(x, bool) for x in predicates[0])
             and not constraints
         ):
-            _mask = predicates[0]
+            mask_native = predicates[0]
         else:
             expr = plx.all_horizontal(
                 *chain(
@@ -418,8 +417,14 @@ class PandasLikeDataFrame:
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            _mask = validate_dataframe_comparand(self._native_frame.index, mask)
-        return self._from_native_frame(self._native_frame.loc[_mask])
+            mask_native = validate_dataframe_comparand(
+                self._native_frame.index,
+                mask,
+                allow_broadcast=False,
+                method_name="filter",
+            )
+
+        return self._from_native_frame(self._native_frame.loc[mask_native])
 
     def with_columns(
         self,
@@ -438,13 +443,21 @@ class PandasLikeDataFrame:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name)
+                        index,
+                        new_column_name_to_new_column_map.pop(name),
+                        allow_broadcast=True,
+                        method_name="with_columns",
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            validate_dataframe_comparand(
+                index,
+                new_column_name_to_new_column_map[s],
+                allow_broadcast=True,
+                method_name="with_columns",
+            )
             for s in new_column_name_to_new_column_map
         )
 
