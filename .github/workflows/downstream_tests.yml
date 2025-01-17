@@ -391,4 +391,4 @@ jobs:
       - name: run test
         run: |
           cd formulaic
-          hatch run pytest --rootdir=. tests
+          hatch run pytest --rootdir=.  --config-file=./pyproject.toml tests
