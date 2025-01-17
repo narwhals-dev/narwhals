@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -33,12 +34,8 @@ class DuckDBGroupBy:
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:  # pragma: no cover
-                msg = (
-                    "Anonymous expressions are not supported in group_by.agg.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+                msg = "group_by.agg"
+                raise AnonymousExprError.from_expr_name(msg)
 
             output_names.extend(expr._output_names)
 

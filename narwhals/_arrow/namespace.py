@@ -435,19 +435,18 @@ class ArrowWhen:
 
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(
-                pa.repeat(pa.scalar(self._then_value), len(condition)),
-                name="literal",
-                backend_version=self._backend_version,
-                version=self._version,
+            # `self._then_value` is a scalar and can't be converted to an expression
+            value_series = plx._create_series_from_scalar(
+                self._then_value, reference_series=condition
             )
 
-        value_series_native = value_series._native_series
-        condition_native = condition._native_series
+        condition_native, value_series_native = broadcast_series(
+            [condition, value_series]
+        )
 
         if self._otherwise_value is None:
             otherwise_native = pa.repeat(
@@ -472,9 +471,7 @@ class ArrowWhen:
             ]
         else:
             otherwise_series = otherwise_expr(df)[0]
-            condition_native, otherwise_native = broadcast_series(
-                [condition, otherwise_series]
-            )
+            _, otherwise_native = broadcast_series([condition, otherwise_series])
             return [
                 value_series._from_native_series(
                     pc.if_else(condition_native, value_series_native, otherwise_native)

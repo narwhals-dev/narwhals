@@ -147,7 +147,7 @@ class DuckDBLazyFrame:
             result.append(value.alias(col))
         return self._from_native_frame(self._native_frame.select(*result))
 
-    def filter(self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
@@ -321,3 +321,12 @@ class DuckDBLazyFrame:
             )
         )
         return self._from_native_frame(result)
+
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+        import duckdb
+
+        rel = self._native_frame
+        subset_ = subset if subset is not None else rel.columns
+        keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
+        query = f"select * from rel where {keep_condition}"  # noqa: S608
+        return self._from_native_frame(duckdb.sql(query))

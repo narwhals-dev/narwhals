@@ -836,6 +836,91 @@ class Expr(NwExpr):
             ddof=ddof,
         )
 
+    def head(self, n: int = 10) -> Self:
+        r"""Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
+
+    def tail(self, n: int = 10) -> Self:
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""Take every nth value in the Series and return as new Series.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+        )
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        """Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sort(
+                descending=descending, nulls_last=nulls_last
+            )
+        )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        """Sample randomly from this expression.
+
+        !!! warning
+            `Expr.sample` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sample())`, use
+            `df.select(nw.col('a')).sample()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+            fraction: Fraction of items to return. Cannot be used with n.
+            with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sample(
+                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            )
+        )
+
 
 class Schema(NwSchema):
     """Ordered mapping of column names to their data type.
