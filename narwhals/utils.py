@@ -388,12 +388,14 @@ def parse_version(version: str) -> tuple[int, ...]:
     return tuple(int(re.sub(r"\D", "", str(v))) for v in version.split("."))
 
 
-def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:
     from narwhals.dtypes import DType
 
-    if isinstance(obj, DType):
-        return isinstance(obj, cls)
-    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
+    if isinstance(obj_or_cls, DType):
+        return isinstance(obj_or_cls, cls_or_tuple)
+    return isinstance(obj_or_cls, cls_or_tuple) or (
+        isinstance(obj_or_cls, type) and issubclass(obj_or_cls, cls_or_tuple)
+    )
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
