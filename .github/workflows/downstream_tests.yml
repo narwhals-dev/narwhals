@@ -391,4 +391,4 @@ jobs:
       - name: run test
         run: |
           cd formulaic
-          hatch run pytest --config-file=pyproject.toml --cov-report=term-missing --cov-config=pyproject.toml --cov=formulaic --cov-report=xml tests
+          hatch run tests --config-file=pyproject.toml
