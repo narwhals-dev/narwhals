@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -29,6 +30,11 @@ def test_sort_expr(
         nw.col("b").sort(descending=descending, nulls_last=nulls_last),
     )
     assert_equal_data(result, expected)
+    with pytest.deprecated_call():
+        df.select(
+            "a",
+            nw_main.col("b").sort(descending=descending, nulls_last=nulls_last),
+        )
 
 
 @pytest.mark.parametrize(

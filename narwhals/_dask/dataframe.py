@@ -96,13 +96,14 @@ class DaskLazyFrame(CompliantLazyFrame):
     def columns(self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
-    def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: DaskExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
         )
         # `[0]` is safe as all_horizontal's expression only returns a single column
         mask = expr._call(self)[0]
+
         return self._from_native_frame(self._native_frame.loc[mask])
 
     def select(
@@ -149,10 +150,9 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna())
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
