@@ -391,4 +391,4 @@ jobs:
       - name: run test
         run: |
           cd formulaic
-          hatch run tests
+          hatch run pytest --rootdir=. tests
