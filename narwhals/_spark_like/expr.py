@@ -494,6 +494,33 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(F.skewness, "skew", returns_scalar=True)
 
+    def sort(self, *, descending: bool = False, nulls_last: bool = True) -> Self:
+        def _sort(_input: Column, *, descending: bool, nulls_last: bool) -> Column:
+            from pyspark.sql import Window
+            from pyspark.sql import functions as F  # noqa: N812
+
+            window = Window.orderBy(
+                _input.desc() if descending else _input.asc(),
+                (
+                    F.col("*").asc_nulls_last()
+                    if nulls_last
+                    else F.col("*").asc_nulls_first()
+                ),
+            ).rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+
+            row_num = F.row_number().over(window)
+            collect_window = Window.orderBy(row_num)
+
+            return F.first(_input).over(collect_window)
+
+        return self._from_call(
+            _sort,
+            "sort",
+            descending=descending,
+            nulls_last=nulls_last,
+            returns_scalar=self._returns_scalar,
+        )
+
     def n_unique(self: Self) -> Self:
         from pyspark.sql import functions as F  # noqa: N812
         from pyspark.sql.types import IntegerType
