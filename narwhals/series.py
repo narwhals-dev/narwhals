@@ -12,6 +12,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import InvalidOperationError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -4898,6 +4899,46 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rank(method=method, descending=descending)
+        )
+
+    def hist(
+        self: Self,
+        bins: Sequence[int | float] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_category: bool = True,
+        include_breakpoint: bool = True,
+    ) -> DataFrame[Any]:
+        """Bin values into buckets and count their occurrences.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            bins: A monotonically increasing sequence of values.
+            bin_count: If no bins provided, this will be used to determine the distance of the bins.
+            include_category: Include a column that indicates the upper value of each bin.
+            include_breakpoint: Include a column that shows the intervals as categories.
+
+        Returns:
+            A new DataFrame containing the counts of values that occur within each passed bin.
+        """
+        if bins is None and bin_count is None:
+            msg = "must provide one of `bin_count` or `bins`"
+            raise InvalidOperationError(msg)
+        if bins is not None and bin_count is not None:
+            msg = "can only provide one of `bin_count` or `bins`"
+            raise InvalidOperationError(msg)
+
+        return self._dataframe(
+            self._compliant_series.hist(
+                bins=bins,
+                bin_count=bin_count,
+                include_category=include_category,
+                include_breakpoint=include_breakpoint,
+            ),
+            level=self._level,
         )
 
     @property

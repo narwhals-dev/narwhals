@@ -30,6 +30,7 @@
         - filter
         - gather_every
         - head
+        - hist
         - implementation
         - is_between
         - is_duplicated
