@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import timezone
 from enum import Enum
 from enum import auto
 from secrets import token_hex
@@ -35,6 +36,8 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+    from collections.abc import Set as AbstractSet
     from types import ModuleType
 
     import pandas as pd
@@ -43,10 +46,12 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import Datetime
     from narwhals.series import Series
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
+    from narwhals.typing import TimeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1067,3 +1072,37 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
+
+
+def _parse_datetime_selector_to_datetimes(
+    time_unit: TimeUnit | Collection[TimeUnit] | None,
+    time_zone: str | timezone | Collection[str | timezone | None] | None,
+    version: Version,
+) -> AbstractSet[Datetime]:
+    # Adapted from polars: https://github.com/pola-rs/polars/blob/725c96009e4c6cb6b05db7f7e33daf3330a4fa35/py-polars/polars/selectors.py#L1340-L1493
+    time_units: list[TimeUnit]
+    if time_unit is None:
+        time_units = ["ms", "us", "ns"]
+    else:
+        time_units = [time_unit] if isinstance(time_unit, str) else list(time_unit)
+
+    time_zones: list[str | timezone | None]
+    if time_zone is None:
+        time_zones = [None]
+    else:
+        time_zones = (
+            [time_zone] if isinstance(time_zone, (str, timezone)) else list(time_zone)
+        )
+
+    if "*" in time_zones:
+        import zoneinfo
+
+        time_zones.extend(list(zoneinfo.available_timezones()))
+        time_zones.remove("*")
+
+    dtypes = import_dtypes_module(version=version)
+    return {
+        dtypes.Datetime(time_unit=tu, time_zone=tz)
+        for tu in time_units
+        for tz in time_zones
+    }

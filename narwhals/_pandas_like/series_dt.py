@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
@@ -12,6 +11,7 @@ from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals.typing import TimeUnit
 
 
 class PandasLikeSeriesDateTimeNamespace:
@@ -206,7 +206,7 @@ class PandasLikeSeriesDateTimeNamespace:
             result = self._compliant_series._native_series.dt.tz_convert(time_zone)
         return self._compliant_series._from_native_series(result)
 
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeSeries:
+    def timestamp(self, time_unit: TimeUnit) -> PandasLikeSeries:
         s = self._compliant_series._native_series
         dtype = self._compliant_series.dtype
         is_pyarrow_dtype = "pyarrow" in str(self._compliant_series._native_series.dtype)

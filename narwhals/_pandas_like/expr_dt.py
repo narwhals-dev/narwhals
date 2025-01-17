@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.typing import TimeUnit
 
 
 class PandasLikeExprDateTimeNamespace:
@@ -99,7 +99,7 @@ class PandasLikeExprDateTimeNamespace:
             self._compliant_expr, "dt", "convert_time_zone", time_zone=time_zone
         )
 
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeExpr:
+    def timestamp(self, time_unit: TimeUnit) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "timestamp", time_unit=time_unit
         )

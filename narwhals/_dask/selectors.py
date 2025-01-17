@@ -12,10 +12,16 @@ if TYPE_CHECKING:
         import dask.dataframe.dask_expr as dx
     except ModuleNotFoundError:
         import dask_expr as dx
+
+    from collections.abc import Collection
+    from collections.abc import Container
+    from datetime import timezone
+
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
 
@@ -26,7 +32,7 @@ class DaskSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
+    def by_dtype(self: Self, dtypes: Container[DType | type[DType]]) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
             return [
                 df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
@@ -88,6 +94,18 @@ class DaskSelectorNamespace:
             version=self._version,
             kwargs={},
         )
+
+    def datetime(
+        self: Self,
+        time_unit: TimeUnit | Collection[TimeUnit] | None,
+        time_zone: str | timezone | Collection[str | timezone | None] | None,
+    ) -> DaskSelector:
+        from narwhals.utils import _parse_datetime_selector_to_datetimes
+
+        datetime_dtypes = _parse_datetime_selector_to_datetimes(
+            time_unit=time_unit, time_zone=time_zone, version=self._version
+        )
+        return self.by_dtype(datetime_dtypes)
 
 
 class DaskSelector(DaskExpr):

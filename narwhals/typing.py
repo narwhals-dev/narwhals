@@ -249,6 +249,8 @@ SizeUnit: TypeAlias = Literal[
     "terabytes",
 ]
 
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
 
 class DTypes:
     Decimal: type[dtypes.Decimal]

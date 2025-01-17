@@ -10,11 +10,16 @@ from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+    from collections.abc import Container
+    from datetime import timezone
+
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
 
@@ -26,7 +31,7 @@ class ArrowSelectorNamespace:
         self._implementation = Implementation.PYARROW
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> ArrowSelector:
+    def by_dtype(self: Self, dtypes: Container[DType | type[DType]]) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
@@ -84,6 +89,18 @@ class ArrowSelectorNamespace:
             version=self._version,
             kwargs={},
         )
+
+    def datetime(
+        self: Self,
+        time_unit: TimeUnit | Collection[TimeUnit] | None,
+        time_zone: str | timezone | Collection[str | timezone | None] | None,
+    ) -> ArrowSelector:
+        from narwhals.utils import _parse_datetime_selector_to_datetimes
+
+        datetime_dtypes = _parse_datetime_selector_to_datetimes(
+            time_unit=time_unit, time_zone=time_zone, version=self._version
+        )
+        return self.by_dtype(datetime_dtypes)
 
 
 class ArrowSelector(ArrowExpr):

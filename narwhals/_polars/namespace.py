@@ -14,6 +14,9 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+    from datetime import timezone
+
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -21,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
 
@@ -282,6 +286,21 @@ class PolarsSelectors:
 
         return PolarsExpr(
             pl.selectors.all(),
+            version=self._version,
+            backend_version=self._backend_version,
+        )
+
+    def datetime(
+        self: Self,
+        time_unit: TimeUnit | Collection[TimeUnit] | None,
+        time_zone: str | timezone | Collection[str | timezone | None] | None,
+    ) -> PolarsExpr:
+        import polars as pl
+
+        from narwhals._polars.expr import PolarsExpr
+
+        return PolarsExpr(
+            pl.selectors.datetime(time_unit=time_unit, time_zone=time_zone),  # type: ignore[arg-type]
             version=self._version,
             backend_version=self._backend_version,
         )

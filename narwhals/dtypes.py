@@ -9,10 +9,11 @@ from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Iterator
-    from typing import Literal
     from typing import Sequence
 
     from typing_extensions import Self
+
+    from narwhals.typing import TimeUnit
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -437,7 +438,7 @@ class Datetime(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
@@ -500,7 +501,7 @@ class Duration(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
     ) -> None:
         if time_unit not in ("s", "ms", "us", "ns"):
             msg = (
