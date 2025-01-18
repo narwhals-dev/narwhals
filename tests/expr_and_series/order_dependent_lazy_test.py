@@ -7,6 +7,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals.exceptions import OrderDependentExprError
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:
     lf = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
-    with pytest.raises(TypeError, match="Order-dependent expressions"):
+    with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
         lf.select(nw.col("a").diff())
 
 
