@@ -16,6 +16,7 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import find_stacklevel
@@ -3646,7 +3647,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  In a future version of Narwhals, a `order_by` argument will be added and \n"
                     "  they will be supported."
                 )
-                raise TypeError(msg)
+                raise OrderDependentExprError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
