@@ -74,7 +74,6 @@ def test_categorical(
     assert_equal_data(result, expected)
 
 
-# @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if (
         "pyspark" in str(constructor)
@@ -103,9 +102,9 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         ],
         *[
             nw.col("ts")
-            .dt.convert_time_zone("UTC")
-            .cast(nw.Datetime(time_zone="UTC", time_unit=tu))
-            .alias(f"ts_utc_{tu}")
+            .dt.convert_time_zone("Europe/Lisbon")
+            .cast(nw.Datetime(time_zone="Europe/Lisbon", time_unit=tu))
+            .alias(f"ts_lisbon_{tu}")
             for tu in time_units
         ],
         *[
@@ -121,23 +120,23 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "ts_ms",
         "ts_us",
         "ts_ns",
-        "ts_utc_ms",
-        "ts_utc_us",
-        "ts_utc_ns",
+        "ts_lisbon_ms",
+        "ts_lisbon_us",
+        "ts_lisbon_ns",
         "ts_berlin_ms",
         "ts_berlin_us",
         "ts_berlin_ns",
     ]
     assert df.select(ncs.datetime(time_unit="ms")).collect_schema().names() == [
         "ts_ms",
-        "ts_utc_ms",
+        "ts_lisbon_ms",
         "ts_berlin_ms",
     ]
     assert df.select(ncs.datetime(time_unit=["us", "ns"])).collect_schema().names() == [
         "ts_us",
         "ts_ns",
-        "ts_utc_us",
-        "ts_utc_ns",
+        "ts_lisbon_us",
+        "ts_lisbon_ns",
         "ts_berlin_us",
         "ts_berlin_ns",
     ]
@@ -148,9 +147,9 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "ts_ns",
     ]
     assert df.select(ncs.datetime(time_zone="*")).collect_schema().names() == [
-        "ts_utc_ms",
-        "ts_utc_us",
-        "ts_utc_ns",
+        "ts_lisbon_ms",
+        "ts_lisbon_us",
+        "ts_lisbon_ns",
         "ts_berlin_ms",
         "ts_berlin_us",
         "ts_berlin_ns",

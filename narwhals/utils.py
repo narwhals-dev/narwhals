@@ -1095,7 +1095,14 @@ def _parse_datetime_selector_to_datetimes(
         )
 
     if "*" in time_zones:
-        import zoneinfo
+        import sys
+
+        if sys.version_info >= (3, 9):
+            import zoneinfo
+        else:  # pragma: no cover
+            # This code block is due to a typing issue with backports.zoneinfo package:
+            # https://github.com/pganssle/zoneinfo/issues/125
+            from backports import zoneinfo
 
         time_zones.extend(list(zoneinfo.available_timezones()))
         time_zones.remove("*")

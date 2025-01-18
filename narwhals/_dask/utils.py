@@ -89,7 +89,7 @@ def add_row_index(
 def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
     try:
         import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
+    except ModuleNotFoundError:  # pragma: no cover
         import dask_expr as dx
 
     if not dx._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
