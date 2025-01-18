@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from datetime import timezone
 from typing import Literal
 
 import pandas as pd
 import pyarrow as pa
 import pytest
-from zoneinfo import ZoneInfo
 
 import narwhals.stable.v1 as nw
 import narwhals.stable.v1.selectors as ncs
@@ -76,6 +74,7 @@ def test_categorical(
     assert_equal_data(result, expected)
 
 
+# @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if (
         "pyspark" in str(constructor)
@@ -84,17 +83,15 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     ):
         request.applymarker(pytest.mark.xfail)
 
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
+        request.applymarker(pytest.mark.xfail)
+
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
-
-    utc_tz = timezone.utc
-    berlin_tz = ZoneInfo("Europe/Berlin")
 
     data = {
         "numeric": [3.14, 6.28],
         "ts": [ts1, ts2],
-        "ts_utc": [ts1.astimezone(utc_tz), ts2.astimezone(utc_tz)],
-        "ts_berlin": [ts1.astimezone(berlin_tz), ts2.astimezone(berlin_tz)],
     }
     time_units: list[Literal["ns", "us", "ms", "s"]] = ["ms", "us", "ns"]
 
@@ -105,13 +102,15 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
             for tu in time_units
         ],
         *[
-            nw.col("ts_utc")
+            nw.col("ts")
+            .dt.convert_time_zone("UTC")
             .cast(nw.Datetime(time_zone="UTC", time_unit=tu))
             .alias(f"ts_utc_{tu}")
             for tu in time_units
         ],
         *[
-            nw.col("ts_berlin")
+            nw.col("ts")
+            .dt.convert_time_zone("Europe/Berlin")
             .cast(nw.Datetime(time_zone="Europe/Berlin", time_unit=tu))
             .alias(f"ts_berlin_{tu}")
             for tu in time_units
