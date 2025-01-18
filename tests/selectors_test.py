@@ -9,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 import narwhals.stable.v1.selectors as ncs
+from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -82,6 +83,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or "dask" in str(constructor)
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("pyarrow" in str(constructor) and is_windows())
+        or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
     ):
         request.applymarker(pytest.mark.xfail)
 
