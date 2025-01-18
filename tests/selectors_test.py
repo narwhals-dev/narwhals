@@ -12,6 +12,7 @@ import narwhals.stable.v1.selectors as ncs
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+from tests.utils import is_windows
 
 data = {
     "a": [1, 1, 2],
@@ -79,10 +80,9 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "pyspark" in str(constructor)
         or "duckdb" in str(constructor)
         or "dask" in str(constructor)
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
+        or ("pyarrow" in str(constructor) and is_windows())
     ):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
         request.applymarker(pytest.mark.xfail)
 
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
@@ -102,14 +102,14 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         ],
         *[
             nw.col("ts")
-            .dt.convert_time_zone("Europe/Lisbon")
+            .dt.replace_time_zone("Europe/Lisbon")
             .cast(nw.Datetime(time_zone="Europe/Lisbon", time_unit=tu))
             .alias(f"ts_lisbon_{tu}")
             for tu in time_units
         ],
         *[
             nw.col("ts")
-            .dt.convert_time_zone("Europe/Berlin")
+            .dt.replace_time_zone("Europe/Berlin")
             .cast(nw.Datetime(time_zone="Europe/Berlin", time_unit=tu))
             .alias(f"ts_berlin_{tu}")
             for tu in time_units

@@ -687,8 +687,7 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         if (
-            parse_version(get_dask().__version__) <= (2024, 12, 1)
-            and get_dask_expr() is None
+            parse_version(get_dask().__version__) < (2025, 1) and get_dask_expr() is None
         ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
