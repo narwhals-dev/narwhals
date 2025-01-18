@@ -6,7 +6,9 @@ build-backend = "hatchling.build"
 [project]
 name = "narwhals"
 version = "1.22.0"
-dependencies = []
+dependencies = [
+  'backports.zoneinfo;python_version<"3.9"',
+]
 requires-python = ">=3.8"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
