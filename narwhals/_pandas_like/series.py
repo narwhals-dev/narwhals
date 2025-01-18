@@ -13,6 +13,7 @@ from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -232,8 +233,15 @@ class PandasLikeSeries(CompliantSeries):
         dtype: Any,
     ) -> Self:
         ser = self._native_series
+        dtype_backend = get_dtype_backend(
+            dtype=ser.dtype, implementation=self._implementation
+        )
         dtype = narwhals_to_native_dtype(
-            dtype, ser.dtype, self._implementation, self._backend_version, self._version
+            dtype,
+            dtype_backend=dtype_backend,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
         )
         return self._from_native_series(ser.astype(dtype))
 
