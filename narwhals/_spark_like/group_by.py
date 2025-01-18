@@ -11,6 +11,7 @@ from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._spark_like.utils import _std
 from narwhals._spark_like.utils import _var
+from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
@@ -55,12 +56,8 @@ class SparkLikeLazyGroupBy:
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:  # pragma: no cover
-                msg = (
-                    "Anonymous expressions are not supported in group_by.agg.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+                msg = "group_by.agg"
+                raise AnonymousExprError.from_expr_name(msg)
 
             output_names.extend(expr._output_names)
 

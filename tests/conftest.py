@@ -152,6 +152,8 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             # executing one task at a time makes the tests faster
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
             .getOrCreate()
         )
 
@@ -232,7 +234,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             any(
                 x in str(metafunc.module)
-                for x in ("list", "name", "unpivot", "from_dict", "from_numpy", "tail")
+                for x in ("list", "unpivot", "from_dict", "from_numpy", "tail")
             )
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):

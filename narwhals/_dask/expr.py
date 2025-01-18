@@ -16,6 +16,7 @@ from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
@@ -690,12 +691,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             if self._output_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in over.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+                msg = "over"
+                raise AnonymousExprError.from_expr_name(msg)
 
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)

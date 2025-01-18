@@ -8,6 +8,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import AnonymousExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -48,7 +49,8 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+        AnonymousExprError,
+        match=r"Anonymous expressions are not supported in `group_by\.agg`",
     ):
         nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
@@ -59,11 +61,13 @@ def test_invalid_group_by() -> None:
     with pytest.raises(ValueError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+        AnonymousExprError,
+        match=r"Anonymous expressions are not supported in `group_by\.agg`",
     ):
         df.group_by("a").agg(nw.all().mean())
     with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+        AnonymousExprError,
+        match=r"Anonymous expressions are not supported in `group_by\.agg`",
     ):
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
@@ -275,9 +279,6 @@ def test_key_with_nulls(
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
 
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
@@ -300,9 +301,6 @@ def test_key_with_nulls_ignored(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
