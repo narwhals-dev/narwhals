@@ -12,7 +12,7 @@ from tests.utils import assert_equal_data
 
 
 def test_filter(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("a") > 1)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
@@ -24,7 +24,7 @@ def test_filter_with_boolean_list(
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     context = (
         pytest.raises(TypeError, match="not supported")
@@ -38,7 +38,7 @@ def test_filter_with_boolean_list(
 
 
 def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     context = (
@@ -56,7 +56,7 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
 
 
 def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     context = (
