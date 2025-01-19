@@ -80,7 +80,7 @@ class SparkLikeExprDateTimeNamespace:
         from pyspark.sql import functions as F  # noqa: N812
 
         def _millisecond(_input: Column) -> Column:
-            return F.date_format(_input, "SSS").cast("int")
+            return F.floor((F.unix_micros(_input) % 1_000_000) / 1000)
 
         return self._compliant_expr._from_call(
             _millisecond,
@@ -92,7 +92,7 @@ class SparkLikeExprDateTimeNamespace:
         from pyspark.sql import functions as F  # noqa: N812
 
         def _microsecond(_input: Column) -> Column:
-            return F.date_format(_input, "SSSSSS").cast("int")
+            return F.unix_micros(_input) % 1_000_000
 
         return self._compliant_expr._from_call(
             _microsecond,
@@ -104,7 +104,7 @@ class SparkLikeExprDateTimeNamespace:
         from pyspark.sql import functions as F  # noqa: N812
 
         def _nanosecond(_input: Column) -> Column:
-            return F.date_format(_input, "SSSSSS").cast("int") * 1000
+            return (F.unix_micros(_input) % 1_000_000) * 1000
 
         return self._compliant_expr._from_call(
             _nanosecond,
