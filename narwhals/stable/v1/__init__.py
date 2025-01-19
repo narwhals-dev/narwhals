@@ -920,6 +920,16 @@ class Expr(NwExpr):
             is_order_dependent=True,
         )
 
+    def arg_true(self) -> Self:
+        """Find elements where boolean expression is True.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).arg_true(), is_order_dependent=True
+        )
+
     def sample(
         self: Self,
         n: int | None = None,
