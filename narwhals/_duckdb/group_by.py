@@ -18,7 +18,10 @@ class DuckDBGroupBy:
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
-        self._compliant_frame = compliant_frame
+        if drop_null_keys:
+            self._compliant_frame = compliant_frame.drop_nulls(subset=None)
+        else:
+            self._compliant_frame = compliant_frame
         self._keys = keys
 
     def agg(

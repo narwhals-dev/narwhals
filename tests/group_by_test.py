@@ -297,12 +297,7 @@ def test_key_with_nulls(
         assert_equal_data(result, expected)
 
 
-def test_key_with_nulls_ignored(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_key_with_nulls_ignored(constructor: Constructor) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))
