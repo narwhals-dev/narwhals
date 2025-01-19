@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-import narwhals.stable.v1 as nw
+from contextlib import nullcontext as does_not_raise
+
+import pytest
+
+import narwhals as nw
+from narwhals.exceptions import LengthChangingExprError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -9,11 +14,17 @@ data = {"a": [1, 1, 2]}
 data_str = {"a": ["x", "x", "y"]}
 
 
-def test_unique_expr(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
-    result = df.select(nw.col("a").unique())
-    expected = {"a": [1, 2]}
-    assert_equal_data(result, expected)
+def test_unique_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    context = (
+        pytest.raises(LengthChangingExprError)
+        if isinstance(df, nw.LazyFrame)
+        else does_not_raise()
+    )
+    with context:
+        result = df.select(nw.col("a").unique())
+        expected = {"a": [1, 2]}
+        assert_equal_data(result, expected)
 
 
 def test_unique_expr_agg(constructor: Constructor) -> None:
