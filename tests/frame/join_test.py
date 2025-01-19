@@ -27,12 +27,12 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     df = nw_main.from_native(constructor(data))
     df_right = df
     result = df.join(
-        df_right,  # type: ignore[arg-type]
+        df_right,
         left_on=["antananarivo", "bob"],
         right_on=["antananarivo", "bob"],
         how="inner",
     )
-    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
+    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")
     result = result.sort("idx").drop("idx_right")
     result_on = result_on.sort("idx").drop("idx_right")
     expected = {
