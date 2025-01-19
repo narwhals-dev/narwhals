@@ -872,7 +872,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).head(n), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).head(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -885,7 +888,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).tail(n), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).tail(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -901,6 +907,8 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -918,6 +926,8 @@ class Expr(NwExpr):
                 descending=descending, nulls_last=nulls_last
             ),
             is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def sample(
@@ -952,6 +962,8 @@ class Expr(NwExpr):
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
             is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
 
@@ -996,7 +1008,12 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, is_order_dependent=obj._is_order_dependent)
+        return Expr(
+            obj._to_compliant_expr,
+            is_order_dependent=obj._is_order_dependent,
+            changes_length=obj._changes_length,
+            aggregates=obj._aggregates,
+        )
     return obj
 
 
@@ -1954,7 +1971,12 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._to_compliant_expr, is_order_dependent=then._is_order_dependent)
+        return cls(
+            then._to_compliant_expr,
+            is_order_dependent=then._is_order_dependent,
+            changes_length=then._changes_length,
+            aggregates=then._aggregates,
+        )
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))

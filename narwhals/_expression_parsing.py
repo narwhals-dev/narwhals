@@ -342,3 +342,44 @@ def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
     # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
     # neither of which is order-dependent, so we default to `False`.
     return any(getattr(x, "_is_order_dependent", False) for x in args)
+
+
+def operation_changes_length(*args: IntoExpr | Any) -> bool:
+    """Track whether operation changes length.
+
+    n-ary operations between expressions which change length are not
+    allowed. This is because the output might be non-relational. For
+    example:
+        df = pl.LazyFrame({'a': [1,2,None], 'b': [4,None,6]})
+        df.select(pl.col('a', 'b').drop_nulls())
+    Polars does allow this, but in the result we end up with the
+    tuple (2, 6) which wasn't part of the original data.
+
+    Rules are:
+        - in an n-ary operation, if any one of them changes length, then
+          it must be the only expression present
+        - in a comparison between a changes-length expression and a
+          scalar, the output changes length
+    """
+    from narwhals.expr import Expr
+
+    n_length_changing_expressions = len(
+        [x for x in args if isinstance(x, Expr) and x._changes_length]
+    )
+    if n_length_changing_expressions > 1:
+        msg = (
+            "Found multiple expressions which change length. You can only use one "
+            "length-changing expression at a time, unless it is followed by an aggregation."
+        )
+        # TODO(marco): custom error class
+        raise ValueError(msg)
+    return n_length_changing_expressions > 0
+
+
+def operation_aggregates(*args: IntoExpr | Any) -> bool:
+    # If an arg is an Expr, we look at `_aggregates`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a').sum() + 1),
+    # which is already length-1, so we default to `True`. If any
+    # expression does not aggregate, then broadcasting will take
+    # place and the result will not be an aggregate.
+    return all(getattr(x, "_aggregates", True) for x in args)
