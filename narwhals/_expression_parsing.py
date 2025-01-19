@@ -370,8 +370,9 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     )
     if n_exprs > 1 and changes_length:
         msg = (
-            "Found multiple expressions at least one of which changes length. You can only use one "
-            "length-changing expression at a time, unless it is followed by an aggregation."
+            "Found multiple expressions at least one of which changes length.\n"
+            "Any length-changing expression can only be used in isolation, unless\n"
+            "it is followed by an aggregation."
         )
         raise LengthChangingExprError(msg)
     return changes_length
