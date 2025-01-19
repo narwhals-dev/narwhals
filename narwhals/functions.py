@@ -352,7 +352,7 @@ def _new_series_impl(
             dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
-    elif implementation is Implementation.DASK:
+    elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
@@ -500,6 +500,7 @@ def _from_dict_impl(
         native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
         if schema:
+            from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
@@ -507,7 +508,11 @@ def _from_dict_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
+                    dtype=schema[name],
+                    dtype_backend=get_dtype_backend(native_type, implementation),
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -725,6 +730,7 @@ def _from_numpy_impl(
         Implementation.CUDF,
     }:
         if isinstance(schema, (dict, Schema)):
+            from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
@@ -732,7 +738,11 @@ def _from_numpy_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
+                    dtype=schema[name],
+                    dtype_backend=get_dtype_backend(native_type, implementation),
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
                 )
                 for name, native_type in schema.items()
             }
