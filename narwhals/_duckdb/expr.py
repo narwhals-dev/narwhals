@@ -332,8 +332,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         from duckdb import ConstantExpression
         from duckdb import FunctionExpression
 
-        # why does this differ from others?
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
             return CaseExpression(
