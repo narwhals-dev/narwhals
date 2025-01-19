@@ -532,12 +532,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType],
-    starting_dtype: Any,
+    dtype_backend: str | None,
     implementation: Implementation,
     backend_version: tuple[int, ...],
     version: Version,
 ) -> Any:
-    dtype_backend = get_dtype_backend(starting_dtype, implementation)
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":

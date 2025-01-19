@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -15,6 +16,7 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import find_stacklevel
@@ -70,25 +72,9 @@ class BaseFrame(Generic[FrameT]):
         kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
         return args, kwargs
 
+    @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):
-            return arg._compliant_series
-        if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        return arg
+        raise NotImplementedError
 
     @property
     def schema(self) -> Schema:
@@ -360,6 +346,26 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             ```
     """
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):
+            return arg._compliant_series
+        if isinstance(arg, Expr):
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        return arg
 
     @property
     def _series(self) -> type[Series[Any]]:
@@ -3620,6 +3626,40 @@ class LazyFrame(BaseFrame[FrameT]):
         narwhals.from_native(native_lazyframe)
         ```
     """
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):  # pragma: no cover
+            msg = "Binary operations between Series and LazyFrame are not supported."
+            raise TypeError(msg)
+        if isinstance(arg, Expr):
+            if arg._is_order_dependent:
+                msg = (
+                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                    "Hints:\n"
+                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()\n"
+                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                    "- `Expr.cum_sum`, and other such expressions, are not currently supported.\n"
+                    "  In a future version of Narwhals, a `order_by` argument will be added and \n"
+                    "  they will be supported."
+                )
+                raise OrderDependentExprError(msg)
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        # TODO(unassigned): should this line even be reachable? Should we
+        # be raising here?
+        return arg  # pragma: no cover
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
