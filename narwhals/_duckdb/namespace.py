@@ -233,6 +233,34 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
+    def sum_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        from duckdb import CoalesceOperator
+        from duckdb import ConstantExpression
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [
+                reduce(
+                    operator.add,
+                    (CoalesceOperator(col, ConstantExpression(0)) for col in cols),
+                ).alias(col_name)
+            ]
+
+        return DuckDBExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
     def when(
         self,
         *predicates: IntoDuckDBExpr,
