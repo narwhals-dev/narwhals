@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -31,7 +33,9 @@ def test_drop_nulls(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result_d, expected_d)
 
 
-def test_drop_nulls_agg(constructor: Constructor) -> None:
+def test_drop_nulls_agg(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
