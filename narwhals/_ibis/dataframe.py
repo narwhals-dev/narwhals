@@ -6,6 +6,7 @@ from typing import Any
 
 from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
 
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
 
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 @lru_cache(maxsize=16)
@@ -81,7 +81,14 @@ class IbisLazyFrame:
         self._backend_version = backend_version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __narwhals_dataframe__(self) -> Any:
+    def __narwhals_dataframe__(self) -> Any:  # pragma: no cover
+        # Keep around for backcompat.
+        if self._version is not Version.V1:
+            msg = "__narwhals_dataframe__ is not implemented for IbisLazyFrame"
+            raise AttributeError(msg)
+        return self
+
+    def __narwhals_lazyframe__(self) -> Any:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
