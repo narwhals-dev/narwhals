@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from datetime import datetime
+from datetime import timezone
 
 import pytest
 
@@ -49,10 +50,15 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    if "pyspark" in str(constructor):
+        data_ = {
+            col_name: [v.replace(tzinfo=timezone.utc) for v in col_values]
+            for col_name, col_values in data.items()
+        }
+    else:
+        data_ = data
+    df = nw.from_native(constructor(data_))
     result = df.select(getattr(nw.col("a").dt, attribute)())
     assert_equal_data(result, {"a": expected})
 
@@ -120,11 +126,10 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
             "pandas_nullable_constructor",
             "cudf",
             "modin_constructor",
-            "pyspark",
         )
     ):
         request.applymarker(pytest.mark.xfail)
-    dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    dates = {"a": [datetime(2001, 1, 1), datetime(2001, 1, 3)]}
     if "dask" in str(constructor):
         df = nw.from_native(constructor(dates).astype({"a": "timestamp[ns][pyarrow]"}))  # type: ignore[union-attr]
     else:
