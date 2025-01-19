@@ -26,6 +26,5 @@ def ibis_constructor() -> Constructor:
 
 
 def test_from_native(ibis_constructor: Constructor) -> None:
-    pytest.importorskip("ibis")
     df = nw.from_native(ibis_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     assert df.columns == ["a", "b"]
