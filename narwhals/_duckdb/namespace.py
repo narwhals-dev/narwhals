@@ -248,6 +248,11 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
+    def nth(self, *column_indices: int) -> DuckDBExpr:
+        return DuckDBExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version, version=self._version
+        )
+
     def lit(self, value: Any, dtype: DType | None) -> DuckDBExpr:
         from duckdb import ConstantExpression
 
