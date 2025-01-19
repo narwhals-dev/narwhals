@@ -46,7 +46,9 @@ def test_duration_attributes(
 ) -> None:
     if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and attribute == "total_nanoseconds":
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
