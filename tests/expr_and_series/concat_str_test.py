@@ -43,16 +43,16 @@ def test_concat_str(
     assert_equal_data(result, {"full_sentence": expected})
     result = (
         df.select(
-            "a",
+            nw.col("a").alias("a_original"),
             nw.concat_str(
                 nw.col("a") * 2,
                 nw.col("b"),
                 nw.col("c"),
                 separator=" ",
                 ignore_nulls=ignore_nulls,  # default behavior is False
-            ).alias("full_sentence"),
+            ),
         )
-        .sort("a")
-        .select("full_sentence")
+        .sort("a_original")
+        .select("a")
     )
-    assert_equal_data(result, {"full_sentence": expected})
+    assert_equal_data(result, {"a": expected})

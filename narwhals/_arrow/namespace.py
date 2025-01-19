@@ -378,19 +378,19 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
-                s._native_series
-                for _expr in parsed_exprs
-                for s in _expr.cast(dtypes.String())(df)
-            )
+            compliant_series_list = [
+                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())(df)
+            ]
             null_handling = "skip" if ignore_nulls else "emit_null"
             result_series = pc.binary_join_element_wise(
-                *series, separator, null_handling=null_handling
+                *(s._native_series for s in compliant_series_list),
+                separator,
+                null_handling=null_handling,
             )
             return [
                 ArrowSeries(
                     native_series=result_series,
-                    name="",
+                    name=compliant_series_list[0].name,
                     backend_version=self._backend_version,
                     version=self._version,
                 )
