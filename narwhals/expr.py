@@ -1395,13 +1395,8 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).n_unique(), self._is_order_dependent
         )
 
-    def unique(self, *, maintain_order: bool = False) -> Self:
+    def unique(self) -> Self:
         """Return unique values of this expression.
-
-        Arguments:
-            maintain_order: Keep the same order as the original expression. This may be more
-                expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for Polars.
 
         Returns:
             A new expression.
@@ -1422,7 +1417,7 @@ class Expr:
 
             >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").unique(maintain_order=True)).to_native()
+            ...     return df.select(nw.col("a", "b").unique().sum()).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_unique`:
@@ -1454,9 +1449,7 @@ class Expr:
             b: [[2,4,6]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).unique(
-                maintain_order=maintain_order
-            ),
+            lambda plx: self._to_compliant_expr(plx).unique(),
             self._is_order_dependent,
         )
 

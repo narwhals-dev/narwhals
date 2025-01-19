@@ -69,6 +69,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -901,6 +902,31 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             is_order_dependent=True,
+        )
+
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
+        """Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression.
+                This is deprecated and will be removed in a future version,
+                but will still be kept around in `narwhals.stable.v1`.
+
+        Returns:
+            A new expression.
+        """
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for Expr.unique."
+            raise ValueError(msg)
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).unique(),
+            self._is_order_dependent,
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
