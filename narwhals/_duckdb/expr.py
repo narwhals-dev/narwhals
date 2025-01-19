@@ -92,7 +92,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs={},
         )
 
-
     @classmethod
     def from_column_indices(
         cls: type[Self],
@@ -100,17 +99,19 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             from duckdb import ColumnExpression
 
-            return [ColumnExpression(col_name) for col_name in column_names]
+            columns = df.columns
+
+            return [ColumnExpression(columns[i]) for i in column_indices]
 
         return cls(
             func,
             depth=0,
-            function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            function_name="nth",
+            root_names=None,
+            output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -343,9 +344,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 ).otherwise(
                     CaseExpression(
                         condition=count == 2, value=ConstantExpression(0.0)
-                    ).otherwise(
-                        FunctionExpression("skewness", _input)
-                        )
+                    ).otherwise(FunctionExpression("skewness", _input))
                 )
             )
 
