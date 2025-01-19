@@ -325,6 +325,7 @@ class DuckDBWhen:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             value = ConstantExpression(self._then_value)
         value = cast("duckdb.Expression", value)
+        input_col_name = get_column_name(df, value)
 
         if self._otherwise_value is None:
             return [CaseExpression(condition=condition, value=value)]
@@ -338,7 +339,11 @@ class DuckDBWhen:
                 )
             ]
         otherwise = otherwise_expr(df)[0]
-        return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
+        return [
+            CaseExpression(condition=condition, value=value)
+            .otherwise(otherwise)
+            .alias(input_col_name)
+        ]
 
     def then(self, value: DuckDBExpr | Any) -> DuckDBThen:
         self._then_value = value
