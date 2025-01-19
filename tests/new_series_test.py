@@ -47,7 +47,6 @@ def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
 
 def test_new_series_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))

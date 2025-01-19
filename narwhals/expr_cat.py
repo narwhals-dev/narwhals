@@ -62,5 +62,6 @@ class ExprCatNamespace(Generic[ExprT]):
             └────────┘
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
+            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories(),
+            self._expr._is_order_dependent,
         )

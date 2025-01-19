@@ -9,13 +9,15 @@ from tests.utils import assert_equal_data
 
 
 def test_expr_sample(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
+    )
 
-    result_expr = df.select(nw.col("a").sample(n=2)).collect().shape
+    result_expr = df.select(nw.col("a").sample(n=2)).shape
     expected_expr = (2, 1)
     assert result_expr == expected_expr
 
-    result_series = df.collect()["a"].sample(n=2).shape
+    result_series = df["a"].sample(n=2).shape
     expected_series = (2,)
     assert result_series == expected_series
 
@@ -39,7 +41,7 @@ def test_expr_sample_fraction(constructor_eager: ConstructorEager) -> None:
 
 def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     size, n = 100, 10
-    df = nw.from_native(constructor_eager({"a": list(range(size))})).lazy()
+    df = nw.from_native(constructor_eager({"a": list(range(size))}))
     expected = {"res1": [True], "res2": [False]}
     result = df.select(
         seed1=nw.col("a").sample(n=n, seed=123),
@@ -52,7 +54,7 @@ def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
 
     assert_equal_data(result, expected)
 
-    series = df.collect()["a"]
+    series = df["a"]
     seed1 = series.sample(n=n, seed=123)
     seed2 = series.sample(n=n, seed=123)
     seed3 = series.sample(n=n, seed=42)
