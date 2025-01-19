@@ -534,6 +534,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(F.isnull, "is_null", returns_scalar=self._returns_scalar)
 
+    def is_nan(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        def _is_nan(_input: Column) -> Column:
+            return F.when(F.isnull(_input), None).otherwise(F.isnan(_input))
+
+        return self._from_call(_is_nan, "is_nan", returns_scalar=self._returns_scalar)
+
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)

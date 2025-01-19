@@ -515,6 +515,24 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
         )
 
+    def is_nan(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("isnan", _input),
+            "is_nan",
+            returns_scalar=self._returns_scalar,
+        )
+
+    def is_finite(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("isfinite", _input),
+            "is_finite",
+            returns_scalar=self._returns_scalar,
+        )
+
     def is_in(self, other: Sequence[Any]) -> Self:
         from duckdb import ConstantExpression
 
