@@ -487,7 +487,8 @@ def datetime(
         tstamp_utc: [[2023-04-10 12:14:16.999000Z,2025-08-25 14:18:22.666000Z]]
     """
     return Selector(
-        lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone)
+        lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
+        is_order_dependent=False,
     )
 
 
