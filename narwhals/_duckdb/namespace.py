@@ -91,17 +91,18 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         from duckdb import FunctionExpression
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [s.cast("string") for _expr in parsed_exprs for s in _expr(df)]
+            cols = [s for _expr in parsed_exprs for s in _expr(df)]
             null_mask = [s.isnull() for _expr in parsed_exprs for s in _expr(df)]
+            first_column_name = get_column_name(df, cols[0])
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
                 cols_separated = [
                     y
                     for x in [
-                        (col,)
+                        (col.cast("string"),)
                         if i == len(cols) - 1
-                        else (col, ConstantExpression(separator))
+                        else (col.cast("string"), ConstantExpression(separator))
                         for i, col in enumerate(cols)
                     ]
                     for y in x
@@ -112,7 +113,9 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                 )
             else:
                 init_value, *values = [
-                    CaseExpression(~nm, col).otherwise(ConstantExpression(""))
+                    CaseExpression(~nm, col.cast("string")).otherwise(
+                        ConstantExpression("")
+                    )
                     for col, nm in zip(cols, null_mask)
                 ]
                 separators = (
@@ -130,7 +133,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.alias(first_column_name)]
 
         return DuckDBExpr(
             call=func,

@@ -45,7 +45,7 @@ def test_concat_str(
         df.select(
             nw.col("a").alias("a_original"),
             nw.concat_str(
-                nw.col("a") * 2,
+                nw.nth(0) * 2,
                 nw.col("b"),
                 nw.col("c"),
                 separator=" ",

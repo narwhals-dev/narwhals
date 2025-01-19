@@ -91,6 +91,31 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             kwargs={},
         )
 
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        version: Version,
+    ) -> Self:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            columns = df.columns
+            return [F.col(columns[i]) for i in column_indices]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=backend_version,
+            version=version,
+            kwargs={},
+        )
+
     def _from_call(
         self,
         call: Callable[..., Column],
