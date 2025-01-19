@@ -38,6 +38,12 @@ def test_unique_expr_agg(
     assert_equal_data(result, expected)
 
 
+def test_unique_illegal_combination(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    with pytest.raises(LengthChangingExprError):
+        df.select((nw.col("a").unique() + nw.col("b").unique()).sum())
+
+
 def test_unique_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data_str), eager_only=True)["a"]
     result = series.unique(maintain_order=True)

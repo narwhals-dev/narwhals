@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -372,8 +373,7 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
             "Found multiple expressions at least one of which changes length. You can only use one "
             "length-changing expression at a time, unless it is followed by an aggregation."
         )
-        # TODO(marco): custom error class
-        raise ValueError(msg)
+        raise LengthChangingExprError(msg)
     return changes_length
 
 
