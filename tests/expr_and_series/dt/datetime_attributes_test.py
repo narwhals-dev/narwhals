@@ -51,7 +51,7 @@ def test_datetime_attributes(
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):  # pragma: no cover
         data_ = {
             col_name: [v.replace(tzinfo=timezone.utc) for v in col_values]
             for col_name, col_values in data.items()
