@@ -27,8 +27,6 @@ def test_concat_str(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (
         df.select(

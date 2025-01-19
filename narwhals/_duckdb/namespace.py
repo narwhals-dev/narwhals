@@ -74,6 +74,70 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         )
         return first._from_native_frame(res)
 
+    def concat_str(self, exprs, *more_exprs, separator, ignore_nulls):
+        parsed_exprs = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = [s.cast("string") for _expr in parsed_exprs for s in _expr(df)]
+            null_mask = [s.isnull() for _expr in parsed_exprs for s in _expr(df)]
+
+            if not ignore_nulls:
+                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                cols_separated = [
+                    y
+                    for x in [
+                        (col,)
+                        if i == len(cols) - 1
+                        else (col, ConstantExpression(separator))
+                        for i, col in enumerate(cols)
+                    ]
+                    for y in x
+                ]
+                result = CaseExpression(
+                    condition=~null_mask_result,
+                    value=FunctionExpression("concat", *cols_separated),
+                )
+            else:
+                init_value, *values = [
+                    F.when(~nm, col).otherwise(F.lit(""))
+                    for col, nm in zip(cols, null_mask)
+                ]
+
+                separators = (
+                    F.when(nm, F.lit("")).otherwise(F.lit(separator))
+                    for nm in null_mask[:-1]
+                )
+                result = reduce(
+                    lambda x, y: F.format_string("%s%s", x, y),
+                    (F.format_string("%s%s", s, v) for s, v in zip(separators, values)),
+                    init_value,
+                )
+
+            return [result]
+
+        return DuckDBExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
+        )
+
     def all_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
