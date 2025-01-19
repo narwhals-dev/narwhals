@@ -21,11 +21,7 @@ data = {
     ],
 )
 def test_concat_str(
-    constructor: Constructor,
-    *,
-    ignore_nulls: bool,
-    expected: list[str],
-    request: pytest.FixtureRequest,
+    constructor: Constructor, *, ignore_nulls: bool, expected: list[str]
 ) -> None:
     df = nw.from_native(constructor(data))
     result = (

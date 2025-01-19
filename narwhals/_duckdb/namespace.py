@@ -5,6 +5,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 from typing import cast
@@ -74,7 +75,13 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         )
         return first._from_native_frame(res)
 
-    def concat_str(self, exprs, *more_exprs, separator, ignore_nulls):
+    def concat_str(
+        self,
+        exprs: Iterable[IntoDuckDBExpr],
+        *more_exprs: IntoDuckDBExpr,
+        separator: str,
+        ignore_nulls: bool,
+    ) -> DuckDBExpr:
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
@@ -105,17 +112,21 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                 )
             else:
                 init_value, *values = [
-                    F.when(~nm, col).otherwise(F.lit(""))
+                    CaseExpression(~nm, col).otherwise(ConstantExpression(""))
                     for col, nm in zip(cols, null_mask)
                 ]
-
                 separators = (
-                    F.when(nm, F.lit("")).otherwise(F.lit(separator))
+                    CaseExpression(nm, ConstantExpression("")).otherwise(
+                        ConstantExpression(separator)
+                    )
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    lambda x, y: F.format_string("%s%s", x, y),
-                    (F.format_string("%s%s", s, v) for s, v in zip(separators, values)),
+                    lambda x, y: FunctionExpression("concat", x, y),
+                    (
+                        FunctionExpression("concat", s, v)
+                        for s, v in zip(separators, values)
+                    ),
                     init_value,
                 )
 
