@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -21,8 +22,15 @@ data = {
     ],
 )
 def test_concat_str(
-    constructor: Constructor, *, ignore_nulls: bool, expected: list[str]
+    constructor: Constructor,
+    *,
+    ignore_nulls: bool,
+    expected: list[str],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+        # nth only available after 1.0
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (
         df.select(
