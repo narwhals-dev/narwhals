@@ -16,6 +16,7 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
@@ -3648,6 +3649,16 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
+            if arg._changes_length:
+                msg = (
+                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                    "followed by an aggregation.\n\n"
+                    "Hints:\n"
+                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                )
+                raise LengthChangingExprError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (

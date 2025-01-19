@@ -45,6 +45,14 @@ class Expr:
         self._changes_length = changes_length
         self._aggregates = aggregates
 
+    def __repr__(self) -> str:
+        return (
+            "Narwhals Expr\n"
+            f"is_order_dependent: {self._is_order_dependent}\n"
+            f"changes_length: {self._changes_length}\n"
+            f"aggregates: {self._aggregates}"
+        )
+
     def _taxicab_norm(self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.

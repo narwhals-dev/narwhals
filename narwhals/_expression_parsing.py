@@ -363,17 +363,18 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     """
     from narwhals.expr import Expr
 
-    n_length_changing_expressions = len(
-        [x for x in args if isinstance(x, Expr) and x._changes_length]
+    n_exprs = len([x for x in args if isinstance(x, Expr)])
+    changes_length = any(
+        isinstance(x, Expr) and x._changes_length and not x._aggregates for x in args
     )
-    if n_length_changing_expressions > 1:
+    if n_exprs > 1 and changes_length:
         msg = (
-            "Found multiple expressions which change length. You can only use one "
+            "Found multiple expressions at least one of which changes length. You can only use one "
             "length-changing expression at a time, unless it is followed by an aggregation."
         )
         # TODO(marco): custom error class
         raise ValueError(msg)
-    return n_length_changing_expressions > 0
+    return changes_length
 
 
 def operation_aggregates(*args: IntoExpr | Any) -> bool:
