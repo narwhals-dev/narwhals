@@ -52,7 +52,9 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.by_dtype(flatten(dtypes)))
+    return Selector(
+        lambda plx: plx.selectors.by_dtype(flatten(dtypes)), is_order_dependent=False
+    )
 
 
 def numeric() -> Expr:
@@ -95,7 +97,7 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric())
+    return Selector(lambda plx: plx.selectors.numeric(), is_order_dependent=False)
 
 
 def boolean() -> Expr:
@@ -138,7 +140,7 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean())
+    return Selector(lambda plx: plx.selectors.boolean(), is_order_dependent=False)
 
 
 def string() -> Expr:
@@ -181,7 +183,7 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string())
+    return Selector(lambda plx: plx.selectors.string(), is_order_dependent=False)
 
 
 def categorical() -> Expr:
@@ -224,7 +226,7 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical())
+    return Selector(lambda plx: plx.selectors.categorical(), is_order_dependent=False)
 
 
 def all() -> Expr:
@@ -267,7 +269,7 @@ def all() -> Expr:
         │ 2   ┆ y   ┆ true  │
         └─────┴─────┴───────┘
     """
-    return Selector(lambda plx: plx.selectors.all())
+    return Selector(lambda plx: plx.selectors.all(), is_order_dependent=False)
 
 
 __all__ = [

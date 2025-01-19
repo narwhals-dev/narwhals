@@ -4,7 +4,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -14,7 +13,7 @@ data = {
 }
 
 
-def test_mode_single_expr(constructor_eager: Constructor) -> None:
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}

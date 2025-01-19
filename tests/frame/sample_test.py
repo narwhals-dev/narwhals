@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 
 
-def test_sample_n(constructor_eager: Constructor) -> None:
+def test_sample_n(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}), eager_only=True
     )
@@ -18,7 +18,7 @@ def test_sample_n(constructor_eager: Constructor) -> None:
     assert result_expr == expected_expr
 
 
-def test_sample_fraction(constructor_eager: Constructor) -> None:
+def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}), eager_only=True
     )
@@ -28,7 +28,7 @@ def test_sample_fraction(constructor_eager: Constructor) -> None:
     assert result_expr == expected_expr
 
 
-def test_sample_with_seed(constructor_eager: Constructor) -> None:
+def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     size, n = 100, 10
     df = nw.from_native(constructor_eager({"a": range(size)}), eager_only=True)
 

@@ -38,7 +38,6 @@ def test_group_by_complex() -> None:
 
 def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df_dask = dd.from_pandas(df_pandas)
