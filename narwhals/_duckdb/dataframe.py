@@ -44,6 +44,7 @@ class DuckDBLazyFrame:
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
+        self._validate_columns(df.columns)
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = backend_version
@@ -75,6 +76,17 @@ class DuckDBLazyFrame:
         return DuckDBInterchangeSeries(
             self._native_frame.select(item), version=self._version
         )
+
+    def _validate_columns(self, columns: list[Any]) -> None:
+        len_unique_columns = len(set(columns))
+        if len(columns) != len_unique_columns:
+            from collections import Counter
+
+            counter = Counter(columns)
+            duplicates = {k: v for k, v in counter.items() if v > 1}
+            msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
+            msg = f"Expected unique column names, got:{msg}"
+            raise ValueError(msg)
 
     def collect(self) -> Any:
         try:
