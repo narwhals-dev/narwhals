@@ -17,6 +17,7 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dependencies import get_polars
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
@@ -237,6 +238,31 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    def _extract_compliant(self, arg: Any) -> Any:
+        # After v1, we raise when passing order-dependent
+        # expressions to LazyFrame
+        from narwhals.dataframe import BaseFrame
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):  # pragma: no cover
+            msg = "Mixing Series with LazyFrame is not supported."
+            raise TypeError(msg)
+        if isinstance(arg, Expr):
+            # After stable.v1, we raise if arg._is_order_dependent
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        return arg
 
     def collect(self) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
@@ -845,7 +871,9 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).head(n), is_order_dependent=True
+        )
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
@@ -856,7 +884,9 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).tail(n), is_order_dependent=True
+        )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -869,7 +899,8 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
+            is_order_dependent=True,
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -885,7 +916,8 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
-            )
+            ),
+            is_order_dependent=True,
         )
 
     def sample(
@@ -918,7 +950,8 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            )
+            ),
+            is_order_dependent=True,
         )
 
 
@@ -963,7 +996,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr)
+        return Expr(obj._to_compliant_expr, is_order_dependent=obj._is_order_dependent)
     return obj
 
 
@@ -1921,7 +1954,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._to_compliant_expr)
+        return cls(then._to_compliant_expr, is_order_dependent=then._is_order_dependent)
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))

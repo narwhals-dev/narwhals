@@ -92,7 +92,7 @@ def get_ibis() -> Any:
     return sys.modules.get("ibis", None)
 
 
-def get_dask_expr() -> Any:
+def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
     return sys.modules.get("dask_expr", None)
 

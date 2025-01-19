@@ -8,6 +8,7 @@ from typing import Literal
 import pandas as pd
 import pytest
 
+import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
@@ -23,7 +24,7 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         "zor ro": [7.0, 8, 9],
         "idx": [0, 1, 2],
     }
-    df = nw.from_native(constructor(data))
+    df = nw_main.from_native(constructor(data))
     df_right = df
     result = df.join(
         df_right,  # type: ignore[arg-type]
