@@ -70,7 +70,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-class IbisInterchangeFrame:
+class IbisLazyFrame:
     _implementation = Implementation.IBIS
 
     def __init__(
