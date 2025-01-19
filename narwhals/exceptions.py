@@ -83,6 +83,14 @@ class AnonymousExprError(ValueError):
         return AnonymousExprError(message)
 
 
+class OrderDependentExprError(ValueError):
+    """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
 class UnsupportedDTypeError(ValueError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 

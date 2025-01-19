@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -16,16 +15,9 @@ expected = {
 
 
 @pytest.mark.parametrize("reverse", [True, False])
-def test_cum_count_expr(
-    request: pytest.FixtureRequest, constructor: Constructor, *, reverse: bool
-) -> None:
-    if "dask" in str(constructor) and reverse:
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_cum_count_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> None:
     name = "reverse_cum_count" if reverse else "cum_count"
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(
         nw.col("a").cum_count(reverse=reverse).alias(name),
     )

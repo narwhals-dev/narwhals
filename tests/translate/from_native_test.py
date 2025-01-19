@@ -202,7 +202,6 @@ def test_init_already_narwhals_unstable() -> None:
 
 def test_series_only_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     dframe = dd.from_pandas(df_pd)
@@ -221,7 +220,6 @@ def test_series_only_dask() -> None:
 )
 def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     dframe = dd.from_pandas(df_pd)

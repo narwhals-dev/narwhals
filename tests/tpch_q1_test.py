@@ -31,7 +31,6 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
-        pytest.importorskip("dask_expr", exc_type=ImportError)
         import dask.dataframe as dd
 
         df_raw = dd.from_pandas(

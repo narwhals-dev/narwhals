@@ -51,7 +51,7 @@ def var(
 
     try:
         import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
+    except ModuleNotFoundError:  # pragma: no cover
         import dask_expr as dx
 
     return partial(dx._groupby.GroupBy.var, ddof=ddof)
@@ -66,7 +66,7 @@ def std(
 
     try:
         import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
+    except ModuleNotFoundError:  # pragma: no cover
         import dask_expr as dx
 
     return partial(dx._groupby.GroupBy.std, ddof=ddof)

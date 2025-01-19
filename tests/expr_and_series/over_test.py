@@ -6,6 +6,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -24,7 +25,7 @@ data_cum = {
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -42,25 +43,25 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 5, 3],
-        "c": [5, 4, 3, 2, 1],
-        "c_min": [5, 4, 1, 2, 1],
+        "b": [1, 2, 3, 3, 5],
+        "c": [5, 4, 3, 1, 2],
+        "c_min": [5, 4, 1, 1, 2],
     }
 
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("a", "b")
     assert_equal_data(result, expected)
 
 
 def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -68,15 +69,15 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
         df.with_columns(c_min=nw.all().min().over("a", "b"))
 
 
-def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+def test_over_cumsum(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data_cum))
+    df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -89,13 +90,13 @@ def test_over_cumsum(request: pytest.FixtureRequest, constructor: Constructor) -
     assert_equal_data(result, expected)
 
 
-def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+def test_over_cumcount(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data_cum))
+    df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -110,14 +111,14 @@ def test_over_cumcount(request: pytest.FixtureRequest, constructor: Constructor)
     assert_equal_data(result, expected)
 
 
-def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "duckdb")):
+def test_over_cummax(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data_cum))
+    df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -129,15 +130,15 @@ def test_over_cummax(request: pytest.FixtureRequest, constructor: Constructor) -
     assert_equal_data(result, expected)
 
 
-def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table" in str(constructor) or "dask_lazy_p2" in str(constructor):
+def test_over_cummin(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data_cum))
+    df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -150,15 +151,15 @@ def test_over_cummin(request: pytest.FixtureRequest, constructor: Constructor) -
     assert_equal_data(result, expected)
 
 
-def test_over_cumprod(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask_lazy_p2", "duckdb")):
+def test_over_cumprod(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data_cum))
+    df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -179,15 +180,15 @@ def test_over_anonymous() -> None:
         nw.from_native(df).select(nw.all().cum_max().over("a"))
 
 
-def test_over_shift(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table_constructor" in str(
-        constructor
-    ) or "dask_lazy_p2_constructor" in str(constructor):
+def test_over_shift(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table_constructor" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if ("pyspark" in str(constructor_eager)) or "duckdb" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
