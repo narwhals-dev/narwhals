@@ -10,7 +10,7 @@ from tests.utils import NUMPY_VERSION
 
 
 def test_invalid() -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
