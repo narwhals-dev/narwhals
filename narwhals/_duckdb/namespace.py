@@ -5,6 +5,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 from typing import cast
@@ -73,6 +74,83 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             lambda x, y: x.union(y), (item._native_frame for item in items)
         )
         return first._from_native_frame(res)
+
+    def concat_str(
+        self,
+        exprs: Iterable[IntoDuckDBExpr],
+        *more_exprs: IntoDuckDBExpr,
+        separator: str,
+        ignore_nulls: bool,
+    ) -> DuckDBExpr:
+        parsed_exprs = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+        from duckdb import CaseExpression
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = [s for _expr in parsed_exprs for s in _expr(df)]
+            null_mask = [s.isnull() for _expr in parsed_exprs for s in _expr(df)]
+            first_column_name = get_column_name(df, cols[0])
+
+            if not ignore_nulls:
+                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                cols_separated = [
+                    y
+                    for x in [
+                        (col.cast("string"),)
+                        if i == len(cols) - 1
+                        else (col.cast("string"), ConstantExpression(separator))
+                        for i, col in enumerate(cols)
+                    ]
+                    for y in x
+                ]
+                result = CaseExpression(
+                    condition=~null_mask_result,
+                    value=FunctionExpression("concat", *cols_separated),
+                )
+            else:
+                init_value, *values = [
+                    CaseExpression(~nm, col.cast("string")).otherwise(
+                        ConstantExpression("")
+                    )
+                    for col, nm in zip(cols, null_mask)
+                ]
+                separators = (
+                    CaseExpression(nm, ConstantExpression("")).otherwise(
+                        ConstantExpression(separator)
+                    )
+                    for nm in null_mask[:-1]
+                )
+                result = reduce(
+                    lambda x, y: FunctionExpression("concat", x, y),
+                    (
+                        FunctionExpression("concat", s, v)
+                        for s, v in zip(separators, values)
+                    ),
+                    init_value,
+                )
+
+            return [result.alias(first_column_name)]
+
+        return DuckDBExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={
+                "exprs": exprs,
+                "more_exprs": more_exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
+        )
 
     def all_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
@@ -158,6 +236,34 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
+    def sum_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        from duckdb import CoalesceOperator
+        from duckdb import ConstantExpression
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [
+                reduce(
+                    operator.add,
+                    (CoalesceOperator(col, ConstantExpression(0)) for col in cols),
+                ).alias(col_name)
+            ]
+
+        return DuckDBExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
     def when(
         self,
         *predicates: IntoDuckDBExpr,
@@ -171,6 +277,11 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def col(self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
+        )
+
+    def nth(self, *column_indices: int) -> DuckDBExpr:
+        return DuckDBExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version, version=self._version
         )
 
     def lit(self, value: Any, dtype: DType | None) -> DuckDBExpr:

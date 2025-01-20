@@ -53,6 +53,11 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
+    def nth(self, *column_indices: int) -> SparkLikeExpr:
+        return SparkLikeExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version, version=self._version
+        )
+
     def lit(self, value: object, dtype: DType | None) -> SparkLikeExpr:
         if dtype is not None:
             msg = "todo"
@@ -293,19 +298,24 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         ]
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = (s.cast(StringType()) for _expr in parsed_exprs for s in _expr(df))
+            cols = [s for _expr in parsed_exprs for s in _expr(df)]
+            cols_casted = [s.cast(StringType()) for s in cols]
             null_mask = [F.isnull(s) for _expr in parsed_exprs for s in _expr(df)]
+            first_column_name = get_column_name(df, cols[0])
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
                 result = F.when(
                     ~null_mask_result,
-                    reduce(lambda x, y: F.format_string(f"%s{separator}%s", x, y), cols),
+                    reduce(
+                        lambda x, y: F.format_string(f"%s{separator}%s", x, y),
+                        cols_casted,
+                    ),
                 ).otherwise(F.lit(None))
             else:
                 init_value, *values = [
                     F.when(~nm, col).otherwise(F.lit(""))
-                    for col, nm in zip(cols, null_mask)
+                    for col, nm in zip(cols_casted, null_mask)
                 ]
 
                 separators = (
@@ -318,7 +328,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.alias(first_column_name)]
 
         return SparkLikeExpr(
             call=func,

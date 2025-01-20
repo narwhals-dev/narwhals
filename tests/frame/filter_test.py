@@ -5,7 +5,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 from polars.exceptions import ShapeError as PlShapeError
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -19,11 +19,7 @@ def test_filter(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_filter_with_boolean_list(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_filter_with_boolean_list(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     context = (

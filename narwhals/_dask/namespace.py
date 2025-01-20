@@ -354,7 +354,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.rename(null_mask[0].name)]
 
         return DaskExpr(
             call=func,
