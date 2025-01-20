@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -13,6 +10,13 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
+
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+import pandas as pd  # noqa: E402
+import polars as pl  # noqa: E402
+import pyarrow as pa  # noqa: E402
 
 
 @given(

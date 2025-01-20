@@ -6,7 +6,6 @@ from typing import Callable
 
 import hypothesis.strategies as st
 import numpy as np
-import polars as pl
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -226,6 +225,8 @@ def test_getitem(
         )
     )
     # End TODO ================================================================
+    pytest.importorskip("polars")
+    import polars as pl
 
     df_polars = nw.from_native(pl.DataFrame(TEST_DATA))
     try:

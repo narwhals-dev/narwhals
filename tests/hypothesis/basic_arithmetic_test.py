@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+import pandas as pd  # noqa: E402
+import polars as pl  # noqa: E402
 
 
 @given(
