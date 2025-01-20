@@ -24,6 +24,11 @@ def test_when(constructor: Constructor) -> None:
         "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
+    result = df.select(nw.when(nw.col("a") == 1).then(value=3))
+    expected = {
+        "literal": [3, None, None],
+    }
+    assert_equal_data(result, expected)
 
 
 def test_when_otherwise(constructor: Constructor) -> None:

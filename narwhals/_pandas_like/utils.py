@@ -128,7 +128,7 @@ def broadcast_align_and_extract_native(
             s = rhs._native_series
             return (
                 lhs._native_series,
-                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype),
+                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype, name=rhs.name),
             )
         if lhs.len() == 1:
             # broadcast

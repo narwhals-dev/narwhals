@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -11,6 +12,8 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     import duckdb
@@ -67,64 +70,66 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_slow)
 
 
-def pandas_constructor(obj: Any) -> IntoDataFrame:
+def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
     return pd.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def pandas_nullable_constructor(obj: Any) -> IntoDataFrame:
+def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
-def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
+def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
 
     return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
-def modin_pyarrow_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+def modin_pyarrow_constructor(
+    obj: dict[str, list[Any]],
+) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
 
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def cudf_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
     import cudf
 
     return cudf.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def polars_eager_constructor(obj: Any) -> IntoDataFrame:
+def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def duckdb_lazy_constructor(obj: Any) -> duckdb.DuckDBPyRelation:
+def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
     import duckdb
 
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")
 
 
-def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
     import dask.dataframe as dd
 
     return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
 
 
-def dask_lazy_p2_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
     import dask.dataframe as dd
 
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
@@ -159,13 +164,16 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
         register(session.stop)
 
-        def _constructor(obj: Any) -> IntoFrame:
-            pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+        def _constructor(obj: dict[str, list[Any]]) -> IntoFrame:
+            _obj = deepcopy(obj)
+            index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
+            _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
+
             return (  # type: ignore[no-any-return]
-                session.createDataFrame(pd_df)
+                session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
-                .orderBy("index")
-                .drop("index")
+                .orderBy(index_col_name)
+                .drop(index_col_name)
             )
 
         return _constructor
