@@ -15,6 +15,56 @@ class SparkLikeExprDateTimeNamespace:
     def __init__(self: Self, expr: SparkLikeExpr) -> None:
         self._compliant_expr = expr
 
+    def to_string(self: Self, format: str) -> SparkLikeExpr:  # noqa: A002
+        def _format_iso_week_with_day(_input: Column) -> Column:
+            """Format datetime as ISO week string with day."""
+            year = F.date_format(_input, "YYYY")
+            week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
+            day = F.dayofweek(_input)
+            # Adjust Sunday from 1 to 7
+            day = F.when(day == 1, 7).otherwise(day - 1)
+            return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
+
+        def _format_iso_week(_input: Column) -> Column:
+            """Format datetime as ISO week string."""
+            year = F.date_format(_input, "YYYY")
+            week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
+            return F.concat(year, F.lit("-W"), week)
+
+        def _format_iso_datetime(_input: Column) -> Column:
+            """Format datetime as ISO datetime with microseconds."""
+            date_part = F.date_format(_input, "yyyy-MM-dd")
+            time_part = F.date_format(_input, "HH:mm:ss")
+            micros = F.unix_micros(_input) % 1_000_000
+            micros_str = F.lpad(micros.cast("string"), 6, "0")
+            return F.concat(date_part, F.lit("T"), time_part, F.lit("."), micros_str)
+
+        def _to_string(_input: Column) -> Column:
+            # Handle special formats
+            if format == "%G-W%V":
+                return _format_iso_week(_input)
+            if format == "%G-W%V-%u":
+                return _format_iso_week_with_day(_input)
+            if format in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S%.f"):
+                return _format_iso_datetime(_input)
+
+            # Standard format conversions
+            java_fmt = (
+                format.replace("%Y", "yyyy")
+                .replace("%m", "MM")
+                .replace("%d", "dd")
+                .replace("%H", "HH")
+                .replace("%M", "mm")
+                .replace("%S", "ss")
+            )
+            return F.date_format(_input, java_fmt)
+
+        return self._compliant_expr._from_call(
+            _to_string,
+            "to_string",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
     def date(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.to_date,

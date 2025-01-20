@@ -159,6 +159,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             .config("spark.sql.shuffle.partitions", "2")
             # common timezone for all tests environments
             .config("spark.sql.session.timeZone", "UTC")
+            .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
             .getOrCreate()
         )
 
