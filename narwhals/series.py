@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
+from narwhals.dtypes import _validate_datetime
 from narwhals.dtypes import _validate_dtype
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
@@ -741,6 +742,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         _validate_dtype(dtype)
+        _validate_datetime(dtype, self.dtype)
         return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
