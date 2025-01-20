@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import dask.dataframe as dd
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -93,8 +95,6 @@ class DaskExprStringNamespace:
         )
 
     def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
-        import dask.dataframe as dd
-
         return self._compliant_expr._from_call(
             lambda _input, format: dd.to_datetime(_input, format=format),
             "to_datetime",

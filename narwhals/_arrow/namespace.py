@@ -7,6 +7,9 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
@@ -85,8 +88,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        import pyarrow as pa
-
         from narwhals._arrow.series import ArrowSeries
 
         return ArrowSeries(
@@ -266,8 +267,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -295,8 +294,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -369,8 +366,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
@@ -428,9 +423,6 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
         from narwhals._expression_parsing import parse_into_expr
 
         plx = df.__narwhals_namespace__()

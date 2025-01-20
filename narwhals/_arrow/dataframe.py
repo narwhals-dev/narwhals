@@ -9,6 +9,9 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -31,7 +34,6 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -289,8 +291,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
     def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
-        import pyarrow as pa
-
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -469,8 +469,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self: Self, name: str) -> Self:
-        import pyarrow as pa
-
         df = self._native_frame
         cols = self.columns
 
@@ -506,8 +504,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.filter(mask_native))
 
     def null_count(self: Self) -> Self:
-        import pyarrow as pa
-
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
 
@@ -583,7 +579,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         pp.write_table(self._native_frame, file)
 
     def write_csv(self: Self, file: Any) -> Any:
-        import pyarrow as pa
         import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
@@ -594,9 +589,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         columns = self.columns
@@ -631,8 +623,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         is_duplicated = self.is_duplicated()._native_series
@@ -654,8 +644,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
-        import pyarrow.compute as pc
 
         df = self._native_frame
         check_column_exists(self.columns, subset)
@@ -693,7 +681,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         frame = self._native_frame
         num_rows = len(self)
@@ -713,8 +700,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        import pyarrow as pa
-
         native_frame = self._native_frame
         variable_name = variable_name if variable_name is not None else "variable"
         value_name = value_name if value_name is not None else "value"

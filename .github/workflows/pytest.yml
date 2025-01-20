@@ -95,4 +95,4 @@ jobs:
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: pytest narwhals --doctest-modules
+        run: pytest narwhals/*.py --doctest-modules

@@ -4,6 +4,8 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+from pyspark.sql import functions as F  # noqa: N812
+
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
@@ -114,8 +116,6 @@ def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
 
 def _columns_from_expr(df: SparkLikeLazyFrame, expr: IntoSparkLikeExpr) -> list[Column]:
     if isinstance(expr, str):  # pragma: no cover
-        from pyspark.sql import functions as F  # noqa: N812
-
         return [F.col(expr)]
     elif hasattr(expr, "__narwhals_expr__"):
         col_output_list = expr._call(df)
@@ -162,7 +162,6 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
         column_result = column_results[0]
         if obj._returns_scalar:
             # Return scalar, let PySpark do its broadcasting
-            from pyspark.sql import functions as F  # noqa: N812
             from pyspark.sql.window import Window
 
             return column_result.over(Window.partitionBy(F.lit(1)))
@@ -172,8 +171,6 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
 
 def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:
     if np_version > (2, 0):
-        from pyspark.sql import functions as F  # noqa: N812
-
         if ddof == 1:
             return F.stddev_samp(_input)
 
@@ -181,7 +178,6 @@ def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column
         return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
     from pyspark.pandas.spark.functions import stddev
-    from pyspark.sql import functions as F  # noqa: N812
 
     input_col = F.col(_input) if isinstance(_input, str) else _input
     return stddev(input_col, ddof=ddof)
@@ -189,8 +185,6 @@ def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column
 
 def _var(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:
     if np_version > (2, 0):
-        from pyspark.sql import functions as F  # noqa: N812
-
         if ddof == 1:
             return F.var_samp(_input)
 
@@ -198,7 +192,6 @@ def _var(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column
         return F.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
 
     from pyspark.pandas.spark.functions import var
-    from pyspark.sql import functions as F  # noqa: N812
 
     input_col = F.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)

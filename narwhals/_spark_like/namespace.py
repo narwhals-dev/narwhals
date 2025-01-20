@@ -7,6 +7,8 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
+from pyspark.sql import functions as F  # noqa: N812
+
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_expr
 from narwhals._expression_parsing import parse_into_exprs
@@ -166,7 +168,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def mean_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
         from pyspark.sql.types import IntegerType
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
@@ -197,8 +198,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def max_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -219,8 +218,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def min_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -289,7 +286,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         separator: str,
         ignore_nulls: bool,
     ) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
         from pyspark.sql.types import StringType
 
         parsed_exprs = [
@@ -374,8 +370,6 @@ class SparkLikeWhen:
         self._version = version
 
     def __call__(self, df: SparkLikeLazyFrame) -> list[Column]:
-        from pyspark.sql import functions as F  # noqa: N812
-
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
 
