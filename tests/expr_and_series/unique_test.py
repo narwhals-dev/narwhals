@@ -51,6 +51,9 @@ def test_unique_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": ["x", "y"]}
     assert_equal_data({"a": result}, expected)
 
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    # this shouldn't warn
+    series.to_frame().select(nw_v1.col("a").unique().sum())
     with pytest.warns(UserWarning):
-        series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+        # this warns that maintain_order has no effect
         series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
