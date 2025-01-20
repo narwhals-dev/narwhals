@@ -7,6 +7,8 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
+from pyspark.sql import functions as F  # noqa: N812
+
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._spark_like.utils import _std
@@ -76,8 +78,6 @@ class SparkLikeLazyGroupBy:
 
 
 def get_spark_function(function_name: str, **kwargs: Any) -> Column:
-    from pyspark.sql import functions as F  # noqa: N812
-
     if function_name in {"std", "var"}:
         import numpy as np  # ignore-banned-import
 
