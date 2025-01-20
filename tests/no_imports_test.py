@@ -14,7 +14,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
     monkeypatch.delitem(sys.modules, "pyarrow")
-    monkeypatch.delitem(sys.modules, "duckdb")
+    monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)
@@ -35,7 +35,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
-    monkeypatch.delitem(sys.modules, "duckdb")
+    monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)
@@ -59,7 +59,7 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
-    monkeypatch.delitem(sys.modules, "duckdb")
+    monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     nw.from_native(df).group_by("a").agg(nw.col("b").mean()).filter(nw.col("a") > 1)
@@ -75,7 +75,7 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pandas")
-    monkeypatch.delitem(sys.modules, "duckdb")
+    monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)

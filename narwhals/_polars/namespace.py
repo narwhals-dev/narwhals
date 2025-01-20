@@ -8,6 +8,8 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+import polars as pl
+
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -96,8 +98,6 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        import polars as pl
-
         from narwhals._polars.dataframe import PolarsDataFrame
         from narwhals._polars.dataframe import PolarsLazyFrame
 
