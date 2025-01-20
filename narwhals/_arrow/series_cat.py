@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pyarrow as pa
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -13,8 +15,6 @@ class ArrowSeriesCatNamespace:
         self._compliant_series = series
 
     def get_categories(self: Self) -> ArrowSeries:
-        import pyarrow as pa
-
         ca = self._compliant_series._native_series
         out = pa.chunked_array(
             [pa.concat_arrays(x.dictionary for x in ca.chunks).unique()]

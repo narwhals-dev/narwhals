@@ -53,7 +53,10 @@ def by_dtype(*dtypes: Any) -> Expr:
         └─────┴─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flatten(dtypes)), is_order_dependent=False
+        lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
     )
 
 
@@ -97,7 +100,12 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.numeric(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def boolean() -> Expr:
@@ -140,7 +148,12 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.boolean(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def string() -> Expr:
@@ -183,7 +196,12 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.string(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def categorical() -> Expr:
@@ -226,7 +244,12 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.categorical(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def all() -> Expr:
@@ -269,7 +292,12 @@ def all() -> Expr:
         │ 2   ┆ y   ┆ true  │
         └─────┴─────┴───────┘
     """
-    return Selector(lambda plx: plx.selectors.all(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.all(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 __all__ = [

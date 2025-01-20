@@ -106,7 +106,9 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         result_value = result[key]
         for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
-                are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
+                are_equivalent_values = rhs is not None and math.isclose(
+                    lhs, rhs, rel_tol=0, abs_tol=1e-6
+                )
             elif isinstance(lhs, float) and math.isnan(lhs):
                 are_equivalent_values = rhs is None or math.isnan(rhs)
             elif isinstance(rhs, float) and math.isnan(rhs):

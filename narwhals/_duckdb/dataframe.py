@@ -7,6 +7,8 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from duckdb import ColumnExpression
+
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
@@ -134,8 +136,6 @@ class DuckDBLazyFrame:
         *exprs: Any,
         **named_exprs: Any,
     ) -> Self:
-        from duckdb import ColumnExpression
-
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         result = []
         for col in self._native_frame.columns:
@@ -195,10 +195,6 @@ class DuckDBLazyFrame:
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
-
-        if drop_null_keys:
-            msg = "todo"
-            raise NotImplementedError(msg)
 
         return DuckDBGroupBy(
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys

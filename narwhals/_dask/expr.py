@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import NoReturn
 from typing import Sequence
 
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
@@ -448,44 +447,25 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def ewm_mean(
-        self: Self,
-        *,
-        com: float | None = None,
-        span: float | None = None,
-        half_life: float | None = None,
-        alpha: float | None = None,
-        adjust: bool = True,
-        min_periods: int = 1,
-        ignore_nulls: bool = False,
-    ) -> NoReturn:
-        msg = "`Expr.ewm_mean` is not supported for the Dask backend"
-        raise NotImplementedError(msg)
+    def unique(self, *, maintain_order: bool) -> Self:
+        # TODO(marco): maintain_order has no effect and will be deprecated
+        return self._from_call(
+            lambda _input: _input.unique(),
+            "unique",
+            returns_scalar=self._returns_scalar,
+        )
 
-    def unique(self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.unique` is not supported for the Dask backend. Please use `LazyFrame.unique` instead."
-        raise NotImplementedError(msg)
-
-    def drop_nulls(self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
-        raise NotImplementedError(msg)
-
-    def head(self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
-        raise NotImplementedError(msg)
+    def drop_nulls(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.dropna(),
+            "drop_nulls",
+            returns_scalar=self._returns_scalar,
+        )
 
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         msg = "`replace_strict` is not yet supported for Dask expressions"
-        raise NotImplementedError(msg)
-
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
         raise NotImplementedError(msg)
 
     def abs(self) -> Self:
@@ -677,16 +657,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             "null_count",
             returns_scalar=True,
         )
-
-    def tail(self: Self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
-        raise NotImplementedError(msg)
-
-    def gather_every(self: Self, n: int, offset: int = 0) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
-        raise NotImplementedError(msg)
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:

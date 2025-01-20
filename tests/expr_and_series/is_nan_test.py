@@ -24,12 +24,10 @@ NON_NULLABLE_CONSTRUCTORS = [
 ]
 
 
-def test_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    data_na = {"int": [0, 1, None]}
+def test_nan(constructor: Constructor) -> None:
+    data_na = {"int": [-1, 1, None]}
     df = nw.from_native(constructor(data_na)).with_columns(
-        float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") / nw.col("int")
+        float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
     )
     result = df.select(
         int=nw.col("int").is_nan(),

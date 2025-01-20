@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -342,3 +343,43 @@ def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
     # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
     # neither of which is order-dependent, so we default to `False`.
     return any(getattr(x, "_is_order_dependent", False) for x in args)
+
+
+def operation_changes_length(*args: IntoExpr | Any) -> bool:
+    """Track whether operation changes length.
+
+    n-ary operations between expressions which change length are not
+    allowed. This is because the output might be non-relational. For
+    example:
+        df = pl.LazyFrame({'a': [1,2,None], 'b': [4,None,6]})
+        df.select(pl.col('a', 'b').drop_nulls())
+    Polars does allow this, but in the result we end up with the
+    tuple (2, 6) which wasn't part of the original data.
+
+    Rules are:
+        - in an n-ary operation, if any one of them changes length, then
+          it must be the only expression present
+        - in a comparison between a changes-length expression and a
+          scalar, the output changes length
+    """
+    from narwhals.expr import Expr
+
+    n_exprs = len([x for x in args if isinstance(x, Expr)])
+    changes_length = any(isinstance(x, Expr) and x._changes_length for x in args)
+    if n_exprs > 1 and changes_length:
+        msg = (
+            "Found multiple expressions at least one of which changes length.\n"
+            "Any length-changing expression can only be used in isolation, unless\n"
+            "it is followed by an aggregation."
+        )
+        raise LengthChangingExprError(msg)
+    return changes_length
+
+
+def operation_aggregates(*args: IntoExpr | Any) -> bool:
+    # If an arg is an Expr, we look at `_aggregates`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a').sum() + 1),
+    # which is already length-1, so we default to `True`. If any
+    # expression does not aggregate, then broadcasting will take
+    # place and the result will not be an aggregate.
+    return all(getattr(x, "_aggregates", True) for x in args)

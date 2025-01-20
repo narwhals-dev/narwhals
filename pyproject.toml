@@ -191,7 +191,7 @@ omit = [
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
   # we don't run these in every environment
-  'tests/spark_like_test.py',
+  'tests/ibis_test.py',
 ]
 exclude_also = [
   "if sys.version_info() <",

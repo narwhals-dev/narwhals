@@ -10,12 +10,6 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._arrow.utils import (
-    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-)
-from narwhals._arrow.utils import (
-    native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
-)
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
@@ -128,7 +122,7 @@ def broadcast_align_and_extract_native(
             s = rhs._native_series
             return (
                 lhs._native_series,
-                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype),
+                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype, name=rhs.name),
             )
         if lhs.len() == 1:
             # broadcast
@@ -478,9 +472,15 @@ def native_to_narwhals_dtype(
     dtypes = import_dtypes_module(version)
 
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
-        if implementation is Implementation.CUDF:
-            return arrow_native_to_narwhals_dtype(native_column.dtype.to_arrow(), version)
-        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
+        from narwhals._arrow.utils import (
+            native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
+        )
+
+        native_dtype = native_column.dtype
+        if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
+            # cudf, cudf.pandas
+            return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
+        return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if dtype != "object":
         return non_object_native_to_narwhals_dtype(dtype, version, implementation)
     if implementation is Implementation.DASK:
@@ -509,6 +509,8 @@ def native_to_narwhals_dtype(
                 )
             except Exception:  # noqa: BLE001, S110
                 pass
+        # The most useful assumption is probably String
+        return dtypes.String()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -665,6 +667,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.List):
+        from narwhals._arrow.utils import (
+            narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+        )
+
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
                 import pandas as pd
@@ -695,6 +701,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
                 raise ImportError(msg) from exc
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
 
             return pd.ArrowDtype(
                 pa.struct(

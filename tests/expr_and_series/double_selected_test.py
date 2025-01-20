@@ -6,7 +6,7 @@ from tests.utils import assert_equal_data
 
 
 def test_double_selected(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7, 8, 9]}
     df = nw.from_native(constructor(data))
 
     result = df.select(nw.col("a", "b") * 2)

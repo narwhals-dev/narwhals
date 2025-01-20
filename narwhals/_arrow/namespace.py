@@ -7,6 +7,9 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
@@ -85,8 +88,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        import pyarrow as pa
-
         from narwhals._arrow.series import ArrowSeries
 
         return ArrowSeries(
@@ -266,8 +267,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -295,8 +294,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         )
 
     def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -369,8 +366,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        import pyarrow.compute as pc
-
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
@@ -378,19 +373,19 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
-                s._native_series
-                for _expr in parsed_exprs
-                for s in _expr.cast(dtypes.String())(df)
-            )
+            compliant_series_list = [
+                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())(df)
+            ]
             null_handling = "skip" if ignore_nulls else "emit_null"
             result_series = pc.binary_join_element_wise(
-                *series, separator, null_handling=null_handling
+                *(s._native_series for s in compliant_series_list),
+                separator,
+                null_handling=null_handling,
             )
             return [
                 ArrowSeries(
                     native_series=result_series,
-                    name="",
+                    name=compliant_series_list[0].name,
                     backend_version=self._backend_version,
                     version=self._version,
                 )
@@ -428,9 +423,6 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
         from narwhals._expression_parsing import parse_into_expr
 
         plx = df.__narwhals_namespace__()
@@ -441,7 +433,7 @@ class ArrowWhen:
         except TypeError:
             # `self._then_value` is a scalar and can't be converted to an expression
             value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition
+                self._then_value, reference_series=condition.alias("literal")
             )
 
         condition_native, value_series_native = broadcast_series(

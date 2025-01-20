@@ -15,7 +15,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
+data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
 df_lazy = pl.LazyFrame(data)
@@ -291,12 +291,7 @@ def test_key_with_nulls(
         assert_equal_data(result, expected)
 
 
-def test_key_with_nulls_ignored(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_key_with_nulls_ignored(constructor: Constructor) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))

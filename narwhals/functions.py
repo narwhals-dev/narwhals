@@ -13,6 +13,8 @@ from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import operation_aggregates
+from narwhals._expression_parsing import operation_changes_length
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
@@ -1393,7 +1395,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func, is_order_dependent=False)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1455,7 +1457,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func, is_order_dependent=False)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1512,7 +1514,12 @@ def all_() -> Expr:
         a: [[2,4,6]]
         b: [[8,10,12]]
     """
-    return Expr(lambda plx: plx.all(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.all(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1565,7 +1572,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, is_order_dependent=False)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=True)
 
 
 def sum(*columns: str) -> Expr:
@@ -1621,7 +1628,12 @@ def sum(*columns: str) -> Expr:
         ----
         a: [[3]]
     """
-    return Expr(lambda plx: plx.col(*columns).sum(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.col(*columns).sum(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def mean(*columns: str) -> Expr:
@@ -1677,7 +1689,12 @@ def mean(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.col(*columns).mean(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.col(*columns).mean(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def median(*columns: str) -> Expr:
@@ -1735,7 +1752,12 @@ def median(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.col(*columns).median(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.col(*columns).median(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def min(*columns: str) -> Expr:
@@ -1791,7 +1813,12 @@ def min(*columns: str) -> Expr:
         ----
         b: [[5]]
     """
-    return Expr(lambda plx: plx.col(*columns).min(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.col(*columns).min(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def max(*columns: str) -> Expr:
@@ -1847,7 +1874,12 @@ def max(*columns: str) -> Expr:
         ----
         a: [[2]]
     """
-    return Expr(lambda plx: plx.col(*columns).max(), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.col(*columns).max(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1914,6 +1946,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.sum_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -1984,6 +2018,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.min_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2054,6 +2090,8 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.max_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2073,6 +2111,8 @@ class When:
                 extract_compliant(plx, value)
             ),
             is_order_dependent=operation_is_order_dependent(*self._predicates, value),
+            changes_length=operation_changes_length(*self._predicates, value),
+            aggregates=operation_aggregates(*self._predicates, value),
         )
 
 
@@ -2083,6 +2123,8 @@ class Then(Expr):
                 extract_compliant(plx, value)
             ),
             is_order_dependent=operation_is_order_dependent(self, value),
+            changes_length=operation_changes_length(self, value),
+            aggregates=operation_aggregates(self, value),
         )
 
 
@@ -2236,6 +2278,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.all_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2306,7 +2350,12 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(lambda plx: plx.lit(value, dtype), is_order_dependent=False)
+    return Expr(
+        lambda plx: plx.lit(value, dtype),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -2384,6 +2433,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.any_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2454,6 +2505,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.mean_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2544,4 +2597,6 @@ def concat_str(
             ignore_nulls=ignore_nulls,
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs, *more_exprs),
+        changes_length=operation_changes_length(*flat_exprs, *more_exprs),
+        aggregates=operation_aggregates(*flat_exprs, *more_exprs),
     )

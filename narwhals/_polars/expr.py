@@ -5,13 +5,14 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
+import polars as pl
+
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import polars as pl
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -81,8 +82,6 @@ class PolarsExpr:
 
     def is_nan(self: Self) -> Self:
         if self._backend_version < (1, 18):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_expr(
                 pl.when(self._native_expr.is_not_null()).then(self._native_expr.is_nan())
             )

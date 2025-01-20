@@ -7,6 +7,8 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
+from pyspark.sql import functions as F  # noqa: N812
+
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_expr
 from narwhals._expression_parsing import parse_into_exprs
@@ -51,6 +53,11 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def col(self, *column_names: str) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
+        )
+
+    def nth(self, *column_indices: int) -> SparkLikeExpr:
+        return SparkLikeExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version, version=self._version
         )
 
     def lit(self, value: object, dtype: DType | None) -> SparkLikeExpr:
@@ -161,7 +168,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def mean_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
         from pyspark.sql.types import IntegerType
 
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
@@ -192,8 +198,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def max_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -214,8 +218,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def min_horizontal(self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -284,7 +286,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         separator: str,
         ignore_nulls: bool,
     ) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
         from pyspark.sql.types import StringType
 
         parsed_exprs = [
@@ -293,19 +294,24 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         ]
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = (s.cast(StringType()) for _expr in parsed_exprs for s in _expr(df))
+            cols = [s for _expr in parsed_exprs for s in _expr(df)]
+            cols_casted = [s.cast(StringType()) for s in cols]
             null_mask = [F.isnull(s) for _expr in parsed_exprs for s in _expr(df)]
+            first_column_name = get_column_name(df, cols[0])
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
                 result = F.when(
                     ~null_mask_result,
-                    reduce(lambda x, y: F.format_string(f"%s{separator}%s", x, y), cols),
+                    reduce(
+                        lambda x, y: F.format_string(f"%s{separator}%s", x, y),
+                        cols_casted,
+                    ),
                 ).otherwise(F.lit(None))
             else:
                 init_value, *values = [
                     F.when(~nm, col).otherwise(F.lit(""))
-                    for col, nm in zip(cols, null_mask)
+                    for col, nm in zip(cols_casted, null_mask)
                 ]
 
                 separators = (
@@ -318,7 +324,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.alias(first_column_name)]
 
         return SparkLikeExpr(
             call=func,
@@ -364,8 +370,6 @@ class SparkLikeWhen:
         self._version = version
 
     def __call__(self, df: SparkLikeLazyFrame) -> list[Column]:
-        from pyspark.sql import functions as F  # noqa: N812
-
         plx = df.__narwhals_namespace__()
         condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
 
