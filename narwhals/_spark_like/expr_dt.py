@@ -44,7 +44,7 @@ class SparkLikeExprDateTimeNamespace:
         from pyspark.sql import functions as F  # noqa: N812
 
         return self._compliant_expr._from_call(
-            F.dayofmonth,
+            F.day,
             "day",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
