@@ -91,6 +91,14 @@ class OrderDependentExprError(ValueError):
         super().__init__(self.message)
 
 
+class LengthChangingExprError(ValueError):
+    """Exception raised when trying to use an expression which changes length with LazyFrames."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
 class UnsupportedDTypeError(ValueError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
