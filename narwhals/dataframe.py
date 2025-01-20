@@ -4360,7 +4360,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().head(n)
 
-    def tail(self, n: int = 5) -> Self:
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
         r"""Get the last `n` rows.
 
         !!! warning

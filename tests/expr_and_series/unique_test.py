@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -25,6 +26,9 @@ def test_unique_expr(constructor: Constructor) -> None:
         result = df.select(nw.col("a").unique())
         expected = {"a": [1, 2]}
         assert_equal_data(result, expected)
+
+    with pytest.warns(UserWarning):
+        df.select(nw_v1.col("a").unique(maintain_order=False).sum())
 
 
 def test_unique_expr_agg(
