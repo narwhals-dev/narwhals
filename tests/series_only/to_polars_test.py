@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import polars as pl
-from polars.testing import assert_series_equal
+import pytest
 
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
+from polars.testing import assert_series_equal  # noqa: E402
 
 data = [1, 3, 2]
 

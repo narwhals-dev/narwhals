@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
-import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
+
+pytest.importorskip("pyarrow")
+import pyarrow as pa  # noqa: E402
+import pyarrow.compute as pc  # noqa: E402
 
 
 def test_to_arrow(constructor_eager: ConstructorEager) -> None:

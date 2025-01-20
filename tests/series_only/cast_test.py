@@ -4,9 +4,6 @@ from datetime import date
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from polars.testing import assert_frame_equal
 
@@ -32,6 +29,9 @@ def test_cast_253(
 
 def test_cast_date_datetime_polars() -> None:
     # polars: date to datetime
+    pytest.importorskip("polars")
+    import polars as pl
+
     dfpl = pl.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     df = nw.from_native(dfpl)
     df = df.select(nw.col("a").cast(nw.Datetime))
@@ -50,7 +50,10 @@ def test_cast_date_datetime_polars() -> None:
 
 
 def test_cast_date_datetime_pyarrow() -> None:
-    # polars: date to datetime
+    # pyarrow: date to datetime
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     dfpa = pa.table({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     df = nw.from_native(dfpa)
     df = df.select(nw.col("a").cast(nw.Datetime))
@@ -73,6 +76,9 @@ def test_cast_date_datetime_pyarrow() -> None:
 )
 def test_cast_date_datetime_pandas() -> None:
     # pandas: pyarrow date to datetime
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
         {"a": "date32[pyarrow]"}
     )
@@ -100,6 +106,9 @@ def test_cast_date_datetime_pandas() -> None:
 
 @pytest.mark.filterwarnings("ignore: casting period")
 def test_unknown_to_int() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
@@ -108,6 +117,11 @@ def test_cast_to_enum() -> None:
     # we don't yet support metadata in dtypes, so for now disallow this
     # seems like a very niche use case anyway, and allowing it later wouldn't be
     # backwards-incompatible
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
     df = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
     with pytest.raises(
         NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
