@@ -365,9 +365,7 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
 
     n_exprs = len([x for x in args if isinstance(x, Expr)])
-    changes_length = any(
-        isinstance(x, Expr) and x._changes_length and not x._aggregates for x in args
-    )
+    changes_length = any(isinstance(x, Expr) and x._changes_length for x in args)
     if n_exprs > 1 and changes_length:
         msg = (
             "Found multiple expressions at least one of which changes length.\n"
