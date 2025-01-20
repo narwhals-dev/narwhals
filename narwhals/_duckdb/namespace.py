@@ -248,22 +248,27 @@ class DuckDBWhen:
             value = parse_into_expr(self._then_value, namespace=plx)(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value = ConstantExpression(self._then_value)
+            value = ConstantExpression(self._then_value).alias("literal")
         value = cast("duckdb.Expression", value)
+        value_name = get_column_name(df, value)
 
         if self._otherwise_value is None:
-            return [CaseExpression(condition=condition, value=value)]
+            return [CaseExpression(condition=condition, value=value).alias(value_name)]
         try:
             otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
-                CaseExpression(condition=condition, value=value).otherwise(
-                    ConstantExpression(self._otherwise_value)
-                )
+                CaseExpression(condition=condition, value=value)
+                .otherwise(ConstantExpression(self._otherwise_value))
+                .alias(value_name)
             ]
         otherwise = otherwise_expr(df)[0]
-        return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
+        return [
+            CaseExpression(condition=condition, value=value)
+            .otherwise(otherwise)
+            .alias(value_name)
+        ]
 
     def then(self, value: DuckDBExpr | Any) -> DuckDBThen:
         self._then_value = value

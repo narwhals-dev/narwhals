@@ -16,9 +16,9 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
-        "a": [0.0, None, 2, 3, 4],
-        "b": [1.0, None, None, 5, 3],
-        "c": [5.0, None, 3, 2, 1],
+        "a": [0.0, None, 2.0, 3.0, 4.0],
+        "b": [1.0, None, None, 5.0, 3.0],
+        "c": [5.0, None, 3.0, 2.0, 1.0],
     }
     df = nw.from_native(constructor(data))
 
@@ -33,7 +33,7 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 def test_fill_null_exceptions(constructor: Constructor) -> None:
     data = {
-        "a": [0.0, None, 2, 3, 4],
+        "a": [0.0, None, 2.0, 3.0, 4.0],
     }
     df = nw.from_native(constructor(data))
 

@@ -13,7 +13,7 @@ def test_tail(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
 
     df_raw = constructor(data)

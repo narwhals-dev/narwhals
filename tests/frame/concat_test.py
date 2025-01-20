@@ -12,7 +12,7 @@ def test_concat_horizontal(
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = nw.from_native(constructor(data)).lazy()
 
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
@@ -22,7 +22,7 @@ def test_concat_horizontal(
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
-        "z": [7.0, 8, 9],
+        "z": [7.0, 8.0, 9.0],
         "c": [6, 12, -1],
         "d": [0, -4, 2],
     }
@@ -33,7 +33,7 @@ def test_concat_horizontal(
 
 
 def test_concat_vertical(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (
         nw.from_native(constructor(data)).lazy().rename({"a": "c", "b": "d"}).drop("z")
     )

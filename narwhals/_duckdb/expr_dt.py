@@ -130,3 +130,55 @@ class DuckDBExprDateTimeNamespace:
             "date",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
+
+    def total_minutes(self) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "datepart", ConstantExpression("minute"), _input
+            ),
+            "total_minutes",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def total_seconds(self) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: 60
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            + FunctionExpression("datepart", ConstantExpression("second"), _input),
+            "total_seconds",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def total_milliseconds(self) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: 60_000
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            + FunctionExpression("datepart", ConstantExpression("millisecond"), _input),
+            "total_milliseconds",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def total_microseconds(self) -> DuckDBExpr:
+        from duckdb import ConstantExpression
+        from duckdb import FunctionExpression
+
+        return self._compliant_expr._from_call(
+            lambda _input: 60_000_000
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            + FunctionExpression("datepart", ConstantExpression("microsecond"), _input),
+            "total_microseconds",
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
+    def total_nanoseconds(self) -> DuckDBExpr:
+        msg = "`total_nanoseconds` is not implemented for DuckDB"
+        raise NotImplementedError(msg)
