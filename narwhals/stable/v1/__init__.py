@@ -281,6 +281,17 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return self.select(all()._l1_norm())
 
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
+        """
+        return super().tail(n)
+
 
 class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.
