@@ -736,7 +736,8 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def unique(self, *, maintain_order: bool) -> PandasLikeSeries:
-        # pandas seems to always maintain order - is that guaranteed?
+        # pandas always maintains order, as per its docstring:
+        # "Uniques are returned in order of appearance"  # noqa: ERA001
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
