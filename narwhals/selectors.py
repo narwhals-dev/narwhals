@@ -517,6 +517,8 @@ def datetime(
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
         is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
     )
 
 
