@@ -937,7 +937,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_true(), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def sample(
