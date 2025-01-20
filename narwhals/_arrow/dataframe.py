@@ -10,6 +10,7 @@ from typing import Sequence
 from typing import overload
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
@@ -588,8 +589,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         columns = self.columns
@@ -624,8 +623,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         is_duplicated = self.is_duplicated()._native_series
@@ -647,7 +644,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         df = self._native_frame
         check_column_exists(self.columns, subset)
@@ -685,7 +681,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         frame = self._native_frame
         num_rows = len(self)

@@ -108,68 +108,46 @@ class ArrowSeries(CompliantSeries):
         return len(self._native_series)
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.equal(ser, other))
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.not_equal(ser, other))
 
     def __ge__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.greater_equal(ser, other))
 
     def __gt__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.greater(ser, other))
 
     def __le__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.less_equal(ser, other))
 
     def __lt__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.less(ser, other))
 
     def __and__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.and_kleene(ser, other))
 
     def __rand__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.and_kleene(other, ser))
 
     def __or__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.or_kleene(ser, other))
 
     def __ror__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.add(ser, other))
 
@@ -177,8 +155,6 @@ class ArrowSeries(CompliantSeries):
         return self + other  # type: ignore[no-any-return]
 
     def __sub__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.subtract(ser, other))
 
@@ -186,8 +162,6 @@ class ArrowSeries(CompliantSeries):
         return (self - other) * (-1)  # type: ignore[no-any-return]
 
     def __mul__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.multiply(ser, other))
 
@@ -195,14 +169,10 @@ class ArrowSeries(CompliantSeries):
         return self * other  # type: ignore[no-any-return]
 
     def __pow__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.power(ser, other))
 
     def __rpow__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.power(other, ser))
 
@@ -215,8 +185,6 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(floordiv_compat(other, ser))
 
     def __truediv__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
@@ -224,8 +192,6 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
@@ -233,24 +199,18 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
 
     def __mod__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         floor_div = (self // other)._native_series
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
 
     def __rmod__(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         floor_div = (other // self)._native_series
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
 
     def __invert__(self: Self) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(pc.invert(self._native_series))
 
     def len(self: Self, *, _return_py_scalar: bool = True) -> int:
@@ -264,13 +224,9 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(ser.filter(other))
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(pc.mean(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def median(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         from narwhals.exceptions import InvalidOperationError
 
         if not self.dtype.is_numeric():
@@ -282,37 +238,25 @@ class ArrowSeries(CompliantSeries):
         )
 
     def min(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def max(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def arg_min(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         index_min = pc.index(self._native_series, pc.min(self._native_series))
         return maybe_extract_py_scalar(index_min, _return_py_scalar)  # type: ignore[no-any-return]
 
     def arg_max(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         index_max = pc.index(self._native_series, pc.max(self._native_series))
         return maybe_extract_py_scalar(index_max, _return_py_scalar)  # type: ignore[no-any-return]
 
     def sum(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.sum(self._native_series, min_count=0), _return_py_scalar
         )
 
     def drop_nulls(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._from_native_series(pc.drop_null(self._native_series))
 
     def shift(self: Self, n: int) -> Self:
@@ -327,22 +271,16 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def std(self: Self, ddof: int, *, _return_py_scalar: bool = True) -> float:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.stddev(self._native_series, ddof=ddof), _return_py_scalar
         )
 
     def var(self: Self, ddof: int, *, _return_py_scalar: bool = True) -> float:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.variance(self._native_series, ddof=ddof), _return_py_scalar
         )
 
     def skew(self: Self, *, _return_py_scalar: bool = True) -> float | None:
-        import pyarrow.compute as pc
-
         ser = self._native_series
         ser_not_null = pc.drop_null(ser)
         if len(ser_not_null) == 0:
@@ -361,13 +299,9 @@ class ArrowSeries(CompliantSeries):
             )
 
     def count(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(pc.count(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
 
     def n_unique(self: Self, *, _return_py_scalar: bool = True) -> int:
-        import pyarrow.compute as pc
-
         unique_values = pc.unique(self._native_series)
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.count(unique_values, mode="all"), _return_py_scalar
@@ -404,7 +338,6 @@ class ArrowSeries(CompliantSeries):
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         mask = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
@@ -443,13 +376,9 @@ class ArrowSeries(CompliantSeries):
         return native_to_narwhals_dtype(self._native_series.type, self._version)
 
     def abs(self: Self) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(pc.abs(self._native_series))
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        import pyarrow.compute as pc
-
         native_series = self._native_series
         result = (
             pc.cumulative_sum(native_series, skip_nulls=True)
@@ -459,29 +388,21 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def round(self: Self, decimals: int) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(
             pc.round(self._native_series, decimals, round_mode="half_towards_infinity")
         )
 
     def diff(self: Self) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(
             pc.pairwise_diff(self._native_series.combine_chunks())
         )
 
     def any(self: Self, *, _return_py_scalar: bool = True) -> bool:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.any(self._native_series, min_count=0), _return_py_scalar
         )
 
     def all(self: Self, *, _return_py_scalar: bool = True) -> bool:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.all(self._native_series, min_count=0), _return_py_scalar
         )
@@ -492,8 +413,6 @@ class ArrowSeries(CompliantSeries):
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
     ) -> Self:
-        import pyarrow.compute as pc
-
         ser = self._native_series
         _, lower_bound = broadcast_and_extract_native(
             self, lower_bound, self._backend_version
@@ -529,13 +448,9 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(ser.is_null())
 
     def is_nan(self: Self) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(pc.is_nan(self._native_series))
 
     def cast(self: Self, dtype: DType) -> Self:
-        import pyarrow.compute as pc
-
         ser = self._native_series
         dtype = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_series(pc.cast(ser, dtype))
@@ -560,8 +475,6 @@ class ArrowSeries(CompliantSeries):
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        import pyarrow.compute as pc
-
         value_set = pa.array(other)
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
@@ -598,8 +511,6 @@ class ArrowSeries(CompliantSeries):
         normalize: bool = False,
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
-        import pyarrow.compute as pc
-
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         index_name_ = "index" if self._name is None else self._name
@@ -624,8 +535,6 @@ class ArrowSeries(CompliantSeries):
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
-        import pyarrow.compute as pc
-
         mask = mask._native_series.combine_chunks()
         return self._from_native_series(
             pc.if_else(
@@ -644,7 +553,6 @@ class ArrowSeries(CompliantSeries):
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         ser = self._native_series
         num_rows = len(self)
@@ -665,7 +573,6 @@ class ArrowSeries(CompliantSeries):
         limit: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         def fill_aux(
             arr: pa.Array,
@@ -735,7 +642,6 @@ class ArrowSeries(CompliantSeries):
 
     def is_first_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         row_number = pa.array(np.arange(len(self)))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
@@ -751,7 +657,6 @@ class ArrowSeries(CompliantSeries):
 
     def is_last_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         row_number = pa.array(np.arange(len(self)))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
@@ -769,7 +674,6 @@ class ArrowSeries(CompliantSeries):
         if not isinstance(descending, bool):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)
-        import pyarrow.compute as pc
 
         ser = self._native_series
         if descending:
@@ -781,15 +685,12 @@ class ArrowSeries(CompliantSeries):
     def unique(self: Self, *, maintain_order: bool) -> ArrowSeries:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
-        import pyarrow.compute as pc
 
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))
         result_native = pc.take(pa.array(new), idxs)
@@ -806,8 +707,6 @@ class ArrowSeries(CompliantSeries):
         return result
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         series = self._native_series
         order = "descending" if descending else "ascending"
         null_placement = "at_end" if nulls_last else "at_start"
@@ -857,8 +756,6 @@ class ArrowSeries(CompliantSeries):
         *,
         _return_py_scalar: bool = True,
     ) -> Any:
-        import pyarrow.compute as pc
-
         return maybe_extract_py_scalar(
             pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[0],
             _return_py_scalar,
@@ -870,8 +767,6 @@ class ArrowSeries(CompliantSeries):
     def clip(
         self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
-        import pyarrow.compute as pc
-
         arr = self._native_series
         _, lower_bound = broadcast_and_extract_native(
             self, lower_bound, self._backend_version
@@ -895,8 +790,6 @@ class ArrowSeries(CompliantSeries):
         )[self.name]
 
     def is_finite(self: Self) -> Self:
-        import pyarrow.compute as pc
-
         return self._from_native_series(pc.is_finite(self._native_series))
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
@@ -907,8 +800,6 @@ class ArrowSeries(CompliantSeries):
         if self._backend_version < (13, 0, 0):
             msg = "cum_min method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        import pyarrow.compute as pc
 
         native_series = self._native_series
 
@@ -924,8 +815,6 @@ class ArrowSeries(CompliantSeries):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
 
-        import pyarrow.compute as pc
-
         native_series = self._native_series
 
         result = (
@@ -939,8 +828,6 @@ class ArrowSeries(CompliantSeries):
         if self._backend_version < (13, 0, 0):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        import pyarrow.compute as pc
 
         native_series = self._native_series
 
@@ -958,8 +845,6 @@ class ArrowSeries(CompliantSeries):
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow.compute as pc
-
         min_periods = min_periods if min_periods is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
@@ -994,8 +879,6 @@ class ArrowSeries(CompliantSeries):
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow.compute as pc
-
         min_periods = min_periods if min_periods is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
@@ -1034,8 +917,6 @@ class ArrowSeries(CompliantSeries):
         center: bool,
         ddof: int,
     ) -> Self:
-        import pyarrow.compute as pc  # ignore-banned-import
-
         min_periods = min_periods if min_periods is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
@@ -1107,7 +988,6 @@ class ArrowSeries(CompliantSeries):
             raise ValueError(msg)
 
         # ignore-banned-import
-        import pyarrow.compute as pc  # ignore-banned-import
 
         sort_keys = "descending" if descending else "ascending"
         tiebreaker = "first" if method == "ordinal" else method

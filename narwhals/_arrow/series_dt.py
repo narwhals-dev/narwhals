@@ -20,8 +20,6 @@ class ArrowSeriesDateTimeNamespace:
         self._compliant_series = series
 
     def to_string(self: Self, format: str) -> ArrowSeries:  # noqa: A002
-        import pyarrow.compute as pc
-
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
@@ -31,8 +29,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         if time_zone is not None:
             result = pc.assume_timezone(
                 pc.local_timestamp(self._compliant_series._native_series), time_zone
@@ -54,8 +50,6 @@ class ArrowSeriesDateTimeNamespace:
         return self._compliant_series._from_native_series(result)
 
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
-        import pyarrow.compute as pc
-
         s = self._compliant_series._native_series
         dtype = self._compliant_series.dtype
         dtypes = import_dtypes_module(self._compliant_series._version)
@@ -112,65 +106,47 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def year(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.year(self._compliant_series._native_series)
         )
 
     def month(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.month(self._compliant_series._native_series)
         )
 
     def day(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.day(self._compliant_series._native_series)
         )
 
     def hour(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.hour(self._compliant_series._native_series)
         )
 
     def minute(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.minute(self._compliant_series._native_series)
         )
 
     def second(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.second(self._compliant_series._native_series)
         )
 
     def millisecond(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.millisecond(self._compliant_series._native_series)
         )
 
     def microsecond(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         result = pc.add(pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr))
 
         return self._compliant_series._from_native_series(result)
 
     def nanosecond(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         result = pc.add(
             pc.multiply(self.microsecond()._native_series, 1000), pc.nanosecond(arr)
@@ -178,15 +154,11 @@ class ArrowSeriesDateTimeNamespace:
         return self._compliant_series._from_native_series(result)
 
     def ordinal_day(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.day_of_year(self._compliant_series._native_series)
         )
 
     def weekday(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         return self._compliant_series._from_native_series(
             pc.day_of_week(self._compliant_series._native_series, count_from_zero=False)
         )
@@ -208,8 +180,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_seconds(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         unit = arr.type.unit
 
@@ -226,8 +196,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_milliseconds(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         unit = arr.type.unit
 
@@ -250,8 +218,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_microseconds(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         unit = arr.type.unit
 
@@ -273,8 +239,6 @@ class ArrowSeriesDateTimeNamespace:
         )
 
     def total_nanoseconds(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         arr = self._compliant_series._native_series
         unit = arr.type.unit
 
