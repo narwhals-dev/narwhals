@@ -935,6 +935,8 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
             self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
