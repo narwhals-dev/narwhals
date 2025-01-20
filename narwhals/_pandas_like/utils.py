@@ -10,12 +10,6 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._arrow.utils import (
-    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-)
-from narwhals._arrow.utils import (
-    native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
-)
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
@@ -478,6 +472,10 @@ def native_to_narwhals_dtype(
     dtypes = import_dtypes_module(version)
 
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+        from narwhals._arrow.utils import (
+            native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
+        )
+
         native_dtype = native_column.dtype
         if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
             # cudf, cudf.pandas
@@ -669,6 +667,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.List):
+        from narwhals._arrow.utils import (
+            narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+        )
+
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
                 import pandas as pd

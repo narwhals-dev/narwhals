@@ -8,6 +8,9 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
 from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
@@ -30,7 +33,6 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -70,8 +72,6 @@ class ArrowSeries(CompliantSeries):
         )
 
     def _from_native_series(self: Self, series: pa.ChunkedArray | pa.Array) -> Self:
-        import pyarrow as pa
-
         if isinstance(series, pa.Array):
             series = pa.chunked_array([series])
         return self.__class__(
@@ -90,8 +90,6 @@ class ArrowSeries(CompliantSeries):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        import pyarrow as pa
-
         return cls(
             pa.chunked_array([data]),
             name=name,
@@ -217,7 +215,6 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(floordiv_compat(other, ser))
 
     def __truediv__(self: Self, other: Any) -> Self:
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
@@ -227,7 +224,6 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
@@ -320,8 +316,6 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.drop_null(self._native_series))
 
     def shift(self: Self, n: int) -> Self:
-        import pyarrow as pa
-
         ca = self._native_series
 
         if n > 0:
@@ -410,7 +404,6 @@ class ArrowSeries(CompliantSeries):
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         mask = np.zeros(self.len(), dtype=bool)
@@ -567,7 +560,6 @@ class ArrowSeries(CompliantSeries):
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         value_set = pa.array(other)
@@ -606,7 +598,6 @@ class ArrowSeries(CompliantSeries):
         normalize: bool = False,
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -674,7 +665,6 @@ class ArrowSeries(CompliantSeries):
         limit: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         def fill_aux(
@@ -720,8 +710,6 @@ class ArrowSeries(CompliantSeries):
         return res_ser
 
     def to_frame(self: Self) -> ArrowDataFrame:
-        import pyarrow as pa
-
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
@@ -747,7 +735,6 @@ class ArrowSeries(CompliantSeries):
 
     def is_first_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         row_number = pa.array(np.arange(len(self)))
@@ -764,7 +751,6 @@ class ArrowSeries(CompliantSeries):
 
     def is_last_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         row_number = pa.array(np.arange(len(self)))
@@ -802,7 +788,6 @@ class ArrowSeries(CompliantSeries):
     def replace_strict(
         self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
-        import pyarrow as pa
         import pyarrow.compute as pc
 
         # https://stackoverflow.com/a/79111029/4451315
@@ -834,7 +819,6 @@ class ArrowSeries(CompliantSeries):
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> ArrowDataFrame:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
 
         from narwhals._arrow.dataframe import ArrowDataFrame
 
@@ -1122,7 +1106,7 @@ class ArrowSeries(CompliantSeries):
             )
             raise ValueError(msg)
 
-        import pyarrow as pa  # ignore-banned-import
+        # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import
 
         sort_keys = "descending" if descending else "ascending"
@@ -1151,9 +1135,6 @@ class ArrowSeries(CompliantSeries):
         from pyarrow import ArrowTypeError  # ignore-banned-imports
 
         try:
-            import pyarrow as pa
-            import pyarrow.compute as pc
-
             native_series = self._native_series
             other_ = (
                 pa.scalar(other)
