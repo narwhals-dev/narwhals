@@ -352,8 +352,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
-    def unique(self: Self, *, maintain_order: bool) -> Self:
-        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
+    def unique(self: Self) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=False)
 
     def replace_strict(
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None

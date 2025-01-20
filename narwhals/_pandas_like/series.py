@@ -735,9 +735,8 @@ class PandasLikeSeries(CompliantSeries):
         )
         return self._from_native_series(result)
 
-    def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
+    def unique(self) -> PandasLikeSeries:
+        # pandas seems to always maintain order - is that guaranteed?
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
