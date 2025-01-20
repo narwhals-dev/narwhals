@@ -735,7 +735,7 @@ class PandasLikeSeries(CompliantSeries):
         )
         return self._from_native_series(result)
 
-    def unique(self) -> PandasLikeSeries:
+    def unique(self, *, maintain_order: bool) -> PandasLikeSeries:
         # pandas seems to always maintain order - is that guaranteed?
         return self._from_native_series(
             self._native_series.__class__(
@@ -778,7 +778,7 @@ class PandasLikeSeries(CompliantSeries):
         if result.is_null().sum() != self.is_null().sum():
             msg = (
                 "replace_strict did not replace all non-null values.\n\n"
-                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
             )
             raise ValueError(msg)
         return result
