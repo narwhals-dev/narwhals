@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -34,7 +33,7 @@ def test_prefix_raise_anonymous(constructor: Constructor) -> None:
 
     context = (
         does_not_raise()
-        if isinstance(df_raw, (pl.LazyFrame, pl.DataFrame))
+        if "polars" in str(constructor)
         else pytest.raises(
             AnonymousExprError,
             match="Anonymous expressions are not supported in `.name.prefix`.",

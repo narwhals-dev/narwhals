@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -167,6 +164,14 @@ def test_truediv_same_dims(
 def test_floordiv(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+
     assume(right != 0)
     expected = {"a": [left // right]}
     result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
@@ -205,6 +210,14 @@ def test_floordiv(left: int, right: int) -> None:
 def test_mod(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+
     assume(right != 0)
     expected = {"a": [left % right]}
     result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(

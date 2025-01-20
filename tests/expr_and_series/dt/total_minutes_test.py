@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import timedelta
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
 
@@ -24,6 +22,11 @@ from tests.utils import PANDAS_VERSION
 )
 @pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True
     ).dt.total_minutes()[0]

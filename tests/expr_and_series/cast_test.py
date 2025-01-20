@@ -3,10 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -167,6 +164,9 @@ def test_cast_series(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_cast_string() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
@@ -259,8 +259,11 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     assert result.schema == {"a": dtype}
 
 
-@pytest.mark.parametrize("dtype", [pl.String, pl.String()])
-def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
+def test_raise_if_polars_dtype(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
-        df.select(nw.col("a").cast(dtype))
+    for dtype in (pl.String, pl.String()):
+        with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
+            df.select(nw.col("a").cast(dtype))  # type: ignore[arg-type]

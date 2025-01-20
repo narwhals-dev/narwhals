@@ -4,9 +4,6 @@ import random
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -108,6 +105,13 @@ def test_rolling_var_series(
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+
     s = pd.Series(values)
     window_size = random.randint(2, len(s))  # noqa: S311
     min_periods = random.randint(2, window_size)  # noqa: S311

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -175,6 +174,9 @@ def test_over_cumprod(
 
 
 def test_over_anonymous() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Anonymous expressions"):
         nw.from_native(df).select(nw.all().cum_max().over("a"))
@@ -200,6 +202,9 @@ def test_over_shift(
 
 
 def test_over_cum_reverse() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
 
     with pytest.raises(

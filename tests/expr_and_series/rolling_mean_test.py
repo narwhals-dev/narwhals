@@ -4,8 +4,6 @@ import random
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -78,6 +76,11 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
     s = pd.Series(values)
     n_missing = random.randint(0, len(s) - 1)  # noqa: S311
     window_size = random.randint(1, len(s))  # noqa: S311

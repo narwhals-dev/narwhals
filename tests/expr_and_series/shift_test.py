@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pyarrow as pa
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
@@ -43,6 +43,9 @@ def test_shift_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_shift_multi_chunk_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     tbl = pa.table({"a": [1, 2, 3]})
     tbl = pa.concat_tables([tbl, tbl, tbl])
     df = nw.from_native(tbl, eager_only=True)

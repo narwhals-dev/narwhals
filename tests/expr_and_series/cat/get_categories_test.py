@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -32,6 +31,9 @@ def test_get_categories(
 def test_get_categories_pyarrow() -> None:
     # temporary test until we have `cast` in pyarrow - later, fuse
     # this with test above
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     table = pa.table(
         {"a": pa.array(["a", "b", None, "d"], pa.dictionary(pa.int64(), pa.utf8()))}
     )

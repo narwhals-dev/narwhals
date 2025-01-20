@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -25,6 +24,7 @@ def test_dask_order_dependent_ops() -> None:
     # raise after stable.v1.
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     result = df.select(

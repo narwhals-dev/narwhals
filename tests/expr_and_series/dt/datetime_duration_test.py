@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import timedelta
 
 import numpy as np
-import pyarrow as pa
-import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -108,6 +106,10 @@ def test_duration_attributes_series(
     ],
 )
 def test_pyarrow_units(unit: str, attribute: str, expected: int) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    import pyarrow.compute as pc
+
     data = [None, timedelta(minutes=1, seconds=10)]
     arr = pc.cast(pa.array(data), pa.duration(unit))
     df = nw.from_native(pa.table({"a": arr}), eager_only=True)
