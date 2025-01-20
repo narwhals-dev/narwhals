@@ -57,8 +57,6 @@ def test_allh_nth(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
