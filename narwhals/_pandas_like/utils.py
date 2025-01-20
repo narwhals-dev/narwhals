@@ -509,6 +509,8 @@ def native_to_narwhals_dtype(
                 )
             except Exception:  # noqa: BLE001, S110
                 pass
+        # The most useful assumption is probably String
+        return dtypes.String()
     return dtypes.Unknown()  # pragma: no cover
 
 
