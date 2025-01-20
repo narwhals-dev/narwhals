@@ -467,13 +467,12 @@ class PandasWhen:
         except TypeError:
             # `self._then_value` is a scalar and can't be converted to an expression
             value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition
+                self._then_value, reference_series=condition.alias("literal")
             )
 
         condition_native, value_series_native = broadcast_align_and_extract_native(
             condition, value_series
         )
-
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
