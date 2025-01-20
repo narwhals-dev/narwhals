@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from duckdb import CaseExpression
+from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
 from duckdb import ConstantExpression
 from duckdb import FunctionExpression
@@ -342,8 +343,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         return self._from_call(func, "skew", returns_scalar=True)
 
     def median(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("median", _input),
             "median",
@@ -351,8 +350,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def all(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("bool_and", _input),
             "all",
@@ -360,8 +357,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def any(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("bool_or", _input),
             "any",
@@ -373,9 +368,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if interpolation == "linear":
                 return FunctionExpression(
@@ -391,8 +383,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        from duckdb import FunctionExpression
-
         def func(
             _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
@@ -434,17 +424,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def sum(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("sum", _input), "sum", returns_scalar=True
         )
 
     def n_unique(self) -> Self:
-        from duckdb import CaseExpression
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             # https://stackoverflow.com/a/79338887/4451315
             return FunctionExpression(
@@ -463,8 +447,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def count(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("count", _input),
             "count",
@@ -472,15 +454,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def len(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("count"), "len", returns_scalar=True
         )
 
     def std(self, ddof: int) -> Self:
-        from duckdb import FunctionExpression
-
         if ddof == 1:
             func = "stddev_samp"
         elif ddof == 0:
@@ -493,8 +471,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def var(self, ddof: int) -> Self:
-        from duckdb import FunctionExpression
-
         if ddof == 1:
             func = "var_samp"
         elif ddof == 0:
@@ -507,22 +483,16 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def max(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("max", _input), "max", returns_scalar=True
         )
 
     def min(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
     def null_count(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
             "null_count",
@@ -535,8 +505,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def is_nan(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("isnan", _input),
             "is_nan",
@@ -544,8 +512,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def is_finite(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("isfinite", _input),
             "is_finite",
@@ -553,8 +519,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        from duckdb import ConstantExpression
-
         return self._from_call(
             lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
             "is_in",
@@ -562,9 +526,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def round(self, decimals: int) -> Self:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression(
                 "round", _input, ConstantExpression(decimals)
@@ -574,9 +535,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
-        from duckdb import CoalesceOperator
-        from duckdb import ConstantExpression
-
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)

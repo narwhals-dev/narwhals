@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from duckdb import ColumnExpression
+
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
@@ -79,8 +81,6 @@ def _columns_from_expr(
     df: DuckDBLazyFrame, expr: IntoDuckDBExpr
 ) -> Sequence[duckdb.Expression]:
     if isinstance(expr, str):  # pragma: no cover
-        from duckdb import ColumnExpression
-
         return [ColumnExpression(expr)]
     elif hasattr(expr, "__narwhals_expr__"):
         col_output_list = expr._call(df)
