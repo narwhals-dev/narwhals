@@ -4,7 +4,6 @@ import pytest
 from hypothesis import assume
 from hypothesis import given
 from hypothesis import strategies as st
-from pandas.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
@@ -17,6 +16,7 @@ pytest.importorskip("pyarrow")
 import pandas as pd  # noqa: E402
 import polars as pl  # noqa: E402
 import pyarrow as pa  # noqa: E402
+from pandas.testing import assert_frame_equal  # noqa: E402
 
 
 @given(

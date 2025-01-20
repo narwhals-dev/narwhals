@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import sys
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 
 
 def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
     monkeypatch.delitem(sys.modules, "pyarrow")
@@ -33,12 +33,16 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean()).filter(
         nw.col("a") > 1
@@ -56,6 +60,7 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
@@ -73,6 +78,9 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)

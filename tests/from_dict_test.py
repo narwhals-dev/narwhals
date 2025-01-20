@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -82,6 +81,9 @@ def test_from_dict_empty() -> None:
 
 
 def test_alignment() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # https://github.com/narwhals-dev/narwhals/issues/1474
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     result = nw.from_dict(

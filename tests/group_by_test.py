@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -17,21 +14,27 @@ from tests.utils import assert_equal_data
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
-df_pandas = pd.DataFrame(data)
-df_lazy = pl.LazyFrame(data)
 
+def test_group_by_complex_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
 
-def test_group_by_complex() -> None:
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
-    df = nw.from_native(df_pandas)
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.warns(UserWarning, match="complex group-by"):
         result = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
     assert_equal_data(result, expected)
 
-    lf = nw.from_native(df_lazy).lazy()
+
+def test_group_by_complex_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    expected = {"a": [1, 3], "b": [-3.5, -3.0]}
+    lf = nw.from_native(pl.LazyFrame(data)).lazy()
     result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     assert_equal_data(result, expected)
 
@@ -39,8 +42,9 @@ def test_group_by_complex() -> None:
 def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
-    df_dask = dd.from_pandas(df_pandas)
+    df_dask = dd.from_pandas(pd.DataFrame(data))
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
@@ -56,8 +60,11 @@ def test_invalid_group_by_dask() -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_invalid_group_by() -> None:
-    df = nw.from_native(df_pandas)
+def test_invalid_group_by_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
@@ -65,6 +72,13 @@ def test_invalid_group_by() -> None:
         match=r"Anonymous expressions are not supported in `group_by\.agg`",
     ):
         df.group_by("a").agg(nw.all().mean())
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
+def test_invalid_group_by_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     with pytest.raises(
         AnonymousExprError,
         match=r"Anonymous expressions are not supported in `group_by\.agg`",
@@ -191,7 +205,7 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
-    import pandas as pd
+    pd = pytest.importorskip("pandas")
 
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Expected unique output names"):
@@ -199,6 +213,9 @@ def test_group_by_same_name_twice() -> None:
 
 
 def test_group_by_empty_result_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
     with pytest.raises(ValueError, match="No results"):

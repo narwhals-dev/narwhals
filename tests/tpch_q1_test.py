@@ -4,9 +4,6 @@ import os
 from datetime import datetime
 from unittest import mock
 
-import pandas as pd
-import polars as pl
-import pyarrow.csv as pa_csv
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -26,17 +23,27 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
+        pytest.importorskip("pandas")
+        import pandas as pd
+
         df_raw = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
         import dask.dataframe as dd
+        import pandas as pd
 
         df_raw = dd.from_pandas(
             pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
         )
     else:
+        pytest.importorskip("pyarrow")
+        import pyarrow.csv as pa_csv
+
         df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
@@ -105,8 +112,14 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
+        pytest.importorskip("pandas")
+        import pandas as pd
+
         df_raw = pd.read_csv("tests/data/lineitem.csv")
     else:
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
@@ -165,6 +178,9 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for pyarrow")
 def test_q1_w_pandas_agg_generic_path() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_raw = pd.read_csv("tests/data/lineitem.csv")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)

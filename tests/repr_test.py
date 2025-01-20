@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
 
+pytest.importorskip("duckdb")
+pytest.importorskip("pandas")
+import duckdb  # noqa: E402
+import pandas as pd  # noqa: E402
+
 
 def test_repr() -> None:
-    duckdb = pytest.importorskip("duckdb")
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["fdaf", "fda", "cf"]})
     result = nw.from_native(df).__repr__()
     expected = (

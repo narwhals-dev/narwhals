@@ -5,10 +5,6 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Literal
 
-import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -130,6 +126,9 @@ def test_struct_hashes() -> None:
     reason="`shape` is only available after 1.0",
 )
 def test_polars_2d_array() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame(
         {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
     )
@@ -143,12 +142,20 @@ def test_polars_2d_array() -> None:
 
 
 def test_second_time_unit() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+
+    import numpy as np
+    import pandas as pd
+    import pyarrow as pa
+
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     if PANDAS_VERSION < (2,):  # pragma: no cover
         assert result.dtype == nw.Datetime("ns")
     else:
         assert result.dtype == nw.Datetime("s")
+
     s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=pa.timestamp("s"))])
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Datetime("s")
@@ -165,6 +172,9 @@ def test_second_time_unit() -> None:
 
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
 def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if PANDAS_VERSION >= (3,):
         # pandas 3.0+ won't allow this kind of inplace modification
         request.applymarker(pytest.mark.xfail)
@@ -179,6 +189,9 @@ def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> Non
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -200,7 +213,12 @@ def test_pandas_fixed_offset_1302() -> None:
 
 
 def test_huge_int() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):  # pragma: no cover
         result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
@@ -227,7 +245,12 @@ def test_huge_int() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal

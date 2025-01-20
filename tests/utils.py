@@ -4,13 +4,13 @@ import math
 import os
 import sys
 import warnings
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import Sequence
 
-import pandas as pd
-
+from narwhals.dependencies import get_pandas
 from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
@@ -21,6 +21,9 @@ if sys.version_info >= (3, 10):
     from typing import TypeAlias  # pragma: no cover
 else:
     from typing_extensions import TypeAlias  # pragma: no cover
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -115,7 +118,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
                 are_equivalent_values = lhs is None or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
-            elif pd.isna(lhs):
+            elif (pd := get_pandas()) is not None and pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
                 are_equivalent_values = lhs == rhs

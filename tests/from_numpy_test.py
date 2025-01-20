@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+
+pytest.importorskip("numpy")
+import numpy as np  # noqa: E402
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 arr = np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]])

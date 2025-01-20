@@ -5,13 +5,8 @@ import string
 from typing import TYPE_CHECKING
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
-from pandas.testing import assert_frame_equal
-from pandas.testing import assert_index_equal
-from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
@@ -23,6 +18,15 @@ from tests.utils import get_module_version_as_tuple
 if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoSeriesT
+
+pytest.importorskip("pandas")
+import pandas as pd  # noqa: E402
+from pandas.testing import assert_frame_equal  # noqa: E402
+from pandas.testing import assert_index_equal  # noqa: E402
+from pandas.testing import assert_series_equal  # noqa: E402
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -45,6 +49,9 @@ def test_maybe_align_index_pandas() -> None:
 def test_with_columns_sort() -> None:
     # Check that, unlike in pandas, we don't change the index
     # when sorting
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({"a": [2, 1, 3]}))
     result = df.with_columns(a_sorted=nw.col("a").sort()).pipe(nw.to_native)
     expected = pd.DataFrame({"a": [2, 1, 3], "a_sorted": [1, 2, 3]})
@@ -52,6 +59,9 @@ def test_with_columns_sort() -> None:
 
 
 def test_non_unique_index() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
     s = nw.from_native(pd.Series([1, 2, 3], index=[2, 2, 0]), series_only=True)
     with pytest.raises(ValueError, match="unique"):
@@ -59,6 +69,9 @@ def test_non_unique_index() -> None:
 
 
 def test_maybe_align_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
@@ -74,6 +87,9 @@ def test_maybe_align_index_polars() -> None:
 def test_maybe_set_index_pandas_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index(column_names)
@@ -90,6 +106,9 @@ def test_maybe_set_index_pandas_column_names(
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     assert result is df

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -24,7 +22,7 @@ data = {
 
 
 def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
@@ -33,7 +31,7 @@ def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> 
 
 
 def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(numeric() + 1)
@@ -42,7 +40,7 @@ def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> No
 
 
 def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(boolean())
@@ -51,7 +49,7 @@ def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> No
 
 
 def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(string())
@@ -67,7 +65,7 @@ def test_categorical(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
@@ -96,20 +94,19 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected
 
 
-@pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
 def test_set_ops_invalid(
-    invalid_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(invalid_constructor):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "polars")):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(invalid_constructor(data))
+    df = nw.from_native(constructor(data))
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 - numeric())
     with pytest.raises((NotImplementedError, ValueError)):

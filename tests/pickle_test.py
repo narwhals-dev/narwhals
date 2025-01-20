@@ -4,13 +4,17 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from typing import Sequence
 
-import pandas as pd
-import polars as pl
+import pytest
 
 import narwhals.stable.v1 as nw
 
 
 def test_dataclass() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
     # https://github.com/narwhals-dev/narwhals/issues/1486
     @dataclass
     class Foo:

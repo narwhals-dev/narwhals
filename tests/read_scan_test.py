@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -10,6 +8,9 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
 
 data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
@@ -43,6 +44,9 @@ def test_read_csv_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -86,6 +90,9 @@ def test_scan_csv_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -124,6 +131,9 @@ def test_read_parquet_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -169,6 +179,9 @@ def test_scan_parquet_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)

@@ -209,43 +209,60 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
+ALL_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
+    **EAGER_CONSTRUCTORS,
+    **LAZY_CONSTRUCTORS,
+    **GPU_CONSTRUCTORS,
+}
+
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    from importlib.util import find_spec
+
     if metafunc.config.getoption("all_cpu_constructors"):
-        selected_constructors: list[str] = [
-            *iter(EAGER_CONSTRUCTORS.keys()),
-            *iter(LAZY_CONSTRUCTORS.keys()),
-        ]
-        selected_constructors = [
-            x
-            for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x not in "modin"  # too slow
-        ]
+        selected_constructors: dict[str, Callable[[Any], IntoFrame]] = {
+            **EAGER_CONSTRUCTORS,
+            **LAZY_CONSTRUCTORS,
+        }
+        selected_constructors.pop("modin")  # too slow
     else:  # pragma: no cover
-        selected_constructors = metafunc.config.getoption("constructors").split(",")
+        selected_constructors = {
+            k: v
+            for k, v in ALL_CONSTRUCTORS.items()
+            if k in metafunc.config.getoption("constructors").split(",")
+        }
+
+    # verify installed
+    for name in selected_constructors:
+        lib_name = name.split("[")[0]
+        if find_spec(lib_name) is None:
+            msg = f"No module named '{lib_name}'"
+            raise ModuleNotFoundError(msg)
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []
     constructors: list[Callable[[Any], IntoFrame]] = []
     constructors_ids: list[str] = []
 
-    for constructor in selected_constructors:
-        if constructor in EAGER_CONSTRUCTORS:
-            eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
-            eager_constructors_ids.append(constructor)
-            constructors.append(EAGER_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
-        elif constructor in LAZY_CONSTRUCTORS:
-            if constructor == "pyspark":
+    for constructor_name, constructor_func in selected_constructors.items():
+        lib_name = name.split("[")[0]
+
+        if name in EAGER_CONSTRUCTORS:
+            eager_constructors.append(constructor_func)
+            eager_constructors_ids.append(constructor_name)
+            constructors.append(constructor_func)
+            constructors_ids.append(constructor_name)
+        elif name in LAZY_CONSTRUCTORS:
+            if constructor_name == "pyspark":
                 if sys.version_info < (3, 12):  # pragma: no cover
                     constructors.append(pyspark_lazy_constructor())
                 else:  # pragma: no cover
                     continue
             else:
-                constructors.append(LAZY_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
+                constructors.append(constructor_func)
+            constructors_ids.append(constructor_name)
         else:  # pragma: no cover
-            msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
+            msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor_name}"
             raise ValueError(msg)
 
     if "constructor_eager" in metafunc.fixturenames:

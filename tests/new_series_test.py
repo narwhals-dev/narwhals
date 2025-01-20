@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -48,6 +47,7 @@ def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
 def test_new_series_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     with pytest.raises(
