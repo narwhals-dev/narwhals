@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import infer_new_root_output_names
@@ -454,8 +455,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def is_unique(self) -> Self:
         def _is_unique(_input: Column) -> Column:
-            from pyspark.sql import Window
-
             # Create a window spec that treats each value separately
             return F.count("*").over(Window.partitionBy(_input)) == 1
 
