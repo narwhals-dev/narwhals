@@ -15,7 +15,7 @@ def test_sumh(
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(horizontal_sum=nw.sum_horizontal(col_expr, nw.col("b")))
     expected = {

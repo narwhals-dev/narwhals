@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExprDateTimeNamespace:
-    def __init__(self, expr: SparkLikeExpr) -> None:
+    def __init__(self: Self, expr: SparkLikeExpr) -> None:
         self._compliant_expr = expr
 
     def date(self: Self) -> SparkLikeExpr:
@@ -77,22 +77,37 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def millisecond(self: Self) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        def _millisecond(_input: Column) -> Column:
+            return F.floor((F.unix_micros(_input) % 1_000_000) / 1000)
+
         return self._compliant_expr._from_call(
-            lambda _input: (_input.cast("double") * 1_000) % 1_000,
+            _millisecond,
             "millisecond",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def microsecond(self: Self) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        def _microsecond(_input: Column) -> Column:
+            return F.unix_micros(_input) % 1_000_000
+
         return self._compliant_expr._from_call(
-            lambda _input: ((_input.cast("double") * 1_000) % 1_000) * 1_000,
+            _microsecond,
             "microsecond",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def nanosecond(self: Self) -> SparkLikeExpr:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        def _nanosecond(_input: Column) -> Column:
+            return (F.unix_micros(_input) % 1_000_000) * 1000
+
         return self._compliant_expr._from_call(
-            lambda _input: ((_input.cast("double") * 1_000) % 1_000) * 1_000_000,
+            _nanosecond,
             "nanosecond",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
@@ -110,10 +125,8 @@ class SparkLikeExprDateTimeNamespace:
         from pyspark.sql import functions as F  # noqa: N812
 
         def _weekday(_input: Column) -> Column:
-            # From F.dayofweek docstring:
-            # Ranges from 1 for a Sunday through to 7 for a Saturday
-            _tmp = F.dayofweek(_input) - 1  # (0 Sunday -> 6 Saturday)
-            return F.when(_tmp == 0, F.lit(7)).otherwise(_tmp)
+            # PySpark's dayofweek returns 1-7 for Sunday-Saturday
+            return (F.dayofweek(_input) + 6) % 7
 
         return self._compliant_expr._from_call(
             _weekday,

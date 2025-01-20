@@ -7,7 +7,7 @@ from tests.utils import assert_equal_data
 
 data = {
     "a": [1.0, None, None, 3.0],
-    "b": [1.0, None, 4, 5.0],
+    "b": [1.0, None, 4.0, 5.0],
 }
 
 
