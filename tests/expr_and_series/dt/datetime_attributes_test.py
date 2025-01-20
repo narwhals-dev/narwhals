@@ -118,7 +118,6 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
             "pandas_nullable_constructor",
             "cudf",
             "modin_constructor",
-            "pyspark",
         )
     ):
         request.applymarker(pytest.mark.xfail)
