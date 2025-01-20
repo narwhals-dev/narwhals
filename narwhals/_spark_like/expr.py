@@ -420,8 +420,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def is_duplicated(self) -> Self:
         def _is_duplicated(_input: Column) -> Column:
-            from pyspark.sql import Window
-
             # Create a window spec that treats each value separately.
             return F.count("*").over(Window.partitionBy(_input)) > 1
 
@@ -501,8 +499,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             raise ValueError(msg)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            from pyspark.sql import Window
-
             return [expr.over(Window.partitionBy(*keys)) for expr in self._call(df)]
 
         return self.__class__(
