@@ -433,13 +433,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _is_finite(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            # A value is finite if it's not NaN, not NULL, and not infinite
-            return (
-                ~F.isnan(_input)
-                & ~F.isnull(_input)
-                & (_input != float("inf"))
-                & (_input != float("-inf"))
+            # A value is finite if it's not NaN, and not infinite, while NULLs should be
+            # preserved
+            is_finite_condition = (
+                ~F.isnan(_input) & (_input != float("inf")) & (_input != float("-inf"))
             )
+            return F.when(~F.isnull(_input), is_finite_condition).otherwise(None)
 
         return self._from_call(
             _is_finite, "is_finite", returns_scalar=self._returns_scalar

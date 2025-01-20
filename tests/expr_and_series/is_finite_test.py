@@ -12,11 +12,12 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_expr(constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("polars", "pyarrow_table", "duckdb")):
+    if any(
+        x in str(constructor) for x in ("polars", "pyarrow_table", "duckdb", "pyspark")
+    ):
         expected = {"a": [False, False, True, None]}
     elif any(
-        x in str(constructor)
-        for x in ("pandas_constructor", "dask", "modin_constructor", "pyspark")
+        x in str(constructor) for x in ("pandas_constructor", "dask", "modin_constructor")
     ):
         expected = {"a": [False, False, True, False]}
     else:  # pandas_nullable_constructor, pandas_pyarrow_constructor, modin_pyarrrow_constructor
