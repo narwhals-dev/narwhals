@@ -6,7 +6,9 @@ build-backend = "hatchling.build"
 [project]
 name = "narwhals"
 version = "1.22.0"
-dependencies = []
+dependencies = [
+  'backports.zoneinfo;python_version<"3.9"',
+]
 requires-python = ">=3.8"
 authors = [
   { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
@@ -174,7 +176,7 @@ xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
-  "PYARROW_IGNORE_TIMEZONE=1"
+  "PYARROW_IGNORE_TIMEZONE=1",
 ]
 
 [tool.coverage.run]
