@@ -11,7 +11,7 @@ from tests.utils import assert_equal_data
 data = {
     "a": [3, 8, 2, None],
     "b": [5, 5, None, 7],
-    "z": [7.0, 8, 9, None],
+    "z": [7.0, 8.0, 9.0, None],
     "s": ["f", "a", "x", "x"],
 }
 

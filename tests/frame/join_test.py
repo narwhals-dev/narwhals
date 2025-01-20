@@ -21,7 +21,7 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
     df = nw_main.from_native(constructor(data))
@@ -38,9 +38,9 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
-        "zor ro_right": [7.0, 8, 9],
+        "zor ro_right": [7.0, 8.0, 9.0],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -50,7 +50,7 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
     df = nw.from_native(constructor(data))
@@ -67,10 +67,10 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
         "bob_right": [4, 4, 6],
-        "zor ro_right": [7.0, 8, 9],
+        "zor ro_right": [7.0, 8.0, 9.0],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -100,7 +100,7 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
     }
     df = nw.from_native(constructor(data))
     df_right = df
@@ -168,7 +168,7 @@ def test_anti_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
@@ -206,7 +206,7 @@ def test_semi_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
@@ -217,7 +217,7 @@ def test_semi_join(
 
 @pytest.mark.parametrize("how", ["right", "full"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -231,13 +231,13 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
 
 def test_left_join(constructor: Constructor) -> None:
     data_left = {
-        "antananarivo": [1.0, 2, 3],
-        "bob": [4.0, 5, 6],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
         "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
-        "antananarivo": [1.0, 2, 3],
-        "co": [4.0, 5, 7],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "co": [4.0, 5.0, 7.0],
         "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
@@ -286,15 +286,15 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
 
 def test_left_join_overlapping_column(constructor: Constructor) -> None:
     data_left = {
-        "antananarivo": [1.0, 2, 3],
-        "bob": [4.0, 5, 6],
-        "d": [1.0, 4, 2],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
-        "antananarivo": [1.0, 2, 3],
-        "c": [4.0, 5, 6],
-        "d": [1.0, 4, 2],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "c": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
@@ -331,7 +331,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
 def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -536,7 +536,7 @@ def test_joinasof_by(
 def test_joinasof_not_implemented(
     constructor: Constructor, strategy: Literal["backward", "forward"]
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -552,7 +552,7 @@ def test_joinasof_not_implemented(
 
 
 def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -593,7 +593,7 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
 
 
 def test_joinasof_by_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
         ValueError,

@@ -35,7 +35,7 @@ def test_quantile_expr(
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
@@ -71,7 +71,7 @@ def test_quantile_series(
 ) -> None:
     q = 0.3
 
-    series = nw.from_native(constructor_eager({"a": [7.0, 8, 9]}), eager_only=True)[
+    series = nw.from_native(constructor_eager({"a": [7.0, 8.0, 9.0]}), eager_only=True)[
         "a"
     ].alias("a")
     result = series.quantile(quantile=q, interpolation=interpolation)

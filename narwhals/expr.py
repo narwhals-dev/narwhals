@@ -2206,50 +2206,13 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, None, None, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_arg_true(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").is_null().arg_true()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_arg_true`:
-
-            >>> agnostic_arg_true(df_pd)
-               a
-            1  1
-            2  2
-
-            >>> agnostic_arg_true(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ u32 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            └─────┘
-
-            >>> agnostic_arg_true(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1,2]]
         """
+        msg = (
+            "`Expr.arg_true` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(), is_order_dependent=True
         )

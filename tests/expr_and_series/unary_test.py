@@ -17,7 +17,7 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
         "a": [1, 3, 2],
         "b": [4, 4, 6],
         "c": [7.0, 8.0, None],
-        "z": [7.0, 8, 9],
+        "z": [7.0, 8.0, 9.0],
     }
     result = nw.from_native(constructor(data)).select(
         a_mean=nw.col("a").mean(),
@@ -49,7 +49,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
         "a": [1, 3, 2],
         "b": [4, 4, 6],
         "c": [7.0, 8.0, None],
-        "z": [7.0, 8, 9],
+        "z": [7.0, 8.0, 9.0],
     }
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
