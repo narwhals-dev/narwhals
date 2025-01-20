@@ -6,6 +6,11 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from duckdb import CaseExpression
+from duckdb import ColumnExpression
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
+
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
@@ -76,8 +81,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         version: Version,
     ) -> Self:
         def func(_: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            from duckdb import ColumnExpression
-
             return [ColumnExpression(col_name) for col_name in column_names]
 
         return cls(
@@ -100,8 +103,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         version: Version,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            from duckdb import ColumnExpression
-
             columns = df.columns
 
             return [ColumnExpression(columns[i]) for i in column_indices]
@@ -310,8 +311,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def abs(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("abs", _input),
             "abs",
@@ -319,8 +318,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def mean(self) -> Self:
-        from duckdb import FunctionExpression
-
         return self._from_call(
             lambda _input: FunctionExpression("mean", _input),
             "mean",
@@ -328,10 +325,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def skew(self) -> Self:
-        from duckdb import CaseExpression
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
             return CaseExpression(
