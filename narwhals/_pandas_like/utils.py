@@ -701,6 +701,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
                 raise ImportError(msg) from exc
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
 
             return pd.ArrowDtype(
                 pa.struct(
