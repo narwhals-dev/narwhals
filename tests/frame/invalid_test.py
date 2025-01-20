@@ -1,33 +1,56 @@
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import NUMPY_VERSION
 
+data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
-def test_invalid() -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+
+def test_invalid_pa() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
+
+
+def test_invalid_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
+
+
+def test_invalid_pl() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]
 
 
-def test_native_vs_non_native() -> None:
+def test_native_vs_non_native_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1, 2, 3])
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you forgot"):
         nw.from_native(df).filter(s > 1)
+
+
+def test_native_vs_non_native_pl() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     s = pl.Series([1, 2, 3])
     df = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
@@ -35,6 +58,9 @@ def test_native_vs_non_native() -> None:
 
 
 def test_validate_laziness() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
         TypeError,
@@ -47,7 +73,9 @@ def test_validate_laziness() -> None:
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")
+    pytest.importorskip("pandas")
     # the headache this caused me...
+    import pandas as pd
     from sklearn.utils import check_X_y
     from sklearn.utils._testing import create_memmap_backed_data
 

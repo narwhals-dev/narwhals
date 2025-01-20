@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
 
 data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 

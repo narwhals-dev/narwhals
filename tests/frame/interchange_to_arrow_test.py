@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+import polars as pl  # noqa: E402
+import pyarrow as pa  # noqa: E402
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 

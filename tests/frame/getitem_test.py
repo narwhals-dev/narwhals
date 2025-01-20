@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -40,6 +37,9 @@ def test_slice_rows_with_step(
 
 
 def test_slice_rows_with_step_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     with pytest.raises(
         NotImplementedError,
         match="Slicing with step is not supported on PyArrow tables",
@@ -48,6 +48,9 @@ def test_slice_rows_with_step_pyarrow() -> None:
 
 
 def test_slice_lazy_fails() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     with pytest.raises(TypeError, match="Slicing is not supported on LazyFrame"):
         _ = nw.from_native(pl.LazyFrame(data))[1:]
 
@@ -77,6 +80,9 @@ def test_gather(constructor_eager: ConstructorEager) -> None:
 
 
 def test_gather_pandas_index() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # check that we're slicing positionally, and not on the pandas index
     df = pd.DataFrame({"a": [4, 1, 2], "b": [1, 4, 2]}, index=[2, 1, 3])
     result = nw.from_native(df, eager_only=True)[[1, 2]]

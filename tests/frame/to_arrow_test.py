@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -17,6 +16,9 @@ def test_to_arrow(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
 ) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 0, 0):
         # pyarrow requires pandas>=1.0.0
         request.applymarker(pytest.mark.xfail)

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -35,6 +33,9 @@ def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) 
 
 
 def test_non_string_select() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     result = nw.to_native(df.select(nw.col(0)))  # type: ignore[arg-type]
     expected = pd.Series([1, 2], name=0).to_frame()
@@ -42,6 +43,9 @@ def test_non_string_select() -> None:
 
 
 def test_int_select_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(InvalidIntoExprError, match="\n\nHint:\n- if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
@@ -59,6 +63,9 @@ def test_invalid_select(
 
 
 def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if PANDAS_VERSION < (1, 1):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
@@ -70,6 +77,11 @@ def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
 
 
 def test_comparison_with_list_error_message() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
     msg = "Expected scalar value, Series, or Expr, got list of : <class 'int'>"
     with pytest.raises(ValueError, match=msg):
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015

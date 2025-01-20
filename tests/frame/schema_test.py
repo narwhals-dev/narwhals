@@ -7,12 +7,15 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+import pandas as pd  # noqa: E402
+import polars as pl  # noqa: E402
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

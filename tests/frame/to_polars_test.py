@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import polars as pl
 import pytest
-from polars.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
+from polars.testing import assert_frame_equal  # noqa: E402
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

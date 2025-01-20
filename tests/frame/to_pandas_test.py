@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+
+pd = pytest.importorskip("pandas")
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

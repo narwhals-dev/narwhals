@@ -4,11 +4,13 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import IBIS_VERSION
+
+pytest.importorskip("polars")
+import polars as pl  # noqa: E402
 
 
 def test_interchange_schema() -> None:

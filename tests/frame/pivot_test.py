@@ -3,14 +3,16 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_polars
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+pl = get_polars()
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -147,7 +149,12 @@ def test_pivot(
     ("data_", "context"),
     [
         (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, pl.exceptions.ComputeError))),
+        (
+            data,
+            pytest.raises(
+                (ValueError, pl.exceptions.ComputeError if pl is not None else Exception)
+            ),
+        ),
     ],
 )
 def test_pivot_no_agg(

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -103,6 +102,9 @@ def test_rows_eager(
 def test_rows_with_nulls_unnamed(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if "cudf" in str(constructor_eager):
         # cudf intentionally doesn't support itertuples / iter_rows
         request.applymarker(pytest.mark.xfail)
@@ -121,6 +123,9 @@ def test_rows_with_nulls_unnamed(
 def test_rows_with_nulls_named(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if "cudf" in str(constructor_eager):
         # cudf intentionally doesn't support itertuples / iter_rows
         request.applymarker(pytest.mark.xfail)

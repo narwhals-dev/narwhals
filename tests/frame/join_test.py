@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Any
 from typing import Literal
 
-import pandas as pd
 import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
@@ -134,6 +133,9 @@ def test_cross_join_suffix(
 
 
 def test_cross_join_non_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(pd.DataFrame(data))
     # HACK to force testing for a non-pandas codepath

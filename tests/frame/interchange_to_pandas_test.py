@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+
+pytest.importorskip("pandas")
+import pandas as pd  # noqa: E402
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
