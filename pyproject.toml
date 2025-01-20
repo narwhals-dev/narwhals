@@ -177,7 +177,6 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
-  "TZ='UTC'",
 ]
 
 [tool.coverage.run]
