@@ -4,10 +4,15 @@ import math
 import os
 import sys
 import warnings
+from itertools import islice
+from itertools import tee
 from typing import Any
 from typing import Callable
+from typing import Generator
+from typing import Iterable
 from typing import Iterator
 from typing import Sequence
+from typing import TypeVar
 
 import pandas as pd
 
@@ -16,6 +21,8 @@ from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
+
+T = TypeVar("T")
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias  # pragma: no cover
@@ -48,6 +55,10 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
         msg = f"left {len(left)=} != right {len(right)=}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
     return zip(left, right)
+
+
+def nwise(iterable: Iterable[T], n: int = 2) -> Generator[tuple[T, ...], None, None]:
+    yield from zip(*(islice(it, i, None) for i, it in enumerate(tee(iterable, n))))
 
 
 def _to_comparable_list(column_values: Any) -> Any:

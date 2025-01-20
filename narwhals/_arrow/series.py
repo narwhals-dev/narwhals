@@ -21,6 +21,7 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import pad_series
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -1003,6 +1004,82 @@ class ArrowSeries(CompliantSeries):
 
         result = pc.if_else(null_mask, pa.scalar(None), rank)
         return self._from_native_series(result)
+
+    def hist(
+        self: Self,
+        bins: list[float | int] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_category: bool = True,
+        include_breakpoint: bool = True,
+    ) -> ArrowDataFrame:
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        if bins is None:
+            d = pc.min_max(self._native_series)
+            lower, upper = d["min"].as_py(), d["max"].as_py()
+            if lower == upper:
+                lower -= 0.001 * abs(lower) if lower != 0 else 0.001
+                upper += 0.001 * abs(upper) if upper != 0 else 0.001
+
+            width = (upper - lower) / bin_count
+            bin_proportions = pc.divide(pc.subtract(self._native_series, lower), width)
+            bin_indices = pc.floor(bin_proportions)
+            bin_indices = pc.if_else(
+                pc.and_(
+                    pc.equal(bin_indices, bin_proportions),
+                    pc.greater(bin_indices, 0),
+                ),
+                pc.subtract(bin_indices, 1),
+                bin_indices,
+            )
+            counts = pc.value_counts(bin_indices)
+            counts = counts.filter(pc.greater_equal(counts.field("values"), 0))
+
+            bin_left = pc.multiply(counts.field("values"), width)
+            bin_right = pc.add(bin_left, width)
+            bin_left = pa.chunked_array(
+                [  # pad lowest bin by 1% of range
+                    [pc.subtract(bin_left[0], (upper - lower) * 0.001)],
+                    bin_left[1:],
+                ]
+            )
+            counts = counts.field("counts")
+
+        else:
+            import numpy as np  # ignore-banned-import
+
+            bins = np.asarray(bins)
+            if (np.diff(bins) < 0).any():
+                msg = "bins must increase monotonically"
+                raise InvalidOperationError(msg)
+
+            bin_indices = np.searchsorted(bins, self._native_series, side="left")
+            obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
+            obj_cats = np.arange(1, len(bins))  # type: ignore[arg-type]
+            counts = np.zeros_like(obj_cats)
+            counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+
+            bin_right = bins[1:]  # type: ignore[index]
+            bin_left = bins[:-1]  # type: ignore[index]
+
+        data = {}
+        if include_breakpoint:
+            data["breakpoint"] = bin_right
+        if include_category:
+            data["category"] = [
+                f"({left}, {right}]" for left, right in zip(bin_left, bin_right)
+            ]
+        data["count"] = counts
+
+        return ArrowDataFrame(
+            pa.Table.from_pydict(data),
+            backend_version=self._backend_version,
+            version=self._version,
+        )
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from (

@@ -416,6 +416,29 @@ class PolarsSeries:
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
 
+    def hist(
+        self: Self,
+        bins: list[float | int] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_category: bool = True,
+        include_breakpoint: bool = True,
+    ) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        df = self._native_series.hist(
+            bins=bins,
+            bin_count=bin_count,
+            include_category=include_category,
+            include_breakpoint=include_breakpoint,
+        )
+        if not include_category and not include_breakpoint:
+            df.columns = ["count"]
+
+        return PolarsDataFrame(
+            df, backend_version=self._backend_version, version=self._version
+        )
+
     def to_polars(self: Self) -> pl.Series:
         return self._native_series
 

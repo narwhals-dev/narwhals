@@ -1031,6 +1031,36 @@ class PandasLikeSeries(CompliantSeries):
 
         return self._from_native_series(ranked_series)
 
+    def hist(
+        self: Self,
+        bins: list[float | int] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_category: bool = True,
+        include_breakpoint: bool = True,
+    ) -> PandasLikeDataFrame:
+        from pandas import Categorical
+        from pandas import cut
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        result = cut(
+            self._native_series, bins=bins if bin_count is None else bin_count
+        ).value_counts(sort=False)
+        data = {}
+        if include_breakpoint:
+            data["breakpoint"] = result.index.categories.right
+        if include_category:
+            data["category"] = Categorical(result.index.categories.astype(str))
+        data["count"] = result.reset_index(drop=True)
+
+        return PandasLikeDataFrame(
+            self.__native_namespace__().DataFrame(data),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     @property
     def str(self: Self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

@@ -4903,7 +4903,7 @@ class Series(Generic[IntoSeriesT]):
 
     def hist(
         self: Self,
-        bins: Sequence[int | float] | None = None,
+        bins: list[float | int] | None = None,
         *,
         bin_count: int | None = None,
         include_category: bool = True,
