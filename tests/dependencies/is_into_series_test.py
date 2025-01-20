@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
+import pytest
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import is_into_series
@@ -28,6 +25,15 @@ class ListBackedSeries:
 
 
 def test_is_into_series() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
+    import numpy as np
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+
     assert is_into_series(pa.chunked_array([["a", "b"]]))
     assert is_into_series(pl.Series([1, 2, 3]))
     assert is_into_series(pd.Series([1, 2, 3]))
