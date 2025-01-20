@@ -96,3 +96,28 @@ jobs:
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
         run: pytest narwhals/*.py --doctest-modules
+
+  pytest-single-module:
+    strategy:
+      matrix:
+        backend: ["pandas", "polars", "pyarrow"]
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        run: uv pip install -e ".[dev, extra]" ${{ matrix.backend }} --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --constructors ${{ matrix.backend }}
