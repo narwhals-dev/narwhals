@@ -73,6 +73,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.date(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def year(self: Self) -> ExprT:
@@ -142,6 +144,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.year(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def month(self: Self) -> ExprT:
@@ -211,6 +215,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.month(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def day(self: Self) -> ExprT:
@@ -280,6 +286,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.day(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def hour(self: Self) -> ExprT:
@@ -349,6 +357,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.hour(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def minute(self: Self) -> ExprT:
@@ -418,6 +428,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.minute(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def second(self: Self) -> ExprT:
@@ -485,6 +497,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.second(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def millisecond(self: Self) -> ExprT:
@@ -552,6 +566,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def microsecond(self: Self) -> ExprT:
@@ -619,6 +635,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def nanosecond(self: Self) -> ExprT:
@@ -686,6 +704,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def ordinal_day(self: Self) -> ExprT:
@@ -745,6 +765,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def weekday(self: Self) -> ExprT:
@@ -802,6 +824,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.weekday(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def total_minutes(self: Self) -> ExprT:
@@ -866,6 +890,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def total_seconds(self: Self) -> ExprT:
@@ -930,6 +956,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def total_milliseconds(self: Self) -> ExprT:
@@ -999,6 +1027,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def total_microseconds(self: Self) -> ExprT:
@@ -1068,6 +1098,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def total_nanoseconds(self: Self) -> ExprT:
@@ -1124,6 +1156,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
@@ -1223,6 +1257,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
@@ -1290,6 +1326,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 time_zone
             ),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ExprT:
@@ -1363,6 +1401,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 time_zone
             ),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def timestamp(self: Self, time_unit: TimeUnit = "us") -> ExprT:
@@ -1437,4 +1477,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )

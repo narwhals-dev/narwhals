@@ -205,7 +205,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             *iter(LAZY_CONSTRUCTORS.keys()),
         ]
         selected_constructors = [
-            x for x in selected_constructors if x not in GPU_CONSTRUCTORS
+            x
+            for x in selected_constructors
+            if x not in GPU_CONSTRUCTORS and x not in "modin"  # too slow
         ]
     else:  # pragma: no cover
         selected_constructors = metafunc.config.getoption("constructors").split(",")
@@ -242,7 +244,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             any(
                 x in str(metafunc.module)
-                for x in ("list", "unpivot", "from_dict", "from_numpy", "tail")
+                for x in ("list", "unpivot", "from_dict", "from_numpy")
             )
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):

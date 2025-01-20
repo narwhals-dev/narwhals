@@ -6,19 +6,20 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
+import dask.dataframe as dd
+
+try:
+    import dask.dataframe.dask_expr as dx
+except ModuleNotFoundError:  # pragma: no cover
+    import dask_expr as dx
+
+
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    import dask.dataframe as dd
-
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
-
     import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -27,8 +28,6 @@ if TYPE_CHECKING:
 
 
 def n_unique() -> dd.Aggregation:
-    import dask.dataframe as dd
-
     def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
         return s.nunique(dropna=False)  # type: ignore[no-any-return]
 
@@ -49,11 +48,6 @@ def var(
 ]:
     from functools import partial
 
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
-        import dask_expr as dx
-
     return partial(dx._groupby.GroupBy.var, ddof=ddof)
 
 
@@ -63,11 +57,6 @@ def std(
     [pd.core.groupby.generic.SeriesGroupBy], pd.core.groupby.generic.SeriesGroupBy
 ]:
     from functools import partial
-
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
-        import dask_expr as dx
 
     return partial(dx._groupby.GroupBy.std, ddof=ddof)
 

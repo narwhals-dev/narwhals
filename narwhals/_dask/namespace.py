@@ -8,6 +8,9 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+import dask.dataframe as dd
+import pandas as pd
+
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -69,9 +72,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
-        import dask.dataframe as dd
-        import pandas as pd
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 dd.from_pandas(
@@ -99,9 +99,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def len(self) -> DaskExpr:
-        import dask.dataframe as dd
-        import pandas as pd
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if not df.columns:
                 return [
@@ -188,8 +185,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
-        import dask.dataframe as dd
-
         if len(list(items)) == 0:
             msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
@@ -265,8 +260,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -287,8 +280,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd
-
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -354,7 +345,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.rename(null_mask[0].name)]
 
         return DaskExpr(
             call=func,

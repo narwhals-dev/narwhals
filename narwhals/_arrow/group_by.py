@@ -7,6 +7,9 @@ from typing import Callable
 from typing import Iterator
 from typing import Sequence
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
@@ -14,8 +17,6 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-    import pyarrow.compute as pc
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -41,8 +42,6 @@ class ArrowGroupBy:
     def __init__(
         self: Self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
-        import pyarrow as pa
-
         if drop_null_keys:
             self._df = df.drop_nulls(keys)
         else:
@@ -74,9 +73,6 @@ class ArrowGroupBy:
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
         col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
         null_token = "__null_token_value__"  # noqa: S105
 
@@ -114,8 +110,6 @@ def agg_arrow(
     from_dataframe: Callable[[Any], ArrowDataFrame],
     backend_version: tuple[int, ...],
 ) -> ArrowDataFrame:
-    import pyarrow.compute as pc
-
     all_simple_aggs = True
     for expr in exprs:
         if not (

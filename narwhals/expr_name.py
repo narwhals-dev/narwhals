@@ -61,6 +61,8 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.keep(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ExprT:
@@ -111,6 +113,8 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.map(function),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def prefix(self: Self, prefix: str) -> ExprT:
@@ -160,6 +164,8 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def suffix(self: Self, suffix: str) -> ExprT:
@@ -209,6 +215,8 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def to_lowercase(self: Self) -> ExprT:
@@ -255,6 +263,8 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def to_uppercase(self: Self) -> ExprT:
@@ -301,4 +311,6 @@ class ExprNameNamespace(Generic[ExprT]):
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase(),
             self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )

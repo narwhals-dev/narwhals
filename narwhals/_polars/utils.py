@@ -6,11 +6,11 @@ from typing import Any
 from typing import TypeVar
 from typing import overload
 
+import polars as pl
+
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    import polars as pl
-
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
@@ -71,8 +71,6 @@ def native_to_narwhals_dtype(
     version: Version,
     backend_version: tuple[int, ...],
 ) -> DType:
-    import polars as pl
-
     dtypes = import_dtypes_module(version)
     if dtype == pl.Float64:
         return dtypes.Float64()

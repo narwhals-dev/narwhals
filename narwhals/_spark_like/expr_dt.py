@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pyspark.sql import functions as F  # noqa: N812
+
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
@@ -14,8 +16,6 @@ class SparkLikeExprDateTimeNamespace:
         self._compliant_expr = expr
 
     def date(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.to_date,
             "date",
@@ -23,8 +23,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def year(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.year,
             "year",
@@ -32,8 +30,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def month(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.month,
             "month",
@@ -41,8 +37,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def day(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.day,
             "day",
@@ -50,8 +44,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def hour(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.hour,
             "hour",
@@ -59,8 +51,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def minute(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.minute,
             "minute",
@@ -68,8 +58,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def second(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.second,
             "second",
@@ -77,8 +65,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def millisecond(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         def _millisecond(_input: Column) -> Column:
             return F.floor((F.unix_micros(_input) % 1_000_000) / 1000)
 
@@ -89,8 +75,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def microsecond(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         def _microsecond(_input: Column) -> Column:
             return F.unix_micros(_input) % 1_000_000
 
@@ -101,8 +85,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def nanosecond(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         def _nanosecond(_input: Column) -> Column:
             return (F.unix_micros(_input) % 1_000_000) * 1000
 
@@ -113,8 +95,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def ordinal_day(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         return self._compliant_expr._from_call(
             F.dayofyear,
             "ordinal_day",
@@ -122,8 +102,6 @@ class SparkLikeExprDateTimeNamespace:
         )
 
     def weekday(self: Self) -> SparkLikeExpr:
-        from pyspark.sql import functions as F  # noqa: N812
-
         def _weekday(_input: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
             return (F.dayofweek(_input) + 6) % 7

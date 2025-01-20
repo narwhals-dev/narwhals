@@ -73,7 +73,10 @@ def by_dtype(*dtypes: Any) -> Expr:
         c: [[8.2,4.6]]
     """
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flatten(dtypes)), is_order_dependent=False
+        lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
     )
 
 
@@ -130,7 +133,12 @@ def numeric() -> Expr:
         a: [[2,4]]
         c: [[8.2,4.6]]
     """
-    return Selector(lambda plx: plx.selectors.numeric(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.numeric(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def boolean() -> Expr:
@@ -183,7 +191,12 @@ def boolean() -> Expr:
         ----
         c: [[false,true]]
     """
-    return Selector(lambda plx: plx.selectors.boolean(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.boolean(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def string() -> Expr:
@@ -236,7 +249,12 @@ def string() -> Expr:
         ----
         b: [["x","y"]]
     """
-    return Selector(lambda plx: plx.selectors.string(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.string(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def categorical() -> Expr:
@@ -294,7 +312,12 @@ def categorical() -> Expr:
         ["x","y"]  -- indices:
         [0,1]]
     """
-    return Selector(lambda plx: plx.selectors.categorical(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.categorical(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def all() -> Expr:
@@ -351,7 +374,12 @@ def all() -> Expr:
         b: [["x","y"]]
         c: [[false,true]]
     """
-    return Selector(lambda plx: plx.selectors.all(), is_order_dependent=False)
+    return Selector(
+        lambda plx: plx.selectors.all(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 def datetime(

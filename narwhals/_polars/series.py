@@ -5,6 +5,8 @@ from typing import Any
 from typing import Sequence
 from typing import overload
 
+import polars as pl
+
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -17,7 +19,6 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     import numpy as np
-    import polars as pl
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -223,8 +224,6 @@ class PolarsSeries:
         return self._from_native_series(self._native_series.__invert__())
 
     def is_nan(self: Self) -> Self:
-        import polars as pl
-
         native = self._native_series
 
         if self._backend_version < (1, 18):  # pragma: no cover

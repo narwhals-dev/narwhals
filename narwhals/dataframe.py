@@ -16,6 +16,7 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
@@ -3648,6 +3649,16 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
+            if arg._changes_length:
+                msg = (
+                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                    "followed by an aggregation.\n\n"
+                    "Hints:\n"
+                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                )
+                raise LengthChangingExprError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
@@ -4301,7 +4312,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().rename(mapping)
 
     def head(self, n: int = 5) -> Self:
-        r"""Get the first `n` rows.
+        r"""Get `n` rows.
 
         Arguments:
             n: Number of rows to return.
@@ -4349,56 +4360,19 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().head(n)
 
-    def tail(self, n: int = 5) -> Self:
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
         r"""Get the last `n` rows.
+
+        !!! warning
+            `LazyFrame.tail` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
 
         Arguments:
             n: Number of rows to return.
 
         Returns:
             A subset of the LazyFrame of shape (n, n_columns).
-
-        Notes:
-            `LazyFrame.tail` is not supported for the Dask backend with multiple
-            partitions.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "a": [1, 2, 3, 4, 5, 6],
-            ...     "b": [7, 8, 9, 10, 11, 12],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=1)
-
-            Let's define a dataframe-agnostic function that gets the last 3 rows.
-
-            >>> def agnostic_tail(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.tail(3).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_tail`:
-
-            >>> agnostic_tail(lf_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 4   ┆ 10  │
-            │ 5   ┆ 11  │
-            │ 6   ┆ 12  │
-            └─────┴─────┘
-            >>> agnostic_tail(lf_dask)
-               a   b
-            3  4  10
-            4  5  11
-            5  6  12
         """
         return super().tail(n)
 

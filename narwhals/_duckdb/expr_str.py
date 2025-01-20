@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import NoReturn
 
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
+
 if TYPE_CHECKING:
     import duckdb
 
@@ -14,9 +17,6 @@ class DuckDBExprStringNamespace:
         self._compliant_expr = expr
 
     def starts_with(self, prefix: str) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "starts_with", _input, ConstantExpression(prefix)
@@ -26,9 +26,6 @@ class DuckDBExprStringNamespace:
         )
 
     def ends_with(self, suffix: str) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "ends_with", _input, ConstantExpression(suffix)
@@ -38,9 +35,6 @@ class DuckDBExprStringNamespace:
         )
 
     def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if literal:
                 return FunctionExpression("contains", _input, ConstantExpression(pattern))
@@ -53,9 +47,6 @@ class DuckDBExprStringNamespace:
         )
 
     def slice(self, offset: int, length: int) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             return FunctionExpression(
                 "array_slice",
@@ -73,8 +64,6 @@ class DuckDBExprStringNamespace:
         )
 
     def len_chars(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("length", _input),
             "len_chars",
@@ -82,8 +71,6 @@ class DuckDBExprStringNamespace:
         )
 
     def to_lowercase(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("lower", _input),
             "to_lowercase",
@@ -91,8 +78,6 @@ class DuckDBExprStringNamespace:
         )
 
     def to_uppercase(self) -> DuckDBExpr:
-        from duckdb import FunctionExpression
-
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("upper", _input),
             "to_uppercase",
@@ -101,9 +86,6 @@ class DuckDBExprStringNamespace:
 
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
         import string
-
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
 
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
@@ -120,9 +102,6 @@ class DuckDBExprStringNamespace:
     def replace_all(
         self, pattern: str, value: str, *, literal: bool = False
     ) -> DuckDBExpr:
-        from duckdb import ConstantExpression
-        from duckdb import FunctionExpression
-
         if literal is False:
             return self._compliant_expr._from_call(
                 lambda _input: FunctionExpression(

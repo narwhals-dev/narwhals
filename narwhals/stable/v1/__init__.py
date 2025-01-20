@@ -69,6 +69,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -240,7 +241,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent
+        # After v1, we raise when passing order-dependent or length-changing
         # expressions to LazyFrame
         from narwhals.dataframe import BaseFrame
         from narwhals.expr import Expr
@@ -252,7 +253,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
-            # After stable.v1, we raise if arg._is_order_dependent
+            # After stable.v1, we raise if arg._is_order_dependent or arg._changes_length
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
@@ -279,6 +280,17 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             A new lazyframe.
         """
         return self.select(all()._l1_norm())
+
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
+        """
+        return super().tail(n)
 
 
 class Series(NwSeries[Any]):
@@ -872,7 +884,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).head(n), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).head(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -885,7 +900,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).tail(n), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).tail(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -901,6 +919,32 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
+        """Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression.
+                This is deprecated and will be removed in a future version,
+                but will still be kept around in `narwhals.stable.v1`.
+
+        Returns:
+            A new expression.
+        """
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).unique(),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -918,6 +962,8 @@ class Expr(NwExpr):
                 descending=descending, nulls_last=nulls_last
             ),
             is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def arg_true(self) -> Self:
@@ -927,7 +973,10 @@ class Expr(NwExpr):
             A new expression.
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_true(), is_order_dependent=True
+            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     def sample(
@@ -962,6 +1011,8 @@ class Expr(NwExpr):
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
             is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
 
@@ -1006,7 +1057,12 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, is_order_dependent=obj._is_order_dependent)
+        return Expr(
+            obj._to_compliant_expr,
+            is_order_dependent=obj._is_order_dependent,
+            changes_length=obj._changes_length,
+            aggregates=obj._aggregates,
+        )
     return obj
 
 
@@ -1964,7 +2020,12 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(then._to_compliant_expr, is_order_dependent=then._is_order_dependent)
+        return cls(
+            then._to_compliant_expr,
+            is_order_dependent=then._is_order_dependent,
+            changes_length=then._changes_length,
+            aggregates=then._aggregates,
+        )
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))

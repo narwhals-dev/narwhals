@@ -6,6 +6,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import polars as pl
+
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
@@ -22,7 +24,6 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     import numpy as np
-    import polars as pl
     from typing_extensions import Self
 
     from narwhals._polars.group_by import PolarsGroupBy
@@ -88,8 +89,6 @@ class PolarsDataFrame:
     def _from_native_object(
         self: Self, obj: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsSeries | T:
-        import polars as pl
-
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
@@ -380,8 +379,6 @@ class PolarsLazyFrame:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            import polars as pl
-
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
                 return self._from_native_frame(

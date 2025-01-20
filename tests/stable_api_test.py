@@ -40,16 +40,16 @@ def test_renamed_taxicab_norm(
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
 
-    df = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    df_v1 = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     # The newer `_taxicab_norm` can still work in the old API, no issue.
     # It's new, so it couldn't be backwards-incompatible.
-    result = df.with_columns(b=nw_v1.col("a")._taxicab_norm())
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    assert_equal_data(result, expected)
+    assert_equal_data(result_v1, expected)
 
     # The older `_l1_norm` still works in the stable api
-    result = df.with_columns(b=nw_v1.col("a")._l1_norm())
-    assert_equal_data(result, expected)
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._l1_norm())
+    assert_equal_data(result_v1, expected)
 
 
 def test_renamed_taxicab_norm_dataframe(
@@ -104,6 +104,10 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
+        if item in ("from_native", "narwhalify"):
+            # `eager_or_interchange` param was removed from main namespace,
+            # but is still present in v1 docstring.
+            continue
         v1_doc = remove_docstring_examples(getattr(nw_v1, item).__doc__)
         nw_doc = remove_docstring_examples(getattr(nw, item).__doc__)
         assert v1_doc == nw_doc, item
@@ -128,6 +132,9 @@ def test_lazyframe_docstrings() -> None:
     for item in api:
         if item in ("schema", "columns"):
             # to avoid performance warning
+            continue
+        if item in ("tail",):
+            # deprecated
             continue
         assert remove_docstring_examples(
             getattr(stable_df, item).__doc__.replace(
