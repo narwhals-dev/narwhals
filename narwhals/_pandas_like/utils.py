@@ -479,7 +479,8 @@ def native_to_narwhals_dtype(
 
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         native_dtype = native_column.dtype
-        if hasattr(native_dtype, "to_arrow"):  # cudf, cudf.pandas
+        if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
+            # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if dtype != "object":
