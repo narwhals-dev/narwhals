@@ -1531,21 +1531,17 @@ class Expr:
             PyArrow to `agnostic_unique`:
 
             >>> agnostic_unique(df_pd)
-               a  b
-            0  1  2
-            1  3  4
-            2  5  6
+               a   b
+            0  9  12
 
             >>> agnostic_unique(df_pl)
-            shape: (3, 2)
+            shape: (1, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            │ 3   ┆ 4   │
-            │ 5   ┆ 6   │
+            │ 9   ┆ 12  │
             └─────┴─────┘
 
             >>> agnostic_unique(df_pa)
@@ -1553,8 +1549,8 @@ class Expr:
             a: int64
             b: int64
             ----
-            a: [[1,3,5]]
-            b: [[2,4,6]]
+            a: [[9]]
+            b: [[12]]
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
