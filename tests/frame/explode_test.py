@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import Sequence
 
 import pytest
-from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
@@ -13,6 +11,14 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+
+try:
+    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
+    from polars.exceptions import ShapeError as PlShapeError
+except ModuleNotFoundError:
+    from narwhals.exceptions import InvalidOperationError as PlInvalidOperationError
+    from narwhals.exceptions import ShapeError as PlShapeError
+
 
 # For context, polars allows to explode multiple columns only if the columns
 # have matching element counts, therefore, l1 and l2 but not l1 and l3 together.

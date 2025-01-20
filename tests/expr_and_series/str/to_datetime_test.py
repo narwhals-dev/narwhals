@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -148,6 +147,8 @@ def test_pyarrow_infer_datetime_raise_invalid() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import parse_datetime_format
+
     with pytest.raises(
         NotImplementedError,
         match="Unable to infer datetime format, provided format is not supported.",
@@ -168,6 +169,8 @@ def test_pyarrow_infer_datetime_raise_not_unique(
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import parse_datetime_format
+
     with pytest.raises(
         ValueError,
         match=f"Found multiple {duplicate} values while inferring datetime format.",
@@ -181,6 +184,8 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
+
+    from narwhals._arrow.utils import parse_datetime_format
 
     with pytest.raises(ValueError, match="Unable to infer datetime format. "):
         parse_datetime_format(pa.chunked_array([data]))

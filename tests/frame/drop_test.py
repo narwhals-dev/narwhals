@@ -5,11 +5,16 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
-from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
+
+try:
+    from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
+except ModuleNotFoundError:
+    from narwhals.exceptions import ColumnNotFoundError as PlColumnNotFoundError
+
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

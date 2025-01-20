@@ -225,6 +225,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             **LAZY_CONSTRUCTORS,
         }
         selected_constructors.pop("modin")  # too slow
+        selected_constructors.pop("cudf")  # too slow
     else:  # pragma: no cover
         selected_constructors = {
             k: v

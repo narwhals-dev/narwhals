@@ -6,13 +6,15 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.dependencies import get_polars
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-pl = get_polars()
+try:
+    from polars.exceptions import ComputeError
+except ModuleNotFoundError:
+    ComputeError = Exception
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -151,9 +153,7 @@ def test_pivot(
         (data_no_dups, does_not_raise()),
         (
             data,
-            pytest.raises(
-                (ValueError, pl.exceptions.ComputeError if pl is not None else Exception)
-            ),
+            pytest.raises((ValueError, ComputeError)),
         ),
     ],
 )

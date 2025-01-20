@@ -16,6 +16,11 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
+try:
+    from polars.exceptions import ComputeError
+except ModuleNotFoundError:
+    ComputeError = Exception
+
 NON_NULLABLE_CONSTRUCTORS = [
     pandas_constructor,
     dask_lazy_p1_constructor,

@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
-from polars.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
@@ -31,6 +30,7 @@ def test_cast_date_datetime_polars() -> None:
     # polars: date to datetime
     pytest.importorskip("polars")
     import polars as pl
+    from polars.testing import assert_frame_equal
 
     dfpl = pl.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     df = nw.from_native(dfpl)

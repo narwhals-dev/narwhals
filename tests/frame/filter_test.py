@@ -11,6 +11,11 @@ from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
+try:
+    from polars.exceptions import ShapeError as PlShapeError
+except ModuleNotFoundError:
+    from narwhals.exceptions import ShapeError as PlShapeError
+
 
 def test_filter(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
