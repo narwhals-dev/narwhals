@@ -27,9 +27,6 @@ def test_unique_expr(constructor: Constructor) -> None:
         expected = {"a": [1, 2]}
         assert_equal_data(result, expected)
 
-    with pytest.warns(UserWarning):
-        df.select(nw_v1.col("a").unique(maintain_order=False).sum())
-
 
 def test_unique_expr_agg(
     constructor: Constructor, request: pytest.FixtureRequest
@@ -53,3 +50,7 @@ def test_unique_series(constructor_eager: ConstructorEager) -> None:
     result = series.unique(maintain_order=True)
     expected = {"a": ["x", "y"]}
     assert_equal_data({"a": result}, expected)
+
+    with pytest.warns(UserWarning):
+        series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+        series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
