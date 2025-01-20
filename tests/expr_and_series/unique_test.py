@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -49,3 +50,10 @@ def test_unique_series(constructor_eager: ConstructorEager) -> None:
     result = series.unique(maintain_order=True)
     expected = {"a": ["x", "y"]}
     assert_equal_data({"a": result}, expected)
+
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    # this shouldn't warn
+    series.to_frame().select(nw_v1.col("a").unique().sum())
+    with pytest.warns(UserWarning):
+        # this warns that maintain_order has no effect
+        series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())

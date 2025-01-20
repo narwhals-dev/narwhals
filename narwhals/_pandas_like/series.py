@@ -735,9 +735,9 @@ class PandasLikeSeries(CompliantSeries):
         )
         return self._from_native_series(result)
 
-    def unique(self, *, maintain_order: bool = False) -> PandasLikeSeries:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
+    def unique(self, *, maintain_order: bool) -> PandasLikeSeries:
+        # pandas always maintains order, as per its docstring:
+        # "Uniques are returned in order of appearance"  # noqa: ERA001
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
@@ -779,7 +779,7 @@ class PandasLikeSeries(CompliantSeries):
         if result.is_null().sum() != self.is_null().sum():
             msg = (
                 "replace_strict did not replace all non-null values.\n\n"
-                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique().to_list()}"
+                f"The following did not get replaced: {self.filter(~self.is_null() & result.is_null()).unique(maintain_order=False).to_list()}"
             )
             raise ValueError(msg)
         return result

@@ -1503,13 +1503,8 @@ class Expr:
             aggregates=True,
         )
 
-    def unique(self, *, maintain_order: bool = False) -> Self:
+    def unique(self) -> Self:
         """Return unique values of this expression.
-
-        Arguments:
-            maintain_order: Keep the same order as the original expression. This may be more
-                expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for Polars.
 
         Returns:
             A new expression.
@@ -1530,27 +1525,23 @@ class Expr:
 
             >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").unique(maintain_order=True)).to_native()
+            ...     return df.select(nw.col("a", "b").unique().sum()).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_unique`:
 
             >>> agnostic_unique(df_pd)
-               a  b
-            0  1  2
-            1  3  4
-            2  5  6
+               a   b
+            0  9  12
 
             >>> agnostic_unique(df_pl)
-            shape: (3, 2)
+            shape: (1, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            │ 3   ┆ 4   │
-            │ 5   ┆ 6   │
+            │ 9   ┆ 12  │
             └─────┴─────┘
 
             >>> agnostic_unique(df_pa)
@@ -1558,13 +1549,11 @@ class Expr:
             a: int64
             b: int64
             ----
-            a: [[1,3,5]]
-            b: [[2,4,6]]
+            a: [[9]]
+            b: [[12]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).unique(
-                maintain_order=maintain_order
-            ),
+            lambda plx: self._to_compliant_expr(plx).unique(),
             self._is_order_dependent,
             changes_length=True,
             aggregates=self._aggregates,

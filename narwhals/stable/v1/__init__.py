@@ -69,6 +69,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -279,6 +280,17 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             A new lazyframe.
         """
         return self.select(all()._l1_norm())
+
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
+        """
+        return super().tail(n)
 
 
 class Series(NwSeries[Any]):
@@ -907,6 +919,30 @@ class Expr(NwExpr):
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
+        """Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression.
+                This is deprecated and will be removed in a future version,
+                but will still be kept around in `narwhals.stable.v1`.
+
+        Returns:
+            A new expression.
+        """
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).unique(),
+            self._is_order_dependent,
             changes_length=True,
             aggregates=self._aggregates,
         )

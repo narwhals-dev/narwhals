@@ -683,9 +683,7 @@ class ArrowSeries(CompliantSeries):
         return maybe_extract_py_scalar(result, return_py_scalar=True)  # type: ignore[no-any-return]
 
     def unique(self: Self, *, maintain_order: bool) -> ArrowSeries:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
-
+        # TODO(marco): `pc.unique` seems to always maintain order, is that guaranteed?
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(

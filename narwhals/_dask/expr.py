@@ -447,8 +447,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def unique(self, *, maintain_order: bool) -> Self:
-        # TODO(marco): maintain_order has no effect and will be deprecated
+    def unique(self) -> Self:
         return self._from_call(
             lambda _input: _input.unique(),
             "unique",
