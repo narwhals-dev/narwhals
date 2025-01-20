@@ -6,13 +6,16 @@ from decimal import Decimal
 from typing import Any
 
 import numpy as np
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.stable.v1.dependencies import get_cudf
 from tests.utils import PANDAS_VERSION
+
+pytest.importorskip("pandas")
+pytest.importorskip("pyarrow")
+import pandas as pd  # noqa: E402
+import pyarrow as pa  # noqa: E402
 
 
 @pytest.mark.parametrize(

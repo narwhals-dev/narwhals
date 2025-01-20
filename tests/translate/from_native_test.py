@@ -5,9 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals as unstable_nw
@@ -16,6 +13,11 @@ from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
     from narwhals.utils import Version
+
+pd = pytest.importorskip("pandas")
+pl = pytest.importorskip("polars")
+pa = pytest.importorskip("pyarrow")
+
 
 data = {"a": [1, 2, 3]}
 
