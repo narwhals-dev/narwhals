@@ -133,6 +133,9 @@ def test_lazyframe_docstrings() -> None:
         if item in ("schema", "columns"):
             # to avoid performance warning
             continue
+        if item in ("tail",):
+            # deprecated
+            continue
         assert remove_docstring_examples(
             getattr(stable_df, item).__doc__.replace(
                 "import narwhals.stable.v1 as nw", "import narwhals as nw"
