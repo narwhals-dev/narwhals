@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 
 import dask.dataframe as dd
+import pandas as pd
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
@@ -81,8 +82,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(df)
 
     def collect(self) -> Any:
-        import pandas as pd
-
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         result = self._native_frame.compute()
@@ -127,8 +126,6 @@ class DaskLazyFrame(CompliantLazyFrame):
 
         if not new_series:
             # return empty dataframe, like Polars does
-            import pandas as pd
-
             return self._from_native_frame(
                 dd.from_pandas(pd.DataFrame(), npartitions=self._native_frame.npartitions)
             )

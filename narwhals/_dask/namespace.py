@@ -99,8 +99,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def len(self) -> DaskExpr:
-        import pandas as pd
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if not df.columns:
                 return [
