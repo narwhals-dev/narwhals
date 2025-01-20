@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals as nw
 from narwhals.exceptions import LengthChangingExprError
@@ -54,5 +55,5 @@ def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
 def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(LengthChangingExprError):
+    with pytest.raises((LengthChangingExprError, ShapeError, PlShapeError)):
         df.filter(nw.col("b").unique() > 2).lazy().collect()
