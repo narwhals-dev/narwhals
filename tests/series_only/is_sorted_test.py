@@ -8,7 +8,7 @@ from tests.utils import assert_equal_data
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
-data_sorted = [7.0, 8, 9]
+data_sorted = [7.0, 8.0, 9.0]
 
 
 @pytest.mark.parametrize(

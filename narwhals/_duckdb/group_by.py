@@ -18,7 +18,10 @@ class DuckDBGroupBy:
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
-        self._compliant_frame = compliant_frame
+        if drop_null_keys:
+            self._compliant_frame = compliant_frame.drop_nulls(subset=None)
+        else:
+            self._compliant_frame = compliant_frame
         self._keys = keys
 
     def agg(
@@ -46,7 +49,7 @@ class DuckDBGroupBy:
         try:
             return self._compliant_frame._from_native_frame(
                 self._compliant_frame._native_frame.aggregate(
-                    agg_columns, group_expr=",".join(self._keys)
+                    agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
                 )
             )
         except ValueError as exc:  # pragma: no cover

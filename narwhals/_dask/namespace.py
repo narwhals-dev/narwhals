@@ -354,7 +354,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     init_value,
                 )
 
-            return [result]
+            return [result.rename(null_mask[0].name)]
 
         return DaskExpr(
             call=func,
@@ -411,8 +411,8 @@ class DaskWhen:
 
         if is_scalar:
             _df = condition.to_frame("a")
-            _df["tmp"] = value_sequence[0]
-            value_series = _df["tmp"]
+            _df["literal"] = value_sequence[0]
+            value_series = _df["literal"]
         else:
             value_series = value_sequence
 

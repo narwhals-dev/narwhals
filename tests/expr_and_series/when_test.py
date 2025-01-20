@@ -24,6 +24,11 @@ def test_when(constructor: Constructor) -> None:
         "a_when": [3, None, None],
     }
     assert_equal_data(result, expected)
+    result = df.select(nw.when(nw.col("a") == 1).then(value=3))
+    expected = {
+        "literal": [3, None, None],
+    }
+    assert_equal_data(result, expected)
 
 
 def test_when_otherwise(constructor: Constructor) -> None:
@@ -121,22 +126,14 @@ def test_otherwise_expression(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_into_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_lit_str(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}

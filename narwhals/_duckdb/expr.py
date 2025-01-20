@@ -92,6 +92,32 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs={},
         )
 
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        version: Version,
+    ) -> Self:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            from duckdb import ColumnExpression
+
+            columns = df.columns
+
+            return [ColumnExpression(columns[i]) for i in column_indices]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=backend_version,
+            version=version,
+            kwargs={},
+        )
+
     def _from_call(
         self,
         call: Callable[..., duckdb.Expression],
@@ -513,6 +539,24 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     def is_null(self) -> Self:
         return self._from_call(
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
+        )
+
+    def is_nan(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("isnan", _input),
+            "is_nan",
+            returns_scalar=self._returns_scalar,
+        )
+
+    def is_finite(self) -> Self:
+        from duckdb import FunctionExpression
+
+        return self._from_call(
+            lambda _input: FunctionExpression("isfinite", _input),
+            "is_finite",
+            returns_scalar=self._returns_scalar,
         )
 
     def is_in(self, other: Sequence[Any]) -> Self:

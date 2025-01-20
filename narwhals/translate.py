@@ -132,7 +132,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoDataFrameT]: ...
@@ -144,7 +143,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
@@ -156,7 +154,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
@@ -168,7 +165,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
@@ -180,7 +176,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
@@ -192,7 +187,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
@@ -204,7 +198,6 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
@@ -216,34 +209,9 @@ def from_native(
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
 
 
 @overload
@@ -252,7 +220,6 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
@@ -264,7 +231,6 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
@@ -276,7 +242,6 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
@@ -288,7 +253,6 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series[IntoSeriesT]: ...
@@ -300,7 +264,6 @@ def from_native(
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
@@ -313,7 +276,6 @@ def from_native(
     *,
     pass_through: bool,
     eager_only: bool,
-    eager_or_interchange_only: bool = False,
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
@@ -325,7 +287,6 @@ def from_native(
     strict: bool | None = None,
     pass_through: bool | None = None,
     eager_only: bool = False,
-    eager_or_interchange_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
 ) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
@@ -355,16 +316,6 @@ def from_native(
 
             - `False` (default): don't require `native_object` to be eager
             - `True`: only convert to Narwhals if `native_object` is eager
-        eager_or_interchange_only: Whether to only allow eager objects or objects which
-            have interchange-level support in Narwhals:
-
-            - `False` (default): don't require `native_object` to either be eager or to
-              have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is eager or has
-              interchange-level support in Narwhals
-
-            See [interchange-only support](../extending.md/#interchange-only-support)
-            for more details.
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
@@ -388,7 +339,7 @@ def from_native(
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
+        eager_or_interchange_only=False,
         series_only=series_only,
         allow_series=allow_series,
         version=Version.MAIN,
@@ -400,6 +351,7 @@ def _from_native_impl(  # noqa: PLR0915
     *,
     pass_through: bool = False,
     eager_only: bool = False,
+    # Interchange-level was removed after v1
     eager_or_interchange_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
@@ -728,12 +680,12 @@ def _from_native_impl(  # noqa: PLR0915
             DuckDBLazyFrame(
                 native_object, backend_version=backend_version, version=version
             ),
-            level="full",
+            level="lazy",
         )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
-        from narwhals._ibis.dataframe import IbisInterchangeFrame
+        from narwhals._ibis.dataframe import IbisLazyFrame
 
         if eager_only or series_only:
             if not pass_through:
@@ -746,11 +698,18 @@ def _from_native_impl(  # noqa: PLR0915
         import ibis  # ignore-banned-import
 
         backend_version = parse_version(ibis.__version__)
-        return DataFrame(
-            IbisInterchangeFrame(
-                native_object, version=version, backend_version=backend_version
+        if version is Version.V1:
+            return DataFrame(
+                IbisLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="interchange",
+            )
+        return LazyFrame(
+            IbisLazyFrame(
+                native_object, backend_version=backend_version, version=version
             ),
-            level="interchange",
+            level="lazy",
         )
 
     # PySpark
@@ -850,7 +809,6 @@ def narwhalify(
     strict: bool | None = None,
     pass_through: bool | None = None,
     eager_only: bool = False,
-    eager_or_interchange_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
@@ -883,16 +841,6 @@ def narwhalify(
 
             - `False` (default): don't require `native_object` to be eager
             - `True`: only convert to Narwhals if `native_object` is eager
-        eager_or_interchange_only: Whether to only allow eager objects or objects which
-            have interchange-level support in Narwhals:
-
-            - `False` (default): don't require `native_object` to either be eager or to
-              have interchange-level support in Narwhals
-            - `True`: only convert to Narwhals if `native_object` is eager or has
-              interchange-level support in Narwhals
-
-            See [interchange-only support](../extending.md/#interchange-only-support)
-            for more details.
         series_only: Whether to only allow Series:
 
             - `False` (default): don't require `native_object` to be a Series
@@ -934,7 +882,6 @@ def narwhalify(
                     arg,
                     pass_through=pass_through,
                     eager_only=eager_only,
-                    eager_or_interchange_only=eager_or_interchange_only,
                     series_only=series_only,
                     allow_series=allow_series,
                 )
@@ -946,7 +893,6 @@ def narwhalify(
                     value,
                     pass_through=pass_through,
                     eager_only=eager_only,
-                    eager_or_interchange_only=eager_or_interchange_only,
                     series_only=series_only,
                     allow_series=allow_series,
                 )

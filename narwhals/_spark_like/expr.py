@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import get_column_name
@@ -85,6 +86,31 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            returns_scalar=False,
+            backend_version=backend_version,
+            version=version,
+            kwargs={},
+        )
+
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        version: Version,
+    ) -> Self:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            columns = df.columns
+            return [F.col(columns[i]) for i in column_indices]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -432,13 +458,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _is_finite(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
 
-            # A value is finite if it's not NaN, not NULL, and not infinite
-            return (
-                ~F.isnan(_input)
-                & ~F.isnull(_input)
-                & (_input != float("inf"))
-                & (_input != float("-inf"))
+            # A value is finite if it's not NaN, and not infinite, while NULLs should be
+            # preserved
+            is_finite_condition = (
+                ~F.isnan(_input) & (_input != float("inf")) & (_input != float("-inf"))
             )
+            return F.when(~F.isnull(_input), is_finite_condition).otherwise(None)
 
         return self._from_call(
             _is_finite, "is_finite", returns_scalar=self._returns_scalar
@@ -534,6 +559,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(F.isnull, "is_null", returns_scalar=self._returns_scalar)
 
+    def is_nan(self: Self) -> Self:
+        from pyspark.sql import functions as F  # noqa: N812
+
+        def _is_nan(_input: Column) -> Column:
+            return F.when(F.isnull(_input), None).otherwise(F.isnan(_input))
+
+        return self._from_call(_is_nan, "is_nan", returns_scalar=self._returns_scalar)
+
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
@@ -541,3 +574,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     @property
     def name(self: Self) -> SparkLikeExprNameNamespace:
         return SparkLikeExprNameNamespace(self)
+
+    @property
+    def dt(self: Self) -> SparkLikeExprDateTimeNamespace:
+        return SparkLikeExprDateTimeNamespace(self)
