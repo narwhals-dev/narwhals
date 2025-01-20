@@ -8,9 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
@@ -71,19 +68,26 @@ def pytest_collection_modifyitems(
 
 
 def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj)  # type: ignore[no-any-return]
 
 
 def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
 def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
 def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
+    import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
@@ -92,6 +96,7 @@ def modin_pyarrow_constructor(
     obj: dict[str, list[Any]],
 ) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
+    import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
@@ -103,15 +108,20 @@ def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no 
 
 
 def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import polars as pl
+
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: dict[str, list[Any]]) -> IntoFrame:
+    import polars as pl
+
     return pl.LazyFrame(obj)
 
 
 def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
     import duckdb
+    import polars as pl
 
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")
@@ -130,6 +140,8 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
 
 
 def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pyarrow as pa
+
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
