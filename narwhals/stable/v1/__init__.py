@@ -934,9 +934,6 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        if maintain_order:  # pragma: no cover
-            msg = "`maintain_order=True` is not supported for Expr.unique."
-            raise ValueError(msg)
         if maintain_order is not None:
             msg = (
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
