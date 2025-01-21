@@ -18,7 +18,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
@@ -267,18 +266,13 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
             return [
                 PandasLikeSeries(
-                    native_series=rename(
-                        self.concat(
-                            (s.to_frame() for s in series), how="horizontal"
-                        )._native_frame.min(axis=1),
-                        series[0].name,
-                        implementation=self._implementation,
-                        backend_version=self._backend_version,
-                    ),
+                    self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )._native_frame.min(axis=1),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
-                )
+                ).alias(series[0].name)
             ]
 
         return self._create_expr_from_callable(
@@ -298,18 +292,13 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
             return [
                 PandasLikeSeries(
-                    rename(
-                        self.concat(
-                            (s.to_frame() for s in series), how="horizontal"
-                        )._native_frame.max(axis=1),
-                        series[0].name,
-                        implementation=self._implementation,
-                        backend_version=self._backend_version,
-                    ),
+                    self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )._native_frame.max(axis=1),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
-                )
+                ).alias(series[0].name)
             ]
 
         return self._create_expr_from_callable(
