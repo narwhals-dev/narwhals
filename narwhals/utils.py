@@ -125,7 +125,7 @@ class Implementation(Enum):
         }
         return mapping[self]  # type: ignore[no-any-return]
 
-    def is_pandas(self) -> bool:
+    def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
 
         Returns:
@@ -141,7 +141,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PANDAS
 
-    def is_pandas_like(self) -> bool:
+    def is_pandas_like(self: Self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
         Returns:
@@ -161,7 +161,7 @@ class Implementation(Enum):
             Implementation.CUDF,
         }
 
-    def is_polars(self) -> bool:
+    def is_polars(self: Self) -> bool:
         """Return whether implementation is Polars.
 
         Returns:
@@ -177,7 +177,7 @@ class Implementation(Enum):
         """
         return self is Implementation.POLARS
 
-    def is_cudf(self) -> bool:
+    def is_cudf(self: Self) -> bool:
         """Return whether implementation is cuDF.
 
         Returns:
@@ -193,7 +193,7 @@ class Implementation(Enum):
         """
         return self is Implementation.CUDF  # pragma: no cover
 
-    def is_modin(self) -> bool:
+    def is_modin(self: Self) -> bool:
         """Return whether implementation is Modin.
 
         Returns:
@@ -209,7 +209,7 @@ class Implementation(Enum):
         """
         return self is Implementation.MODIN  # pragma: no cover
 
-    def is_pyspark(self) -> bool:
+    def is_pyspark(self: Self) -> bool:
         """Return whether implementation is PySpark.
 
         Returns:
@@ -225,7 +225,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYSPARK  # pragma: no cover
 
-    def is_pyarrow(self) -> bool:
+    def is_pyarrow(self: Self) -> bool:
         """Return whether implementation is PyArrow.
 
         Returns:
@@ -241,7 +241,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYARROW  # pragma: no cover
 
-    def is_dask(self) -> bool:
+    def is_dask(self: Self) -> bool:
         """Return whether implementation is Dask.
 
         Returns:
@@ -257,7 +257,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DASK  # pragma: no cover
 
-    def is_duckdb(self) -> bool:
+    def is_duckdb(self: Self) -> bool:
         """Return whether implementation is DuckDB.
 
         Returns:
@@ -273,7 +273,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DUCKDB  # pragma: no cover
 
-    def is_ibis(self) -> bool:
+    def is_ibis(self: Self) -> bool:
         """Return whether implementation is Ibis.
 
         Returns:

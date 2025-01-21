@@ -83,7 +83,7 @@ class ExprStringNamespace(Generic[ExprT]):
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 

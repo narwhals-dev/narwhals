@@ -14,6 +14,8 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.typing import IntoExpr
 
 DataFrameT = TypeVar("DataFrameT")
@@ -21,7 +23,7 @@ LazyFrameT = TypeVar("LazyFrameT")
 
 
 class GroupBy(Generic[DataFrameT]):
-    def __init__(self, df: DataFrameT, *keys: str, drop_null_keys: bool) -> None:
+    def __init__(self: Self, df: DataFrameT, *keys: str, drop_null_keys: bool) -> None:
         self._df = cast(DataFrame[Any], df)
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
@@ -29,7 +31,7 @@ class GroupBy(Generic[DataFrameT]):
         )
 
     def agg(
-        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
+        self: Self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> DataFrameT:
         """Compute aggregations for each group of a group by operation.
 
@@ -125,7 +127,7 @@ class GroupBy(Generic[DataFrameT]):
             self._grouped.agg(*aggs, **named_aggs),
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
+    def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (  # type: ignore[misc]
             (tupleify(key), self._df._from_compliant_dataframe(df))
             for (key, df) in self._grouped.__iter__()
@@ -133,7 +135,7 @@ class GroupBy(Generic[DataFrameT]):
 
 
 class LazyGroupBy(Generic[LazyFrameT]):
-    def __init__(self, df: LazyFrameT, *keys: str, drop_null_keys: bool) -> None:
+    def __init__(self: Self, df: LazyFrameT, *keys: str, drop_null_keys: bool) -> None:
         self._df = cast(LazyFrame[Any], df)
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
@@ -141,7 +143,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
         )
 
     def agg(
-        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
+        self: Self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> LazyFrameT:
         """Compute aggregations for each group of a group by operation.
 
