@@ -10,6 +10,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
@@ -18,7 +19,6 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -417,7 +417,9 @@ class PandasLikeDataFrame:
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            mask_native = validate_dataframe_comparand(self._native_frame.index, mask)
+            mask_native = broadcast_and_extract_dataframe_comparand(
+                self._native_frame.index, mask
+            )
 
         return self._from_native_frame(self._native_frame.loc[mask_native])
 
@@ -437,14 +439,16 @@ class PandasLikeDataFrame:
         for name in self._native_frame.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    validate_dataframe_comparand(
+                    broadcast_and_extract_dataframe_comparand(
                         index, new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            broadcast_and_extract_dataframe_comparand(
+                index, new_column_name_to_new_column_map[s]
+            )
             for s in new_column_name_to_new_column_map
         )
 

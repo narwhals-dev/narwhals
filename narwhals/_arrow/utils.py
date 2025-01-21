@@ -206,7 +206,7 @@ def broadcast_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(
+def broadcast_and_extract_dataframe_comparand(
     length: int,
     other: Any,
     backend_version: tuple[int, ...],

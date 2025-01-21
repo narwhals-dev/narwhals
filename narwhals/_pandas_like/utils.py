@@ -146,7 +146,7 @@ def broadcast_align_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(index: Any, other: Any) -> Any:
+def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
