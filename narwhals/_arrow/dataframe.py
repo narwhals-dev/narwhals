@@ -312,11 +312,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             col_name = col_value.name
 
             column = validate_dataframe_comparand(
-                length=length,
-                other=col_value,
-                backend_version=self._backend_version,
-                allow_broadcast=True,
-                method_name="with_columns",
+                length=length, other=col_value, backend_version=self._backend_version
             )
 
             native_frame = (
@@ -495,11 +491,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
             mask_native = validate_dataframe_comparand(
-                length=len(self),
-                other=mask,
-                backend_version=self._backend_version,
-                allow_broadcast=False,
-                method_name="filter",
+                length=len(self), other=mask, backend_version=self._backend_version
             )
         return self._from_native_frame(self._native_frame.filter(mask_native))
 

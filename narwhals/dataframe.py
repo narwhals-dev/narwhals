@@ -18,6 +18,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
+from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import find_stacklevel
@@ -139,14 +140,19 @@ class BaseFrame(Generic[FrameT]):
     def filter(
         self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
+        flat_predicates = flatten(predicates)
+        if any(
+            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            for x in flat_predicates
+        ):
+            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
+            raise ShapeError(msg)
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            predicates, constraints = self._flatten_and_extract(
-                *predicates, **constraints
-            )
+            predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates, **constraints),
         )

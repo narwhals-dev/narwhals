@@ -417,12 +417,7 @@ class PandasLikeDataFrame:
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            mask_native = validate_dataframe_comparand(
-                self._native_frame.index,
-                mask,
-                allow_broadcast=False,
-                method_name="filter",
-            )
+            mask_native = validate_dataframe_comparand(self._native_frame.index, mask)
 
         return self._from_native_frame(self._native_frame.loc[mask_native])
 
@@ -443,21 +438,13 @@ class PandasLikeDataFrame:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        index,
-                        new_column_name_to_new_column_map.pop(name),
-                        allow_broadcast=True,
-                        method_name="with_columns",
+                        index, new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            validate_dataframe_comparand(
-                index,
-                new_column_name_to_new_column_map[s],
-                allow_broadcast=True,
-                method_name="with_columns",
-            )
+            validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
             for s in new_column_name_to_new_column_map
         )
 

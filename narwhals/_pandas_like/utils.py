@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -147,9 +146,7 @@ def broadcast_align_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(
-    index: Any, other: Any, *, allow_broadcast: bool, method_name: str
-) -> Any:
+def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -161,26 +158,12 @@ def validate_dataframe_comparand(
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        len_index = len(index)
         len_other = other.len()
 
         if len_other == 1:
-            if len_index > 1 and not allow_broadcast:
-                msg = (
-                    f"{method_name}'s length: 1 differs from that of the series: "
-                    f"{len_index}"
-                )
-                raise ShapeError(msg)
             # broadcast
             s = other._native_series
             return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-
-        if len_index != len_other:
-            msg = (
-                f"{method_name}'s length: {len_other} differs from that of the series: "
-                f"{len_index}"
-            )
-            raise ShapeError(msg)
 
         if other._native_series.index is not index:
             return set_index(
