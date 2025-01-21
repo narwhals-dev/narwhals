@@ -408,7 +408,7 @@ class ArrowSeries(CompliantSeries):
         )
 
     def is_between(
-        self,
+        self: Self,
         lower_bound: Any,
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
@@ -687,7 +687,7 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))

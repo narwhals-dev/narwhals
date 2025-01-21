@@ -40,7 +40,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
-        self,
+        self: Self,
         call: Callable[[DaskLazyFrame], Sequence[dx.Series]],
         *,
         depth: int,
@@ -64,7 +64,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
+    def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
@@ -129,7 +129,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def _from_call(
-        self,
+        self: Self,
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         expr_name: str,
@@ -166,7 +166,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             kwargs={**self._kwargs, **kwargs},
         )
 
-    def alias(self, name: str) -> Self:
+    def alias(self: Self, name: str) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             inputs = self._call(df)
             return [_input.rename(name) for _input in inputs]
@@ -183,7 +183,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def __add__(self, other: Any) -> Self:
+    def __add__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__add__(other),
             "__add__",
@@ -191,7 +191,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __sub__(self, other: Any) -> Self:
+    def __sub__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
             "__sub__",
@@ -199,7 +199,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __mul__(self, other: Any) -> Self:
+    def __mul__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mul__(other),
             "__mul__",
@@ -207,7 +207,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __truediv__(self, other: Any) -> Self:
+    def __truediv__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__truediv__(other),
             "__truediv__",
@@ -215,7 +215,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __floordiv__(self, other: Any) -> Self:
+    def __floordiv__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
@@ -223,7 +223,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __pow__(self, other: Any) -> Self:
+    def __pow__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__pow__(other),
             "__pow__",
@@ -231,7 +231,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __mod__(self, other: Any) -> Self:
+    def __mod__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
             "__mod__",
@@ -239,7 +239,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input.__eq__(other),
             "__eq__",
@@ -247,7 +247,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input.__ne__(other),
             "__ne__",
@@ -255,7 +255,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __ge__(self, other: DaskExpr) -> Self:
+    def __ge__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other),
             "__ge__",
@@ -263,7 +263,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __gt__(self, other: DaskExpr) -> Self:
+    def __gt__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__gt__(other),
             "__gt__",
@@ -271,7 +271,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __le__(self, other: DaskExpr) -> Self:
+    def __le__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__le__(other),
             "__le__",
@@ -279,7 +279,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __lt__(self, other: DaskExpr) -> Self:
+    def __lt__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__lt__(other),
             "__lt__",
@@ -287,7 +287,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __and__(self, other: DaskExpr) -> Self:
+    def __and__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__and__(other),
             "__and__",
@@ -295,7 +295,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __or__(self, other: DaskExpr) -> Self:
+    def __or__(self: Self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__or__(other),
             "__or__",
@@ -310,10 +310,10 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def mean(self) -> Self:
+    def mean(self: Self) -> Self:
         return self._from_call(lambda _input: _input.mean(), "mean", returns_scalar=True)
 
-    def median(self) -> Self:
+    def median(self: Self) -> Self:
         from narwhals.exceptions import InvalidOperationError
 
         def func(s: dx.Series) -> dx.Series:
@@ -325,13 +325,13 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
         return self._from_call(func, "median", returns_scalar=True)
 
-    def min(self) -> Self:
+    def min(self: Self) -> Self:
         return self._from_call(lambda _input: _input.min(), "min", returns_scalar=True)
 
-    def max(self) -> Self:
+    def max(self: Self) -> Self:
         return self._from_call(lambda _input: _input.max(), "max", returns_scalar=True)
 
-    def std(self, ddof: int) -> Self:
+    def std(self: Self, ddof: int) -> Self:
         return self._from_call(
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
@@ -339,7 +339,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=True,
         )
 
-    def var(self, ddof: int) -> Self:
+    def var(self: Self, ddof: int) -> Self:
         return self._from_call(
             lambda _input, ddof: _input.var(ddof=ddof),
             "var",
@@ -350,7 +350,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
     def skew(self: Self) -> Self:
         return self._from_call(lambda _input: _input.skew(), "skew", returns_scalar=True)
 
-    def shift(self, n: int) -> Self:
+    def shift(self: Self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
             "shift",
@@ -414,7 +414,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def is_between(
-        self,
+        self: Self,
         lower_bound: Self | Any,
         upper_bound: Self | Any,
         closed: Literal["left", "right", "none", "both"],
@@ -431,15 +431,15 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def sum(self) -> Self:
+    def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum(), "sum", returns_scalar=True)
 
-    def count(self) -> Self:
+    def count(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.count(), "count", returns_scalar=True
         )
 
-    def round(self, decimals: int) -> Self:
+    def round(self: Self, decimals: int) -> Self:
         return self._from_call(
             lambda _input, decimals: _input.round(decimals),
             "round",
@@ -447,14 +447,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def unique(self) -> Self:
+    def unique(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.unique(),
             "unique",
             returns_scalar=self._returns_scalar,
         )
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.dropna(),
             "drop_nulls",
@@ -462,17 +462,17 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         msg = "`replace_strict` is not yet supported for Dask expressions"
         raise NotImplementedError(msg)
 
-    def abs(self) -> Self:
+    def abs(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.abs(), "abs", returns_scalar=self._returns_scalar
         )
 
-    def all(self) -> Self:
+    def all(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.all(
                 axis=None, skipna=True, split_every=False, out=None
@@ -481,7 +481,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=True,
         )
 
-    def any(self) -> Self:
+    def any(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.any(axis=0, skipna=True, split_every=False),
             "any",

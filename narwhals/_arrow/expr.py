@@ -65,7 +65,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             f"output_names={self._output_names}"
         )
 
-    def __call__(self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
     @classmethod

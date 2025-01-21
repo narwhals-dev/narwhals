@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 
 class DaskExprStringNamespace:
-    def __init__(self, expr: DaskExpr) -> None:
+    def __init__(self: Self, expr: DaskExpr) -> None:
         self._compliant_expr = expr
 
-    def len_chars(self) -> DaskExpr:
+    def len_chars(self: Self) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input: _input.str.len(),
             "len",
@@ -22,7 +22,7 @@ class DaskExprStringNamespace:
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal, n: _input.str.replace(
@@ -36,7 +36,9 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> DaskExpr:
+    def replace_all(
+        self: Self, pattern: str, value: str, *, literal: bool = False
+    ) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal: _input.str.replace(
                 pattern, value, n=-1, regex=not literal
@@ -48,7 +50,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def strip_chars(self, characters: str | None = None) -> DaskExpr:
+    def strip_chars(self: Self, characters: str | None = None) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, characters: _input.str.strip(characters),
             "strip",
@@ -56,7 +58,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def starts_with(self, prefix: str) -> DaskExpr:
+    def starts_with(self: Self, prefix: str) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, prefix: _input.str.startswith(prefix),
             "starts_with",
@@ -64,7 +66,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def ends_with(self, suffix: str) -> DaskExpr:
+    def ends_with(self: Self, suffix: str) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, suffix: _input.str.endswith(suffix),
             "ends_with",
@@ -72,7 +74,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> DaskExpr:
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, literal: _input.str.contains(
                 pat=pattern, regex=not literal
@@ -83,7 +85,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def slice(self, offset: int, length: int | None = None) -> DaskExpr:
+    def slice(self: Self, offset: int, length: int | None = None) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, offset, length: _input.str.slice(
                 start=offset, stop=offset + length if length else None
@@ -102,14 +104,14 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def to_uppercase(self) -> DaskExpr:
+    def to_uppercase(self: Self) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input: _input.str.upper(),
             "to_uppercase",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def to_lowercase(self) -> DaskExpr:
+    def to_lowercase(self: Self) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input: _input.str.lower(),
             "to_lowercase",
