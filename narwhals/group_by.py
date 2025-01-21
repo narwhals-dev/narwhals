@@ -10,6 +10,7 @@ from typing import cast
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
@@ -109,6 +110,16 @@ class GroupBy(Generic[DataFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
+        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
+            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        ):
+            msg = (
+                "Found expression which does not aggregate.\n\n"
+                "All expressions passed to GroupBy.agg must aggregate.\n"
+                "For example, `df.group_by('a').agg(nw.col('b').sum())` is valid,\n"
+                "but `df.group_by('a').agg(nw.col('b'))` is not."
+            )
+            raise InvalidOperationError(msg)
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
@@ -195,6 +206,16 @@ class LazyGroupBy(Generic[LazyFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
+        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
+            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        ):
+            msg = (
+                "Found expression which does not aggregate.\n\n"
+                "All expressions passed to GroupBy.agg must aggregate.\n"
+                "For example, `df.group_by('a').agg(nw.col('b').sum())` is valid,\n"
+                "but `df.group_by('a').agg(nw.col('b'))` is not."
+            )
+            raise InvalidOperationError(msg)
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
