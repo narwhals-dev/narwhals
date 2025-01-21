@@ -9,7 +9,6 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -207,13 +206,10 @@ def broadcast_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(
+def broadcast_and_extract_dataframe_comparand(
     length: int,
     other: Any,
     backend_version: tuple[int, ...],
-    *,
-    allow_broadcast: bool,
-    method_name: str,
 ) -> Any:
     """Validate RHS of binary operation.
 
@@ -225,22 +221,12 @@ def validate_dataframe_comparand(
     if isinstance(other, ArrowSeries):
         len_other = len(other)
         if len_other == 1:
-            if length > 1 and not allow_broadcast:
-                msg = (
-                    f"{method_name}'s length: 1 differs from that of the series: {length}"
-                )
-                raise ShapeError(msg)
-
             import numpy as np  # ignore-banned-import
 
             value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
-
-        if length != len_other:
-            msg = f"{method_name}'s length: {len_other} differs from that of the series: {length}"
-            raise ShapeError(msg)
 
         return other._native_series
 
