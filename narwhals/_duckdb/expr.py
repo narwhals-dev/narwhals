@@ -37,7 +37,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
-        self,
+        self: Self,
         call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
         *,
         depth: int,
@@ -61,7 +61,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
@@ -121,7 +121,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def _from_call(
-        self,
+        self: Self,
         call: Callable[..., duckdb.Expression],
         expr_name: str,
         *,
@@ -166,7 +166,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs=kwargs,
         )
 
-    def __and__(self, other: DuckDBExpr) -> Self:
+    def __and__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input & other,
             "__and__",
@@ -174,7 +174,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __or__(self, other: DuckDBExpr) -> Self:
+    def __or__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input | other,
             "__or__",
@@ -182,7 +182,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __add__(self, other: DuckDBExpr) -> Self:
+    def __add__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,
             "__add__",
@@ -190,7 +190,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __truediv__(self, other: DuckDBExpr) -> Self:
+    def __truediv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input / other,
             "__truediv__",
@@ -198,7 +198,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __floordiv__(self, other: DuckDBExpr) -> Self:
+    def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
@@ -206,7 +206,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __mod__(self, other: DuckDBExpr) -> Self:
+    def __mod__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
             "__mod__",
@@ -214,7 +214,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __sub__(self, other: DuckDBExpr) -> Self:
+    def __sub__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
@@ -222,7 +222,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __mul__(self, other: DuckDBExpr) -> Self:
+    def __mul__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input * other,
             "__mul__",
@@ -230,7 +230,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __pow__(self, other: DuckDBExpr) -> Self:
+    def __pow__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input**other,
             "__pow__",
@@ -238,7 +238,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __lt__(self, other: DuckDBExpr) -> Self:
+    def __lt__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input < other,
             "__lt__",
@@ -246,7 +246,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __gt__(self, other: DuckDBExpr) -> Self:
+    def __gt__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input > other,
             "__gt__",
@@ -254,7 +254,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __le__(self, other: DuckDBExpr) -> Self:
+    def __le__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input <= other,
             "__le__",
@@ -262,7 +262,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __ge__(self, other: DuckDBExpr) -> Self:
+    def __ge__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input >= other,
             "__ge__",
@@ -270,7 +270,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __eq__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input == other,
             "__eq__",
@@ -278,7 +278,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __ne__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input != other,
             "__ne__",
@@ -286,14 +286,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __invert__(self) -> Self:
+    def __invert__(self: Self) -> Self:
         return self._from_call(
             lambda _input: ~_input,
             "__invert__",
             returns_scalar=self._returns_scalar,
         )
 
-    def alias(self, name: str) -> Self:
+    def alias(self: Self, name: str) -> Self:
         def _alias(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [col.alias(name) for col in self._call(df)]
 
@@ -311,21 +311,21 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def abs(self) -> Self:
+    def abs(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("abs", _input),
             "abs",
             returns_scalar=self._returns_scalar,
         )
 
-    def mean(self) -> Self:
+    def mean(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("mean", _input),
             "mean",
             returns_scalar=True,
         )
 
-    def skew(self) -> Self:
+    def skew(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
             return CaseExpression(
@@ -342,21 +342,21 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
         return self._from_call(func, "skew", returns_scalar=True)
 
-    def median(self) -> Self:
+    def median(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("median", _input),
             "median",
             returns_scalar=True,
         )
 
-    def all(self) -> Self:
+    def all(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("bool_and", _input),
             "all",
             returns_scalar=True,
         )
 
-    def any(self) -> Self:
+    def any(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("bool_or", _input),
             "any",
@@ -364,7 +364,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def quantile(
-        self,
+        self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
@@ -382,7 +382,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
         def func(
             _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
@@ -399,7 +399,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def is_between(
-        self,
+        self: Self,
         lower_bound: Any,
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
@@ -423,12 +423,12 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def sum(self) -> Self:
+    def sum(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("sum", _input), "sum", returns_scalar=True
         )
 
-    def n_unique(self) -> Self:
+    def n_unique(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             # https://stackoverflow.com/a/79338887/4451315
             return FunctionExpression(
@@ -446,19 +446,19 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=True,
         )
 
-    def count(self) -> Self:
+    def count(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("count", _input),
             "count",
             returns_scalar=True,
         )
 
-    def len(self) -> Self:
+    def len(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("count"), "len", returns_scalar=True
         )
 
-    def std(self, ddof: int) -> Self:
+    def std(self: Self, ddof: int) -> Self:
         if ddof == 1:
             func = "stddev_samp"
         elif ddof == 0:
@@ -470,7 +470,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression(func, _input), "std", returns_scalar=True
         )
 
-    def var(self, ddof: int) -> Self:
+    def var(self: Self, ddof: int) -> Self:
         if ddof == 1:
             func = "var_samp"
         elif ddof == 0:
@@ -482,50 +482,50 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input: FunctionExpression(func, _input), "var", returns_scalar=True
         )
 
-    def max(self) -> Self:
+    def max(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("max", _input), "max", returns_scalar=True
         )
 
-    def min(self) -> Self:
+    def min(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("min", _input), "min", returns_scalar=True
         )
 
-    def null_count(self) -> Self:
+    def null_count(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
             "null_count",
             returns_scalar=True,
         )
 
-    def is_null(self) -> Self:
+    def is_null(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.isnull(), "is_null", returns_scalar=self._returns_scalar
         )
 
-    def is_nan(self) -> Self:
+    def is_nan(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("isnan", _input),
             "is_nan",
             returns_scalar=self._returns_scalar,
         )
 
-    def is_finite(self) -> Self:
+    def is_finite(self: Self) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression("isfinite", _input),
             "is_finite",
             returns_scalar=self._returns_scalar,
         )
 
-    def is_in(self, other: Sequence[Any]) -> Self:
+    def is_in(self: Self, other: Sequence[Any]) -> Self:
         return self._from_call(
             lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
             "is_in",
             returns_scalar=self._returns_scalar,
         )
 
-    def round(self, decimals: int) -> Self:
+    def round(self: Self, decimals: int) -> Self:
         return self._from_call(
             lambda _input: FunctionExpression(
                 "round", _input, ConstantExpression(decimals)
@@ -534,7 +534,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def fill_null(self, value: Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(self: Self, value: Any, strategy: Any, limit: int | None) -> Self:
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)
@@ -545,10 +545,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def cast(
-        self: Self,
-        dtype: DType | type[DType],
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(native_dtype)
