@@ -46,12 +46,8 @@ class DuckDBGroupBy:
             *self._keys,
             *(x for expr in exprs for x in expr(self._compliant_frame)),
         ]
-        try:
-            return self._compliant_frame._from_native_frame(
-                self._compliant_frame._native_frame.aggregate(
-                    agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
-                )
+        return self._compliant_frame._from_native_frame(
+            self._compliant_frame._native_frame.aggregate(
+                agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
             )
-        except ValueError as exc:  # pragma: no cover
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
+        )
