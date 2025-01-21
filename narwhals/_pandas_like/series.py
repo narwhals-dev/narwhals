@@ -1044,9 +1044,27 @@ class PandasLikeSeries(CompliantSeries):
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        result = cut(
-            self._native_series, bins=bins if bin_count is None else bin_count
-        ).value_counts(sort=False)
+        data: dict[str, Sequence[int | float | str]]
+        if bin_count is not None and bin_count == 0:
+            data = {}
+            if include_breakpoint:
+                data["breakpoint"] = []
+            if include_category:
+                data["category"] = []
+            data["count"] = []
+
+            return PandasLikeDataFrame(
+                self.__native_namespace__().DataFrame(data),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        result = (
+            cut(self._native_series, bins=bins if bin_count is None else bin_count)
+            .value_counts()
+            .sort_index()
+        )
         data = {}
         if include_breakpoint:
             data["breakpoint"] = result.index.categories.right

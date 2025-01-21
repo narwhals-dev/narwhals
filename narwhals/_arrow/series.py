@@ -1013,12 +1013,15 @@ class ArrowSeries(CompliantSeries):
         include_category: bool = True,
         include_breakpoint: bool = True,
     ) -> ArrowDataFrame:
+        import numpy as np  # ignore-banned-import
         import pyarrow as pa
         import pyarrow.compute as pc
 
         from narwhals._arrow.dataframe import ArrowDataFrame
 
-        if bins is None:
+        def _hist_from_bin_count(
+            bin_count: int,
+        ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
             d = pc.min_max(self._native_series)
             lower, upper = d["min"].as_py(), d["max"].as_py()
             if lower == upper:
@@ -1028,7 +1031,8 @@ class ArrowSeries(CompliantSeries):
             width = (upper - lower) / bin_count
             bin_proportions = pc.divide(pc.subtract(self._native_series, lower), width)
             bin_indices = pc.floor(bin_proportions)
-            bin_indices = pc.if_else(
+
+            bin_indices = pc.if_else(  # shift bins so they are right-closed
                 pc.and_(
                     pc.equal(bin_indices, bin_proportions),
                     pc.greater(bin_indices, 0),
@@ -1036,10 +1040,26 @@ class ArrowSeries(CompliantSeries):
                 pc.subtract(bin_indices, 1),
                 bin_indices,
             )
-            counts = pc.value_counts(bin_indices)
-            counts = counts.filter(pc.greater_equal(counts.field("values"), 0))
+            counts = (  # count bin id occurrences
+                pa.Table.from_arrays(
+                    pc.value_counts(bin_indices)
+                    .cast(pa.struct({"values": pa.int64(), "counts": pa.int64()}))
+                    .flatten(),
+                    names=["values", "counts"],
+                )
+                .join(  # align bin ids to all possible bin ids (populate in missing bins)
+                    pa.Table.from_arrays([np.arange(bin_count)], ["values"]),
+                    keys="values",
+                    join_type="right outer",
+                )
+                .sort_by("values")
+            )
+            counts = counts.set_column(  # empty bin intervals should have a 0 count
+                0, "counts", pc.coalesce(counts.column("counts"), 0)
+            )
 
-            bin_left = pc.multiply(counts.field("values"), width)
+            # extract left/right side of the intervals
+            bin_left = pc.multiply(counts.column("values"), width)
             bin_right = pc.add(bin_left, width)
             bin_left = pa.chunked_array(
                 [  # pad lowest bin by 1% of range
@@ -1047,11 +1067,12 @@ class ArrowSeries(CompliantSeries):
                     bin_left[1:],
                 ]
             )
-            counts = counts.field("counts")
+            counts = counts.column("counts")
+            return counts, bin_left, bin_right
 
-        else:
-            import numpy as np  # ignore-banned-import
-
+        def _hist_from_bins(
+            bins: Sequence[int | float],
+        ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
             bins = np.asarray(bins)
             if (np.diff(bins) < 0).any():
                 msg = "bins must increase monotonically"
@@ -1059,14 +1080,29 @@ class ArrowSeries(CompliantSeries):
 
             bin_indices = np.searchsorted(bins, self._native_series, side="left")
             obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
-            obj_cats = np.arange(1, len(bins))  # type: ignore[arg-type]
+            obj_cats = np.arange(1, len(bins))
             counts = np.zeros_like(obj_cats)
             counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
 
-            bin_right = bins[1:]  # type: ignore[index]
-            bin_left = bins[:-1]  # type: ignore[index]
+            bin_right = bins[1:]
+            bin_left = bins[:-1]
+            return counts, bin_left, bin_right
 
-        data = {}
+        if bins is not None:
+            counts, bin_left, bin_right = _hist_from_bins(bins)
+
+        elif bin_count is not None:
+            if bin_count == 0:
+                counts, bin_left, bin_right = [], [], []
+            else:
+                counts, bin_left, bin_right = _hist_from_bin_count(bin_count)
+
+        else:  # pragma: no cover
+            # caller guarantees that either bins or bin_count is specified
+            msg = "must provide one of `bin_count` or `bins`"
+            raise InvalidOperationError(msg)
+
+        data: dict[str, Sequence[int | float | str]] = {}
         if include_breakpoint:
             data["breakpoint"] = bin_right
         if include_category:
