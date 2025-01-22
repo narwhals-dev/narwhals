@@ -24,7 +24,7 @@ class SparkLikeExprStringNamespace:
         )
 
     def replace_all(
-        self: Self, pattern: str, value: str, *, literal: bool = False
+        self: Self, pattern: str, value: str, *, literal: bool
     ) -> SparkLikeExpr:
         def func(_input: Column, pattern: str, value: str, *, literal: bool) -> Column:
             replace_all_func = F.replace if literal else F.regexp_replace
@@ -82,7 +82,7 @@ class SparkLikeExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> SparkLikeExpr:
+    def slice(self: Self, offset: int, length: int | None) -> SparkLikeExpr:
         # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
         # The position is not zero based, but 1 based index.
         def func(_input: Column, offset: int, length: int | None) -> Column:

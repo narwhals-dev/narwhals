@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.dtypes import DType
 
 
@@ -40,7 +41,7 @@ class DuckDBLazyFrame:
     _implementation = Implementation.DUCKDB
 
     def __init__(
-        self,
+        self: Self,
         df: duckdb.DuckDBPyRelation,
         *,
         backend_version: tuple[int, ...],
@@ -51,34 +52,34 @@ class DuckDBLazyFrame:
         self._backend_version = backend_version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __narwhals_dataframe__(self) -> Any:  # pragma: no cover
+    def __narwhals_dataframe__(self: Self) -> Self:  # pragma: no cover
         # Keep around for backcompat.
         if self._version is not Version.V1:
             msg = "__narwhals_dataframe__ is not implemented for DuckDBLazyFrame"
             raise AttributeError(msg)
         return self
 
-    def __narwhals_lazyframe__(self) -> Any:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
         return get_duckdb()  # type: ignore[no-any-return]
 
-    def __narwhals_namespace__(self) -> DuckDBNamespace:
+    def __narwhals_namespace__(self: Self) -> DuckDBNamespace:
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
+    def __getitem__(self: Self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
         return DuckDBInterchangeSeries(
             self._native_frame.select(item), version=self._version
         )
 
-    def collect(self) -> Any:
+    def collect(self: Self) -> pa.Table:
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
@@ -93,13 +94,13 @@ class DuckDBLazyFrame:
             version=self._version,
         )
 
-    def head(self, n: int) -> Self:
+    def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
 
     def select(
         self: Self,
-        *exprs: Any,
-        **named_exprs: Any,
+        *exprs: IntoDuckDBExpr,
+        **named_exprs: IntoDuckDBExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         if not new_columns_map:
@@ -128,13 +129,13 @@ class DuckDBLazyFrame:
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._from_native_frame(self._native_frame.select(*selection))
 
-    def lazy(self) -> Self:
+    def lazy(self: Self) -> Self:
         return self
 
     def with_columns(
         self: Self,
-        *exprs: Any,
-        **named_exprs: Any,
+        *exprs: IntoDuckDBExpr,
+        **named_exprs: IntoDuckDBExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         result = []
@@ -157,7 +158,7 @@ class DuckDBLazyFrame:
         return self._from_native_frame(self._native_frame.filter(mask))
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
             for column_name, duckdb_dtype in zip(
@@ -166,7 +167,7 @@ class DuckDBLazyFrame:
         }
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
     def to_pandas(self: Self) -> pd.DataFrame:
@@ -188,7 +189,7 @@ class DuckDBLazyFrame:
             self._native_frame, version=version, backend_version=self._backend_version
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _from_native_frame(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
@@ -211,7 +212,7 @@ class DuckDBLazyFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -257,7 +258,7 @@ class DuckDBLazyFrame:
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
             for column_name, duckdb_dtype in zip(
@@ -265,7 +266,7 @@ class DuckDBLazyFrame:
             )
         }
 
-    def unique(self, subset: Sequence[str] | None, keep: str) -> Self:
+    def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
             import duckdb
 
@@ -298,8 +299,8 @@ class DuckDBLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):

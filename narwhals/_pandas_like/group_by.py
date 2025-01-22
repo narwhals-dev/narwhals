@@ -21,6 +21,8 @@ from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -42,7 +44,7 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 class PandasLikeGroupBy:
     def __init__(
-        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+        self: Self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
         self._df = df
         self._keys = keys
@@ -80,7 +82,7 @@ class PandasLikeGroupBy:
             )
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoPandasLikeExpr,
         **named_aggs: IntoPandasLikeExpr,
     ) -> PandasLikeDataFrame:
@@ -110,7 +112,7 @@ class PandasLikeGroupBy:
             native_namespace=self._df.__native_namespace__(),
         )
 
-    def _from_native_frame(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
+    def _from_native_frame(self: Self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
@@ -120,7 +122,7 @@ class PandasLikeGroupBy:
             version=self._df._version,
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+    def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",

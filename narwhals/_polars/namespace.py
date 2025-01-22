@@ -113,7 +113,7 @@ class PolarsNamespace:
             result, backend_version=items[0]._backend_version, version=items[0]._version
         )
 
-    def lit(self: Self, value: Any, dtype: DType | None = None) -> PolarsExpr:
+    def lit(self: Self, value: Any, dtype: DType | None) -> PolarsExpr:
         import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
@@ -150,7 +150,7 @@ class PolarsNamespace:
         )
 
     def concat_str(
-        self,
+        self: Self,
         exprs: Iterable[IntoPolarsExpr],
         *more_exprs: IntoPolarsExpr,
         separator: str,

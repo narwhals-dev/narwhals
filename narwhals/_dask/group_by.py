@@ -8,19 +8,19 @@ from typing import Sequence
 
 import dask.dataframe as dd
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
-
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import remove_prefix
 
+try:
+    import dask.dataframe.dask_expr as dx
+except ModuleNotFoundError:  # pragma: no cover
+    import dask_expr as dx
+
 if TYPE_CHECKING:
     import pandas as pd
+    from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
@@ -77,7 +77,7 @@ POLARS_TO_DASK_AGGREGATIONS = {
 
 class DaskLazyGroupBy:
     def __init__(
-        self, df: DaskLazyFrame, keys: list[str], *, drop_null_keys: bool
+        self: Self, df: DaskLazyFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
         self._df = df
         self._keys = keys
@@ -88,7 +88,7 @@ class DaskLazyGroupBy:
         )
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoDaskExpr,
         **named_aggs: IntoDaskExpr,
     ) -> DaskLazyFrame:
@@ -113,7 +113,7 @@ class DaskLazyGroupBy:
             self._from_native_frame,
         )
 
-    def _from_native_frame(self, df: DaskLazyFrame) -> DaskLazyFrame:
+    def _from_native_frame(self: Self, df: DaskLazyFrame) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(

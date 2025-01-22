@@ -8,6 +8,8 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 
 class PandasSelectorNamespace:
     def __init__(
-        self,
+        self: Self,
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
@@ -27,7 +29,7 @@ class PandasSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:
+    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
@@ -43,7 +45,7 @@ class PandasSelectorNamespace:
             kwargs={"dtypes": dtypes},
         )
 
-    def numeric(self) -> PandasSelector:
+    def numeric(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
@@ -60,19 +62,19 @@ class PandasSelectorNamespace:
             ],
         )
 
-    def categorical(self) -> PandasSelector:
+    def categorical(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
-    def string(self) -> PandasSelector:
+    def string(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
 
-    def boolean(self) -> PandasSelector:
+    def boolean(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Boolean])
 
-    def all(self) -> PandasSelector:
+    def all(self: Self) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns]
 
@@ -99,7 +101,7 @@ class PandasSelector(PandasLikeExpr):
             f"output_names={self._output_names}"
         )
 
-    def _to_expr(self) -> PandasLikeExpr:
+    def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,
             depth=self._depth,
@@ -112,7 +114,7 @@ class PandasSelector(PandasLikeExpr):
             kwargs=self._kwargs,
         )
 
-    def __sub__(self, other: PandasSelector | Any) -> PandasSelector | Any:
+    def __sub__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
             def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -134,7 +136,7 @@ class PandasSelector(PandasLikeExpr):
         else:
             return self._to_expr() - other
 
-    def __or__(self, other: PandasSelector | Any) -> PandasSelector | Any:
+    def __or__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
             def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -156,7 +158,7 @@ class PandasSelector(PandasLikeExpr):
         else:
             return self._to_expr() | other
 
-    def __and__(self, other: PandasSelector | Any) -> PandasSelector | Any:
+    def __and__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
             def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -178,7 +180,7 @@ class PandasSelector(PandasLikeExpr):
         else:
             return self._to_expr() & other
 
-    def __invert__(self) -> PandasSelector:
+    def __invert__(self: Self) -> PandasSelector:
         return (
             PandasSelectorNamespace(
                 implementation=self._implementation,

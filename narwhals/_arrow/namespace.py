@@ -408,7 +408,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
 class ArrowWhen:
     def __init__(
-        self,
+        self: Self,
         condition: ArrowExpr,
         backend_version: tuple[int, ...],
         then_value: Any = None,

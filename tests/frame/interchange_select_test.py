@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import polars as pl
@@ -7,20 +8,23 @@ import pytest
 
 import narwhals.stable.v1 as nw
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 
 class InterchangeDataFrame:
-    def __init__(self, df: CustomDataFrame) -> None:
+    def __init__(self: Self, df: CustomDataFrame) -> None:
         self._df = df
 
-    def __dataframe__(self) -> InterchangeDataFrame:  # pragma: no cover
+    def __dataframe__(self: Self) -> InterchangeDataFrame:  # pragma: no cover
         return self
 
-    def column_names(self) -> list[str]:
+    def column_names(self: Self) -> list[str]:
         return list(self._df._data.keys())
 
-    def select_columns_by_name(self, columns: list[str]) -> InterchangeDataFrame:
+    def select_columns_by_name(self: Self, columns: list[str]) -> InterchangeDataFrame:
         return InterchangeDataFrame(
             CustomDataFrame(
                 {key: value for key, value in self._df._data.items() if key in columns}
@@ -29,10 +33,10 @@ class InterchangeDataFrame:
 
 
 class CustomDataFrame:
-    def __init__(self, data: dict[str, Any]) -> None:
+    def __init__(self: Self, data: dict[str, Any]) -> None:
         self._data = data
 
-    def __dataframe__(self, *, allow_copy: bool = True) -> InterchangeDataFrame:
+    def __dataframe__(self: Self, *, allow_copy: bool = True) -> InterchangeDataFrame:
         return InterchangeDataFrame(self)
 
 

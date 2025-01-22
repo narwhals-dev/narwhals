@@ -17,9 +17,12 @@ from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -30,7 +33,7 @@ if TYPE_CHECKING:
 
 class SparkLikeLazyFrame:
     def __init__(
-        self,
+        self: Self,
         native_dataframe: DataFrame,
         *,
         backend_version: tuple[int, ...],
@@ -42,38 +45,38 @@ class SparkLikeLazyFrame:
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
+    def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         if self._implementation is Implementation.PYSPARK:
             return self._implementation.to_native_namespace()
 
         msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_namespace__(self) -> SparkLikeNamespace:
+    def __narwhals_namespace__(self: Self) -> SparkLikeNamespace:
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_version(self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self, df: DataFrame) -> Self:
+    def _from_native_frame(self: Self, df: DataFrame) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
-    def collect(self) -> Any:
+    def collect(self: Self) -> PandasLikeDataFrame:
         import pandas as pd  # ignore-banned-import()
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -119,7 +122,7 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(spark_df)
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         return {
             field.name: native_to_narwhals_dtype(
                 dtype=field.dataType, version=self._version
@@ -127,7 +130,7 @@ class SparkLikeLazyFrame:
             for field in self._native_frame.schema
         }
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
     def with_columns(
@@ -162,8 +165,8 @@ class SparkLikeLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         import pyspark.sql.functions as F  # noqa: N812
 
@@ -200,7 +203,7 @@ class SparkLikeLazyFrame:
 
     def unique(
         self: Self,
-        subset: list[str] | None = None,
+        subset: list[str] | None,
         *,
         keep: Literal["any", "none"],
     ) -> Self:
@@ -211,7 +214,7 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
-        self,
+        self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
         left_on: str | list[str] | None,

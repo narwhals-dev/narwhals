@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class PandasLikeSeriesListNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
+    def __init__(self: Self, series: PandasLikeSeries) -> None:
         self._compliant_series = series
 
     def len(self: Self) -> PandasLikeSeries:
