@@ -15,6 +15,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
+from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import get_column_name
 from narwhals.typing import CompliantNamespace
 
@@ -34,6 +35,12 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     ) -> None:
         self._backend_version = backend_version
         self._version = version
+
+    @property
+    def selectors(self: Self) -> SparkLikeSelectorNamespace:
+        return SparkLikeSelectorNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def all(self: Self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:

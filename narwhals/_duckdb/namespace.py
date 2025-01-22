@@ -17,6 +17,7 @@ from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.expr import DuckDBExpr
+from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -43,6 +44,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     ) -> None:
         self._backend_version = backend_version
         self._version = version
+
+    @property
+    def selectors(self: Self) -> DuckDBSelectorNamespace:
+        return DuckDBSelectorNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def all(self: Self) -> DuckDBExpr:
         def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:

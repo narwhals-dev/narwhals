@@ -23,36 +23,28 @@ data = {
 }
 
 
-def test_selectors(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_selectors(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     assert_equal_data(result, expected)
 
 
-def test_numeric(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_numeric(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(numeric() + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     assert_equal_data(result, expected)
 
 
-def test_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_boolean(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(boolean())
     expected = {"d": [True, False, True]}
     assert_equal_data(result, expected)
 
 
-def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_string(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(string())
     expected = {"b": ["a", "b", "c"]}
@@ -67,7 +59,7 @@ def test_categorical(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
@@ -96,7 +88,7 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) and not expected:
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
