@@ -346,14 +346,52 @@ def extract_compliant(
         return other._compliant_series
     return other
 
+def arg_aggregates(arg: IntoExpr | Any) -> bool:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    if isinstance(arg, Expr):
+        return arg._metadata['aggregates']
+    if isinstance(arg, Series):
+        return arg.len() == 1
+    if isinstance(arg, str):
+        # Column name, e.g. 'a', gets treated as `nw.col('a')`,
+        # which doesn't aggregate.
+        return False
+    # Scalar
+    return True
+
+def arg_changes_length(arg: IntoExpr | Any) -> bool:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    if isinstance(arg, Expr):
+        return arg._metadata['changes_length']
+    if isinstance(arg, Series):
+        return True  # safest assumption
+    if isinstance(arg, str):
+        # Column name, e.g. 'a', gets treated as `nw.col('a')`,
+        # which doesn't change length.
+        return False
+    # Scalar
+    return False
+
+def arg_is_order_dependent(arg: IntoExpr | Any) -> bool:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    if isinstance(arg, Expr):
+        return arg._metadata['is_order_dependent']
+    if isinstance(arg, Series):
+        return True  # safest assumption
+    if isinstance(arg, str):
+        # Column name, e.g. 'a', gets treated as `nw.col('a')`,
+        # which doesn't change length.
+        return False
+    # Scalar
+    return False
+
+
 
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
-    # neither of which is order-dependent, so we default to `False`.
-    from narwhals.expr import Expr
-
-    return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
+    return any(arg_is_order_dependent(x) for x in args)
 
 
 def operation_changes_length(*args: IntoExpr | Any) -> bool:
@@ -375,7 +413,8 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     """
     from narwhals.expr import Expr
 
-    n_exprs = len([x for x in args if isinstance(x, Expr)])
+    n_change_length = len([arg_changes_length(x) for x in args])
+    n_exprs = len([x for x in args if isinstance(x, (Expr, str))])
     changes_length = any(
         isinstance(x, Expr) and x._metadata["changes_length"] for x in args
     )
@@ -404,10 +443,6 @@ def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
     # Only the first expression is allowed to produce multiple outputs.
     # oh shoot - do we need to track the number of outputs?
     from narwhals.expr import Expr
-    from narwhals.selectors import Selector
-
-    # if all(isinstance(x, Selector) for x in args):
-    #     return True
 
     n_multi_output = len([x for x in args if isinstance(x, Expr) and x._metadata["is_multi_output"]])
     if n_multi_output > 1:
