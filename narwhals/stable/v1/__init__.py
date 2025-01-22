@@ -885,9 +885,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -901,9 +899,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -918,9 +914,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -942,9 +936,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            self._is_order_dependent,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True})
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -961,9 +953,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            is_order_dependent=True,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
         )
 
     def arg_true(self) -> Self:
@@ -974,9 +964,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
         )
 
     def sample(
@@ -1010,9 +998,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=self._aggregates,
+            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
         )
 
 

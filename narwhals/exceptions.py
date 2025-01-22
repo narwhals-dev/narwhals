@@ -98,6 +98,13 @@ class LengthChangingExprError(ValueError):
         self.message = message
         super().__init__(self.message)
 
+class MultiOutputExprError(ValueError):
+    """Exception raised when trying to combine expressions where one has multiple outputs."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
 
 class UnsupportedDTypeError(ValueError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""

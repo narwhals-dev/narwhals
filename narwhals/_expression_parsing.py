@@ -9,12 +9,12 @@ from typing import Any
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
-from typing import cast
+from typing import cast, TypedDict
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
-from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import LengthChangingExprError, MultiOutputExprError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -42,6 +42,12 @@ if TYPE_CHECKING:
     ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
     T = TypeVar("T")
+
+class ExprMetadata(TypedDict):
+    is_order_dependent: bool
+    changes_length: bool
+    aggregates: bool
+    is_multi_output: bool
 
 
 def evaluate_into_expr(
@@ -383,3 +389,19 @@ def operation_aggregates(*args: IntoExpr | Any) -> bool:
     # expression does not aggregate, then broadcasting will take
     # place and the result will not be an aggregate.
     return all(getattr(x, "_aggregates", True) for x in args)
+
+def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
+    # None of the comparands can be multi-output
+    from narwhals.expr import Expr
+
+    if any(isinstance(x, Expr) and x._metadata['is_multi_output'] for x in args[1:]):
+        msg = (
+            "Multi-output expressions cannot appear in the right-hand-side of\n"
+            "any operation. For example, `nw.col('a', 'b') + nw.col('c')` is \n"
+            "allowed, but not `nw.col('a') + nw.col('b', 'c')`."
+        )
+        raise MultiOutputExprError(msg)
+    return args[0]._metadata['is_multi_output']
+
+def combine_metadata(lhs, *args: IntoExpr | Any) -> ExprMetadata:
+    return ExprMetadata(is_order_dependent=operation_is_order_dependent(lhs, *args), changes_length=operation_changes_length(lhs, *args), aggregates=operation_aggregates(lhs, *args), is_multi_output=operation_is_multi_output(lhs, *args))
