@@ -130,7 +130,7 @@ class PolarsExpr:
         )
 
     def map_batches(
-        self,
+        self: Self,
         function: Callable[..., Self],
         return_dtype: DType | None,
     ) -> Self:
