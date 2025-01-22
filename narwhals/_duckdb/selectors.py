@@ -62,10 +62,6 @@ class DuckDBSelectorNamespace:
             ],
         )
 
-    def categorical(self: Self) -> DuckDBSelector:
-        dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
-
     def string(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])

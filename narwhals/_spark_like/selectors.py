@@ -61,10 +61,6 @@ class SparkLikeSelectorNamespace:
             ],
         )
 
-    def categorical(self: Self) -> SparkLikeSelector:
-        dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
-
     def string(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
