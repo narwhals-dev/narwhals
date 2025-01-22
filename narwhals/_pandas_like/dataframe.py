@@ -732,7 +732,7 @@ class PandasLikeDataFrame:
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
         if copy is None:

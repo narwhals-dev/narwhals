@@ -30,6 +30,7 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
@@ -673,7 +674,7 @@ class PandasLikeSeries(CompliantSeries):
         # sure an appropriate numpy dtype is returned.
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self, dtype: Any, copy: bool | None) -> Any:
+    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF

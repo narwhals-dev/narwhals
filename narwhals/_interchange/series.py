@@ -29,6 +29,7 @@ class InterchangeSeries:
         )
         raise NotImplementedError(msg)
 
+    @property
     def dtype(self: Self) -> DType:
         return map_interchange_dtype_to_narwhals_dtype(
             self._native_series.dtype, version=self._version
