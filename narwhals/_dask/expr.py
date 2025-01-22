@@ -689,7 +689,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(_input: Any, dtype: DType | type[DType]) -> Any:
+        def func(_input: dx.Series, dtype: DType | type[DType]) -> dx.Series:
             dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.astype(dtype)
 

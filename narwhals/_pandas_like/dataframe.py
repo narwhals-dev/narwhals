@@ -31,6 +31,8 @@ from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import numpy as np
@@ -797,11 +799,17 @@ class PandasLikeDataFrame:
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def write_parquet(self: Self, file: Any) -> Any:
+    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         self._native_frame.to_parquet(file)
 
-    def write_csv(self: Self, file: Any = None) -> Any:
-        return self._native_frame.to_csv(file, index=False)
+    @overload
+    def write_csv(self: Self, file: None = None) -> str: ...
+
+    @overload
+    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+
+    def write_csv(self: Self, file: str | Path | BytesIO | None = None) -> str | None:
+        return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:

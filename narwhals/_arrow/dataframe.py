@@ -29,6 +29,8 @@ from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import numpy as np
@@ -565,20 +567,26 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
-    def write_parquet(self: Self, file: Any) -> None:
+    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
         pp.write_table(self._native_frame, file)
 
-    def write_csv(self: Self, file: Any) -> Any:
+    @overload
+    def write_csv(self: Self, file: None = None) -> str: ...
+
+    @overload
+    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+
+    def write_csv(self: Self, file: str | Path | BytesIO | None = None) -> str | None:
         import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
-            return csv_buffer.getvalue().to_pybytes().decode()
-        return pa_csv.write_csv(pa_table, file)
+            return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
+        return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
 
     def is_duplicated(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries

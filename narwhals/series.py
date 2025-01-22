@@ -844,7 +844,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_list()  # type: ignore[no-any-return]
 
-    def mean(self: Self) -> Any:
+    def mean(self: Self) -> float:
         """Reduce this Series to the mean value.
 
         Returns:
@@ -880,9 +880,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_mean(s_pa)
             2.0
         """
-        return self._compliant_series.mean()
+        return self._compliant_series.mean()  # type: ignore[no-any-return]
 
-    def median(self: Self) -> Any:
+    def median(self: Self) -> float:
         """Reduce this Series to the median value.
 
         Notes:
@@ -921,9 +921,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_median(s_pa)
             5.0
         """
-        return self._compliant_series.median()
+        return self._compliant_series.median()  # type: ignore[no-any-return]
 
-    def skew(self: Self) -> Any:
+    def skew(self: Self) -> float | None:
         """Calculate the sample skewness of the Series.
 
         Returns:
@@ -963,9 +963,9 @@ class Series(Generic[IntoSeriesT]):
             The skewness is a measure of the asymmetry of the probability distribution.
             A perfectly symmetric distribution has a skewness of 0.
         """
-        return self._compliant_series.skew()
+        return self._compliant_series.skew()  # type: ignore[no-any-return]
 
-    def count(self: Self) -> Any:
+    def count(self: Self) -> int:
         """Returns the number of non-null elements in the Series.
 
         Returns:
@@ -1001,9 +1001,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_count(s_pa)
             3
         """
-        return self._compliant_series.count()
+        return self._compliant_series.count()  # type: ignore[no-any-return]
 
-    def any(self: Self) -> Any:
+    def any(self: Self) -> bool:
         """Return whether any of the values in the Series are True.
 
         Notes:
@@ -1042,9 +1042,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_any(s_pa)
             True
         """
-        return self._compliant_series.any()
+        return self._compliant_series.any()  # type: ignore[no-any-return]
 
-    def all(self: Self) -> Any:
+    def all(self: Self) -> bool:
         """Return whether all values in the Series are True.
 
         Returns:
@@ -1080,9 +1080,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_all(s_pa)
             False
         """
-        return self._compliant_series.all()
+        return self._compliant_series.all()  # type: ignore[no-any-return]
 
-    def min(self: Self) -> Any:
+    def min(self: Self) -> float:
         """Get the minimal value in this Series.
 
         Returns:
@@ -1118,9 +1118,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_min(s_pa)
             1
         """
-        return self._compliant_series.min()
+        return self._compliant_series.min()  # type: ignore[no-any-return]
 
-    def max(self: Self) -> Any:
+    def max(self: Self) -> float:
         """Get the maximum value in this Series.
 
         Returns:
@@ -1156,7 +1156,7 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_max(s_pa)
             3
         """
-        return self._compliant_series.max()
+        return self._compliant_series.max()  # type: ignore[no-any-return]
 
     def arg_min(self: Self) -> int:
         """Returns the index of the minimum value.
@@ -1228,7 +1228,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.arg_max()  # type: ignore[no-any-return]
 
-    def sum(self: Self) -> Any:
+    def sum(self: Self) -> float:
         """Reduce this Series to the sum value.
 
         Returns:
@@ -1264,9 +1264,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_sum(s_pa)
             6
         """
-        return self._compliant_series.sum()
+        return self._compliant_series.sum()  # type: ignore[no-any-return]
 
-    def std(self: Self, *, ddof: int = 1) -> Any:
+    def std(self: Self, *, ddof: int = 1) -> float:
         """Get the standard deviation of this Series.
 
         Arguments:
@@ -1306,9 +1306,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_std(s_pa)
             1.0
         """
-        return self._compliant_series.std(ddof=ddof)
+        return self._compliant_series.std(ddof=ddof)  # type: ignore[no-any-return]
 
-    def var(self: Self, *, ddof: int = 1) -> Any:
+    def var(self: Self, *, ddof: int = 1) -> float:
         """Get the variance of this Series.
 
         Arguments:
@@ -1345,7 +1345,7 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_var(s_pa)
             1.0
         """
-        return self._compliant_series.var(ddof=ddof)
+        return self._compliant_series.var(ddof=ddof)  # type: ignore[no-any-return]
 
     def clip(
         self: Self,
@@ -3499,7 +3499,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> Any:
+    ) -> float:
         """Get quantile value of the series.
 
         Note:
@@ -3545,7 +3545,7 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_quantile(s_pa)
             [5, 12, 24, 37, 44]
         """
-        return self._compliant_series.quantile(
+        return self._compliant_series.quantile(  # type: ignore[no-any-return]
             quantile=quantile, interpolation=interpolation
         )
 

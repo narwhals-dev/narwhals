@@ -753,8 +753,8 @@ class ArrowSeries(CompliantSeries):
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
         *,
         _return_py_scalar: bool = True,
-    ) -> Any:
-        return maybe_extract_py_scalar(
+    ) -> float:
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[0],
             _return_py_scalar,
         )

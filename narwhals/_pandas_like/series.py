@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -265,10 +266,10 @@ class PandasLikeSeries(CompliantSeries):
             version=self._version,
         )
 
-    def to_list(self: Self) -> Any:
+    def to_list(self: Self) -> list[Any]:
         if self._implementation is Implementation.CUDF:
-            return self._native_series.to_arrow().to_pylist()
-        return self._native_series.to_list()
+            return self._native_series.to_arrow().to_pylist()  # type: ignore[no-any-return]
+        return self._native_series.to_list()  # type: ignore[no-any-return]
 
     def is_between(
         self: Self,
@@ -474,40 +475,40 @@ class PandasLikeSeries(CompliantSeries):
 
     # Reductions
 
-    def any(self: Self) -> Any:
+    def any(self: Self) -> bool:
         ser = self._native_series
-        return ser.any()
+        return ser.any()  # type: ignore[no-any-return]
 
-    def all(self: Self) -> Any:
+    def all(self: Self) -> bool:
         ser = self._native_series
-        return ser.all()
+        return ser.all()  # type: ignore[no-any-return]
 
-    def min(self: Self) -> Any:
+    def min(self: Self) -> float:
         ser = self._native_series
-        return ser.min()
+        return ser.min()  # type: ignore[no-any-return]
 
-    def max(self: Self) -> Any:
+    def max(self: Self) -> float:
         ser = self._native_series
-        return ser.max()
+        return ser.max()  # type: ignore[no-any-return]
 
-    def sum(self: Self) -> Any:
+    def sum(self: Self) -> float:
         ser = self._native_series
-        return ser.sum()
+        return ser.sum()  # type: ignore[no-any-return]
 
-    def count(self: Self) -> Any:
+    def count(self: Self) -> int:
         ser = self._native_series
-        return ser.count()
+        return ser.count()  # type: ignore[no-any-return]
 
-    def mean(self: Self) -> Any:
+    def mean(self: Self) -> float:
         ser = self._native_series
-        return ser.mean()
+        return ser.mean()  # type: ignore[no-any-return]
 
-    def median(self: Self) -> Any:
+    def median(self: Self) -> float:
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
         ser = self._native_series
-        return ser.median()
+        return ser.median()  # type: ignore[no-any-return]
 
     def std(self: Self, *, ddof: int) -> float:
         ser = self._native_series
@@ -668,7 +669,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         return self
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> Any:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
         # pandas used to always return object dtype for nullable dtypes.
         # So, we intercept __array__ and pass to `to_numpy` ourselves to make
         # sure an appropriate numpy dtype is returned.
@@ -795,8 +796,8 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> Any:
-        return self._native_series.quantile(q=quantile, interpolation=interpolation)
+    ) -> float:
+        return self._native_series.quantile(q=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser, mask = broadcast_align_and_extract_native(self, mask)
@@ -866,7 +867,7 @@ class PandasLikeSeries(CompliantSeries):
             self._native_series.clip(lower_bound, upper_bound, **kwargs)
         )
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Array:
         if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 
