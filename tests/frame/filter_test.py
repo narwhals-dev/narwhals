@@ -37,18 +37,7 @@ def test_filter_with_boolean_list(constructor: Constructor) -> None:
 def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
-
-    context = (
-        pytest.raises(
-            ShapeError,
-            match="filter's length: 1 differs from that of the series: 3",
-        )
-        if any(x in str(constructor) for x in ("pandas", "pyarrow", "modin"))
-        else does_not_raise()
-        if "polars" in str(constructor)
-        else pytest.raises(Exception)  # type: ignore[arg-type] # noqa: PT011
-    )
-    with context:
+    with pytest.raises(ShapeError):
         df.filter(nw.col("a").max() > 2).lazy().collect()
 
 

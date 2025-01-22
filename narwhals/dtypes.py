@@ -25,19 +25,19 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
 
 
 class DType:
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self: Self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
     @classmethod
     def is_numeric(cls: type[Self]) -> bool:
         return issubclass(cls, NumericType)
 
-    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash(self.__class__)
 
 
@@ -577,17 +577,17 @@ class Field:
     name: str
     dtype: type[DType] | DType
 
-    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
+    def __init__(self: Self, name: str, dtype: type[DType] | DType) -> None:
         self.name = name
         self.dtype = dtype
 
-    def __eq__(self, other: Field) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: Field) -> bool:  # type: ignore[override]
         return (self.name == other.name) & (self.dtype == other.dtype)
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash((self.name, self.dtype))
 
-    def __repr__(self) -> str:
+    def __repr__(self: Self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.name!r}, {self.dtype})"
 
@@ -616,14 +616,14 @@ class Struct(DType):
     fields: list[Field]
 
     def __init__(
-        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+        self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
             self.fields = [Field(name, dtype) for name, dtype in fields.items()]
         else:
             self.fields = list(fields)
 
-    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # The comparison allows comparing objects to classes, and specific
         # inner types to those without (eg: inner=None). if one of the
         # arguments is not specific about its inner type we infer it
@@ -635,22 +635,22 @@ class Struct(DType):
         else:
             return False
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __iter__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in self.fields:
             yield fld.name, fld.dtype
 
-    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __reversed__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in reversed(self.fields):
             yield fld.name, fld.dtype
 
-    def __repr__(self) -> str:
+    def __repr__(self: Self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({dict(self)})"
 
-    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
+    def to_schema(self: Self) -> OrderedDict[str, DType | type[DType]]:
         """Return Struct dtype as a schema dict.
 
         Returns:
@@ -680,10 +680,10 @@ class List(DType):
        List(String)
     """
 
-    def __init__(self, inner: DType | type[DType]) -> None:
+    def __init__(self: Self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
-    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > list[i64] == list[i64] -> True
@@ -698,10 +698,10 @@ class List(DType):
         else:
             return False
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash((self.__class__, self.inner))
 
-    def __repr__(self) -> str:
+    def __repr__(self: Self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.inner!r})"
 
@@ -731,14 +731,16 @@ class Array(DType):
         Array(Int32, 2)
     """
 
-    def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
+    def __init__(
+        self: Self, inner: DType | type[DType], width: int | None = None
+    ) -> None:
         self.inner = inner
         if width is None:
             error = "`width` must be specified when initializing an `Array`"
             raise TypeError(error)
         self.width = width
 
-    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > array[i64] == array[i64] -> True
@@ -753,10 +755,10 @@ class Array(DType):
         else:
             return False
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash((self.__class__, self.inner, self.width))
 
-    def __repr__(self) -> str:
+    def __repr__(self: Self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.inner!r}, {self.width})"
 

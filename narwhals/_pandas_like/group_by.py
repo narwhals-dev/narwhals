@@ -21,6 +21,8 @@ from narwhals.utils import find_stacklevel
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -42,7 +44,7 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 class PandasLikeGroupBy:
     def __init__(
-        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+        self: Self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
         self._df = df
         self._keys = keys
@@ -80,7 +82,7 @@ class PandasLikeGroupBy:
             )
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoPandasLikeExpr,
         **named_aggs: IntoPandasLikeExpr,
     ) -> PandasLikeDataFrame:
@@ -110,7 +112,7 @@ class PandasLikeGroupBy:
             native_namespace=self._df.__native_namespace__(),
         )
 
-    def _from_native_frame(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
+    def _from_native_frame(self: Self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
@@ -120,7 +122,7 @@ class PandasLikeGroupBy:
             version=self._df._version,
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+    def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -344,11 +346,6 @@ def agg_pandas(  # noqa: PLR0915
         out_names = []
         for expr in exprs:
             results_keys = expr(from_dataframe(df))
-            if not all(len(x) == 1 for x in results_keys):
-                msg = f"Aggregation '{expr._function_name}' failed to aggregate - does your aggregation function return a scalar? \
-                \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
-
-                raise ValueError(msg)
             for result_keys in results_keys:
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
@@ -29,6 +31,9 @@ from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 
 class Datetime(NwDatetime):
     """Data type representing a calendar date and time of day.
@@ -42,7 +47,7 @@ class Datetime(NwDatetime):
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
     """
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash(self.__class__)
 
 
@@ -56,7 +61,7 @@ class Duration(NwDuration):
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
     """
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash(self.__class__)
 
 

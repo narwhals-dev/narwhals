@@ -12,11 +12,11 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
@@ -29,6 +29,8 @@ from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import numpy as np
@@ -311,12 +313,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         for col_value in new_columns:
             col_name = col_value.name
 
-            column = validate_dataframe_comparand(
-                length=length,
-                other=col_value,
-                backend_version=self._backend_version,
-                allow_broadcast=True,
-                method_name="with_columns",
+            column = broadcast_and_extract_dataframe_comparand(
+                length=length, other=col_value, backend_version=self._backend_version
             )
 
             native_frame = (
@@ -494,12 +492,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            mask_native = validate_dataframe_comparand(
-                length=len(self),
-                other=mask,
-                backend_version=self._backend_version,
-                allow_broadcast=False,
-                method_name="filter",
+            mask_native = broadcast_and_extract_dataframe_comparand(
+                length=len(self), other=mask, backend_version=self._backend_version
             )
         return self._from_native_frame(self._native_frame.filter(mask_native))
 
@@ -573,20 +567,26 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
-    def write_parquet(self: Self, file: Any) -> None:
+    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
         pp.write_table(self._native_frame, file)
 
-    def write_csv(self: Self, file: Any) -> Any:
+    @overload
+    def write_csv(self: Self, file: None) -> str: ...
+
+    @overload
+    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+
+    def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
-            return csv_buffer.getvalue().to_pybytes().decode()
-        return pa_csv.write_csv(pa_table, file)
+            return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
+        return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
 
     def is_duplicated(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -639,7 +639,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool = False,
+        maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -666,7 +666,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(self._native_frame[offset::n])
 
     def to_arrow(self: Self) -> pa.Table:

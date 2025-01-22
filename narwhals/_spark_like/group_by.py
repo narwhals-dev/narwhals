@@ -162,10 +162,5 @@ def agg_pyspark(
         )
 
     agg_columns = [col_.alias(name) for name, col_ in simple_aggregations.items()]
-    try:
-        result_simple = grouped.agg(*agg_columns)
-    except ValueError as exc:  # pragma: no cover
-        msg = "Failed to aggregated - does your aggregation function return a scalar? \
-        \n\n Please see: https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
-        raise RuntimeError(msg) from exc
+    result_simple = grouped.agg(*agg_columns)
     return from_dataframe(result_simple)

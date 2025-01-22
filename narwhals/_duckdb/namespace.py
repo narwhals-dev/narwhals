@@ -25,6 +25,7 @@ from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
     import duckdb
+    from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.typing import IntoDuckDBExpr
@@ -37,11 +38,13 @@ def get_column_name(df: DuckDBLazyFrame, column: duckdb.Expression) -> str:
 
 
 class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def all(self) -> DuckDBExpr:
+    def all(self: Self) -> DuckDBExpr:
         def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [ColumnExpression(col_name) for col_name in df.columns]
 
@@ -58,7 +61,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         )
 
     def concat(
-        self,
+        self: Self,
         items: Sequence[DuckDBLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
@@ -80,7 +83,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
         return first._from_native_frame(res)
 
     def concat_str(
-        self,
+        self: Self,
         exprs: Iterable[IntoDuckDBExpr],
         *more_exprs: IntoDuckDBExpr,
         separator: str,
@@ -153,7 +156,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             },
         )
 
-    def all_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+    def all_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -173,7 +176,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+    def any_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -193,7 +196,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+    def max_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -213,7 +216,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+    def min_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -233,7 +236,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
-    def sum_horizontal(self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+    def sum_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -258,8 +261,36 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={"exprs": exprs},
         )
 
+    def mean_horizontal(self: Self, *exprs: IntoDuckDBExpr) -> DuckDBExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            col_name = get_column_name(df, cols[0])
+            return [
+                (
+                    reduce(
+                        operator.add,
+                        (CoalesceOperator(col, ConstantExpression(0)) for col in cols),
+                    )
+                    / reduce(operator.add, (col.isnotnull().cast("int") for col in cols))
+                ).alias(col_name)
+            ]
+
+        return DuckDBExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"exprs": exprs},
+        )
+
     def when(
-        self,
+        self: Self,
         *predicates: IntoDuckDBExpr,
     ) -> DuckDBWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
@@ -268,17 +299,17 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             condition, self._backend_version, returns_scalar=False, version=self._version
         )
 
-    def col(self, *column_names: str) -> DuckDBExpr:
+    def col(self: Self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def nth(self, *column_indices: int) -> DuckDBExpr:
+    def nth(self: Self, *column_indices: int) -> DuckDBExpr:
         return DuckDBExpr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version
         )
 
-    def lit(self, value: Any, dtype: DType | None) -> DuckDBExpr:
+    def lit(self: Self, value: Any, dtype: DType | None) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             if dtype is not None:
                 return [
@@ -300,7 +331,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             kwargs={},
         )
 
-    def len(self) -> DuckDBExpr:
+    def len(self: Self) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [FunctionExpression("count").alias("len")]
 
@@ -319,7 +350,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
 class DuckDBWhen:
     def __init__(
-        self,
+        self: Self,
         condition: DuckDBExpr,
         backend_version: tuple[int, ...],
         then_value: Any = None,
@@ -335,7 +366,7 @@ class DuckDBWhen:
         self._returns_scalar = returns_scalar
         self._version = version
 
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         from narwhals._expression_parsing import parse_into_expr
 
         plx = df.__narwhals_namespace__()
@@ -368,7 +399,7 @@ class DuckDBWhen:
             .alias(value_name)
         ]
 
-    def then(self, value: DuckDBExpr | Any) -> DuckDBThen:
+    def then(self: Self, value: DuckDBExpr | Any) -> DuckDBThen:
         self._then_value = value
 
         return DuckDBThen(
@@ -386,7 +417,7 @@ class DuckDBWhen:
 
 class DuckDBThen(DuckDBExpr):
     def __init__(
-        self,
+        self: Self,
         call: DuckDBWhen,
         *,
         depth: int,
@@ -408,7 +439,7 @@ class DuckDBThen(DuckDBExpr):
         self._returns_scalar = returns_scalar
         self._kwargs = kwargs
 
-    def otherwise(self, value: DuckDBExpr | Any) -> DuckDBExpr:
+    def otherwise(self: Self, value: DuckDBExpr | Any) -> DuckDBExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `DuckDBWhen`, base class has the attribute as
         # only a `Callable`

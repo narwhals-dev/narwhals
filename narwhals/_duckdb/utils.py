@@ -157,9 +157,9 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "FLOAT"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
         return "DOUBLE"
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
+        return "FLOAT"
     if isinstance_or_issubclass(dtype, dtypes.Int64):
         return "BIGINT"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
@@ -195,11 +195,14 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
         return "DATE"
     if isinstance_or_issubclass(dtype, dtypes.List):
-        msg = "todo"
-        raise NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
+        return f"{inner}[]"
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "todo"
-        raise NotImplementedError(msg)
+        inner = ", ".join(
+            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
+            for field in dtype.fields  # type: ignore[union-attr]
+        )
+        return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "todo"
         raise NotImplementedError(msg)

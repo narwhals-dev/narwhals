@@ -7,13 +7,15 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.typing import IntoDuckDBExpr
 
 
 class DuckDBGroupBy:
     def __init__(
-        self,
+        self: Self,
         compliant_frame: DuckDBLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
@@ -25,7 +27,7 @@ class DuckDBGroupBy:
         self._keys = keys
 
     def agg(
-        self,
+        self: Self,
         *aggs: IntoDuckDBExpr,
         **named_aggs: IntoDuckDBExpr,
     ) -> DuckDBLazyFrame:
@@ -46,12 +48,8 @@ class DuckDBGroupBy:
             *self._keys,
             *(x for expr in exprs for x in expr(self._compliant_frame)),
         ]
-        try:
-            return self._compliant_frame._from_native_frame(
-                self._compliant_frame._native_frame.aggregate(
-                    agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
-                )
+        return self._compliant_frame._from_native_frame(
+            self._compliant_frame._native_frame.aggregate(
+                agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
             )
-        except ValueError as exc:  # pragma: no cover
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
+        )

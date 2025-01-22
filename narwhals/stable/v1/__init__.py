@@ -122,51 +122,51 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self) -> type[Series]:
+    def _series(self: Self) -> type[Series]:
         return Series
 
     @property
-    def _lazyframe(self) -> type[LazyFrame[Any]]:
+    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: str) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[str]) -> Self: ...
+    def __getitem__(self: Self, item: Sequence[str]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: slice) -> Self: ...
+    def __getitem__(self: Self, item: slice) -> Self: ...
 
     @overload
-    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
 
-    def __getitem__(self, item: Any) -> Any:
+    def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self) -> LazyFrame[Any]:
+    def lazy(self: Self) -> LazyFrame[Any]:
         """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.
@@ -179,13 +179,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    def to_dict(self: Self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
     @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
     def to_dict(
-        self, *, as_series: bool = True
+        self: Self, *, as_series: bool
+    ) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self: Self, *, as_series: bool = True
     ) -> dict[str, Series] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
@@ -237,10 +239,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     """
 
     @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
+    def _dataframe(self: Self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self, arg: Any) -> Any:
+    def _extract_compliant(self: Self, arg: Any) -> Any:
         # After v1, we raise when passing order-dependent or length-changing
         # expressions to LazyFrame
         from narwhals.dataframe import BaseFrame
@@ -265,7 +267,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             raise TypeError(msg)
         return arg
 
-    def collect(self) -> DataFrame[Any]:
+    def collect(self: Self) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
         Returns:
@@ -322,10 +324,10 @@ class Series(NwSeries[Any]):
     # annotations are correct.
 
     @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
+    def _dataframe(self: Self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def to_frame(self) -> DataFrame[Any]:
+    def to_frame(self: Self) -> DataFrame[Any]:
         """Convert to dataframe.
 
         Returns:
@@ -618,7 +620,7 @@ class Series(NwSeries[Any]):
 
 
 class Expr(NwExpr):
-    def _l1_norm(self) -> Self:
+    def _l1_norm(self: Self) -> Self:
         return super()._taxicab_norm()
 
     def ewm_mean(
@@ -874,7 +876,7 @@ class Expr(NwExpr):
             ddof=ddof,
         )
 
-    def head(self, n: int = 10) -> Self:
+    def head(self: Self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         Arguments:
@@ -890,7 +892,7 @@ class Expr(NwExpr):
             aggregates=self._aggregates,
         )
 
-    def tail(self, n: int = 10) -> Self:
+    def tail(self: Self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -923,7 +925,7 @@ class Expr(NwExpr):
             aggregates=self._aggregates,
         )
 
-    def unique(self, *, maintain_order: bool | None = None) -> Self:
+    def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
         """Return unique values of this expression.
 
         Arguments:
@@ -947,7 +949,7 @@ class Expr(NwExpr):
             aggregates=self._aggregates,
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         Arguments:
@@ -966,7 +968,7 @@ class Expr(NwExpr):
             aggregates=self._aggregates,
         )
 
-    def arg_true(self) -> Self:
+    def arg_true(self: Self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -2010,24 +2012,24 @@ def concat_str(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls, when: NwWhen) -> Self:
-        return cls(*when._predicates)
+    def from_when(cls: type, when: NwWhen) -> When:
+        return cls(*when._predicates)  # type: ignore[no-any-return]
 
-    def then(self, value: Any) -> Then:
+    def then(self: Self, value: Any) -> Then:
         return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Self:
-        return cls(
+    def from_then(cls: type, then: NwThen) -> Then:
+        return cls(  # type: ignore[no-any-return]
             then._to_compliant_expr,
             is_order_dependent=then._is_order_dependent,
             changes_length=then._changes_length,
             aggregates=then._aggregates,
         )
 
-    def otherwise(self, value: Any) -> Expr:
+    def otherwise(self: Self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
 
 

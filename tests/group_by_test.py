@@ -9,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import AnonymousExprError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -45,7 +46,7 @@ def test_invalid_group_by_dask() -> None:
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
 
-    with pytest.raises(ValueError, match="Non-trivial complex aggregation"):
+    with pytest.raises(InvalidOperationError, match="does not aggregate"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     with pytest.raises(
@@ -58,7 +59,7 @@ def test_invalid_group_by_dask() -> None:
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
-    with pytest.raises(ValueError, match="does your"):
+    with pytest.raises(InvalidOperationError, match="does not aggregate"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(
         AnonymousExprError,
@@ -366,25 +367,10 @@ def test_group_by_categorical(
     assert_equal_data(result, data)
 
 
-@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_group_by_shift_raises(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor):
-        # Polars supports all kinds of crazy group-by aggregations, so
-        # we don't check that it errors here.
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        # This operation fails completely in cuDF anyway, we just let raise its own
-        # error.
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
-    with pytest.raises(
-        ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
-    ):
+    with pytest.raises(InvalidOperationError, match="does not aggregate"):
         df.group_by("b").agg(nw.col("a").shift(1))
 
 
