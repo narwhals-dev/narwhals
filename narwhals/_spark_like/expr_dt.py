@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 from pyspark.sql import functions as F  # noqa: N812
 
+from narwhals._spark_like.utils import strptime_to_pyspark_format
+
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
@@ -48,16 +50,9 @@ class SparkLikeExprDateTimeNamespace:
             if format in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S%.f"):
                 return _format_iso_datetime(_input)
 
-            # Standard format conversions
-            java_fmt = (
-                format.replace("%Y", "yyyy")
-                .replace("%m", "MM")
-                .replace("%d", "dd")
-                .replace("%H", "HH")
-                .replace("%M", "mm")
-                .replace("%S", "ss")
-            )
-            return F.date_format(_input, java_fmt)
+            # Convert Python format to PySpark format
+            pyspark_fmt = strptime_to_pyspark_format(format)
+            return F.date_format(_input, pyspark_fmt)
 
         return self._compliant_expr._from_call(
             _to_string,
