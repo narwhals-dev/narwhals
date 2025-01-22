@@ -245,12 +245,12 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     data = {
         "a": [
-            {"movie": "Cars", "rating": 4.5},
-            {"movie": "Toy Story", "rating": 4.9},
+            {"movie ": "Cars", "rating": 4.5},
+            {"movie ": "Toy Story", "rating": 4.9},
         ]
     }
 
-    dtype = nw.Struct([nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())])
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
     result = (
         nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
     )
