@@ -11,23 +11,23 @@ if TYPE_CHECKING:
 
 
 class PandasLikeExprStringNamespace:
-    def __init__(self, expr: PandasLikeExpr) -> None:
+    def __init__(self: Self, expr: PandasLikeExpr) -> None:
         self._compliant_expr = expr
 
     def len_chars(
-        self,
+        self: Self,
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "str", "len_chars"
         )
 
     def replace(
-        self,
+        self: Self,
         pattern: str,
         value: str,
         *,
-        literal: bool = False,
-        n: int = 1,
+        literal: bool,
+        n: int,
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -40,11 +40,11 @@ class PandasLikeExprStringNamespace:
         )
 
     def replace_all(
-        self,
+        self: Self,
         pattern: str,
         value: str,
         *,
-        literal: bool = False,
+        literal: bool,
     ) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
@@ -55,7 +55,7 @@ class PandasLikeExprStringNamespace:
             literal=literal,
         )
 
-    def strip_chars(self, characters: str | None = None) -> PandasLikeExpr:
+    def strip_chars(self: Self, characters: str | None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -63,7 +63,7 @@ class PandasLikeExprStringNamespace:
             characters=characters,
         )
 
-    def starts_with(self, prefix: str) -> PandasLikeExpr:
+    def starts_with(self: Self, prefix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -71,7 +71,7 @@ class PandasLikeExprStringNamespace:
             prefix=prefix,
         )
 
-    def ends_with(self, suffix: str) -> PandasLikeExpr:
+    def ends_with(self: Self, suffix: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -79,7 +79,7 @@ class PandasLikeExprStringNamespace:
             suffix=suffix,
         )
 
-    def contains(self, pattern: str, *, literal: bool) -> PandasLikeExpr:
+    def contains(self: Self, pattern: str, *, literal: bool) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
@@ -88,7 +88,7 @@ class PandasLikeExprStringNamespace:
             literal=literal,
         )
 
-    def slice(self, offset: int, length: int | None = None) -> PandasLikeExpr:
+    def slice(self: Self, offset: int, length: int | None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "str", "slice", offset=offset, length=length
         )
@@ -101,14 +101,14 @@ class PandasLikeExprStringNamespace:
             format=format,
         )
 
-    def to_uppercase(self) -> PandasLikeExpr:
+    def to_uppercase(self: Self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
             "to_uppercase",
         )
 
-    def to_lowercase(self) -> PandasLikeExpr:
+    def to_lowercase(self: Self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr,
             "str",
