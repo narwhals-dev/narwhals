@@ -12,7 +12,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.expr import Expr
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import tupleify
+from narwhals.utils import tupleify, flatten
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
@@ -111,7 +111,8 @@ class GroupBy(Generic[DataFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in aggs) and all(
+        flat_aggs = flatten(aggs)
+        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in flat_aggs) and all(
             isinstance(x, Expr) and x._metadata['aggregates'] for x in named_aggs.values()
         ):
             msg = (
@@ -121,7 +122,7 @@ class GroupBy(Generic[DataFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        aggs, named_aggs = self._df._flatten_and_extract(*flat_aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
@@ -207,7 +208,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in aggs) and all(
+        flat_aggs = flatten(aggs)
+        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in flat_aggs) and all(
             isinstance(x, Expr) and x._metadata['aggregates'] for x in named_aggs.values()
         ):
             msg = (
@@ -217,7 +219,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        aggs, named_aggs = self._df._flatten_and_extract(*flat_aggs, **named_aggs)
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
