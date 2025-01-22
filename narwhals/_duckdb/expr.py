@@ -13,6 +13,7 @@ from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
+from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import binary_operation_returns_scalar
@@ -571,3 +572,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     @property
     def name(self: Self) -> DuckDBExprNameNamespace:
         return DuckDBExprNameNamespace(self)
+
+    @property
+    def list(self: Self) -> DuckDBExprListNamespace:
+        return DuckDBExprListNamespace(self)
