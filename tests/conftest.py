@@ -231,7 +231,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     continue
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
-                constructors_ids.append(constructor)
+            constructors_ids.append(constructor)
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
             raise ValueError(msg)
