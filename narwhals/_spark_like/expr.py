@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import operator
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -17,6 +20,7 @@ from narwhals._spark_like.utils import get_column_name
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
+from narwhals.typing import IntoExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
@@ -315,6 +319,90 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def count(self) -> Self:
         return self._from_call(F.count, "count", returns_scalar=True)
+
+    def drop_nulls(self) -> Self:
+        def _drop_nulls(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            return F.explode(F.filter(F.array(_input), F.isnotnull))
+
+        return self._from_call(_drop_nulls, "drop_nulls", returns_scalar=True)
+
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        def _fill_null(
+            _input: Column,
+            value: Any | None = None,
+            strategy: Literal["forward", "backward"] | None = None,
+            limit: int | None = None,
+        ) -> Column:
+            from pyspark.sql import Window
+            from pyspark.sql import functions as F  # noqa: N812
+
+            if strategy is not None:
+                match strategy:
+                    case "forward":
+                        lower_limit = (
+                            Window.unboundedPreceding if limit is None else -limit
+                        )
+                        window_spec = Window.orderBy(
+                            F.monotonically_increasing_id()
+                        ).rowsBetween(lower_limit, 0)
+                        fill_value = F.last(_input, ignorenulls=True).over(window_spec)
+                    case "backward":
+                        upper_limit = (
+                            Window.unboundedFollowing if limit is None else limit
+                        )
+                        window_spec = Window.orderBy(
+                            F.monotonically_increasing_id()
+                        ).rowsBetween(0, upper_limit)
+                        fill_value = F.first(_input, ignorenulls=True).over(window_spec)
+            else:
+                fill_value = F.lit(value)
+
+            return F.ifnull(_input, fill_value)
+
+        return self._from_call(
+            _fill_null,
+            "fill_null",
+            value=value,
+            strategy=strategy,
+            limit=limit,
+            returns_scalar=True,
+        )
+
+    def filter(
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
+    ) -> Self:
+        def _filter(
+            _input: Column, predicates: Iterable[IntoExpr], constraints: Any
+        ) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+
+            if constraints:
+                predicates = (
+                    *predicates,
+                    *[
+                        operator.eq(F.col(key), value)
+                        for key, value in constraints.items()
+                    ],
+                )
+            query = reduce(operator.and_, predicates)
+            return F.explode(
+                F.filter(F.array(_input), lambda _: query)
+            )  # TODO (unauthored): resolve PySparkValueError: [HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN] Function `<lambda>` should return Column, got SparkLikeExpr.
+
+        return self._from_call(
+            _filter,
+            "filter",
+            predicates=predicates,
+            constraints=constraints,
+            returns_scalar=self._returns_scalar,
+        )
 
     def max(self) -> Self:
         return self._from_call(F.max, "max", returns_scalar=True)
