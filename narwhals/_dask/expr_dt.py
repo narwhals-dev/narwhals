@@ -145,8 +145,8 @@ class DaskExprDateTimeNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
-        def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"] = "us") -> dx.Series:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> DaskExpr:
+        def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"]) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s, self._compliant_expr._version, Implementation.DASK
             )

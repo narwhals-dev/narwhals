@@ -49,7 +49,7 @@ class ArrowSeriesDateTimeNamespace:
 
         return self._compliant_series._from_native_series(result)
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> ArrowSeries:
         s = self._compliant_series._native_series
         dtype = self._compliant_series.dtype
         dtypes = import_dtypes_module(self._compliant_series._version)

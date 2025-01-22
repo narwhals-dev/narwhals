@@ -490,9 +490,9 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def fill_null(
         self: Self,
-        value: Any | None = None,
-        strategy: Literal["forward", "backward"] | None = None,
-        limit: int | None = None,
+        value: Any | None,
+        strategy: Literal["forward", "backward"] | None,
+        limit: int | None,
     ) -> DaskExpr:
         def func(
             _input: dx.Series,

@@ -380,7 +380,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             interpolation=interpolation,
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
     def clip(self: Self, lower_bound: Any | None, upper_bound: Any | None) -> Self:

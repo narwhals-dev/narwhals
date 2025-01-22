@@ -573,12 +573,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         pp.write_table(self._native_frame, file)
 
     @overload
-    def write_csv(self: Self, file: None = None) -> str: ...
+    def write_csv(self: Self, file: None) -> str: ...
 
     @overload
     def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
 
-    def write_csv(self: Self, file: str | Path | BytesIO | None = None) -> str | None:
+    def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
@@ -639,7 +639,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool = False,
+        maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -666,7 +666,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(self._native_frame[offset::n])
 
     def to_arrow(self: Self) -> pa.Table:

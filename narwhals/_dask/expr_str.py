@@ -22,7 +22,7 @@ class DaskExprStringNamespace:
         )
 
     def replace(
-        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self: Self, pattern: str, value: str, *, literal: bool, n: int
     ) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal, n: _input.str.replace(
@@ -36,9 +36,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace_all(
-        self: Self, pattern: str, value: str, *, literal: bool = False
-    ) -> DaskExpr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, value, literal: _input.str.replace(
                 pattern, value, n=-1, regex=not literal
@@ -50,7 +48,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def strip_chars(self: Self, characters: str | None = None) -> DaskExpr:
+    def strip_chars(self: Self, characters: str | None) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, characters: _input.str.strip(characters),
             "strip",
@@ -74,7 +72,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool = False) -> DaskExpr:
+    def contains(self: Self, pattern: str, *, literal: bool) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, pattern, literal: _input.str.contains(
                 pat=pattern, regex=not literal
@@ -85,7 +83,7 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> DaskExpr:
+    def slice(self: Self, offset: int, length: int | None) -> DaskExpr:
         return self._compliant_expr._from_call(
             lambda _input, offset, length: _input.str.slice(
                 start=offset, stop=offset + length if length else None

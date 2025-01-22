@@ -505,10 +505,10 @@ class ArrowSeries(CompliantSeries):
     def value_counts(
         self: Self,
         *,
-        sort: bool = False,
-        parallel: bool = False,
-        name: str | None = None,
-        normalize: bool = False,
+        sort: bool,
+        parallel: bool,
+        name: str | None,
+        normalize: bool,
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -783,9 +783,12 @@ class ArrowSeries(CompliantSeries):
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(name=col_token, normalize=False).filter(
-            plx.col(col_token) == plx.col(col_token).max()
-        )[self.name]
+        return self.value_counts(
+            name=col_token,
+            normalize=False,
+            sort=False,
+            parallel=False,  # parallel is unused
+        ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
 
     def is_finite(self: Self) -> Self:
         return self._from_native_series(pc.is_finite(self._native_series))

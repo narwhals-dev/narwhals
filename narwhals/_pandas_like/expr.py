@@ -338,7 +338,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             self, "replace_strict", old=old, new=new, return_dtype=return_dtype
         )
 
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         return reuse_series_implementation(
             self, "sort", descending=descending, nulls_last=nulls_last
         )
@@ -360,11 +360,11 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -504,7 +504,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def len(self: Self) -> Self:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
     def mode(self: Self) -> Self:
@@ -513,7 +513,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
+        return_dtype: DType | None,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             input_series_list = self._call(df)

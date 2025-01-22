@@ -296,7 +296,7 @@ class PandasLikeDataFrame:
     def rows(
         self: Self,
         *,
-        named: Literal[False] = False,
+        named: Literal[False],
     ) -> list[tuple[Any, ...]]: ...
 
     @overload
@@ -306,9 +306,7 @@ class PandasLikeDataFrame:
         named: bool,
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
-    def rows(
-        self: Self, *, named: bool = False
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
             if self._implementation is Implementation.CUDF:
@@ -523,7 +521,7 @@ class PandasLikeDataFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -700,8 +698,8 @@ class PandasLikeDataFrame:
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "first", "last", "none"],
+        maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -719,7 +717,7 @@ class PandasLikeDataFrame:
     def shape(self: Self) -> tuple[int, int]:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
-    def to_dict(self: Self, *, as_series: bool = False) -> dict[str, Any]:
+    def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
@@ -803,12 +801,12 @@ class PandasLikeDataFrame:
         self._native_frame.to_parquet(file)
 
     @overload
-    def write_csv(self: Self, file: None = None) -> str: ...
+    def write_csv(self: Self, file: None) -> str: ...
 
     @overload
     def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
 
-    def write_csv(self: Self, file: str | Path | BytesIO | None = None) -> str | None:
+    def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
@@ -864,7 +862,7 @@ class PandasLikeDataFrame:
     def clone(self: Self) -> Self:
         return self._from_native_frame(self._native_frame.copy())
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
     def pivot(
@@ -875,7 +873,7 @@ class PandasLikeDataFrame:
         values: str | list[str] | None,
         aggregate_function: Any | None,
         sort_columns: bool,
-        separator: str = "_",
+        separator: str,
     ) -> Self:
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
@@ -969,11 +967,11 @@ class PandasLikeDataFrame:
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         return self._from_native_frame(
             self._native_frame.sample(

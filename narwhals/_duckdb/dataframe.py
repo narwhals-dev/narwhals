@@ -212,7 +212,7 @@ class DuckDBLazyFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -299,8 +299,8 @@ class DuckDBLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):

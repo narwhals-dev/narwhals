@@ -101,9 +101,7 @@ class PandasLikeExprDateTimeNamespace:
             self._compliant_expr, "dt", "convert_time_zone", time_zone=time_zone
         )
 
-    def timestamp(
-        self: Self, time_unit: Literal["ns", "us", "ms"] = "us"
-    ) -> PandasLikeExpr:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "timestamp", time_unit=time_unit
         )

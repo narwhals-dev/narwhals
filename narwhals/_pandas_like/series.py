@@ -244,7 +244,7 @@ class PandasLikeSeries(CompliantSeries):
         )
         return self._from_native_series(ser.astype(dtype))
 
-    def item(self: Self, index: int | None = None) -> Any:
+    def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:
@@ -577,11 +577,11 @@ class PandasLikeSeries(CompliantSeries):
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         ser = self._native_series
         return self._from_native_series(
@@ -750,7 +750,7 @@ class PandasLikeSeries(CompliantSeries):
         res = ~self._native_series.duplicated(keep="last")
         return self._from_native_series(res).alias(self.name)
 
-    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+    def is_sorted(self: Self, *, descending: bool) -> bool:
         if not isinstance(descending, bool):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)

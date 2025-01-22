@@ -165,8 +165,8 @@ class SparkLikeLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         import pyspark.sql.functions as F  # noqa: N812
 
