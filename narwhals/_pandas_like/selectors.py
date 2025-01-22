@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import NoReturn
 
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals.utils import import_dtypes_module
@@ -189,12 +188,3 @@ class PandasSelector(PandasLikeExpr):
             ).all()
             - self
         )
-
-    def __rsub__(self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __rand__(self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __ror__(self, other: Any) -> NoReturn:
-        raise NotImplementedError
