@@ -1082,7 +1082,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.all()  # type: ignore[no-any-return]
 
-    def min(self: Self) -> float:
+    def min(self: Self) -> Any:
         """Get the minimal value in this Series.
 
         Returns:
@@ -1118,9 +1118,9 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_min(s_pa)
             1
         """
-        return self._compliant_series.min()  # type: ignore[no-any-return]
+        return self._compliant_series.min()
 
-    def max(self: Self) -> float:
+    def max(self: Self) -> Any:
         """Get the maximum value in this Series.
 
         Returns:
@@ -1156,7 +1156,7 @@ class Series(Generic[IntoSeriesT]):
             >>> agnostic_max(s_pa)
             3
         """
-        return self._compliant_series.max()  # type: ignore[no-any-return]
+        return self._compliant_series.max()
 
     def arg_min(self: Self) -> int:
         """Returns the index of the minimum value.

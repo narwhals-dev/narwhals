@@ -237,11 +237,11 @@ class ArrowSeries(CompliantSeries):
             pc.approximate_median(self._native_series), _return_py_scalar
         )
 
-    def min(self: Self, *, _return_py_scalar: bool = True) -> int:
-        return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+    def min(self: Self, *, _return_py_scalar: bool = True) -> Any:
+        return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)
 
-    def max(self: Self, *, _return_py_scalar: bool = True) -> int:
-        return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+    def max(self: Self, *, _return_py_scalar: bool = True) -> Any:
+        return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)
 
     def arg_min(self: Self, *, _return_py_scalar: bool = True) -> int:
         index_min = pc.index(self._native_series, pc.min(self._native_series))

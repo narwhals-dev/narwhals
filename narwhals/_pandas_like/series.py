@@ -483,13 +483,13 @@ class PandasLikeSeries(CompliantSeries):
         ser = self._native_series
         return ser.all()  # type: ignore[no-any-return]
 
-    def min(self: Self) -> float:
+    def min(self: Self) -> Any:
         ser = self._native_series
-        return ser.min()  # type: ignore[no-any-return]
+        return ser.min()
 
-    def max(self: Self) -> float:
+    def max(self: Self) -> Any:
         ser = self._native_series
-        return ser.max()  # type: ignore[no-any-return]
+        return ser.max()
 
     def sum(self: Self) -> float:
         ser = self._native_series
