@@ -7,14 +7,16 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
-from typing import cast, TypedDict
+from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
-from narwhals.exceptions import LengthChangingExprError, MultiOutputExprError
+from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import MultiOutputExprError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -42,6 +44,7 @@ if TYPE_CHECKING:
     ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
     T = TypeVar("T")
+
 
 class ExprMetadata(TypedDict):
     is_order_dependent: bool
@@ -348,7 +351,9 @@ def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
     # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
     # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
     # neither of which is order-dependent, so we default to `False`.
-    return any(getattr(x, "_is_order_dependent", False) for x in args)
+    from narwhals.expr import Expr
+
+    return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
 
 
 def operation_changes_length(*args: IntoExpr | Any) -> bool:
@@ -371,7 +376,9 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
 
     n_exprs = len([x for x in args if isinstance(x, Expr)])
-    changes_length = any(isinstance(x, Expr) and x._changes_length for x in args)
+    changes_length = any(
+        isinstance(x, Expr) and x._metadata["changes_length"] for x in args
+    )
     if n_exprs > 1 and changes_length:
         msg = (
             "Found multiple expressions at least one of which changes length.\n"
@@ -388,20 +395,29 @@ def operation_aggregates(*args: IntoExpr | Any) -> bool:
     # which is already length-1, so we default to `True`. If any
     # expression does not aggregate, then broadcasting will take
     # place and the result will not be an aggregate.
-    return all(getattr(x, "_aggregates", True) for x in args)
-
-def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
-    # None of the comparands can be multi-output
     from narwhals.expr import Expr
 
-    if any(isinstance(x, Expr) and x._metadata['is_multi_output'] for x in args[1:]):
+    return all(isinstance(x, Expr) and x._metadata["aggregates"] for x in args)
+
+
+def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
+    # Only the first expression is allowed to produce multiple outputs.
+    from narwhals.expr import Expr
+
+    if any(isinstance(x, Expr) and x._metadata["is_multi_output"] for x in args[1:]):
         msg = (
             "Multi-output expressions cannot appear in the right-hand-side of\n"
             "any operation. For example, `nw.col('a', 'b') + nw.col('c')` is \n"
             "allowed, but not `nw.col('a') + nw.col('b', 'c')`."
         )
         raise MultiOutputExprError(msg)
-    return args[0]._metadata['is_multi_output']
+    return isinstance(args[0], Expr) and args[0]._metadata["is_multi_output"]
 
-def combine_metadata(lhs, *args: IntoExpr | Any) -> ExprMetadata:
-    return ExprMetadata(is_order_dependent=operation_is_order_dependent(lhs, *args), changes_length=operation_changes_length(lhs, *args), aggregates=operation_aggregates(lhs, *args), is_multi_output=operation_is_multi_output(lhs, *args))
+
+def combine_metadata(*args: IntoExpr | Any) -> ExprMetadata:
+    return ExprMetadata(
+        is_order_dependent=operation_is_order_dependent(*args),
+        changes_length=operation_changes_length(*args),
+        aggregates=operation_aggregates(*args),
+        is_multi_output=operation_is_multi_output(*args),
+    )

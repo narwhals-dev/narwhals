@@ -6,6 +6,7 @@ import sys
 import polars as pl
 
 import narwhals as nw
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
 from narwhals.utils import remove_suffix
 
@@ -44,6 +45,12 @@ BASE_DTYPES = {
     "OrderedDict",
     "Mapping",
 }
+PLACEHOLDER_EXPR_METADATA = ExprMetadata(
+    is_order_dependent=False,
+    aggregates=False,
+    changes_length=False,
+    is_multi_output=False,
+)
 
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 
@@ -161,9 +168,7 @@ for namespace in NAMESPACES.difference({"name"}):
 # Expr methods
 expr_methods = [
     i
-    for i in nw.Expr(
-        lambda: 0, is_order_dependent=False, changes_length=False, aggregates=False
-    ).__dir__()
+    for i in nw.Expr(lambda: 0, PLACEHOLDER_EXPR_METADATA).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
@@ -187,12 +192,7 @@ for namespace in NAMESPACES:
     expr_methods = [
         i
         for i in getattr(
-            nw.Expr(
-                lambda: 0,
-                is_order_dependent=False,
-                changes_length=False,
-                aggregates=False,
-            ),
+            nw.Expr(lambda: 0, PLACEHOLDER_EXPR_METADATA),
             namespace,
         ).__dir__()
         if not i[0].isupper() and i[0] != "_"
@@ -236,9 +236,7 @@ if extra := set(documented).difference(dtypes):
 # Check Expr vs Series
 expr = [
     i
-    for i in nw.Expr(
-        lambda: 0, is_order_dependent=False, changes_length=False, aggregates=False
-    ).__dir__()
+    for i in nw.Expr(lambda: 0, PLACEHOLDER_EXPR_METADATA).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 series = [
@@ -260,12 +258,7 @@ for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
         for i in getattr(
-            nw.Expr(
-                lambda: 0,
-                is_order_dependent=False,
-                changes_length=False,
-                aggregates=False,
-            ),
+            nw.Expr(lambda: 0, PLACEHOLDER_EXPR_METADATA),
             namespace,
         ).__dir__()
         if not i[0].isupper() and i[0] != "_"

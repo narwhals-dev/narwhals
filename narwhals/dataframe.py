@@ -3644,7 +3644,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
-            if arg._is_order_dependent:
+            if arg._metadata["is_order_dependent"]:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -3655,7 +3655,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._changes_length:
+            if arg._metadata["changes_length"]:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

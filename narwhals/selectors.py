@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
@@ -54,9 +55,12 @@ def by_dtype(*dtypes: Any) -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 
@@ -102,9 +106,12 @@ def numeric() -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.numeric(),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 
@@ -150,9 +157,12 @@ def boolean() -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.boolean(),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 
@@ -198,9 +208,12 @@ def string() -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.string(),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 
@@ -246,9 +259,12 @@ def categorical() -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.categorical(),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 
@@ -294,9 +310,12 @@ def all() -> Expr:
     """
     return Selector(
         lambda plx: plx.selectors.all(),
-        is_order_dependent=False,
-        changes_length=False,
-        aggregates=False,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
     )
 
 

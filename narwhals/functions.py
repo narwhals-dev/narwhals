@@ -12,10 +12,9 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
-from narwhals._expression_parsing import extract_compliant, combine_metadata
-from narwhals._expression_parsing import operation_aggregates
-from narwhals._expression_parsing import operation_changes_length, ExprMetadata
-from narwhals._expression_parsing import operation_is_order_dependent
+from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import extract_compliant
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -1397,7 +1396,15 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flat_names)
 
-    Expr(func, ExprMetadata(is_order_dependent=False, changes_length=False, aggregates=False, is_multi_output=len(flat_names)>1))
+    return Expr(
+        func,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=len(flat_names) > 1,
+        ),
+    )
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1460,7 +1467,15 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flat_indices)
 
-    Expr(func, ExprMetadata(is_order_dependent=False, changes_length=False, aggregates=False, is_multi_output=len(flat_indices)>1))
+    return Expr(
+        func,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=len(flat_indices) > 1,
+        ),
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1517,10 +1532,15 @@ def all_() -> Expr:
         a: [[2,4,6]]
         b: [[8,10,12]]
     """
-    Expr(lambda plx: plx.all(), ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=False, is_multi_output=True))
+    return Expr(
+        lambda plx: plx.all(),
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=False,
+            is_multi_output=True,
+        ),
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1573,7 +1593,15 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=True)
+    return Expr(
+        func,
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=False,
+        ),
+    )
 
 
 def sum(*columns: str) -> Expr:
@@ -1631,10 +1659,12 @@ def sum(*columns: str) -> Expr:
     """
     return Expr(
         lambda plx: plx.col(*columns).sum(),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=len(columns) > 1,
+        ),
     )
 
 
@@ -1693,10 +1723,12 @@ def mean(*columns: str) -> Expr:
     """
     return Expr(
         lambda plx: plx.col(*columns).mean(),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=len(columns) > 1,
+        ),
     )
 
 
@@ -1757,10 +1789,12 @@ def median(*columns: str) -> Expr:
     """
     return Expr(
         lambda plx: plx.col(*columns).median(),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=len(columns) > 1,
+        ),
     )
 
 
@@ -1819,10 +1853,12 @@ def min(*columns: str) -> Expr:
     """
     return Expr(
         lambda plx: plx.col(*columns).min(),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=len(columns) > 1,
+        ),
     )
 
 
@@ -1881,10 +1917,12 @@ def max(*columns: str) -> Expr:
     """
     return Expr(
         lambda plx: plx.col(*columns).max(),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=len(columns) > 1,
+        ),
     )
 
 
@@ -1951,7 +1989,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.sum_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2021,7 +2059,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.min_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2091,7 +2129,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.max_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2116,9 +2154,7 @@ class When:
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
                 extract_compliant(plx, value)
             ),
-            is_order_dependent=operation_is_order_dependent(*self._predicates, value),
-            changes_length=operation_changes_length(*self._predicates, value),
-            aggregates=operation_aggregates(*self._predicates, value),
+            combine_metadata(*self._predicates, value),
         )
 
 
@@ -2128,9 +2164,7 @@ class Then(Expr):
             lambda plx: self._to_compliant_expr(plx).otherwise(
                 extract_compliant(plx, value)
             ),
-            is_order_dependent=operation_is_order_dependent(self, value),
-            changes_length=operation_changes_length(self, value),
-            aggregates=operation_aggregates(self, value),
+            combine_metadata(self, value),
         )
 
 
@@ -2283,7 +2317,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.all_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2356,10 +2390,12 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-            ExprMetadata(
-                    is_order_dependent=False,
-        changes_length=False,
-        aggregates=True, is_multi_output=len(columns)>1)
+        ExprMetadata(
+            is_order_dependent=False,
+            changes_length=False,
+            aggregates=True,
+            is_multi_output=False,
+        ),
     )
 
 
@@ -2437,7 +2473,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.any_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2507,7 +2543,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.mean_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), 'is_multi_output': False})
+        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
     )
 
 
@@ -2597,7 +2633,5 @@ def concat_str(
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
-        is_order_dependent=operation_is_order_dependent(*flat_exprs, *more_exprs),
-        changes_length=operation_changes_length(*flat_exprs, *more_exprs),
-        aggregates=operation_aggregates(*flat_exprs, *more_exprs),
+        combine_metadata(*flat_exprs, *more_exprs),
     )

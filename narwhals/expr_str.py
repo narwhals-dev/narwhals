@@ -77,9 +77,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.len_chars(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def replace(
@@ -146,9 +144,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def replace_all(
@@ -214,9 +210,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def strip_chars(self: Self, characters: str | None = None) -> ExprT:
@@ -265,9 +259,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def starts_with(self: Self, prefix: str) -> ExprT:
@@ -330,9 +322,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def ends_with(self: Self, suffix: str) -> ExprT:
@@ -395,9 +385,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def contains(self: Self, pattern: str, *, literal: bool = False) -> ExprT:
@@ -476,9 +464,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
                 pattern, literal=literal
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def slice(self: Self, offset: int, length: int | None = None) -> ExprT:
@@ -581,9 +567,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def head(self: Self, n: int = 5) -> ExprT:
@@ -651,9 +635,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def tail(self: Self, n: int = 5) -> ExprT:
@@ -723,9 +705,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=-n, length=None
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
@@ -795,9 +775,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_uppercase(self: Self) -> ExprT:
@@ -862,9 +840,7 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_lowercase(self: Self) -> ExprT:
@@ -924,7 +900,5 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )

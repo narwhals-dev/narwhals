@@ -15,6 +15,7 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -885,7 +886,9 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -899,7 +902,9 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -914,7 +919,9 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -936,7 +943,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata({**self._metadata, 'changes_length': True})
+            ExprMetadata({**self._metadata, "changes_length": True}),
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -953,7 +960,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def arg_true(self) -> Self:
@@ -964,7 +971,9 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     def sample(
@@ -998,7 +1007,9 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
 
@@ -1043,12 +1054,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(
-            obj._to_compliant_expr,
-            is_order_dependent=obj._is_order_dependent,
-            changes_length=obj._changes_length,
-            aggregates=obj._aggregates,
-        )
+        return Expr(obj._to_compliant_expr, obj._metadata)
     return obj
 
 
@@ -2006,12 +2012,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls, then: NwThen) -> Self:
-        return cls(
-            then._to_compliant_expr,
-            is_order_dependent=then._is_order_dependent,
-            changes_length=then._changes_length,
-            aggregates=then._aggregates,
-        )
+        return cls(then._to_compliant_expr, then._metadata)
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
