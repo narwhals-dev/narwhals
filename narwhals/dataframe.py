@@ -1,4 +1,5 @@
 from __future__ import annotations
+from narwhals.expr import Expr
 
 from abc import abstractmethod
 from typing import TYPE_CHECKING
@@ -142,7 +143,7 @@ class BaseFrame(Generic[FrameT]):
     ) -> Self:
         flat_predicates = flatten(predicates)
         if any(
-            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            isinstance(x, Expr) and (x._metadata['aggregates'] or x._metadata['changes_length'])
             for x in flat_predicates
         ):
             msg = "Expressions which aggregate or change length cannot be passed to `filter`."

@@ -10,6 +10,7 @@ from typing import cast
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.expr import Expr
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import tupleify
 
@@ -110,8 +111,8 @@ class GroupBy(Generic[DataFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in aggs) and all(
+            isinstance(x, Expr) and x._metadata['aggregates'] for x in named_aggs.values()
         ):
             msg = (
                 "Found expression which does not aggregate.\n\n"
@@ -206,8 +207,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        if not all(isinstance(x, Expr) and x._metadata['aggregates'] for x in aggs) and all(
+            isinstance(x, Expr) and x._metadata['aggregates'] for x in named_aggs.values()
         ):
             msg = (
                 "Found expression which does not aggregate.\n\n"

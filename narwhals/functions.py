@@ -2140,8 +2140,9 @@ class When:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
         if any(
-            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            x._metadata['aggregates'] or x._metadata['changes_length']
             for x in self._predicates
+            if isinstance(x, Expr)
         ):
             msg = "Expressions which aggregate or change length cannot be passed to `filter`."
             raise ShapeError(msg)

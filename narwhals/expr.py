@@ -46,7 +46,7 @@ class Expr:
             "Narwhals Expr\n"
             f"is_order_dependent: {self._metadata['is_order_dependent']}\n"
             f"changes_length: {self._metadata['changes_length']}\n"
-            f"aggregates: {self._metadata['aggregates']}"
+            f"aggregates: {self._metadata['aggregates']}\n"
             f"is_multi_output: {self._metadata['is_multi_output']}"
         )
 
@@ -520,7 +520,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def all(self) -> Self:
@@ -574,7 +574,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def ewm_mean(
@@ -731,7 +731,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def median(self) -> Self:
@@ -788,7 +788,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def std(self, *, ddof: int = 1) -> Self:
@@ -845,7 +845,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def var(self, *, ddof: int = 1) -> Self:
@@ -903,7 +903,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def map_batches(
@@ -1039,7 +1039,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def sum(self) -> Expr:
@@ -1091,7 +1091,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def min(self) -> Self:
@@ -1145,7 +1145,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def max(self) -> Self:
@@ -1199,7 +1199,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            ExprMetadata({**self._metadata, 'aggregates': True})
+            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
         )
 
     def arg_min(self) -> Self:

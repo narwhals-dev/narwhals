@@ -1,4 +1,5 @@
 from __future__ import annotations
+from narwhals._expression_parsing import extract_compliant
 
 from typing import Any
 
@@ -7,7 +8,40 @@ from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 
-class Selector(Expr): ...
+class Selector(Expr):
+    def __or__(self, other):
+        return Selector(
+            lambda plx: self._to_compliant_expr(plx) | extract_compliant(plx, other),
+            ExprMetadata(
+                is_order_dependent=False,
+                changes_length=False,
+                aggregates=False,
+                is_multi_output=True,
+            ),
+        )
+    def __and__(self, other):
+        return Selector(
+            lambda plx: self._to_compliant_expr(plx) & extract_compliant(plx, other),
+            ExprMetadata(
+                is_order_dependent=False,
+                changes_length=False,
+                aggregates=False,
+                is_multi_output=True,
+            ),
+        )
+    def __sub__(self, other):
+        return Selector(
+            lambda plx: self._to_compliant_expr(plx) - extract_compliant(plx, other),
+            ExprMetadata(
+                is_order_dependent=False,
+                changes_length=False,
+                aggregates=False,
+                is_multi_output=True,
+            ),
+        )
+
+
+
 
 
 def by_dtype(*dtypes: Any) -> Expr:

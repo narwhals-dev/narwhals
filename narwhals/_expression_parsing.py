@@ -397,21 +397,27 @@ def operation_aggregates(*args: IntoExpr | Any) -> bool:
     # place and the result will not be an aggregate.
     from narwhals.expr import Expr
 
-    return all(isinstance(x, Expr) and x._metadata["aggregates"] for x in args)
+    return all(x._metadata["aggregates"] for x in args if isinstance(x, Expr))
 
 
 def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
     # Only the first expression is allowed to produce multiple outputs.
+    # oh shoot - do we need to track the number of outputs?
     from narwhals.expr import Expr
+    from narwhals.selectors import Selector
 
-    if any(isinstance(x, Expr) and x._metadata["is_multi_output"] for x in args[1:]):
+    # if all(isinstance(x, Selector) for x in args):
+    #     return True
+
+    n_multi_output = len([x for x in args if isinstance(x, Expr) and x._metadata["is_multi_output"]])
+    if n_multi_output > 1:
         msg = (
             "Multi-output expressions cannot appear in the right-hand-side of\n"
             "any operation. For example, `nw.col('a', 'b') + nw.col('c')` is \n"
             "allowed, but not `nw.col('a') + nw.col('b', 'c')`."
         )
         raise MultiOutputExprError(msg)
-    return isinstance(args[0], Expr) and args[0]._metadata["is_multi_output"]
+    return n_multi_output > 0
 
 
 def combine_metadata(*args: IntoExpr | Any) -> ExprMetadata:
