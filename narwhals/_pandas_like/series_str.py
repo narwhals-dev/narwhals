@@ -11,16 +11,16 @@ if TYPE_CHECKING:
 
 
 class PandasLikeSeriesStringNamespace:
-    def __init__(self, series: PandasLikeSeries) -> None:
+    def __init__(self: Self, series: PandasLikeSeries) -> None:
         self._compliant_series = series
 
-    def len_chars(self) -> PandasLikeSeries:
+    def len_chars(self: Self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.len()
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self: Self, pattern: str, value: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.replace(
@@ -29,33 +29,33 @@ class PandasLikeSeriesStringNamespace:
         )
 
     def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
+        self: Self, pattern: str, value: str, *, literal: bool
     ) -> PandasLikeSeries:
         return self.replace(pattern, value, literal=literal, n=-1)
 
-    def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+    def strip_chars(self: Self, characters: str | None) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.strip(characters),
         )
 
-    def starts_with(self, prefix: str) -> PandasLikeSeries:
+    def starts_with(self: Self, prefix: str) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.startswith(prefix),
         )
 
-    def ends_with(self, suffix: str) -> PandasLikeSeries:
+    def ends_with(self: Self, suffix: str) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.endswith(suffix),
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> PandasLikeSeries:
+    def contains(self: Self, pattern: str, *, literal: bool) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.contains(
                 pat=pattern, regex=not literal
             )
         )
 
-    def slice(self, offset: int, length: int | None = None) -> PandasLikeSeries:
+    def slice(self: Self, offset: int, length: int | None) -> PandasLikeSeries:
         stop = offset + length if length else None
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.slice(start=offset, stop=stop),
@@ -68,12 +68,12 @@ class PandasLikeSeriesStringNamespace:
             )
         )
 
-    def to_uppercase(self) -> PandasLikeSeries:
+    def to_uppercase(self: Self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.upper(),
         )
 
-    def to_lowercase(self) -> PandasLikeSeries:
+    def to_lowercase(self: Self) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.lower(),
         )

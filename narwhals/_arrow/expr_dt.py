@@ -30,7 +30,7 @@ class ArrowExprDateTimeNamespace:
             self._compliant_expr, "dt", "convert_time_zone", time_zone=time_zone
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "timestamp", time_unit=time_unit
         )

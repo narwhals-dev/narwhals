@@ -6,12 +6,12 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Mapping
-from typing import Sequence, TypedDict
+from typing import Sequence
 
+from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import operation_aggregates
-from narwhals._expression_parsing import operation_changes_length
-from narwhals._expression_parsing import operation_is_order_dependent, ExprMetadata, combine_metadata
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
@@ -23,6 +23,10 @@ from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
 
 if TYPE_CHECKING:
+    from typing import TypeVar
+
+    from typing_extensions import Concatenate
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -30,18 +34,19 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
+    PS = ParamSpec("PS")
+    R = TypeVar("R")
+
 
 class Expr:
     def __init__(
-        self,
-        to_compliant_expr: Callable[[Any], Any],
-        metadata: ExprMetadata
+        self: Self, to_compliant_expr: Callable[[Any], Any], metadata: ExprMetadata
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         self._to_compliant_expr = to_compliant_expr
         self._metadata = metadata
 
-    def __repr__(self) -> str:
+    def __repr__(self: Self) -> str:
         return (
             "Narwhals Expr\n"
             f"is_order_dependent: {self._metadata['is_order_dependent']}\n"
@@ -50,16 +55,15 @@ class Expr:
             f"is_multi_output: {self._metadata['is_multi_output']}"
         )
 
-    def _taxicab_norm(self) -> Self:
+    def _taxicab_norm(self: Self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).abs().sum(), self._metadata
         )
 
     # --- convert ---
-    def alias(self, name: str) -> Self:
+    def alias(self: Self, name: str) -> Self:
         """Rename the expression.
 
         Arguments:
@@ -112,15 +116,19 @@ class Expr:
             c: [[14,15]]
 
         """
-        if self._metadata['is_multi_output']:
+        if self._metadata["is_multi_output"]:
             msg = "Cannot alias multi-output expression. Use `.name.suffix`, `.name.map`"
             raise ValueError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).alias(name),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
         )
 
-    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+    def pipe(
+        self: Self,
+        function: Callable[Concatenate[Self, PS], R],
+        *args: PS.args,
+        **kwargs: PS.kwargs,
+    ) -> R:
         """Pipe function call.
 
         Arguments:
@@ -238,238 +246,209 @@ class Expr:
         """
         _validate_dtype(dtype)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cast(dtype),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).cast(dtype), self._metadata
         )
 
     # --- binary ---
-    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__eq__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ne__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __and__(self, other: Any) -> Self:
+    def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__and__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rand__(self, other: Any) -> Self:
+    def __rand__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__and__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __or__(self, other: Any) -> Self:
+    def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__or__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __ror__(self, other: Any) -> Self:
+    def __ror__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__or__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __add__(self, other: Any) -> Self:
+    def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__add__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __radd__(self, other: Any) -> Self:
+    def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__add__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __sub__(self, other: Any) -> Self:
+    def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__sub__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rsub__(self, other: Any) -> Self:
+    def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__sub__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __truediv__(self, other: Any) -> Self:
+    def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__truediv__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rtruediv__(self, other: Any) -> Self:
+    def __rtruediv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__truediv__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __mul__(self, other: Any) -> Self:
+    def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mul__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rmul__(self, other: Any) -> Self:
+    def __rmul__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__mul__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __le__(self, other: Any) -> Self:
+    def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__le__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __lt__(self, other: Any) -> Self:
+    def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__lt__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __gt__(self, other: Any) -> Self:
+    def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__gt__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __ge__(self, other: Any) -> Self:
+    def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ge__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __pow__(self, other: Any) -> Self:
+    def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__pow__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rpow__(self, other: Any) -> Self:
+    def __rpow__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__pow__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __floordiv__(self, other: Any) -> Self:
+    def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rfloordiv__(self, other: Any) -> Self:
+    def __rfloordiv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__floordiv__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
-    def __mod__(self, other: Any) -> Self:
+    def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mod__(
                 extract_compliant(plx, other)
             ),
-            combine_metadata(self, other)
+            combine_metadata(self, other),
         )
 
-    def __rmod__(self, other: Any) -> Self:
+    def __rmod__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             return plx.lit(extract_compliant(plx, other), dtype=None).__mod__(
                 extract_compliant(plx, self)
             )
 
-        return self.__class__(
-            func,
-            combine_metadata(self, other)
-        )
+        return self.__class__(func, combine_metadata(self, other))
 
     # --- unary ---
-    def __invert__(self) -> Self:
+    def __invert__(self: Self) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__invert__(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).__invert__(), self._metadata
         )
 
-    def any(self) -> Self:
+    def any(self: Self) -> Self:
         """Return whether any of the values in the column are `True`.
 
         Returns:
@@ -520,10 +499,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def all(self) -> Self:
+    def all(self: Self) -> Self:
         """Return whether all values in the column are `True`.
 
         Returns:
@@ -574,7 +553,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
     def ewm_mean(
@@ -677,10 +656,10 @@ class Expr:
                 min_periods=min_periods,
                 ignore_nulls=ignore_nulls,
             ),
-            self._metadata
+            self._metadata,
         )
 
-    def mean(self) -> Self:
+    def mean(self: Self) -> Self:
         """Get mean value.
 
         Returns:
@@ -731,10 +710,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def median(self) -> Self:
+    def median(self: Self) -> Self:
         """Get median value.
 
         Returns:
@@ -788,10 +767,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def std(self, *, ddof: int = 1) -> Self:
+    def std(self: Self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
         Arguments:
@@ -845,10 +824,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def var(self, *, ddof: int = 1) -> Self:
+    def var(self: Self, *, ddof: int = 1) -> Self:
         """Get variance.
 
         Arguments:
@@ -903,11 +882,11 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
     def map_batches(
-        self,
+        self: Self,
         function: Callable[[Any], Self],
         return_dtype: DType | None = None,
     ) -> Self:
@@ -984,8 +963,8 @@ class Expr:
                 is_order_dependent=True,
                 changes_length=True,
                 aggregates=False,
-                is_multi_output=True
-            )
+                is_multi_output=True,
+            ),
         )
 
     def skew(self: Self) -> Self:
@@ -1039,10 +1018,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def sum(self) -> Expr:
+    def sum(self: Self) -> Expr:
         """Return the sum value.
 
         Returns:
@@ -1091,10 +1070,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def min(self) -> Self:
+    def min(self: Self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
         Returns:
@@ -1145,10 +1124,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def max(self) -> Self:
+    def max(self: Self) -> Self:
         """Returns the maximum value(s) from a column(s).
 
         Returns:
@@ -1199,10 +1178,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            ExprMetadata({**self._metadata, 'aggregates': True, 'changes_length': False})
+            ExprMetadata({**self._metadata, "aggregates": True, "changes_length": False}),
         )
 
-    def arg_min(self) -> Self:
+    def arg_min(self: Self) -> Self:
         """Returns the index of the minimum value.
 
         Returns:
@@ -1259,11 +1238,11 @@ class Expr:
                 is_order_dependent=True,
                 changes_length=False,
                 aggregates=True,
-                is_multi_output=self._metadata['is_multi_output']
-            )
+                is_multi_output=self._metadata["is_multi_output"],
+            ),
         )
 
-    def arg_max(self) -> Self:
+    def arg_max(self: Self) -> Self:
         """Returns the index of the maximum value.
 
         Returns:
@@ -1320,11 +1299,11 @@ class Expr:
                 is_order_dependent=True,
                 changes_length=False,
                 aggregates=True,
-                is_multi_output=self._metadata['is_multi_output']
-            )
+                is_multi_output=self._metadata["is_multi_output"],
+            ),
         )
 
-    def count(self) -> Self:
+    def count(self: Self) -> Self:
         """Returns the number of non-null elements in the column.
 
         Returns:
@@ -1375,10 +1354,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            ExprMetadata({**self._metadata, 'changes_length': False, 'aggregates': True})
+            ExprMetadata({**self._metadata, "changes_length": False, "aggregates": True}),
         )
 
-    def n_unique(self) -> Self:
+    def n_unique(self: Self) -> Self:
         """Returns count of unique values.
 
         Returns:
@@ -1427,10 +1406,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            ExprMetadata({**self._metadata, 'changes_length': False, 'aggregates': True})
+            ExprMetadata({**self._metadata, "changes_length": False, "aggregates": True}),
         )
 
-    def unique(self) -> Self:
+    def unique(self: Self) -> Self:
         """Return unique values of this expression.
 
         Returns:
@@ -1481,10 +1460,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata({**self._metadata, 'changes_length': True})
+            ExprMetadata({**self._metadata, "changes_length": True}),
         )
 
-    def abs(self) -> Self:
+    def abs(self: Self) -> Self:
         """Return absolute value of each element.
 
         Returns:
@@ -1536,8 +1515,7 @@ class Expr:
             b: [[3,4]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).abs(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).abs(), self._metadata
         )
 
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
@@ -1600,10 +1578,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
-    def diff(self) -> Self:
+    def diff(self: Self) -> Self:
         """Returns the difference between each element and the previous one.
 
         Returns:
@@ -1669,10 +1647,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
-    def shift(self, n: int) -> Self:
+    def shift(self: Self, n: int) -> Self:
         """Shift values by `n` positions.
 
         Arguments:
@@ -1741,11 +1719,11 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def replace_strict(
-        self,
+        self: Self,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
@@ -1834,10 +1812,10 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             ),
-            self._metadata
+            self._metadata,
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         !!! warning
@@ -1865,7 +1843,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     # --- transform ---
@@ -1943,7 +1921,7 @@ class Expr:
             combine_metadata(self, lower_bound, upper_bound),
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self: Self, other: Any) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
         Arguments:
@@ -2006,13 +1984,13 @@ class Expr:
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     extract_compliant(plx, other)
                 ),
-                combine_metadata(self, other)
+                combine_metadata(self, other),
             )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             raise NotImplementedError(msg)
 
-    def filter(self, *predicates: Any) -> Self:
+    def filter(self: Self, *predicates: Any) -> Self:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
@@ -2076,10 +2054,16 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).filter(
                 *[extract_compliant(plx, pred) for pred in flat_predicates],
             ),
-            ExprMetadata({**combine_metadata(self, *flat_predicates), 'is_order_dependent': operation_is_order_dependent(*flat_predicates), 'changes_length': True})
+            ExprMetadata(
+                {
+                    **combine_metadata(self, *flat_predicates),
+                    "is_order_dependent": operation_is_order_dependent(*flat_predicates),
+                    "changes_length": True,
+                }
+            ),
         )
 
-    def is_null(self) -> Self:
+    def is_null(self: Self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
         Returns:
@@ -2156,11 +2140,10 @@ class Expr:
             b_is_null: [[false,false,true,false,false]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_null(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).is_null(), self._metadata
         )
 
-    def is_nan(self) -> Self:
+    def is_nan(self: Self) -> Self:
         """Indicate which values are NaN.
 
         Returns:
@@ -2224,11 +2207,10 @@ class Expr:
             divided_is_nan: [[true,null,false]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_nan(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).is_nan(), self._metadata
         )
 
-    def arg_true(self) -> Self:
+    def arg_true(self: Self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -2242,11 +2224,13 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     def fill_null(
-        self,
+        self: Self,
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
@@ -2386,11 +2370,11 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).fill_null(
                 value=value, strategy=strategy, limit=limit
             ),
-            self._metadata
+            self._metadata,
         )
 
     # --- partial reduction ---
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self) -> Self:
         """Drop null values.
 
         Returns:
@@ -2449,7 +2433,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            ExprMetadata({**self._metadata, 'changes_length': True})
+            ExprMetadata({**self._metadata, "changes_length": True}),
         )
 
     def sample(
@@ -2490,10 +2474,10 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata({**self._metadata, 'changes_length': True})
+            ExprMetadata({**self._metadata, "changes_length": True}),
         )
 
-    def over(self, *keys: str | Iterable[str]) -> Self:
+    def over(self: Self, *keys: str | Iterable[str]) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
@@ -2581,11 +2565,10 @@ class Expr:
             └─────┴─────┴─────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)), self._metadata
         )
 
-    def is_duplicated(self) -> Self:
+    def is_duplicated(self: Self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
 
         Returns:
@@ -2641,11 +2624,10 @@ class Expr:
             b: [[true,true,false,false]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_duplicated(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).is_duplicated(), self._metadata
         )
 
-    def is_unique(self) -> Self:
+    def is_unique(self: Self) -> Self:
         r"""Return a boolean mask indicating unique values.
 
         Returns:
@@ -2701,11 +2683,10 @@ class Expr:
             b: [[false,false,true,true]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_unique(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).is_unique(), self._metadata
         )
 
-    def null_count(self) -> Self:
+    def null_count(self: Self) -> Self:
         r"""Count null values.
 
         Returns:
@@ -2760,11 +2741,10 @@ class Expr:
             b: [[2]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).null_count(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).null_count(), self._metadata
         )
 
-    def is_first_distinct(self) -> Self:
+    def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
         Returns:
@@ -2821,10 +2801,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
-    def is_last_distinct(self) -> Self:
+    def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
         Returns:
@@ -2881,11 +2861,11 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def quantile(
-        self,
+        self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
@@ -2952,10 +2932,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            ExprMetadata({**self._metadata, 'changes_length': False, 'aggregates': True})
+            ExprMetadata({**self._metadata, "changes_length": False, "aggregates": True}),
         )
 
-    def head(self, n: int = 10) -> Self:
+    def head(self: Self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         !!! warning
@@ -2980,10 +2960,12 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
-    def tail(self, n: int = 10) -> Self:
+    def tail(self: Self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         !!! warning
@@ -3008,10 +2990,12 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
-    def round(self, decimals: int = 0) -> Self:
+    def round(self: Self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
 
         Arguments:
@@ -3075,11 +3059,10 @@ class Expr:
             a: [[1.1,2.6,3.9]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).round(decimals),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).round(decimals), self._metadata
         )
 
-    def len(self) -> Self:
+    def len(self: Self) -> Self:
         r"""Return the number of elements in the column.
 
         Null values count towards the total.
@@ -3136,7 +3119,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            ExprMetadata({**self._metadata, 'changes_length': False, 'aggregates': True})
+            ExprMetadata({**self._metadata, "changes_length": False, "aggregates": True}),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -3165,13 +3148,15 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata({**self._metadata, 'changes_length': True, 'is_order_dependent': True})
+            ExprMetadata(
+                {**self._metadata, "changes_length": True, "is_order_dependent": True}
+            ),
         )
 
     # need to allow numeric typing
     # TODO @aivanoved: make type alias for numeric type
     def clip(
-        self,
+        self: Self,
         lower_bound: IntoExpr | Any | None = None,
         upper_bound: IntoExpr | Any | None = None,
     ) -> Self:
@@ -3313,7 +3298,7 @@ class Expr:
                 extract_compliant(plx, lower_bound),
                 extract_compliant(plx, upper_bound),
             ),
-            ExprMetadata({**combine_metadata(self, lower_bound, upper_bound)})
+            ExprMetadata({**combine_metadata(self, lower_bound, upper_bound)}),
         )
 
     def mode(self: Self) -> Self:
@@ -3370,7 +3355,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            ExprMetadata({**self._metadata, 'changes_length': True})
+            ExprMetadata({**self._metadata, "changes_length": True}),
         )
 
     def is_finite(self: Self) -> Self:
@@ -3432,8 +3417,7 @@ class Expr:
             a: [[false,false,true,null]]
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_finite(),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).is_finite(), self._metadata
         )
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
@@ -3501,7 +3485,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -3569,7 +3553,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -3637,7 +3621,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -3705,7 +3689,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def rolling_sum(
@@ -3800,7 +3784,7 @@ class Expr:
                 min_periods=min_periods,
                 center=center,
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def rolling_mean(
@@ -3895,7 +3879,7 @@ class Expr:
                 min_periods=min_periods,
                 center=center,
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def rolling_var(
@@ -3990,7 +3974,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def rolling_std(
@@ -4088,7 +4072,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     def rank(
@@ -4186,7 +4170,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            metadata=ExprMetadata({**self._metadata, 'is_order_dependent': True})
+            metadata=ExprMetadata({**self._metadata, "is_order_dependent": True}),
         )
 
     @property

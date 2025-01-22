@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     except ModuleNotFoundError:
         import dask_expr as dx
 
+    from typing_extensions import Self
+
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -36,16 +38,18 @@ if TYPE_CHECKING:
 
 class DaskNamespace(CompliantNamespace["dx.Series"]):
     @property
-    def selectors(self) -> DaskSelectorNamespace:
+    def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def all(self) -> DaskExpr:
+    def all(self: Self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [df._native_frame[column_name] for column_name in df.columns]
 
@@ -61,17 +65,17 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={},
         )
 
-    def col(self, *column_names: str) -> DaskExpr:
+    def col(self: Self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def nth(self, *column_indices: int) -> DaskExpr:
+    def nth(self: Self, *column_indices: int) -> DaskExpr:
         return DaskExpr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version
         )
 
-    def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
+    def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 dd.from_pandas(
@@ -98,7 +102,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={},
         )
 
-    def len(self) -> DaskExpr:
+    def len(self: Self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if not df.columns:
                 return [
@@ -122,7 +126,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={},
         )
 
-    def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def all_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -141,7 +145,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def any_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -160,7 +164,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def sum_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -180,7 +184,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def concat(
-        self,
+        self: Self,
         items: Iterable[DaskLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
@@ -234,7 +238,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
         raise NotImplementedError
 
-    def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def mean_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -259,7 +263,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def min_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -279,7 +283,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+    def max_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -300,7 +304,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def when(
-        self,
+        self: Self,
         *predicates: IntoDaskExpr,
     ) -> DaskWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
@@ -310,7 +314,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         )
 
     def concat_str(
-        self,
+        self: Self,
         exprs: Iterable[IntoDaskExpr],
         *more_exprs: IntoDaskExpr,
         separator: str,
@@ -367,7 +371,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
 class DaskWhen:
     def __init__(
-        self,
+        self: Self,
         condition: DaskExpr,
         backend_version: tuple[int, ...],
         then_value: Any = None,
@@ -383,7 +387,7 @@ class DaskWhen:
         self._returns_scalar = returns_scalar
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
+    def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         from narwhals._expression_parsing import parse_into_expr
 
         plx = df.__narwhals_namespace__()
@@ -424,7 +428,7 @@ class DaskWhen:
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
 
-    def then(self, value: DaskExpr | Any) -> DaskThen:
+    def then(self: Self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
 
         return DaskThen(
@@ -442,7 +446,7 @@ class DaskWhen:
 
 class DaskThen(DaskExpr):
     def __init__(
-        self,
+        self: Self,
         call: DaskWhen,
         *,
         depth: int,
@@ -464,7 +468,7 @@ class DaskThen(DaskExpr):
         self._returns_scalar = returns_scalar
         self._kwargs = kwargs
 
-    def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
+    def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `DaskWhen`, base class has the attribute as
         # only a `Callable`

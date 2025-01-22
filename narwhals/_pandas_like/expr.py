@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -67,7 +68,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._version = version
         self._kwargs = kwargs
 
-    def __call__(self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+    def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -80,7 +81,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             ")"
         )
 
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
@@ -158,116 +159,113 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={},
         )
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype)
 
-    def __eq__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
         return reuse_series_implementation(self, "__eq__", other=other)
 
-    def __ne__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
         return reuse_series_implementation(self, "__ne__", other=other)
 
-    def __ge__(self, other: PandasLikeExpr | Any) -> Self:
+    def __ge__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__ge__", other=other)
 
-    def __gt__(self, other: PandasLikeExpr | Any) -> Self:
+    def __gt__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__gt__", other=other)
 
-    def __le__(self, other: PandasLikeExpr | Any) -> Self:
+    def __le__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__le__", other=other)
 
-    def __lt__(self, other: PandasLikeExpr | Any) -> Self:
+    def __lt__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__lt__", other=other)
 
-    def __and__(self, other: PandasLikeExpr | bool | Any) -> Self:
+    def __and__(self: Self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
-    def __or__(self, other: PandasLikeExpr | bool | Any) -> Self:
+    def __or__(self: Self, other: PandasLikeExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
 
-    def __add__(self, other: PandasLikeExpr | Any) -> Self:
+    def __add__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
-    def __sub__(self, other: PandasLikeExpr | Any) -> Self:
+    def __sub__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
-    def __mul__(self, other: PandasLikeExpr | Any) -> Self:
+    def __mul__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
-    def __truediv__(self, other: PandasLikeExpr | Any) -> Self:
+    def __truediv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
-    def __floordiv__(self, other: PandasLikeExpr | Any) -> Self:
+    def __floordiv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
 
-    def __pow__(self, other: PandasLikeExpr | Any) -> Self:
+    def __pow__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
 
-    def __mod__(self, other: PandasLikeExpr | Any) -> Self:
+    def __mod__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
 
     # Unary
-    def __invert__(self) -> Self:
+    def __invert__(self: Self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
     # Reductions
-    def null_count(self) -> Self:
+    def null_count(self: Self) -> Self:
         return reuse_series_implementation(self, "null_count", returns_scalar=True)
 
-    def n_unique(self) -> Self:
+    def n_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
-    def sum(self) -> Self:
+    def sum(self: Self) -> Self:
         return reuse_series_implementation(self, "sum", returns_scalar=True)
 
-    def count(self) -> Self:
+    def count(self: Self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
-    def mean(self) -> Self:
+    def mean(self: Self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
-    def median(self) -> Self:
+    def median(self: Self) -> Self:
         return reuse_series_implementation(self, "median", returns_scalar=True)
 
-    def std(self, *, ddof: int) -> Self:
+    def std(self: Self, *, ddof: int) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
-    def var(self, *, ddof: int) -> Self:
+    def var(self: Self, *, ddof: int) -> Self:
         return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 
-    def any(self) -> Self:
+    def any(self: Self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
 
-    def all(self) -> Self:
+    def all(self: Self) -> Self:
         return reuse_series_implementation(self, "all", returns_scalar=True)
 
-    def max(self) -> Self:
+    def max(self: Self) -> Self:
         return reuse_series_implementation(self, "max", returns_scalar=True)
 
-    def min(self) -> Self:
+    def min(self: Self) -> Self:
         return reuse_series_implementation(self, "min", returns_scalar=True)
 
-    def arg_min(self) -> Self:
+    def arg_min(self: Self) -> Self:
         return reuse_series_implementation(self, "arg_min", returns_scalar=True)
 
-    def arg_max(self) -> Self:
+    def arg_max(self: Self) -> Self:
         return reuse_series_implementation(self, "arg_max", returns_scalar=True)
 
     # Other
 
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
         return reuse_series_implementation(
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_between(
-        self,
+        self: Self,
         lower_bound: Any,
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
@@ -280,38 +278,38 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             closed=closed,
         )
 
-    def is_null(self) -> Self:
+    def is_null(self: Self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
-    def is_nan(self) -> Self:
+    def is_nan(self: Self) -> Self:
         return reuse_series_implementation(self, "is_nan")
 
     def fill_null(
-        self,
-        value: Any | None = None,
-        strategy: Literal["forward", "backward"] | None = None,
-        limit: int | None = None,
+        self: Self,
+        value: Any | None,
+        strategy: Literal["forward", "backward"] | None,
+        limit: int | None,
     ) -> Self:
         return reuse_series_implementation(
             self, "fill_null", value=value, strategy=strategy, limit=limit
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self: Self, other: Any) -> Self:
         return reuse_series_implementation(self, "is_in", other=other)
 
-    def arg_true(self) -> Self:
+    def arg_true(self: Self) -> Self:
         return reuse_series_implementation(self, "arg_true")
 
     def ewm_mean(
-        self,
+        self: Self,
         *,
-        com: float | None = None,
-        span: float | None = None,
-        half_life: float | None = None,
-        alpha: float | None = None,
-        adjust: bool = True,
-        min_periods: int = 1,
-        ignore_nulls: bool = False,
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+        adjust: bool,
+        min_periods: int,
+        ignore_nulls: bool,
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -325,48 +323,48 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
-    def filter(self, *predicates: Any) -> Self:
+    def filter(self: Self, *predicates: IntoPandasLikeExpr) -> Self:
         plx = self.__narwhals_namespace__()
         other = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=other)
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old=old, new=new, return_dtype=return_dtype
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool, nulls_last: bool) -> Self:
         return reuse_series_implementation(
             self, "sort", descending=descending, nulls_last=nulls_last
         )
 
-    def abs(self) -> Self:
+    def abs(self: Self) -> Self:
         return reuse_series_implementation(self, "abs")
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
         return reuse_series_implementation(self, "cum_sum", reverse=reverse)
 
-    def unique(self) -> Self:
+    def unique(self: Self) -> Self:
         return reuse_series_implementation(self, "unique", maintain_order=False)
 
-    def diff(self) -> Self:
+    def diff(self: Self) -> Self:
         return reuse_series_implementation(self, "diff")
 
-    def shift(self, n: int) -> Self:
+    def shift(self: Self, n: int) -> Self:
         return reuse_series_implementation(self, "shift", n=n)
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -377,7 +375,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             seed=seed,
         )
 
-    def alias(self, name: str) -> Self:
+    def alias(self: Self, name: str) -> Self:
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
@@ -469,20 +467,20 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def is_duplicated(self) -> Self:
+    def is_duplicated(self: Self) -> Self:
         return reuse_series_implementation(self, "is_duplicated")
 
-    def is_unique(self) -> Self:
+    def is_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "is_unique")
 
-    def is_first_distinct(self) -> Self:
+    def is_first_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_first_distinct")
 
-    def is_last_distinct(self) -> Self:
+    def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
     def quantile(
-        self,
+        self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
@@ -494,10 +492,10 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             returns_scalar=True,
         )
 
-    def head(self, n: int) -> Self:
+    def head(self: Self, n: int) -> Self:
         return reuse_series_implementation(self, "head", n=n)
 
-    def tail(self, n: int) -> Self:
+    def tail(self: Self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n=n)
 
     def round(self: Self, decimals: int) -> Self:
@@ -506,7 +504,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def len(self: Self) -> Self:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
     def mode(self: Self) -> Self:
@@ -515,7 +513,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
-        return_dtype: DType | None = None,
+        return_dtype: DType | None,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             input_series_list = self._call(df)

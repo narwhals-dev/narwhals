@@ -8,15 +8,16 @@ from duckdb import FunctionExpression
 
 if TYPE_CHECKING:
     import duckdb
+    from typing_extensions import Self
 
     from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBExprStringNamespace:
-    def __init__(self, expr: DuckDBExpr) -> None:
+    def __init__(self: Self, expr: DuckDBExpr) -> None:
         self._compliant_expr = expr
 
-    def starts_with(self, prefix: str) -> DuckDBExpr:
+    def starts_with(self: Self, prefix: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "starts_with", _input, ConstantExpression(prefix)
@@ -25,7 +26,7 @@ class DuckDBExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def ends_with(self, suffix: str) -> DuckDBExpr:
+    def ends_with(self: Self, suffix: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "ends_with", _input, ConstantExpression(suffix)
@@ -34,7 +35,7 @@ class DuckDBExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
+    def contains(self: Self, pattern: str, *, literal: bool) -> DuckDBExpr:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if literal:
                 return FunctionExpression("contains", _input, ConstantExpression(pattern))
@@ -46,7 +47,7 @@ class DuckDBExprStringNamespace:
             func, "contains", returns_scalar=self._compliant_expr._returns_scalar
         )
 
-    def slice(self, offset: int, length: int) -> DuckDBExpr:
+    def slice(self: Self, offset: int, length: int) -> DuckDBExpr:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             return FunctionExpression(
                 "array_slice",
@@ -63,28 +64,28 @@ class DuckDBExprStringNamespace:
             func, "slice", returns_scalar=self._compliant_expr._returns_scalar
         )
 
-    def len_chars(self) -> DuckDBExpr:
+    def len_chars(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("length", _input),
             "len_chars",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def to_lowercase(self) -> DuckDBExpr:
+    def to_lowercase(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("lower", _input),
             "to_lowercase",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def to_uppercase(self) -> DuckDBExpr:
+    def to_uppercase(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("upper", _input),
             "to_uppercase",
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def strip_chars(self, characters: str | None) -> DuckDBExpr:
+    def strip_chars(self: Self, characters: str | None) -> DuckDBExpr:
         import string
 
         return self._compliant_expr._from_call(
@@ -99,9 +100,7 @@ class DuckDBExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> DuckDBExpr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
         if literal is False:
             return self._compliant_expr._from_call(
                 lambda _input: FunctionExpression(
@@ -122,6 +121,8 @@ class DuckDBExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> NoReturn:
+    def replace(
+        self: Self, pattern: str, value: str, *, literal: bool, n: int
+    ) -> NoReturn:
         msg = "`replace` is currently not supported for DuckDB"
         raise NotImplementedError(msg)
