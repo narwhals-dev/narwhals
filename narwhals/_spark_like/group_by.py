@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._spark_like.typing import SparkLikeExpr
     from narwhals.typing import CompliantExpr
 
 
@@ -45,8 +45,8 @@ class SparkLikeLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoSparkLikeExpr,
-        **named_aggs: IntoSparkLikeExpr,
+        *aggs: SparkLikeExpr,
+        **named_aggs: SparkLikeExpr,
     ) -> SparkLikeLazyFrame:
         exprs = parse_into_exprs(
             *aggs,
