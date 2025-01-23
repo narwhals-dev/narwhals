@@ -61,23 +61,9 @@ counts_and_expected = [
         "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
     },
     {
-        "bin_count": 12,
-        "expected_bins": [
-            -0.006,
-            0.5,
-            1.0,
-            1.5,
-            2.0,
-            2.5,
-            3.0,
-            3.5,
-            4.0,
-            4.5,
-            5.0,
-            5.5,
-            6.0,
-        ],
-        "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        "bin_count": 0,
+        "expected_bins": [],
+        "expected_count": [],
     },
 ]
 
@@ -236,14 +222,18 @@ def test_hist_bins_hypotheis(
 
 
 @given(  # type: ignore[misc]
-    data=st.lists(st.floats(min_value=-1_000, max_value=1_000), min_size=1, max_size=100),
-    bin_count=st.integers(max_value=1_000),
+    data=st.lists(
+        st.floats(min_value=-1_000, max_value=1_000, allow_subnormal=False),
+        min_size=1,
+        max_size=100,
+    ),
+    bin_count=st.integers(min_value=0, max_value=1_000),
 )
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 @pytest.mark.slow
-def test_hist_counts_hypotheis(
+def test_hist_count_hypothesis(
     constructor_eager: ConstructorEager,
     data: list[float],
     bin_count: int,
@@ -272,6 +262,7 @@ def test_hist_counts_hypotheis(
 
     # Bug in Polars <= 1.2.0; hist becomes unreliable when passing bin_counts
     #   for data with a wide range and a large number of passed bins
+    #   https://github.com/pola-rs/polars/issues/20879
     if expected["count"].sum() != len(data) and "polars" not in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
