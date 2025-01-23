@@ -2629,21 +2629,14 @@ def concat_str(
         ----
         full_sentence: [["2 dogs play","4 cats swim",null]]
     """
-    flat_exprs = flatten([exprs])
+    exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            [
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
-                for v in flat_exprs
-            ],
-            *[
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
-                for v in more_exprs
-            ],
+            *[extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs],
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
-        is_order_dependent=operation_is_order_dependent(*flat_exprs, *more_exprs),
-        changes_length=operation_changes_length(*flat_exprs, *more_exprs),
-        aggregates=operation_aggregates(*flat_exprs, *more_exprs),
+        is_order_dependent=operation_is_order_dependent(*exprs),
+        changes_length=operation_changes_length(*exprs),
+        aggregates=operation_aggregates(*exprs),
     )

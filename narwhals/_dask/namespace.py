@@ -19,7 +19,6 @@ from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals.typing import CompliantNamespace
 
@@ -302,20 +301,13 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def concat_str(
         self: Self,
-        exprs: Iterable[DaskExpr],
-        *more_exprs: DaskExpr,
+        *exprs: DaskExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> DaskExpr:
-        # this can be simplified, don't need parse_into_exprs
-        parsed_exprs = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
-        ]
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = (s.astype(str) for _expr in parsed_exprs for s in _expr(df))
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
+            series = (s.astype(str) for _expr in exprs for s in _expr(df))
+            null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
@@ -341,16 +333,15 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
         return DaskExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={
                 "exprs": exprs,
-                "more_exprs": more_exprs,
                 "separator": separator,
                 "ignore_nulls": ignore_nulls,
             },

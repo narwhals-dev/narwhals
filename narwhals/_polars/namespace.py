@@ -151,8 +151,7 @@ class PolarsNamespace:
 
     def concat_str(
         self: Self,
-        exprs: Iterable[IntoPolarsExpr],
-        *more_exprs: IntoPolarsExpr,
+        *exprs: IntoPolarsExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> PolarsExpr:
@@ -162,10 +161,7 @@ class PolarsNamespace:
 
         pl_exprs: list[pl.Expr] = [
             expr._native_expr  # type: ignore[attr-defined]
-            for expr in (
-                *parse_into_exprs(*exprs, namespace=self),
-                *parse_into_exprs(*more_exprs, namespace=self),
-            )
+            for expr in (*parse_into_exprs(*exprs, namespace=self),)
         ]
 
         if self._backend_version < (0, 20, 6):

@@ -377,14 +377,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def concat_str(
         self: Self,
-        exprs: Iterable[IntoPandasLikeExpr],
-        *more_exprs: IntoPandasLikeExpr,
+        *exprs: IntoPandasLikeExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
         ]
         dtypes = import_dtypes_module(self._version)
 
@@ -429,7 +427,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             output_names=reduce_output_names(parsed_exprs),
             kwargs={
                 "exprs": exprs,
-                "more_exprs": more_exprs,
                 "separator": separator,
                 "ignore_nulls": ignore_nulls,
             },

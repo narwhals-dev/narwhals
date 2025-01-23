@@ -361,14 +361,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def concat_str(
         self: Self,
-        exprs: Iterable[IntoArrowExpr],
-        *more_exprs: IntoArrowExpr,
+        *exprs: IntoArrowExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
         ]
         dtypes = import_dtypes_module(self._version)
 
@@ -399,7 +397,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             output_names=reduce_output_names(parsed_exprs),
             kwargs={
                 "exprs": exprs,
-                "more_exprs": more_exprs,
                 "separator": separator,
                 "ignore_nulls": ignore_nulls,
             },
