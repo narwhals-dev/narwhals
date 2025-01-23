@@ -143,20 +143,23 @@ class BaseFrame(Generic[FrameT]):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
-        exprs = tuple(flatten(exprs))
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
+        flat_exprs = tuple(flatten(exprs))
+        if flat_exprs and all(isinstance(x, str) for x in flat_exprs) and not named_exprs:
             # fast path!
             try:
                 return self._from_compliant_dataframe(
-                    self._compliant_frame.simple_select(*exprs),
+                    self._compliant_frame.simple_select(*flat_exprs),
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
-                raise ColumnNotFoundError(msg) from e
+                available_columns = self.columns
+                missing_columns = [x for x in flat_exprs if x not in available_columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns, available_columns
+                ) from e
 
         compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
-            *exprs, **named_exprs
+            *flat_exprs, **named_exprs
         )
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
