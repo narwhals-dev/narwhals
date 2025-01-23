@@ -75,7 +75,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def _flatten_and_extract(
-        self, *exprs: IntoExpr | Any, **named_exprs: IntoExpr | Any
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         plx = self.__narwhals_namespace__()
