@@ -135,7 +135,7 @@ def agg_dask(
     """
     if not exprs:
         # No aggregation provided
-        return df.select(*keys).unique(subset=keys)
+        return df.simple_select(*keys).unique(subset=keys)
 
     all_simple_aggs = True
     for expr in exprs:

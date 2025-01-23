@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._dask.typing import IntoDaskExpr
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -115,11 +114,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
         )
 
-    def select(
-        self: Self,
-        *exprs: IntoDaskExpr,
-        **named_exprs: IntoDaskExpr,
-    ) -> Self:
+    def select(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_series:
