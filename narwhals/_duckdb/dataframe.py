@@ -33,8 +33,10 @@ if TYPE_CHECKING:
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
 
+from narwhals.typing import CompliantLazyFrame
 
-class DuckDBLazyFrame:
+
+class DuckDBLazyFrame(CompliantLazyFrame):
     _implementation = Implementation.DUCKDB
 
     def __init__(

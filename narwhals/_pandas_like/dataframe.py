@@ -46,8 +46,11 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
-class PandasLikeDataFrame:
+
+class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,

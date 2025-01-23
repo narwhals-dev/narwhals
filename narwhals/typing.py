@@ -59,6 +59,14 @@ class CompliantDataFrame(Protocol):
     ) -> CompliantDataFrame: ...  # `select` where all args are column names
 
 
+class CompliantLazyFramme(Protocol):
+    def __narwhals_lazyframe__(self) -> CompliantDataFrame: ...
+    def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantLazyFrame: ...  # `select` where all args are column names
+
+
 class CompliantLazyFrame(Protocol):
     def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
     def __narwhals_namespace__(self) -> Any: ...

@@ -26,9 +26,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+from narwhals.typing import CompliantLazyFrame
 
 
-class SparkLikeLazyFrame:
+class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
         native_dataframe: DataFrame,
