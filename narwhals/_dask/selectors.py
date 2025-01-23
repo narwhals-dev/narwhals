@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import NoReturn
 
 from narwhals._dask.expr import DaskExpr
 from narwhals.utils import import_dtypes_module
@@ -186,12 +185,3 @@ class DaskSelector(DaskExpr):
             ).all()
             - self
         )
-
-    def __rsub__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __rand__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __ror__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
