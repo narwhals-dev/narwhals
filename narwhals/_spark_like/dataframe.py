@@ -85,11 +85,8 @@ class SparkLikeLazyFrame:
             version=self._version,
         )
 
-    def simple_select(
-        self: Self,
-        *exprs: str,
-    ) -> Self:
-        return self._from_native_frame(self._native_frame.select(*exprs))
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(*column_names))
 
     def select(
         self: Self,
