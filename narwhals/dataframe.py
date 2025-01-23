@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import IntoCompliantExpr
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
@@ -70,28 +71,29 @@ class BaseFrame(Generic[FrameT]):
     def _from_compliant_dataframe(self: Self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
-            df,
-            level=self._level,
+            df, level=self._level
         )
 
     def _flatten_parse_col_names_into_expr_and_extract(
         self, *exprs: IntoExpr | Any, **named_exprs: IntoExpr | Any
-    ) -> Any:
+    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         plx = self.__narwhals_namespace__()
-        exprs = tuple(
+        compliant_exprs = tuple(
             plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
             for expr in flatten(exprs)
         )
-        named_exprs = {
+        compliant_named_exprs = {
             key: plx.col(value)
             if isinstance(value, str)
             else self._extract_compliant(value)
             for key, value in named_exprs.items()
         }
-        return exprs, named_exprs
+        return compliant_exprs, compliant_named_exprs
 
-    def _flatten_and_extract(self: Self, *args: Any, **kwargs: Any) -> Any:
+    def _flatten_and_extract(
+        self: Self, *args: Any, **kwargs: Any
+    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
         args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
@@ -136,11 +138,11 @@ class BaseFrame(Generic[FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        exprs, named_exprs = self._flatten_parse_col_names_into_expr_and_extract(
-            *exprs, **named_exprs
+        compliant_exprs, compliant_named_exprs = (
+            self._flatten_parse_col_names_into_expr_and_extract(*exprs, **named_exprs)
         )
         return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*exprs, **named_exprs),
+            self._compliant_frame.with_columns(*compliant_exprs, **compliant_named_exprs),
         )
 
     def select(
@@ -148,23 +150,23 @@ class BaseFrame(Generic[FrameT]):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
-        flat_exprs = list(flatten(exprs))
-        if flat_exprs and all(isinstance(x, str) for x in flat_exprs) and not named_exprs:
+        exprs = tuple(flatten(exprs))
+        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # fast path!
             try:
                 return self._from_compliant_dataframe(
-                    self._compliant_frame.simple_select(*flat_exprs),
+                    self._compliant_frame.simple_select(*exprs),
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
 
-        flat_exprs, named_exprs = self._flatten_parse_col_names_into_expr_and_extract(
-            *flat_exprs, **named_exprs
+        compliant_exprs, compliant_named_exprs = (
+            self._flatten_parse_col_names_into_expr_and_extract(*exprs, **named_exprs)
         )
         return self._from_compliant_dataframe(
-            self._compliant_frame.select(*flat_exprs, **named_exprs),
+            self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
         )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:

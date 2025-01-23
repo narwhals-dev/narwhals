@@ -18,8 +18,6 @@ from narwhals.exceptions import LengthChangingExprError
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.typing import CompliantDataFrame
@@ -28,12 +26,8 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
+    from narwhals.typing import IntoCompliantExpr
     from narwhals.typing import IntoExpr
-
-    IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
-    )
-    CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr[Any])
 
     ArrowOrPandasLikeExpr = TypeVar(
         "ArrowOrPandasLikeExpr", bound=Union[ArrowExpr, PandasLikeExpr]

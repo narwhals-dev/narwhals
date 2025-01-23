@@ -122,9 +122,11 @@ class GroupBy(Generic[DataFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        compliant_aggs, compliant_named_aggs = self._df._flatten_and_extract(
+            *aggs, **named_aggs
+        )
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*compliant_aggs, **compliant_named_aggs),
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
@@ -218,7 +220,9 @@ class LazyGroupBy(Generic[LazyFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        compliant_aggs, compliant_named_aggs = self._df._flatten_and_extract(
+            *aggs, **named_aggs
+        )
         return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*compliant_aggs, **compliant_named_aggs),
         )

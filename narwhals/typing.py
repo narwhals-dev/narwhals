@@ -95,6 +95,11 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     def __pow__(self, other: Any) -> Self: ...
 
 
+IntoCompliantExpr: TypeAlias = (
+    CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
+)
+
+
 class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
     def lit(
