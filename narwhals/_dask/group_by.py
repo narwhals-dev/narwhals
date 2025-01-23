@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.typing import IntoDaskExpr
+    from narwhals._dask.expr import DaskExpr
     from narwhals.typing import CompliantExpr
 
 
@@ -89,8 +89,8 @@ class DaskLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoDaskExpr,
-        **named_aggs: IntoDaskExpr,
+        *aggs: DaskExpr,
+        **named_aggs: DaskExpr,
     ) -> DaskLazyFrame:
         exprs = parse_into_exprs(
             *aggs,

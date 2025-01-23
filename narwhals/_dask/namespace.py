@@ -126,19 +126,17 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={},
         )
 
-    def all_horizontal(self: Self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
+            series = [s for _expr in exprs for s in _expr(df)]
             return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
 
         return DaskExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -305,7 +303,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def when(
         self: Self,
-        *predicates: IntoDaskExpr,
+        *predicates: DaskExpr,
     ) -> DaskWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
@@ -315,11 +313,12 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def concat_str(
         self: Self,
-        exprs: Iterable[IntoDaskExpr],
-        *more_exprs: IntoDaskExpr,
+        exprs: Iterable[DaskExpr],
+        *more_exprs: DaskExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> DaskExpr:
+        # this can be simplified, don't need parse_into_exprs
         parsed_exprs = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
