@@ -1991,8 +1991,8 @@ class Expr:
         """Check if this expression is between the given lower and upper bounds.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are interpreted as column names.
+            upper_bound: Upper bound value. String literals are interpreted as column names.
             closed: Define which sides of the interval are closed (inclusive).
 
         Returns:
