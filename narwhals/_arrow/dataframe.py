@@ -3,7 +3,6 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
@@ -21,7 +20,6 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -292,6 +290,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(list(column_names)))
+
     def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
@@ -405,21 +406,19 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
 
         if isinstance(descending, bool):
             order = "descending" if descending else "ascending"
-            sorting = [(key, order) for key in flat_keys]
+            sorting = [(key, order) for key in by]
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
-                for key, is_descending in zip(flat_keys, descending)
+                for key, is_descending in zip(by, descending)
             ]
 
         null_placement = "at_end" if nulls_last else "at_start"
@@ -663,7 +662,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return self._from_native_frame(pc.take(df, keep_idx))
 
-        keep_idx = self.select(*subset).is_unique()
+        keep_idx = self.simple_select(*subset).is_unique()
         return self.filter(keep_idx)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:

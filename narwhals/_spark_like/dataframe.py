@@ -3,7 +3,6 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -11,7 +10,6 @@ from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -26,7 +24,6 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -90,8 +87,8 @@ class SparkLikeLazyFrame:
 
     def select(
         self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
+        **named_exprs: SparkLikeExpr,
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple select
@@ -135,8 +132,8 @@ class SparkLikeLazyFrame:
 
     def with_columns(
         self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
+        **named_exprs: SparkLikeExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
@@ -163,16 +160,14 @@ class SparkLikeLazyFrame:
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
         import pyspark.sql.functions as F  # noqa: N812
 
-        flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):
-            descending = [descending] * len(flat_by)
+            descending = [descending] * len(by)
 
         if nulls_last:
             sort_funcs = (
@@ -183,7 +178,7 @@ class SparkLikeLazyFrame:
                 F.desc_nulls_first if d else F.asc_nulls_first for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:

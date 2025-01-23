@@ -17,7 +17,7 @@ def test_invalid() -> None:
     df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
-    with pytest.raises(TypeError, match="Perhaps you:"):
+    with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]

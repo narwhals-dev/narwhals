@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from duckdb import ColumnExpression
-
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
@@ -18,7 +16,6 @@ if TYPE_CHECKING:
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
-    from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.utils import Version
 
 
@@ -52,15 +49,13 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
 
 def parse_exprs_and_named_exprs(
     df: DuckDBLazyFrame,
-    *exprs: IntoDuckDBExpr,
-    **named_exprs: IntoDuckDBExpr,
+    *exprs: DuckDBExpr,
+    **named_exprs: DuckDBExpr,
 ) -> dict[str, duckdb.Expression]:
     result_columns: dict[str, list[duckdb.Expression]] = {}
     for expr in exprs:
         column_list = _columns_from_expr(df, expr)
-        if isinstance(expr, str):  # pragma: no cover
-            output_names = [expr]
-        elif expr._output_names is None:
+        if expr._output_names is None:
             output_names = [
                 get_column_name(df, col, returns_scalar=expr._returns_scalar)
                 for col in column_list
@@ -78,11 +73,9 @@ def parse_exprs_and_named_exprs(
 
 
 def _columns_from_expr(
-    df: DuckDBLazyFrame, expr: IntoDuckDBExpr
+    df: DuckDBLazyFrame, expr: DuckDBExpr
 ) -> Sequence[duckdb.Expression]:
-    if isinstance(expr, str):  # pragma: no cover
-        return [ColumnExpression(expr)]
-    elif hasattr(expr, "__narwhals_expr__"):
+    if hasattr(expr, "__narwhals_expr__"):
         col_output_list = expr._call(df)
         if expr._output_names is not None and (
             len(col_output_list) != len(expr._output_names)

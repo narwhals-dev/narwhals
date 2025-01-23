@@ -93,7 +93,7 @@ class ArrowGroupBy:
                             table.filter(pc.equal(table[col_token], v)).drop([col_token])
                         )
                     )
-                    .select(*self._keys)
+                    .simple_select(*self._keys)
                     .head(1)
                     .iter_rows(named=False, buffer_size=512)
                 ),

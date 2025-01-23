@@ -6,7 +6,6 @@ from typing import Any
 
 from pyspark.sql import functions as F  # noqa: N812
 
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
     from pyspark.sql import types as pyspark_types
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -114,30 +113,23 @@ def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
     return str(df._native_frame.select(column).columns[0])
 
 
-def _columns_from_expr(df: SparkLikeLazyFrame, expr: IntoSparkLikeExpr) -> list[Column]:
-    if isinstance(expr, str):  # pragma: no cover
-        return [F.col(expr)]
-    elif hasattr(expr, "__narwhals_expr__"):
-        col_output_list = expr._call(df)
-        if expr._output_names is not None and (
-            len(col_output_list) != len(expr._output_names)
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
-        return col_output_list
-    else:
-        raise InvalidIntoExprError.from_invalid_type(type(expr))
+def _columns_from_expr(df: SparkLikeLazyFrame, expr: SparkLikeExpr) -> list[Column]:
+    col_output_list = expr._call(df)
+    if expr._output_names is not None and (
+        len(col_output_list) != len(expr._output_names)
+    ):  # pragma: no cover
+        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        raise AssertionError(msg)
+    return col_output_list
 
 
 def parse_exprs_and_named_exprs(
-    df: SparkLikeLazyFrame, *exprs: IntoSparkLikeExpr, **named_exprs: IntoSparkLikeExpr
+    df: SparkLikeLazyFrame, *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
 ) -> dict[str, Column]:
     result_columns: dict[str, list[Column]] = {}
     for expr in exprs:
         column_list = _columns_from_expr(df, expr)
-        if isinstance(expr, str):  # pragma: no cover
-            output_names = [expr]
-        elif expr._output_names is None:
+        if expr._output_names is None:
             output_names = [get_column_name(df, col) for col in column_list]
         else:
             output_names = expr._output_names

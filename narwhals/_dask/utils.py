@@ -51,8 +51,6 @@ def parse_exprs_and_named_exprs(
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
-        elif isinstance(expr, str):
-            _results = [df._native_frame[expr]]
         else:
             raise InvalidIntoExprError.from_invalid_type(type(expr))
         return_scalar = getattr(expr, "_returns_scalar", False)

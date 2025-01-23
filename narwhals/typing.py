@@ -54,6 +54,9 @@ class CompliantSeries(Protocol):
 class CompliantDataFrame(Protocol):
     def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantDataFrame: ...  # `select` where all args are column names
 
 
 class CompliantLazyFrame(Protocol):

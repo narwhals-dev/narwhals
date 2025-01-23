@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantNamespace
+    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
@@ -69,6 +70,19 @@ class Expr:
             self._changes_length,
             self._aggregates,
         )
+
+    def _parse_column_name_into_expr(self, column_name: Self | str) -> Self:
+        if isinstance(column_name, str):
+
+            def func(
+                plx: CompliantNamespace[CompliantSeriesT_co],
+            ) -> CompliantExpr[CompliantSeriesT_co]:
+                return plx.col(column_name)
+
+            return self.__class__(
+                func, is_order_dependent=False, changes_length=False, aggregates=False
+            )
+        return column_name
 
     # --- convert ---
     def alias(self: Self, name: str) -> Self:
@@ -264,7 +278,7 @@ class Expr:
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__eq__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -274,7 +288,7 @@ class Expr:
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ne__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -284,7 +298,7 @@ class Expr:
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__and__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -293,9 +307,9 @@ class Expr:
 
     def __rand__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__and__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__and__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -307,7 +321,7 @@ class Expr:
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__or__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -316,9 +330,9 @@ class Expr:
 
     def __ror__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__or__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__or__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -330,7 +344,7 @@ class Expr:
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__add__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -339,9 +353,9 @@ class Expr:
 
     def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__add__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__add__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -353,7 +367,7 @@ class Expr:
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -362,9 +376,9 @@ class Expr:
 
     def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__sub__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__sub__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -376,7 +390,7 @@ class Expr:
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__truediv__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -385,9 +399,9 @@ class Expr:
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__truediv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__truediv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -399,7 +413,7 @@ class Expr:
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mul__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -408,9 +422,9 @@ class Expr:
 
     def __rmul__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mul__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mul__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -422,7 +436,7 @@ class Expr:
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__le__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -432,7 +446,7 @@ class Expr:
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__lt__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -442,7 +456,7 @@ class Expr:
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__gt__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -452,7 +466,7 @@ class Expr:
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ge__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -462,7 +476,7 @@ class Expr:
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__pow__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -471,9 +485,9 @@ class Expr:
 
     def __rpow__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__pow__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__pow__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -485,7 +499,7 @@ class Expr:
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -494,9 +508,9 @@ class Expr:
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__floordiv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__floordiv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -508,7 +522,7 @@ class Expr:
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mod__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -517,9 +531,9 @@ class Expr:
 
     def __rmod__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mod__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mod__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -2035,8 +2049,8 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_between(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
                 closed,
             ),
             is_order_dependent=operation_is_order_dependent(
@@ -2107,7 +2121,7 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other)
+                    extract_compliant(plx, other, parse_column_name_as_expr=False)
                 ),
                 self._is_order_dependent,
                 changes_length=self._changes_length,
@@ -2179,7 +2193,10 @@ class Expr:
         flat_predicates = flatten(predicates)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flat_predicates],
+                *[
+                    extract_compliant(plx, pred, parse_column_name_as_expr=True)
+                    for pred in flat_predicates
+                ],
             ),
             is_order_dependent=operation_is_order_dependent(*flat_predicates),
             changes_length=True,
@@ -3453,8 +3470,8 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
             ),
             is_order_dependent=operation_is_order_dependent(
                 self, lower_bound, upper_bound

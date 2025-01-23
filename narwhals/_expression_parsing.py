@@ -119,11 +119,9 @@ def parse_into_expr(
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
-    if isinstance(into_expr, str):
-        return namespace.col(into_expr)
     if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)
+        series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
+        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
@@ -326,13 +324,18 @@ def reduce_output_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str]
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantSeriesT_co], other: Any
+    plx: CompliantNamespace[CompliantSeriesT_co],
+    other: Any,
+    *,
+    parse_column_name_as_expr: bool,
 ) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
     if isinstance(other, Expr):
         return other._to_compliant_expr(plx)
+    if parse_column_name_as_expr and isinstance(other, str):
+        return plx.col(other)
     if isinstance(other, Series):
         return other._compliant_series
     return other

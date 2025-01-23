@@ -213,6 +213,13 @@ class PolarsDataFrame:
                 )
             return self._from_native_object(result)
 
+    def simple_select(self, *column_names: str) -> Self:
+        try:
+            return self._from_native_frame(self._native_frame.select(*column_names))
+        except Exception as e:
+            msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
+            raise ColumnNotFoundError(msg) from e
+
     def get_column(self: Self, name: str) -> PolarsSeries:
         from narwhals._polars.series import PolarsSeries
 
@@ -475,3 +482,9 @@ class PolarsLazyFrame:
                 on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
+
+    def simple_select(self, *column_names: str) -> Self:
+        try:
+            return self._from_native_frame(self._native_frame.select(*column_names))
+        except Exception as e:
+            raise ColumnNotFoundError(str(e)) from e
