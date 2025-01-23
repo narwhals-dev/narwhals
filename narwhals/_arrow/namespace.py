@@ -365,9 +365,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        parsed_exprs = [
-            *parse_into_exprs(*exprs, namespace=self),
-        ]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:

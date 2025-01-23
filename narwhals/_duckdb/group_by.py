@@ -27,12 +27,8 @@ class DuckDBGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoDuckDBExpr,
-        **named_aggs: IntoDuckDBExpr,
+        *exprs: IntoDuckDBExpr,
     ) -> DuckDBLazyFrame:
-        exprs = tuple(
-            *(x for x in aggs), *(val.alias(key) for key, val in named_aggs.items())
-        )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:  # pragma: no cover

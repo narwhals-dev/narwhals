@@ -381,9 +381,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        parsed_exprs = [
-            *parse_into_exprs(*exprs, namespace=self),
-        ]
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:

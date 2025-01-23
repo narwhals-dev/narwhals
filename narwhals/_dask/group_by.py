@@ -88,13 +88,8 @@ class DaskLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: DaskExpr,
-        **named_aggs: DaskExpr,
+        *exprs: DaskExpr,
     ) -> DaskLazyFrame:
-        exprs: list[DaskExpr] = [
-            *aggs,
-            *(val.alias(key) for key, val in named_aggs.items()),
-        ]
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
