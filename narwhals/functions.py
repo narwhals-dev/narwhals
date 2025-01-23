@@ -1947,10 +1947,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.sum_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
@@ -2024,10 +2024,10 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.min_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
@@ -2101,10 +2101,10 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.max_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
@@ -2303,10 +2303,10 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.all_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
@@ -2463,10 +2463,10 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.any_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
@@ -2540,10 +2540,10 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.mean_horizontal(
-            *[
+            *(
                 extract_compliant(plx, v, parse_column_name_as_expr=True)
                 for v in flat_exprs
-            ]
+            )
         ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
