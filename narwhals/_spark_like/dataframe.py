@@ -85,15 +85,17 @@ class SparkLikeLazyFrame:
             version=self._version,
         )
 
+    def simple_select(
+        self: Self,
+        *exprs: str,
+    ) -> Self:
+        return self._from_native_frame(self._native_frame.select(*exprs))
+
     def select(
         self: Self,
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple select
-            return self._from_native_frame(self._native_frame.select(*exprs))
-
         new_columns = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_columns:
