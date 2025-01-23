@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import NoReturn
 
 from duckdb import ColumnExpression
 from duckdb import Expression
@@ -49,10 +48,12 @@ class DuckDBSelectorNamespace:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
+                dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
                 dtypes.Int16,
                 dtypes.Int8,
+                dtypes.UInt128,
                 dtypes.UInt64,
                 dtypes.UInt32,
                 dtypes.UInt16,
@@ -210,12 +211,3 @@ class DuckDBSelector(DuckDBExpr):
             ).all()
             - self
         )
-
-    def __rsub__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __rand__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __ror__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
