@@ -7,7 +7,6 @@ from typing import Any
 from typing import Sequence
 
 from narwhals.dtypes import DType
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -75,16 +74,13 @@ def parse_exprs_and_named_exprs(
 def _columns_from_expr(
     df: DuckDBLazyFrame, expr: DuckDBExpr
 ) -> Sequence[duckdb.Expression]:
-    if hasattr(expr, "__narwhals_expr__"):
-        col_output_list = expr._call(df)
-        if expr._output_names is not None and (
-            len(col_output_list) != len(expr._output_names)
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
-        return col_output_list
-    else:
-        raise InvalidIntoExprError.from_invalid_type(type(expr))
+    col_output_list = expr._call(df)
+    if expr._output_names is not None and (
+        len(col_output_list) != len(expr._output_names)
+    ):  # pragma: no cover
+        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        raise AssertionError(msg)
+    return col_output_list
 
 
 @lru_cache(maxsize=16)

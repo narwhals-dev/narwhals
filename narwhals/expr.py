@@ -3338,8 +3338,8 @@ class Expr:
         r"""Clip values in the Series.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are treated as column names.
+            upper_bound: Upper bound value. String literals are treated as column names.
 
         Returns:
             A new expression.
