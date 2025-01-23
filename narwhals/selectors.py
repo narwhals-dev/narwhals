@@ -1,12 +1,39 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import NoReturn
 
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
-class Selector(Expr): ...
+
+class Selector(Expr):
+    def _to_expr(self: Self) -> Expr:
+        return Expr(
+            to_compliant_expr=self._to_compliant_expr,
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
+
+    def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
+            raise TypeError(msg)
+        return self._to_expr() + other  # type: ignore[no-any-return]
+
+    def __rsub__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rand__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __ror__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
 
 
 def by_dtype(*dtypes: Any) -> Expr:
