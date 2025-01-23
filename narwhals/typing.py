@@ -286,7 +286,7 @@ if TYPE_CHECKING:
     # This one needs to be in TYPE_CHECKING to pass on 3.9,
     # and can only be defined after CompliantExpr has been defined
     IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
+        CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co
     )
 
 
