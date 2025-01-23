@@ -258,6 +258,52 @@ class DuckDBLazyFrame:
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
 
+    def join_asof(
+        self: Self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        import duckdb
+
+        if on is not None:
+            left_on = right_on = on
+        suffix = "_right"
+        if strategy == "backward":
+            conditions = [f'lhs."{left_on}" >= rhs."{right_on}"']
+        elif strategy == "forward":
+            conditions = [f'lhs."{left_on}" <= rhs."{right_on}"']
+        else:
+            msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
+            raise NotImplementedError(msg)
+        if by_left is not None and by_right is not None:
+            conditions = [f'lhs."{by_left}" = rhs."{by_right}"']
+        condition = " and ".join(conditions)
+        select = [f'lhs."{x}"' for x in self._native_frame.columns]
+        for col in other._native_frame.columns:
+            if col in self._native_frame.columns and (
+                right_on is None or col not in right_on
+            ):
+                select.append(f'rhs."{col}" as "{col}{suffix}"')
+            elif right_on is None or col not in right_on:
+                select.append(col)
+        lhs = self._native_frame  # noqa: F841
+        rhs = other._native_frame  # noqa: F841
+        query = f"""
+            SELECT {",".join(select)}
+            FROM lhs
+            ASOF LEFT JOIN rhs
+            ON {condition}
+            """  # noqa: S608
+        res = duckdb.sql(query)
+        return self._from_native_frame(res)
+
     def collect_schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
