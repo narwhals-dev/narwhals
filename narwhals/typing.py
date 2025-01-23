@@ -95,11 +95,6 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     def __pow__(self, other: Any) -> Self: ...
 
 
-IntoCompliantExpr: TypeAlias = (
-    CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
-)
-
-
 class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
     def lit(
@@ -285,6 +280,14 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+
+
+if TYPE_CHECKING:
+    # This one needs to be in TYPE_CHECKING to pass on 3.9,
+    # and can only be defined after CompliantExpr has been defined
+    IntoCompliantExpr: TypeAlias = (
+        CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
+    )
 
 
 __all__ = [

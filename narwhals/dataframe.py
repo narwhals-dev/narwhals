@@ -74,7 +74,7 @@ class BaseFrame(Generic[FrameT]):
             df, level=self._level
         )
 
-    def _flatten_parse_col_names_into_expr_and_extract(
+    def _flatten_and_extract(
         self, *exprs: IntoExpr | Any, **named_exprs: IntoExpr | Any
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
@@ -90,14 +90,6 @@ class BaseFrame(Generic[FrameT]):
             for key, value in named_exprs.items()
         }
         return compliant_exprs, compliant_named_exprs
-
-    def _flatten_and_extract(
-        self: Self, *args: Any, **kwargs: Any
-    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
-        """Process `args` and `kwargs`, extracting underlying objects as we go."""
-        args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
-        kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
-        return args, kwargs
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -138,8 +130,8 @@ class BaseFrame(Generic[FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, compliant_named_exprs = (
-            self._flatten_parse_col_names_into_expr_and_extract(*exprs, **named_exprs)
+        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
+            *exprs, **named_exprs
         )
         return self._from_compliant_dataframe(
             self._compliant_frame.with_columns(*compliant_exprs, **compliant_named_exprs),
@@ -162,8 +154,8 @@ class BaseFrame(Generic[FrameT]):
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
 
-        compliant_exprs, compliant_named_exprs = (
-            self._flatten_parse_col_names_into_expr_and_extract(*exprs, **named_exprs)
+        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
+            *exprs, **named_exprs
         )
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
