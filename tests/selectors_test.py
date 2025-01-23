@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pandas as pd
-import pyarrow as pa
+import re
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -103,16 +103,17 @@ def test_set_ops(
     assert sorted(result) == expected
 
 
-@pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
-def test_set_ops_invalid(
-    invalid_constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(invalid_constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(invalid_constructor(data))
+def test_set_ops_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 - numeric())
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 | numeric())
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & numeric())
+
+    with pytest.raises(
+        TypeError,
+        match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
+    ):
+        df.select(boolean() + numeric())

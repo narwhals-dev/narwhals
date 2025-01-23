@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import NoReturn
 from typing import Sequence
 
 from narwhals._arrow.expr import ArrowExpr
@@ -178,12 +177,3 @@ class ArrowSelector(ArrowExpr):
             ).all()
             - self
         )
-
-    def __rsub__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __rand__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
-
-    def __ror__(self: Self, other: Any) -> NoReturn:
-        raise NotImplementedError
