@@ -1,15 +1,38 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import NoReturn
 
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 
 class Selector(Expr):
-    def __or__(self, other: Selector | Any) -> Selector | Any:
+    def _to_expr(self: Self) -> Expr:
+        return Expr(self._to_compliant_expr, self._metadata)
+
+    def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
+            raise TypeError(msg)
+        return self._to_expr() + other  # type: ignore[no-any-return]
+
+    def __rsub__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rand__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __ror__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __or__(self, other: Selector | Any) -> Selector:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) | extract_compliant(plx, other),
             ExprMetadata(
@@ -20,7 +43,7 @@ class Selector(Expr):
             ),
         )
 
-    def __and__(self, other: Selector | Any) -> Selector | Any:
+    def __and__(self, other: Selector | Any) -> Selector:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) & extract_compliant(plx, other),
             ExprMetadata(
@@ -31,7 +54,7 @@ class Selector(Expr):
             ),
         )
 
-    def __sub__(self, other: Selector | Any) -> Selector | Any:
+    def __sub__(self, other: Selector | Any) -> Selector:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) - extract_compliant(plx, other),
             ExprMetadata(
