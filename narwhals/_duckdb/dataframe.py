@@ -274,27 +274,38 @@ class DuckDBLazyFrame:
 
         if on is not None:
             left_on = right_on = on
+        if by is not None:
+            by_left = by_right = by
+        if isinstance(by_left, str):
+            by_left = [by_left]
+        if isinstance(by_right, str):
+            by_right = [by_right]
         suffix = "_right"
+        lhs = self._native_frame
+        rhs = other._native_frame
+        conditions = []
+        if by_left is not None and by_right is not None:
+            conditions += [
+                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
+            ]
+        else:
+            by_left = by_right = []
         if strategy == "backward":
-            conditions = [f'lhs."{left_on}" >= rhs."{right_on}"']
+            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
         elif strategy == "forward":
-            conditions = [f'lhs."{left_on}" <= rhs."{right_on}"']
+            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
-        if by_left is not None and by_right is not None:
-            conditions = [f'lhs."{by_left}" = rhs."{by_right}"']
         condition = " and ".join(conditions)
         select = [f'lhs."{x}"' for x in self._native_frame.columns]
-        for col in other._native_frame.columns:
-            if col in self._native_frame.columns and (
-                right_on is None or col not in right_on
+        for col in rhs.columns:
+            if col in lhs.columns and (
+                right_on is None or col not in [right_on, *by_right]
             ):
                 select.append(f'rhs."{col}" as "{col}{suffix}"')
-            elif right_on is None or col not in right_on:
+            elif right_on is None or col not in [right_on, *by_right]:
                 select.append(col)
-        lhs = self._native_frame  # noqa: F841
-        rhs = other._native_frame  # noqa: F841
         query = f"""
             SELECT {",".join(select)}
             FROM lhs
