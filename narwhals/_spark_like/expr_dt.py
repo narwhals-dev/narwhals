@@ -20,7 +20,7 @@ class SparkLikeExprDateTimeNamespace:
     def to_string(self: Self, format: str) -> SparkLikeExpr:  # noqa: A002
         def _format_iso_week_with_day(_input: Column) -> Column:
             """Format datetime as ISO week string with day."""
-            year = F.date_format(_input, "YYYY")
+            year = F.date_format(_input, "yyyy")
             week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
             day = F.dayofweek(_input)
             # Adjust Sunday from 1 to 7
@@ -29,7 +29,7 @@ class SparkLikeExprDateTimeNamespace:
 
         def _format_iso_week(_input: Column) -> Column:
             """Format datetime as ISO week string."""
-            year = F.date_format(_input, "YYYY")
+            year = F.date_format(_input, "yyyy")
             week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
             return F.concat(year, F.lit("-W"), week)
 

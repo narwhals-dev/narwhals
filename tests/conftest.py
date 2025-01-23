@@ -150,6 +150,9 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
 
+        # common timezone for all tests environments
+        os.environ["TZ"] = "UTC"
+
         session = (
             SparkSession.builder.appName("unit-tests")
             .master("local[1]")
@@ -157,9 +160,6 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             # executing one task at a time makes the tests faster
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
             .getOrCreate()
         )
 
