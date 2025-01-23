@@ -178,13 +178,3 @@ class PandasSelector(PandasLikeExpr):
             )
         else:
             return self._to_expr() & other
-
-    def __invert__(self: Self) -> PandasSelector:
-        return (
-            PandasSelectorNamespace(
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-            ).all()
-            - self
-        )

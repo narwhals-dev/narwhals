@@ -169,11 +169,3 @@ class ArrowSelector(ArrowExpr):
             )
         else:
             return self._to_expr() & other
-
-    def __invert__(self: Self) -> ArrowSelector:
-        return (
-            ArrowSelectorNamespace(
-                backend_version=self._backend_version, version=self._version
-            ).all()
-            - self
-        )

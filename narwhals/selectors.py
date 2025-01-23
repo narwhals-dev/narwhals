@@ -32,9 +32,9 @@ class Selector(Expr):
     def __ror__(self: Self, other: Any) -> NoReturn:
         raise NotImplementedError
 
-    def __or__(self, other: Selector | Any) -> Selector:
+    def __and__(self, other: Selector | Any) -> Selector:
         return Selector(
-            lambda plx: self._to_compliant_expr(plx) | extract_compliant(plx, other),
+            lambda plx: self._to_compliant_expr(plx) & extract_compliant(plx, other),
             ExprMetadata(
                 is_order_dependent=False,
                 changes_length=False,
@@ -43,9 +43,9 @@ class Selector(Expr):
             ),
         )
 
-    def __and__(self, other: Selector | Any) -> Selector:
+    def __or__(self, other: Selector | Any) -> Selector:
         return Selector(
-            lambda plx: self._to_compliant_expr(plx) & extract_compliant(plx, other),
+            lambda plx: self._to_compliant_expr(plx) | extract_compliant(plx, other),
             ExprMetadata(
                 is_order_dependent=False,
                 changes_length=False,
@@ -65,8 +65,11 @@ class Selector(Expr):
             ),
         )
 
+    def __invert__(self: Self) -> Selector:
+        return all() - self
 
-def by_dtype(*dtypes: Any) -> Expr:
+
+def by_dtype(*dtypes: Any) -> Selector:
     """Select columns based on their dtype.
 
     Arguments:
@@ -120,7 +123,7 @@ def by_dtype(*dtypes: Any) -> Expr:
     )
 
 
-def numeric() -> Expr:
+def numeric() -> Selector:
     """Select numeric columns.
 
     Returns:
@@ -171,7 +174,7 @@ def numeric() -> Expr:
     )
 
 
-def boolean() -> Expr:
+def boolean() -> Selector:
     """Select boolean columns.
 
     Returns:
@@ -222,7 +225,7 @@ def boolean() -> Expr:
     )
 
 
-def string() -> Expr:
+def string() -> Selector:
     """Select string columns.
 
     Returns:
@@ -273,7 +276,7 @@ def string() -> Expr:
     )
 
 
-def categorical() -> Expr:
+def categorical() -> Selector:
     """Select categorical columns.
 
     Returns:
@@ -324,7 +327,7 @@ def categorical() -> Expr:
     )
 
 
-def all() -> Expr:
+def all() -> Selector:
     """Select all columns.
 
     Returns:

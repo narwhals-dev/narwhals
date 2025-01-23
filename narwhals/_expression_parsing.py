@@ -365,17 +365,16 @@ def arg_aggregates(arg: IntoExpr | Any) -> bool:
 
 def arg_is_order_dependent(arg: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
-    from narwhals.series import Series
 
     if isinstance(arg, Expr):
         return arg._metadata["is_order_dependent"]
-    if isinstance(arg, Series):
-        return True  # safest assumption
     if isinstance(arg, str):
         # Column name, e.g. 'a', gets treated as `nw.col('a')`,
         # which doesn't change length.
         return False
-    # Scalar
+    # Scalar or Series
+    # Series are an eager-only concept anyway and so the order-dependent
+    # restrictions don't apply to them anyway.
     return False
 
 
@@ -408,7 +407,6 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
           scalar, the output changes length
     """
     from narwhals.expr import Expr
-    from narwhals.series import Series
 
     n_exprs = 0
     changes_length = False
@@ -417,14 +415,10 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
             n_exprs += 1
             if arg._metadata["changes_length"]:
                 changes_length = True
-        elif isinstance(arg, Series):
-            n_exprs += 1
-            # Safest assumption, although Series are an eager-only
-            # concept anyway and so the length-changing restrictions
-            # don't apply to them anyway.
-            changes_length = True
         elif isinstance(arg, str):
             n_exprs += 1
+        # Note: Series are an eager-only concept anyway and so the length-changing
+        # restrictions don't apply to them anyway.
     if n_exprs > 1 and changes_length:
         msg = (
             "Found multiple expressions at least one of which changes length.\n"
