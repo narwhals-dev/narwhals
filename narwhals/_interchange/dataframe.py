@@ -167,7 +167,7 @@ class InterchangeFrame:
         self: Self,
         *exprs: str,
         **named_exprs: str,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         msg = (
             "`select`-ing not by name is not supported for interchange-only level.\n\n"
             "If you would like to see this kind of object better supported in "

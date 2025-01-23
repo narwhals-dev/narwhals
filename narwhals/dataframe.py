@@ -407,7 +407,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             return arg._compliant_series
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"
@@ -3730,7 +3730,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
 
     @property
     def _dataframe(self: Self) -> type[DataFrame[Any]]:
