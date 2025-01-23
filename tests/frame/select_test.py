@@ -80,7 +80,10 @@ def test_missing_columns(
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
-    msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    )
     if "polars" in str(constructor):
         # In the lazy case, Polars only errors when we call `collect`,
         # and we have no way to recover exactly which columns the user
