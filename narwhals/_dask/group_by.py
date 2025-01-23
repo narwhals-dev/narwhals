@@ -9,7 +9,6 @@ from typing import Sequence
 import dask.dataframe as dd
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import remove_prefix
 
@@ -92,11 +91,10 @@ class DaskLazyGroupBy:
         *aggs: DaskExpr,
         **named_aggs: DaskExpr,
     ) -> DaskLazyFrame:
-        exprs = parse_into_exprs(
+        exprs: list[DaskExpr] = [
             *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
+            *(val.alias(key) for key, val in named_aggs.items()),
+        ]
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:

@@ -367,21 +367,16 @@ class DaskWhen:
         self._version = version
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        from narwhals._expression_parsing import parse_into_expr
-
-        plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
         condition = cast("dx.Series", condition)
 
-        try:
-            then_expr = parse_into_expr(self._then_value, namespace=plx)
-        except TypeError:
-            # `self._then_value` is a scalar and can't be converted to an expression
-            value_sequence: Sequence[Any] = [self._then_value]
-            is_scalar = True
+        if isinstance(self._then_value, DaskExpr):
+            is_scalar = self._then_value._returns_scalar
+            value_sequence: Sequence[Any] = self._then_value(df)[0]
         else:
-            is_scalar = then_expr._returns_scalar  # type: ignore[attr-defined]
-            value_sequence = then_expr(df)[0]
+            # `self._then_value` is a scalar
+            value_sequence = [self._then_value]
+            is_scalar = True
 
         if is_scalar:
             _df = condition.to_frame("a")
@@ -395,15 +390,16 @@ class DaskWhen:
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
-        try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if not isinstance(self._otherwise_value, DaskExpr):
+            # `self._otherwise_value` is a scalar
             return [value_series.where(condition, self._otherwise_value)]
+
+        otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
 
-        if otherwise_expr._returns_scalar:  # type: ignore[attr-defined]
+        if otherwise_expr._returns_scalar:
             return [value_series.where(condition, otherwise_series[0])]
+
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
 

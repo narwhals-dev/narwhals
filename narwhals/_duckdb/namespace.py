@@ -345,32 +345,27 @@ class DuckDBWhen:
         self._version = version
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        from narwhals._expression_parsing import parse_into_expr
-
-        plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
         condition = cast("duckdb.Expression", condition)
 
-        try:
-            value = parse_into_expr(self._then_value, namespace=plx)(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if isinstance(self._then_value, DuckDBExpr):
+            value = self._then_value(df)[0]
+        else:
+            # `self._otherwise_value` is a scalar
             value = ConstantExpression(self._then_value).alias("literal")
         value = cast("duckdb.Expression", value)
         value_name = get_column_name(df, value)
 
         if self._otherwise_value is None:
             return [CaseExpression(condition=condition, value=value).alias(value_name)]
-        try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if not isinstance(self._otherwise_value, DuckDBExpr):
+            # `self._otherwise_value` is a scalar
             return [
                 CaseExpression(condition=condition, value=value)
                 .otherwise(ConstantExpression(self._otherwise_value))
                 .alias(value_name)
             ]
-        otherwise = otherwise_expr(df)[0]
+        otherwise = self._otherwise_value(df)[0]
         return [
             CaseExpression(condition=condition, value=value)
             .otherwise(otherwise)

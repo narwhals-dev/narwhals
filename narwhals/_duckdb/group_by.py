@@ -3,7 +3,6 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING
 
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
@@ -31,10 +30,8 @@ class DuckDBGroupBy:
         *aggs: IntoDuckDBExpr,
         **named_aggs: IntoDuckDBExpr,
     ) -> DuckDBLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._compliant_frame.__narwhals_namespace__(),
-            **named_aggs,
+        exprs = tuple(
+            *(x for x in aggs), *(val.alias(key) for key, val in named_aggs.items())
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:

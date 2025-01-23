@@ -10,7 +10,6 @@ from typing import Literal
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import parse_into_expr
 from narwhals._expression_parsing import reduce_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -352,21 +351,20 @@ class SparkLikeWhen:
         self._version = version
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
-        plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
 
-        try:
-            value_ = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+        if isinstance(self._then_value, SparkLikeExpr):
+            value_ = self._then_value(df)[0]
             col_name = get_column_name(df, value_)
-        except TypeError:
-            # `self._then_value` is a scalar and can't be converted to an expression
+        else:
+            # `self._then_value` is a scalar
             value_ = F.lit(self._then_value)
             col_name = "literal"
 
-        try:
-            other_ = parse_into_expr(self._otherwise_value, namespace=plx)(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if isinstance(self._otherwise_value, SparkLikeExpr):
+            other_ = self._otherwise_value(df)[0]
+        else:
+            # `self._otherwise_value` is a scalar
             other_ = F.lit(self._otherwise_value)
 
         return [
