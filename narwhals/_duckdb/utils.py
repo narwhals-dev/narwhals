@@ -163,7 +163,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Int64):
         return "BIGINT"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "INT"
+        return "INTEGER"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
         return "SMALLINT"
     if isinstance_or_issubclass(dtype, dtypes.Int8):
@@ -171,7 +171,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
         return "UBIGINT"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "UINT"
+        return "UINTEGER"
     if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
         return "USMALLINT"
     if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
