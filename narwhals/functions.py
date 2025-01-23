@@ -1990,7 +1990,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.sum_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 
@@ -2060,7 +2060,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.min_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 
@@ -2130,7 +2130,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.max_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 
@@ -2319,7 +2319,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.all_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 
@@ -2475,7 +2475,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.any_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 
@@ -2545,7 +2545,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.mean_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
-        ExprMetadata({**combine_metadata(*flat_exprs), "is_multi_output": False}),
+        combine_metadata(*exprs, is_multi_output=False),
     )
 
 

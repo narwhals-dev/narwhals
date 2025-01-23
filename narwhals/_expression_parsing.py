@@ -346,39 +346,29 @@ def extract_compliant(
         return other._compliant_series
     return other
 
+
 def arg_aggregates(arg: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
     from narwhals.series import Series
+
     if isinstance(arg, Expr):
-        return arg._metadata['aggregates']
+        return arg._metadata["aggregates"]
     if isinstance(arg, Series):
         return arg.len() == 1
-    if isinstance(arg, str):
+    if isinstance(arg, str):  # noqa: SIM103
         # Column name, e.g. 'a', gets treated as `nw.col('a')`,
         # which doesn't aggregate.
         return False
     # Scalar
     return True
 
-def arg_changes_length(arg: IntoExpr | Any) -> bool:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-    if isinstance(arg, Expr):
-        return arg._metadata['changes_length']
-    if isinstance(arg, Series):
-        return True  # safest assumption
-    if isinstance(arg, str):
-        # Column name, e.g. 'a', gets treated as `nw.col('a')`,
-        # which doesn't change length.
-        return False
-    # Scalar
-    return False
 
 def arg_is_order_dependent(arg: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
     from narwhals.series import Series
+
     if isinstance(arg, Expr):
-        return arg._metadata['is_order_dependent']
+        return arg._metadata["is_order_dependent"]
     if isinstance(arg, Series):
         return True  # safest assumption
     if isinstance(arg, str):
@@ -389,9 +379,15 @@ def arg_is_order_dependent(arg: IntoExpr | Any) -> bool:
     return False
 
 
-
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
+    # If any arg is order-dependent, the whole expression is.
     return any(arg_is_order_dependent(x) for x in args)
+
+
+def operation_aggregates(*args: IntoExpr | Any) -> bool:
+    # If there's a mix of aggregates and non-aggregates, broadcasting
+    # will happen. The whole operation aggregates if all arguments aggregate.
+    return all(arg_aggregates(x) for x in args)
 
 
 def operation_changes_length(*args: IntoExpr | Any) -> bool:
@@ -412,12 +408,23 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
           scalar, the output changes length
     """
     from narwhals.expr import Expr
+    from narwhals.series import Series
 
-    n_change_length = len([arg_changes_length(x) for x in args])
-    n_exprs = len([x for x in args if isinstance(x, (Expr, str))])
-    changes_length = any(
-        isinstance(x, Expr) and x._metadata["changes_length"] for x in args
-    )
+    n_exprs = 0
+    changes_length = False
+    for arg in args:
+        if isinstance(arg, Expr):
+            n_exprs += 1
+            if arg._metadata["changes_length"]:
+                changes_length = True
+        elif isinstance(arg, Series):
+            n_exprs += 1
+            # Safest assumption, although Series are an eager-only
+            # concept anyway and so the length-changing restrictions
+            # don't apply to them anyway.
+            changes_length = True
+        elif isinstance(arg, str):
+            n_exprs += 1
     if n_exprs > 1 and changes_length:
         msg = (
             "Found multiple expressions at least one of which changes length.\n"
@@ -428,37 +435,28 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     return changes_length
 
 
-def operation_aggregates(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_aggregates`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a').sum() + 1),
-    # which is already length-1, so we default to `True`. If any
-    # expression does not aggregate, then broadcasting will take
-    # place and the result will not be an aggregate.
-    from narwhals.expr import Expr
-
-    return all(x._metadata["aggregates"] for x in args if isinstance(x, Expr))
-
-
 def operation_is_multi_output(*args: IntoExpr | Any) -> bool:
     # Only the first expression is allowed to produce multiple outputs.
-    # oh shoot - do we need to track the number of outputs?
     from narwhals.expr import Expr
 
-    n_multi_output = len([x for x in args if isinstance(x, Expr) and x._metadata["is_multi_output"]])
-    if n_multi_output > 1:
+    if any(isinstance(x, Expr) and x._metadata["is_multi_output"] for x in args[1:]):
         msg = (
             "Multi-output expressions cannot appear in the right-hand-side of\n"
             "any operation. For example, `nw.col('a', 'b') + nw.col('c')` is \n"
             "allowed, but not `nw.col('a') + nw.col('b', 'c')`."
         )
         raise MultiOutputExprError(msg)
-    return n_multi_output > 0
+    return isinstance(args[0], Expr) and args[0]._metadata["is_multi_output"]
 
 
-def combine_metadata(*args: IntoExpr | Any) -> ExprMetadata:
+def combine_metadata(
+    *args: IntoExpr | Any, is_multi_output: bool | None = None
+) -> ExprMetadata:
     return ExprMetadata(
         is_order_dependent=operation_is_order_dependent(*args),
         changes_length=operation_changes_length(*args),
         aggregates=operation_aggregates(*args),
-        is_multi_output=operation_is_multi_output(*args),
+        is_multi_output=is_multi_output
+        if is_multi_output is not None
+        else operation_is_multi_output(*args),
     )

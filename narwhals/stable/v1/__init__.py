@@ -2014,7 +2014,7 @@ class When(NwWhen):
 class Then(NwThen, Expr):
     @classmethod
     def from_then(cls: type, then: NwThen) -> Then:
-        return cls(then._to_compliant_expr, then._metadata)
+        return cls(then._to_compliant_expr, then._metadata)  # type: ignore[no-any-return]
 
     def otherwise(self: Self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))

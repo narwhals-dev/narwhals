@@ -1,15 +1,15 @@
 from __future__ import annotations
-from narwhals._expression_parsing import extract_compliant
 
 from typing import Any
 
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import extract_compliant
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 
 class Selector(Expr):
-    def __or__(self, other):
+    def __or__(self, other: Selector | Any) -> Selector | Any:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) | extract_compliant(plx, other),
             ExprMetadata(
@@ -19,7 +19,8 @@ class Selector(Expr):
                 is_multi_output=True,
             ),
         )
-    def __and__(self, other):
+
+    def __and__(self, other: Selector | Any) -> Selector | Any:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) & extract_compliant(plx, other),
             ExprMetadata(
@@ -29,7 +30,8 @@ class Selector(Expr):
                 is_multi_output=True,
             ),
         )
-    def __sub__(self, other):
+
+    def __sub__(self, other: Selector | Any) -> Selector | Any:
         return Selector(
             lambda plx: self._to_compliant_expr(plx) - extract_compliant(plx, other),
             ExprMetadata(
@@ -39,9 +41,6 @@ class Selector(Expr):
                 is_multi_output=True,
             ),
         )
-
-
-
 
 
 def by_dtype(*dtypes: Any) -> Expr:
