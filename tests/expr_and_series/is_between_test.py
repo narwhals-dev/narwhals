@@ -34,7 +34,7 @@ def test_is_between(
 def test_is_between_expressified(constructor: Constructor) -> None:
     data = {"a": [1, 4, 2, 5], "b": [0, 5, 2, 4], "c": [9, 9, 9, 9]}
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").is_between(nw.col("b") * 0.9, nw.col("c") - 1))
+    result = df.select(nw.col("a").is_between(nw.col("b") * 0.9, "c"))
     expected_dict = {"a": [True, False, True, True]}
     assert_equal_data(result, expected_dict)
 
