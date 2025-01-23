@@ -10,7 +10,6 @@ from typing import Sequence
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._spark_like.utils import _std
 from narwhals._spark_like.utils import _var
 from narwhals.exceptions import AnonymousExprError
@@ -48,10 +47,8 @@ class SparkLikeLazyGroupBy:
         *aggs: SparkLikeExpr,
         **named_aggs: SparkLikeExpr,
     ) -> SparkLikeLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
+        exprs = tuple(
+            *(x for x in aggs), *(val.alias(key) for key, val in named_aggs.items())
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
