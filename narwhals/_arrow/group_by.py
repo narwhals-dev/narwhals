@@ -48,10 +48,7 @@ class ArrowGroupBy:
         self._keys = list(keys)
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
-    def agg(
-        self: Self,
-        *exprs: ArrowExpr,
-    ) -> ArrowDataFrame:
+    def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
         for expr in exprs:
             if expr._output_names is None:
                 msg = "group_by.agg"

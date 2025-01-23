@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.typing import IntoDuckDBExpr
+    from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBGroupBy:
@@ -27,7 +27,7 @@ class DuckDBGroupBy:
 
     def agg(
         self: Self,
-        *exprs: IntoDuckDBExpr,
+        *exprs: DuckDBExpr,
     ) -> DuckDBLazyFrame:
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
