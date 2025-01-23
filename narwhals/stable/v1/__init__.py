@@ -266,8 +266,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        msg = f"Expected expression, series, or column name, got: {type(arg)}"
-        raise InvalidIntoExprError(msg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(self: Self) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.

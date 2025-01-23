@@ -412,8 +412,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        msg = f"Expected expression, series, or column name, got: {type(arg)}"
-        raise InvalidIntoExprError(msg)
+        if is_numpy_array(arg):
+            return arg
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _series(self: Self) -> type[Series[Any]]:
@@ -3726,8 +3727,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        msg = f"Expected expression, series, or column name, got: {type(arg)}"
-        raise InvalidIntoExprError(msg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _dataframe(self: Self) -> type[DataFrame[Any]]:
