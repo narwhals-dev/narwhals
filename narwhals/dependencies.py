@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    import sqlalchemy
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -105,6 +106,11 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
+
+
+def get_sqlalchemy() -> Any:
+    """Get sqlalchemy module (if already imported - else return None)."""
+    return sys.modules.get("sqlalchemy", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -215,6 +221,12 @@ def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_sqlalchemy_table(df: Any) -> TypeGuard[sqlalchemy.Table]:
+    return bool(
+        (sqlalchemy := get_sqlalchemy()) is not None and isinstance(df, sqlalchemy.Table)
     )
 
 
