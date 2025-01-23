@@ -2632,7 +2632,7 @@ def concat_str(
     exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            *[extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs],
+            *(extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs),
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),

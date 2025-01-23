@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantNamespace
-    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
@@ -70,19 +69,6 @@ class Expr:
             self._changes_length,
             self._aggregates,
         )
-
-    def _parse_column_name_into_expr(self, column_name: Self | str) -> Self:
-        if isinstance(column_name, str):
-
-            def func(
-                plx: CompliantNamespace[CompliantSeriesT_co],
-            ) -> CompliantExpr[CompliantSeriesT_co]:
-                return plx.col(column_name)
-
-            return self.__class__(
-                func, is_order_dependent=False, changes_length=False, aggregates=False
-            )
-        return column_name
 
     # --- convert ---
     def alias(self: Self, name: str) -> Self:

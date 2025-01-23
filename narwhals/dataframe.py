@@ -17,6 +17,7 @@ from warnings import warn
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
@@ -411,7 +412,8 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        return arg
+        msg = f"Expected expression, series, or column name, got: {type(arg)}"
+        raise InvalidIntoExprError(msg)
 
     @property
     def _series(self: Self) -> type[Series[Any]]:
@@ -3724,9 +3726,8 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        # TODO(unassigned): should this line even be reachable? Should we
-        # be raising here?
-        return arg  # pragma: no cover
+        msg = f"Expected expression, series, or column name, got: {type(arg)}"
+        raise InvalidIntoExprError(msg)
 
     @property
     def _dataframe(self: Self) -> type[DataFrame[Any]]:
