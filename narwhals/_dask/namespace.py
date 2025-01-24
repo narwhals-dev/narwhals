@@ -92,8 +92,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="lit",
-            evaluate_root_names=None,
-            output_names=["literal"],
+            evaluate_root_names=lambda df: df.columns,
+            evaluate_aliases=lambda root_names: ['literal'],
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
@@ -116,8 +116,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="len",
-            evaluate_root_names=None,
-            output_names=["len"],
+            evaluate_root_names=lambda df: df.columns,
+            evaluate_aliases=lambda _root_names: ['len'],
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
@@ -410,8 +410,8 @@ class DaskWhen:
             self,
             depth=0,
             function_name="whenthen",
-            root_names=None,
-            output_names=None,
+            evaluate_root_names=value._evaluate_root_names,
+            evaluate_aliases=value._evaluate_aliases,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -426,8 +426,8 @@ class DaskThen(DaskExpr):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_root_names: list[str] | None,
+        evaluate_aliases: list[str] | None,
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
@@ -438,8 +438,8 @@ class DaskThen(DaskExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = root_names
-        self._output_names = output_names
+        self._evaluate_root_names = evaluate_root_names
+        self._evaluate_aliases = evaluate_aliases
         self._returns_scalar = returns_scalar
         self._kwargs = kwargs
 

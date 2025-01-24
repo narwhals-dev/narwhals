@@ -33,7 +33,7 @@ def test_suffix_raise_anonymous(constructor: Constructor) -> None:
 
     context = (
         does_not_raise()
-        if isinstance(df_raw, (pl.LazyFrame, pl.DataFrame))
+        if df.implementation.is_polars() or df.implementation.is_dask()
         else pytest.raises(
             ValueError,
             match="Anonymous expressions are not supported in `.name.suffix`.",

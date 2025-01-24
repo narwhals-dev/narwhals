@@ -33,7 +33,7 @@ def test_to_lowercase_raise_anonymous(constructor: Constructor) -> None:
 
     context = (
         does_not_raise()
-        if isinstance(df_raw, (pl.LazyFrame, pl.DataFrame))
+        if (df.implementation.is_polars() or df.implementation.is_dask())
         else pytest.raises(
             AnonymousExprError,
             match="Anonymous expressions are not supported in `.name.to_lowercase`.",
