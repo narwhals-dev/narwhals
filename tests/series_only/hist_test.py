@@ -191,8 +191,12 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0),
+    reason="hist(bins=...) cannot be used for compatibility checks since narwhals aims to mimi polars>=1.0 behavior",
+)
 @pytest.mark.slow
-def test_hist_bins_hypotheis(
+def test_hist_bin_hypotheis(
     constructor_eager: ConstructorEager,
     data: list[float],
     bin_deltas: list[float],

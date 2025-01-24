@@ -427,11 +427,26 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
         from narwhals.exceptions import InvalidOperationError
 
+        # check for monotonicity, polars<1.0 does not do this.
         if bins is not None:
             for i in range(1, len(bins)):
                 if bins[i - 1] >= bins[i]:
                     msg = "bins must increase monotonically"
                     raise InvalidOperationError(msg)
+
+        # polars<1.0 returned bins -inf to inf in these conditions
+        if (self._backend_version < (1, 0)) and ((len(bins) == 0) or (bin_count == 0)):  # type:ignore[arg-type]
+            data: list[pl.Series] = []
+            if include_breakpoint:
+                data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
+            if include_category:
+                data.append(pl.Series("category", [], dtype=pl.Category))
+            data.append(pl.Series("count", [], dtype=pl.UInt32))
+            return PolarsDataFrame(
+                pl.DataFrame(data),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
 
         df = self._native_series.hist(
             bins=bins,
