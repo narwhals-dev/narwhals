@@ -542,6 +542,36 @@ def test_joinasof_by(
     assert_equal_data(result_by.sort(by="antananarivo"), expected)
 
 
+def test_joinasof_suffix(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
+    ).sort("antananarivo")
+    df_right = nw.from_native(
+        constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
+    ).sort("antananarivo")
+    result = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        suffix="_y",
+    )
+    expected = {
+        "antananarivo": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_y": [1, 3, 7],
+    }
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+
+
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
 def test_joinasof_not_implemented(
     constructor: Constructor, strategy: Literal["backward", "forward"]
