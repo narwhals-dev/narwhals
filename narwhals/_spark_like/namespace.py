@@ -10,8 +10,6 @@ from typing import Literal
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import parse_into_expr
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -23,7 +21,6 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -103,53 +100,47 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             kwargs={},
         )
 
-    def all_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def all_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def any_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.or_, cols).alias(col_name)]
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
-    def sum_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def sum_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             import pyspark.sql.functions as F  # noqa: N812
 
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [
                 reduce(
@@ -160,23 +151,21 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
-    def mean_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
+    def mean_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         from pyspark.sql.types import IntegerType
 
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [
                 (
@@ -190,50 +179,46 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [F.greatest(*cols).alias(col_name)]
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self: Self, *exprs: IntoSparkLikeExpr) -> SparkLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in parsed_exprs for c in _expr(df)]
+            cols = [c for _expr in exprs for c in _expr(df)]
             col_name = get_column_name(df, cols[0])
             return [F.least(*cols).alias(col_name)]
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -284,22 +269,16 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def concat_str(
         self: Self,
-        exprs: Iterable[IntoSparkLikeExpr],
-        *more_exprs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> SparkLikeExpr:
         from pyspark.sql.types import StringType
 
-        parsed_exprs = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
-        ]
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [s for _expr in parsed_exprs for s in _expr(df)]
+            cols = [s for _expr in exprs for s in _expr(df)]
             cols_casted = [s.cast(StringType()) for s in cols]
-            null_mask = [F.isnull(s) for _expr in parsed_exprs for s in _expr(df)]
+            null_mask = [F.isnull(s) for _expr in exprs for s in _expr(df)]
             first_column_name = get_column_name(df, cols[0])
 
             if not ignore_nulls:
@@ -331,22 +310,21 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
         return SparkLikeExpr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            root_names=combine_root_names(exprs),
+            output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={
                 "exprs": exprs,
-                "more_exprs": more_exprs,
                 "separator": separator,
                 "ignore_nulls": ignore_nulls,
             },
         )
 
-    def when(self: Self, *predicates: IntoSparkLikeExpr) -> SparkLikeWhen:
+    def when(self: Self, *predicates: SparkLikeExpr) -> SparkLikeWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
         return SparkLikeWhen(
@@ -373,21 +351,20 @@ class SparkLikeWhen:
         self._version = version
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
-        plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
 
-        try:
-            value_ = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+        if isinstance(self._then_value, SparkLikeExpr):
+            value_ = self._then_value(df)[0]
             col_name = get_column_name(df, value_)
-        except TypeError:
-            # `self._then_value` is a scalar and can't be converted to an expression
+        else:
+            # `self._then_value` is a scalar
             value_ = F.lit(self._then_value)
             col_name = "literal"
 
-        try:
-            other_ = parse_into_expr(self._otherwise_value, namespace=plx)(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if isinstance(self._otherwise_value, SparkLikeExpr):
+            other_ = self._otherwise_value(df)[0]
+        else:
+            # `self._otherwise_value` is a scalar
             other_ = F.lit(self._otherwise_value)
 
         return [

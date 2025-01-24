@@ -10,7 +10,6 @@ from typing import Sequence
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._spark_like.utils import _std
 from narwhals._spark_like.utils import _var
 from narwhals.exceptions import AnonymousExprError
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._spark_like.typing import SparkLikeExpr
     from narwhals.typing import CompliantExpr
 
 
@@ -45,14 +44,8 @@ class SparkLikeLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoSparkLikeExpr,
-        **named_aggs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
     ) -> SparkLikeLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:  # pragma: no cover

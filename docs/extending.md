@@ -107,22 +107,20 @@ the next section for what else you can do.
 We love open source, but we're not "open source absolutists". If you're unable to open
 source you library, then this is how you can make your library compatible with Narwhals.
 
-Make sure that, in addition to the public Narwhals API, you also define:
+Make sure that you also define:
 
-  - `DataFrame.__narwhals_dataframe__`: return an object which implements public methods
-    from `Narwhals.DataFrame`
-  - `DataFrame.__narwhals_namespace__`: return an object which implements public top-level
-    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
-  - `DataFrame.__native_namespace__`: return a native namespace object which must have a
-    `from_dict` method
-  - `LazyFrame.__narwhals_lazyframe__`: return an object which implements public methods
-    from `Narwhals.LazyFrame`
-  - `LazyFrame.__narwhals_namespace__`: return an object which implements public top-level
-    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
-  - `LazyFrame.__native_namespace__`: return a native namespace object which must have a
-    `from_dict` method
-  - `Series.__narwhals_series__`: return an object which implements public methods
-    from `Narwhals.Series`
+  - `DataFrame.__narwhals_dataframe__`: return an object which implements methods from the
+    `CompliantDataFrame` protocol in  `narwhals/typing.py`.
+  - `DataFrame.__narwhals_namespace__`: return an object which implements methods from the
+    `CompliantNamespace` protocol in `narwhals/typing.py`.
+  - `DataFrame.__native_namespace__`: return the object's native namespace.
+  - `LazyFrame.__narwhals_lazyframe__`: return an object which implements methods from the
+    `CompliantLazyFrame` protocol in  `narwhals/typing.py`.
+  - `LazyFrame.__narwhals_namespace__`: return an object which implements methods from the
+    `CompliantNamespace` protocol in `narwhals/typing.py`.
+  - `LazyFrame.__native_namespace__`: return the object's native namespace.
+  - `Series.__narwhals_series__`: return an object which implements methods from the
+    `CompliantSeries` protocol in `narwhals/typing.py`.
 
   If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
   object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,

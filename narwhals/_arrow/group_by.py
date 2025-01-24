@@ -11,7 +11,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import remove_prefix
@@ -20,8 +19,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.typing import CompliantExpr
 
 POLARS_TO_ARROW_AGGREGATIONS = {
@@ -49,16 +48,7 @@ class ArrowGroupBy:
         self._keys = list(keys)
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
-    def agg(
-        self: Self,
-        *aggs: IntoArrowExpr,
-        **named_aggs: IntoArrowExpr,
-    ) -> ArrowDataFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
+    def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
         for expr in exprs:
             if expr._output_names is None:
                 msg = "group_by.agg"
@@ -93,7 +83,7 @@ class ArrowGroupBy:
                             table.filter(pc.equal(table[col_token], v)).drop([col_token])
                         )
                     )
-                    .select(*self._keys)
+                    .simple_select(*self._keys)
                     .head(1)
                     .iter_rows(named=False, buffer_size=512)
                 ),

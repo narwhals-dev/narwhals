@@ -3,7 +3,6 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -17,7 +16,6 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -31,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._dask.typing import IntoDaskExpr
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -107,22 +104,17 @@ class DaskLazyFrame(CompliantLazyFrame):
 
         return self._from_native_frame(self._native_frame.loc[mask])
 
-    def select(
-        self: Self,
-        *exprs: IntoDaskExpr,
-        **named_exprs: IntoDaskExpr,
-    ) -> Self:
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple slice => fastpath!
-            return self._from_native_frame(
-                select_columns_by_name(
-                    self._native_frame,
-                    list(exprs),  # type: ignore[arg-type]
-                    self._backend_version,
-                    self._implementation,
-                )
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(
+            select_columns_by_name(
+                self._native_frame,
+                list(column_names),
+                self._backend_version,
+                self._implementation,
             )
+        )
 
+    def select(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_series:
@@ -211,12 +203,10 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -224,7 +214,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
         return self._from_native_frame(
-            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+            df.sort_values(list(by), ascending=ascending, na_position=na_position)
         )
 
     def join(

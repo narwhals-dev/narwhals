@@ -18,6 +18,7 @@ from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
@@ -265,7 +266,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        return arg
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(self: Self) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.

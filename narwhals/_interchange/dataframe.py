@@ -153,25 +153,25 @@ class InterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def select(
-        self: Self,
-        *exprs: str,
-        **named_exprs: str,
-    ) -> Self:
-        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
-            msg = (
-                "`select`-ing not by name is not supported for interchange-only level.\n\n"
-                "If you would like to see this kind of object better supported in "
-                "Narwhals, please open a feature request "
-                "at https://github.com/narwhals-dev/narwhals/issues."
-            )
-            raise NotImplementedError(msg)
-
-        frame = self._interchange_frame.select_columns_by_name(exprs)
+    def simple_select(self: Self, *column_names: str) -> Self:
+        frame = self._interchange_frame.select_columns_by_name(list(column_names))
         if not hasattr(frame, "_df"):  # pragma: no cover
             msg = (
                 "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
                 "See https://github.com/data-apis/dataframe-api/issues/360."
             )
-            raise NotImplementedError(frame)
+            raise NotImplementedError(msg)
         return self.__class__(frame._df, version=self._version)
+
+    def select(
+        self: Self,
+        *exprs: str,
+        **named_exprs: str,
+    ) -> Self:  # pragma: no cover
+        msg = (
+            "`select`-ing not by name is not supported for interchange-only level.\n\n"
+            "If you would like to see this kind of object better supported in "
+            "Narwhals, please open a feature request "
+            "at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)

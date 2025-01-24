@@ -6,7 +6,6 @@ from typing import Any
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -45,16 +44,11 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
+    df: DaskLazyFrame, *exprs: DaskExpr, **named_exprs: DaskExpr
 ) -> dict[str, dx.Series]:
     results = {}
     for expr in exprs:
-        if hasattr(expr, "__narwhals_expr__"):
-            _results = expr._call(df)
-        elif isinstance(expr, str):
-            _results = [df._native_frame[expr]]
-        else:
-            raise InvalidIntoExprError.from_invalid_type(type(expr))
+        _results = expr._call(df)
         return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
             results[_result.name] = _result[0] if return_scalar else _result
