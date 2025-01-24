@@ -425,6 +425,13 @@ class PolarsSeries:
         include_breakpoint: bool = True,
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
+        from narwhals.exceptions import InvalidOperationError
+
+        if bins is not None:
+            for i in range(1, len(bins)):
+                if bins[i - 1] >= bins[i]:
+                    msg = "bins must increase monotonically"
+                    raise InvalidOperationError(msg)
 
         df = self._native_series.hist(
             bins=bins,
@@ -434,6 +441,15 @@ class PolarsSeries:
         )
         if not include_category and not include_breakpoint:
             df.columns = ["count"]
+
+        if self._backend_version < (1, 0):  # pragma: no cover
+            if (
+                bins is not None
+            ):  #  polars<1.0 implicitly adds -inf and inf to either end of bins
+                r = pl.int_range(0, len(df))
+                df = df.filter((r > 0) & (r < len(df) - 1))
+            if include_breakpoint:
+                df = df.rename({"break_point": "breakpoint"})
 
         return PolarsDataFrame(
             df, backend_version=self._backend_version, version=self._version

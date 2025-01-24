@@ -8,6 +8,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import nwise
@@ -109,6 +110,10 @@ def test_hist_bin(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0),
+    reason="hist(bin_count=...) behavior significantly changed after 1.0",
+)
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.parametrize("include_category", [True, False])
@@ -228,6 +233,10 @@ def test_hist_bins_hypotheis(
         max_size=100,
     ),
     bin_count=st.integers(min_value=0, max_value=1_000),
+)
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 0),
+    reason="hist(bin_count=...) behavior significantly changed after 1.0",
 )
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
