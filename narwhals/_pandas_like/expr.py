@@ -61,7 +61,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = root_names
+        self._root_names = root_names
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version
@@ -76,7 +76,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             f"PandasLikeExpr("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._evaluate_root_names}, "
+            f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
             ")"
         )
@@ -382,7 +382,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             lambda df: [series.alias(name) for series in self._call(df)],
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -395,7 +395,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 if (
-                    self._output_names is None or self._evaluate_root_names is None
+                    self._output_names is None or self._root_names is None
                 ):  # pragma: no cover
                     # Technically unreachable, but keep this for safety
                     msg = "over"
@@ -411,7 +411,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
                 if self._function_name == "col->cum_count":
                     plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(*self._evaluate_root_names).is_null())
+                    df = df.with_columns(~plx.col(*self._root_names).is_null())
 
                 if self._function_name == "col->shift":
                     kwargs = {"periods": self._kwargs["n"]}
@@ -428,7 +428,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
                 res_native = getattr(
                     df._native_frame.groupby(list(keys), as_index=False)[
-                        self._evaluate_root_names
+                        self._root_names
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
                 )(**kwargs)
@@ -436,7 +436,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                 result_frame = df._from_native_frame(
                     rename(
                         res_native,
-                        columns=dict(zip(self._evaluate_root_names, self._output_names)),
+                        columns=dict(zip(self._root_names, self._output_names)),
                         implementation=self._implementation,
                         backend_version=self._backend_version,
                     )
@@ -459,7 +459,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -536,7 +536,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,

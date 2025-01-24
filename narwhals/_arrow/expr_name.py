@@ -16,7 +16,7 @@ class ArrowExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = ".name.keep"
@@ -37,7 +37,7 @@ class ArrowExprNameNamespace:
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = ".name.map"
@@ -60,7 +60,7 @@ class ArrowExprNameNamespace:
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.prefix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -81,7 +81,7 @@ class ArrowExprNameNamespace:
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.suffix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -103,7 +103,7 @@ class ArrowExprNameNamespace:
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = ".name.to_lowercase"
@@ -125,7 +125,7 @@ class ArrowExprNameNamespace:
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
 
         if root_names is None:
             msg = ".name.to_uppercase"

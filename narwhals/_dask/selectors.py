@@ -30,6 +30,9 @@ class DaskSelectorNamespace:
             return [
                 df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
             ]
+        
+        # todo(marco): these will...take some effort?
+        # yeah, maybe.
 
         return DaskSelector(
             func,

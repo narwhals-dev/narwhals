@@ -48,7 +48,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         depth: int,
         function_name: str,
         evaluate_root_names: Callable[[DaskLazyFrame], Sequence[str]],
-        evaluate_aliases: Callable[[list[str]], list[str]],
+        evaluate_aliases: Callable[[Sequence[str]], Sequence[str]] | None,
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
@@ -171,7 +171,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def alias(self: Self, name: str) -> Self:
-        def func(names: list[str]) -> list[str]:
+        def func(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
                 raise ValueError(msg)
@@ -682,12 +682,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             )
             raise NotImplementedError(msg)
 
+        # TODO(marco): should evaluate_root_names should also consider `keys`?
+
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._evaluate_root_names,
-            output_names=self._output_names,
+            evaluate_root_names=self._evaluate_root_names,
+            evaluate_aliases=self._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,

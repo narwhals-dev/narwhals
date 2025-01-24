@@ -16,7 +16,7 @@ class SparkLikeExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.keep"
             raise AnonymousExprError.from_expr_name(msg)
@@ -37,7 +37,7 @@ class SparkLikeExprNameNamespace:
         )
 
     def map(self: Self, function: Callable[[str], str]) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.map"
             raise AnonymousExprError.from_expr_name(msg)
@@ -60,7 +60,7 @@ class SparkLikeExprNameNamespace:
         )
 
     def prefix(self: Self, prefix: str) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.prefix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -82,7 +82,7 @@ class SparkLikeExprNameNamespace:
         )
 
     def suffix(self: Self, suffix: str) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.suffix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -105,7 +105,7 @@ class SparkLikeExprNameNamespace:
         )
 
     def to_lowercase(self: Self) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.to_lowercase"
             raise AnonymousExprError.from_expr_name(msg)
@@ -127,7 +127,7 @@ class SparkLikeExprNameNamespace:
         )
 
     def to_uppercase(self: Self) -> SparkLikeExpr:
-        root_names = self._compliant_expr._evaluate_root_names
+        root_names = self._compliant_expr._root_names
         if root_names is None:
             msg = ".name.to_uppercase"
             raise AnonymousExprError.from_expr_name(msg)

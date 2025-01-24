@@ -9,7 +9,7 @@ from typing import Sequence
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
-from narwhals._expression_parsing import infer_new_root_names
+from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -51,7 +51,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = root_names
+        self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
@@ -136,7 +136,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                 results.append(column_result)
             return results
 
-        root_names, output_names = infer_new_root_names(self, **kwargs)
+        root_names, output_names = infer_new_root_output_names(self, **kwargs)
 
         return self.__class__(
             func,
@@ -290,7 +290,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             _alias,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=[name],
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
@@ -505,7 +505,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,

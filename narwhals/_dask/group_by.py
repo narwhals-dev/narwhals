@@ -161,7 +161,7 @@ def agg_dask(
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
             if (
-                expr._depth != 1 or expr._evaluate_root_names is None or expr._output_names is None
+                expr._depth != 1 or expr._root_names is None or expr._output_names is None
             ):  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                 raise AssertionError(msg)
@@ -181,7 +181,7 @@ def agg_dask(
                 {
                     output_name: (root_name, agg_function)
                     for root_name, output_name in zip(
-                        expr._evaluate_root_names, expr._output_names
+                        expr._root_names, expr._output_names
                     )
                 }
             )

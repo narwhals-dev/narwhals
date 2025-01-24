@@ -120,7 +120,7 @@ def parse_into_expr(
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
-def infer_new_root_names(
+def infer_new_root_output_names(
     expr: CompliantExpr[Any], **kwargs: Any
 ) -> tuple[list[str] | None, list[str] | None]:
     """Return new root and output names after chaining expressions.
@@ -162,7 +162,7 @@ def combine_evaluate_root_names(
     """
 
     def func(df: CompliantDataFrame | CompliantLazyFrame) -> Sequence[str]:
-        root_names = expr._evaluate_root_names(df)
+        root_names = expr._evaluate_root_names(df)  # type: ignore[attr-defined]
         root_names.extend(
             root_name
             for comparand in other_exprs
@@ -170,7 +170,7 @@ def combine_evaluate_root_names(
             for root_name in comparand._evaluate_root_names(df)
             if root_name not in root_names
         )
-        return root_names
+        return root_names  # type: ignore[no-any-return]
 
     return func
 
@@ -251,7 +251,7 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    root_names, output_names = infer_new_root_names(expr, **kwargs)
+    root_names, output_names = infer_new_root_output_names(expr, **kwargs)
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
@@ -297,7 +297,7 @@ def reuse_series_namespace_implementation(
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        root_names=expr._evaluate_root_names,
+        root_names=expr._root_names,
         output_names=expr._output_names,
         kwargs={**expr._kwargs, **kwargs},
     )
@@ -321,11 +321,11 @@ def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
 
 
 def combine_root_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    root_names = copy(parsed_exprs[0]._evaluate_root_names)
+    root_names = copy(parsed_exprs[0]._root_names)
     for arg in parsed_exprs[1:]:
         if root_names is not None:
-            if arg._evaluate_root_names is not None:
-                root_names.extend(arg._evaluate_root_names)
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
             else:
                 root_names = None
                 break

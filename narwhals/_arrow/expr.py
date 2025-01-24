@@ -48,7 +48,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = root_names
+        self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
         self._implementation = Implementation.PYARROW
@@ -61,7 +61,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             f"ArrowExpr("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._evaluate_root_names}, "
+            f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
         )
 
@@ -271,7 +271,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             lambda df: [series.alias(name) for series in self._call(df)],
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=[name],
             backend_version=self._backend_version,
             version=self._version,
@@ -404,7 +404,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
@@ -446,7 +446,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
-            root_names=self._evaluate_root_names,
+            root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,
