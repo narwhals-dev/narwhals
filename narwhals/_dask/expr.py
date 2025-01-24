@@ -154,7 +154,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                 results.append(result)
             return results
 
-        evaluate_root_names = infer_evaluate_root_names(self, **kwargs)
+        evaluate_root_names = infer_evaluate_root_names(self, *kwargs.values())
 
         return self.__class__(
             func,

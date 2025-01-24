@@ -18,7 +18,7 @@ from narwhals._dask.utils import name_preserving_div
 from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
-from narwhals._expression_parsing import combine_root_names
+from narwhals._expression_parsing import combine_root_names, infer_evaluate_root_names
 from narwhals._expression_parsing import reduce_output_names
 from narwhals.typing import CompliantNamespace
 
@@ -133,8 +133,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -150,8 +150,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -167,8 +167,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -245,8 +245,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -263,8 +263,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -281,8 +281,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_root_names=infer_evaluate_root_names(exprs[0], *exprs[1:]),
+            evaluate_aliases=exprs[0]._evaluate_aliases,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,

@@ -20,7 +20,7 @@ from narwhals._duckdb.utils import binary_operation_returns_scalar
 from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._expression_parsing import infer_new_root_names
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
@@ -153,7 +153,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 results.append(column_result)
             return results
 
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+        root_names, output_names = infer_new_root_names(self, **kwargs)
 
         return self.__class__(
             func,

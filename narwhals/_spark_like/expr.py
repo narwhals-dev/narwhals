@@ -9,7 +9,7 @@ from typing import Sequence
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
-from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._expression_parsing import infer_new_root_names
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -136,7 +136,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                 results.append(column_result)
             return results
 
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+        root_names, output_names = infer_new_root_names(self, **kwargs)
 
         return self.__class__(
             func,

@@ -396,7 +396,6 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     def _extract_compliant(self: Self, arg: Any) -> Any:
-        breakpoint()
         from narwhals.expr import Expr
         from narwhals.series import Series
 

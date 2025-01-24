@@ -119,7 +119,7 @@ def parse_into_expr(
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
-def infer_new_root_output_names(
+def infer_new_root_names(
     expr: CompliantExpr[Any], **kwargs: Any
 ) -> tuple[list[str] | None, list[str] | None]:
     """Return new root and output names after chaining expressions.
@@ -152,7 +152,7 @@ def infer_new_root_output_names(
 
 
 def infer_evaluate_root_names(
-    expr: CompliantExpr[Any], **kwargs: Any
+    expr: CompliantExpr[Any], *other_exprs: Any
 ) -> tuple[list[str] | None, list[str] | None]:
     """Return new root and output names after chaining expressions.
 
@@ -164,7 +164,7 @@ def infer_evaluate_root_names(
         root_names = expr._evaluate_root_names(df)
         root_names.extend(
             root_name
-            for comparand in kwargs.values()
+            for comparand in other_exprs
             if hasattr(comparand, '__narwhals_expr__')
             for root_name in  comparand._evaluate_root_names(df)
             if root_name not in root_names
@@ -250,7 +250,7 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    root_names, output_names = infer_new_root_output_names(expr, **kwargs)
+    root_names, output_names = infer_new_root_names(expr, **kwargs)
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
