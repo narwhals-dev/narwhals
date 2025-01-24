@@ -290,7 +290,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
         condition = " and ".join(conditions)
-        select = [f'lhs."{x}"' for x in self._native_frame.columns]
+        select = [f'lhs."{x}"' for x in lhs.columns]
         for col in rhs.columns:
             if col in lhs.columns and (
                 right_on is None or col not in [right_on, *by_right]
