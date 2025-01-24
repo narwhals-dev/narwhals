@@ -294,6 +294,10 @@ class PandasLikeSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
+        if isinstance(other, self.__class__):
+            # We can't use `broadcast_and_align` because we don't want to align here.
+            # `other` is just a sequence that all rows from `self` are checked against.
+            other = other._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
 
@@ -669,10 +673,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         return self
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        # NOTE: leave the default `=None` here in order for cuDF tests to pass.
-        # They call `cupy.asarray` which doesn't pass `dtype` or `copy`.
-
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
         # pandas used to always return object dtype for nullable dtypes.
         # So, we intercept __array__ and pass to `to_numpy` ourselves to make
         # sure an appropriate numpy dtype is returned.
