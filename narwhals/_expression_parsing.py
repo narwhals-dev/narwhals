@@ -6,6 +6,7 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -151,22 +152,22 @@ def infer_new_root_names(
     return root_names, output_names
 
 
-def infer_evaluate_root_names(
+def combine_evaluate_root_names(
     expr: CompliantExpr[Any], *other_exprs: Any
-) -> tuple[list[str] | None, list[str] | None]:
-    """Return new root and output names after chaining expressions.
+) -> Callable[[CompliantDataFrame | CompliantLazyFrame], Sequence[str]]:
+    """Combine expressions to get a new `evaluate_root_names` function.
 
-    Try tracking root and output names by combining them from all expressions appearing in kwargs.
-    If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
-    and just set it to None.
+    We keep all root names from the left-most expression (`expr`), and
+    then append any new root names from the other expressions.
     """
-    def func(df: CompliantDataFrame) -> list[str]:
+
+    def func(df: CompliantDataFrame | CompliantLazyFrame) -> Sequence[str]:
         root_names = expr._evaluate_root_names(df)
         root_names.extend(
             root_name
             for comparand in other_exprs
-            if hasattr(comparand, '__narwhals_expr__')
-            for root_name in  comparand._evaluate_root_names(df)
+            if hasattr(comparand, "__narwhals_expr__")
+            for root_name in comparand._evaluate_root_names(df)
             if root_name not in root_names
         )
         return root_names

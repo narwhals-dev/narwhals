@@ -13,7 +13,7 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import infer_evaluate_root_names
+from narwhals._expression_parsing import combine_evaluate_root_names
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
@@ -47,7 +47,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         *,
         depth: int,
         function_name: str,
-        evaluate_root_names: Callable[[DaskLazyFrame], list[str]],
+        evaluate_root_names: Callable[[DaskLazyFrame], Sequence[str]],
         evaluate_aliases: Callable[[list[str]], list[str]],
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
@@ -137,24 +137,26 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **kwargs: Any,
+        **other_exprs: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            results = []
-            inputs = self._call(df)
-            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
-            for _input in inputs:
-                # name = _input.name
+            native_results: list[dx.Series] = []
+            native_series_list = self._call(df)
+            other_native_series = {
+                key: maybe_evaluate(df, value) for key, value in other_exprs.items()
+            }
+            for native_series in native_series_list:
                 if self._returns_scalar:
-                    _input = _input[0]
-                result = call(_input, **_kwargs)
+                    result_native = call(native_series[0], **other_native_series)
+                else:
+                    result_native = call(native_series, **other_native_series)
                 if returns_scalar:
-                    result = result.to_series()
-                # result = result.rename(name)
-                results.append(result)
-            return results
+                    native_results.append(result_native.to_series())
+                else:
+                    native_results.append(result_native)
+            return native_results
 
-        evaluate_root_names = infer_evaluate_root_names(self, *kwargs.values())
+        evaluate_root_names = combine_evaluate_root_names(self, *other_exprs.values())
 
         return self.__class__(
             func,
@@ -165,12 +167,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, **kwargs},
+            kwargs={**self._kwargs, **other_exprs},
         )
 
     def alias(self: Self, name: str) -> Self:
-        def func(root_names: list[str]) -> list[str]:
-            assert len(root_names) == 1, root_names
+        def func(names: list[str]) -> list[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
             return [name]
 
         return self.__class__(
@@ -178,7 +182,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             depth=self._depth,
             function_name=self._function_name,
             evaluate_root_names=self._evaluate_root_names,
-            evaluate_aliases = func,
+            evaluate_aliases=func,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
