@@ -6,6 +6,7 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
+import duckdb
 from duckdb import ColumnExpression
 
 from narwhals._duckdb.utils import native_to_narwhals_dtype
@@ -22,7 +23,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import duckdb
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -258,6 +258,51 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             select = ["lhs.*"]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)
+        return self._from_native_frame(res)
+
+    def join_asof(
+        self: Self,
+        other: Self,
+        *,
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
+    ) -> Self:
+        lhs = self._native_frame
+        rhs = other._native_frame
+        conditions = []
+        if by_left is not None and by_right is not None:
+            conditions += [
+                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
+            ]
+        else:
+            by_left = by_right = []
+        if strategy == "backward":
+            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
+        elif strategy == "forward":
+            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
+        else:
+            msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
+            raise NotImplementedError(msg)
+        condition = " and ".join(conditions)
+        select = ["lhs.*"]
+        for col in rhs.columns:
+            if col in lhs.columns and (
+                right_on is None or col not in [right_on, *by_right]
+            ):
+                select.append(f'rhs."{col}" as "{col}{suffix}"')
+            elif right_on is None or col not in [right_on, *by_right]:
+                select.append(col)
+        query = f"""
+            SELECT {",".join(select)}
+            FROM lhs
+            ASOF LEFT JOIN rhs
+            ON {condition}
+            """  # noqa: S608
+        res = duckdb.sql(query)
         return self._from_native_frame(res)
 
     def collect_schema(self: Self) -> dict[str, DType]:
