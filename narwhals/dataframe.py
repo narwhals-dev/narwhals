@@ -16,6 +16,8 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
@@ -43,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import IntoCompliantExpr
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
@@ -69,15 +72,25 @@ class BaseFrame(Generic[FrameT]):
     def _from_compliant_dataframe(self: Self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
-            df,
-            level=self._level,
+            df, level=self._level
         )
 
-    def _flatten_and_extract(self: Self, *args: Any, **kwargs: Any) -> Any:
-        """Process `args` and `kwargs`, extracting underlying objects as we go."""
-        args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
-        kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
-        return args, kwargs
+    def _flatten_and_extract(
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
+        """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        plx = self.__narwhals_namespace__()
+        compliant_exprs = tuple(
+            plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
+            for expr in flatten(exprs)
+        )
+        compliant_named_exprs = {
+            key: plx.col(value)
+            if isinstance(value, str)
+            else self._extract_compliant(value)
+            for key, value in named_exprs.items()
+        }
+        return compliant_exprs, compliant_named_exprs
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -118,9 +131,11 @@ class BaseFrame(Generic[FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
+            *exprs, **named_exprs
+        )
         return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*exprs, **named_exprs),
+            self._compliant_frame.with_columns(*compliant_exprs, **compliant_named_exprs),
         )
 
     def select(
@@ -128,9 +143,26 @@ class BaseFrame(Generic[FrameT]):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
-        exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
+        flat_exprs = tuple(flatten(exprs))
+        if flat_exprs and all(isinstance(x, str) for x in flat_exprs) and not named_exprs:
+            # fast path!
+            try:
+                return self._from_compliant_dataframe(
+                    self._compliant_frame.simple_select(*flat_exprs),
+                )
+            except Exception as e:
+                # Column not found is the only thing that can realistically be raised here.
+                available_columns = self.columns
+                missing_columns = [x for x in flat_exprs if x not in available_columns]
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns, available_columns
+                ) from e
+
+        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
+            *flat_exprs, **named_exprs
+        )
         return self._from_compliant_dataframe(
-            self._compliant_frame.select(*exprs, **named_exprs),
+            self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
         )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -176,10 +208,9 @@ class BaseFrame(Generic[FrameT]):
         descending: bool | Sequence[bool] = False,
         nulls_last: bool = False,
     ) -> Self:
+        by = flatten([*flatten([by]), *more_by])
         return self._from_compliant_dataframe(
-            self._compliant_frame.sort(
-                by, *more_by, descending=descending, nulls_last=nulls_last
-            )
+            self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
 
     def join(
@@ -374,7 +405,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             return arg._compliant_series
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"
@@ -382,7 +413,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        return arg
+        if is_numpy_array(arg):
+            return arg
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _series(self: Self) -> type[Series[Any]]:
@@ -3698,9 +3731,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        # TODO(unassigned): should this line even be reachable? Should we
-        # be raising here?
-        return arg  # pragma: no cover
+        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
 
     @property
     def _dataframe(self: Self) -> type[DataFrame[Any]]:

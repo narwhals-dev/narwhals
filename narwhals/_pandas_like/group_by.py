@@ -10,7 +10,6 @@ from typing import Iterator
 from typing import Sequence
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -24,8 +23,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.typing import CompliantExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
@@ -83,14 +82,8 @@ class PandasLikeGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoPandasLikeExpr,
-        **named_aggs: IntoPandasLikeExpr,
+        *exprs: PandasLikeExpr,
     ) -> PandasLikeDataFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
         implementation: Implementation = self._df._implementation
         output_names: list[str] = copy(self._keys)
         for expr in exprs:

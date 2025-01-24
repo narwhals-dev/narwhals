@@ -54,6 +54,17 @@ class CompliantSeries(Protocol):
 class CompliantDataFrame(Protocol):
     def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantDataFrame: ...  # `select` where all args are column names
+
+
+class CompliantLazyFramme(Protocol):
+    def __narwhals_lazyframe__(self) -> CompliantDataFrame: ...
+    def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantLazyFrame: ...  # `select` where all args are column names
 
 
 class CompliantLazyFrame(Protocol):
@@ -277,6 +288,14 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+
+
+if TYPE_CHECKING:
+    # This one needs to be in TYPE_CHECKING to pass on 3.9,
+    # and can only be defined after CompliantExpr has been defined
+    IntoCompliantExpr: TypeAlias = (
+        CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co
+    )
 
 
 __all__ = [

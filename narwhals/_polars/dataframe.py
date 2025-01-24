@@ -13,7 +13,6 @@ from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -109,17 +108,9 @@ class PolarsDataFrame:
                 return self._from_native_object(
                     getattr(self._native_frame, attr)(*args, **kwargs)
                 )
-            except pl.exceptions.ColumnNotFoundError as e:
+            except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
-            except TypeError as e:
-                e_str = str(e)
-                if (
-                    "cannot create expression literal" in e_str
-                    or "invalid literal" in e_str
-                ):
-                    raise InvalidIntoExprError(e_str) from e
-                raise
 
         return func
 
@@ -212,6 +203,9 @@ class PolarsDataFrame:
                     result, backend_version=self._backend_version, version=self._version
                 )
             return self._from_native_object(result)
+
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(*column_names))
 
     def get_column(self: Self, name: str) -> PolarsSeries:
         from narwhals._polars.series import PolarsSeries
@@ -386,14 +380,6 @@ class PolarsLazyFrame:
                 )
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 raise ColumnNotFoundError(str(e)) from e
-            except TypeError as e:
-                e_str = str(e)
-                if (
-                    "cannot create expression literal" in e_str
-                    or "invalid literal" in e_str
-                ):
-                    raise InvalidIntoExprError(e_str) from e
-                raise
 
         return func
 
@@ -475,3 +461,6 @@ class PolarsLazyFrame:
                 on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
+
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(*column_names))

@@ -460,27 +460,32 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def std(self: Self, ddof: int) -> Self:
-        if ddof == 1:
-            func = "stddev_samp"
-        elif ddof == 0:
-            func = "stddev_pop"
-        else:
-            msg = f"std with ddof {ddof} is not supported in DuckDB"
-            raise NotImplementedError(msg)
+        def _std(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+            n_samples = FunctionExpression("count", _input)
+
+            return (
+                FunctionExpression("stddev_pop", _input)
+                * FunctionExpression("sqrt", n_samples)
+                / (FunctionExpression("sqrt", (n_samples - ddof)))
+            )
+
         return self._from_call(
-            lambda _input: FunctionExpression(func, _input), "std", returns_scalar=True
+            _std,
+            "std",
+            ddof=ddof,
+            returns_scalar=True,
         )
 
     def var(self: Self, ddof: int) -> Self:
-        if ddof == 1:
-            func = "var_samp"
-        elif ddof == 0:
-            func = "var_pop"
-        else:
-            msg = f"var with ddof {ddof} is not supported in DuckDB"
-            raise NotImplementedError(msg)
+        def _var(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+            n_samples = FunctionExpression("count", _input)
+            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)
+
         return self._from_call(
-            lambda _input: FunctionExpression(func, _input), "var", returns_scalar=True
+            _var,
+            "var",
+            ddof=ddof,
+            returns_scalar=True,
         )
 
     def max(self: Self) -> Self:

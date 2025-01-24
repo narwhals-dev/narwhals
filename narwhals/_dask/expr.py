@@ -666,7 +666,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp_native = (
-                    df.select(*keys)
+                    df.simple_select(*keys)
                     .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
                     ._native_frame
                 )

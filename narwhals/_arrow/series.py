@@ -745,7 +745,7 @@ class ArrowSeries(CompliantSeries):
             pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             version=self._version,
-        ).select(*output_order)
+        ).simple_select(*output_order)
 
     def quantile(
         self: Self,

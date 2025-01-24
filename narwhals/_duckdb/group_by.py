@@ -3,14 +3,13 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING
 
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.typing import IntoDuckDBExpr
+    from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBGroupBy:
@@ -28,14 +27,8 @@ class DuckDBGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoDuckDBExpr,
-        **named_aggs: IntoDuckDBExpr,
+        *exprs: DuckDBExpr,
     ) -> DuckDBLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._compliant_frame.__narwhals_namespace__(),
-            **named_aggs,
-        )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:  # pragma: no cover

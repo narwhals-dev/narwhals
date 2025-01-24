@@ -9,7 +9,6 @@ from typing import Sequence
 import dask.dataframe as dd
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import remove_prefix
 
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.typing import IntoDaskExpr
+    from narwhals._dask.expr import DaskExpr
     from narwhals.typing import CompliantExpr
 
 
@@ -89,14 +88,8 @@ class DaskLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoDaskExpr,
-        **named_aggs: IntoDaskExpr,
+        *exprs: DaskExpr,
     ) -> DaskLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
@@ -135,7 +128,7 @@ def agg_dask(
     """
     if not exprs:
         # No aggregation provided
-        return df.select(*keys).unique(subset=keys)
+        return df.simple_select(*keys).unique(subset=keys)
 
     all_simple_aggs = True
     for expr in exprs:

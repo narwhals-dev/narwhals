@@ -450,7 +450,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     msg = "over"
                     raise AnonymousExprError.from_expr_name(msg)
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-                tmp = df.select(*keys).join(
+                tmp = df.simple_select(*keys).join(
                     tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
                 )
                 return [tmp[name] for name in self._output_names]
