@@ -58,6 +58,10 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 
 
 def nwise(iterable: Iterable[T], n: int = 2) -> Generator[tuple[T, ...], None, None]:
+    """Produces a sliding window across values.
+
+    Behaves like a generic version of `itertools.pairwise`.
+    """
     yield from zip(*(islice(it, i, None) for i, it in enumerate(tee(iterable, n))))
 
 

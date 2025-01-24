@@ -1014,8 +1014,6 @@ class ArrowSeries(CompliantSeries):
         include_breakpoint: bool = True,
     ) -> ArrowDataFrame:
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
-        import pyarrow.compute as pc
 
         from narwhals._arrow.dataframe import ArrowDataFrame
 

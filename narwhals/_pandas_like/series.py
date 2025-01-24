@@ -1039,12 +1039,11 @@ class PandasLikeSeries(CompliantSeries):
         include_category: bool = True,
         include_breakpoint: bool = True,
     ) -> PandasLikeDataFrame:
-        from pandas import Categorical
-        from pandas import cut
-
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
+        ns = self.__native_namespace__()
         data: dict[str, Sequence[int | float | str]]
+
         if bin_count is not None and bin_count == 0:
             data = {}
             if include_breakpoint:
@@ -1054,14 +1053,14 @@ class PandasLikeSeries(CompliantSeries):
             data["count"] = []
 
             return PandasLikeDataFrame(
-                self.__native_namespace__().DataFrame(data),
+                ns.DataFrame(data),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
             )
 
         result = (
-            cut(self._native_series, bins=bins if bin_count is None else bin_count)
+            ns.cut(self._native_series, bins=bins if bin_count is None else bin_count)
             .value_counts()
             .sort_index()
         )
@@ -1069,11 +1068,11 @@ class PandasLikeSeries(CompliantSeries):
         if include_breakpoint:
             data["breakpoint"] = result.index.categories.right
         if include_category:
-            data["category"] = Categorical(result.index.categories.astype(str))
+            data["category"] = ns.Categorical(result.index.categories.astype(str))
         data["count"] = result.reset_index(drop=True)
 
         return PandasLikeDataFrame(
-            self.__native_namespace__().DataFrame(data),
+            ns.DataFrame(data),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
