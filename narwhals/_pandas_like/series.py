@@ -669,7 +669,10 @@ class PandasLikeSeries(CompliantSeries):
             )
         return self
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        # NOTE: leave the default `=None` here in order for cuDF tests to pass.
+        # They call `cupy.asarray` which doesn't pass `dtype` or `copy`.
+
         # pandas used to always return object dtype for nullable dtypes.
         # So, we intercept __array__ and pass to `to_numpy` ourselves to make
         # sure an appropriate numpy dtype is returned.

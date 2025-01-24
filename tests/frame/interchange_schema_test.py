@@ -70,10 +70,13 @@ def test_interchange_schema() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*locale specific date formats")
 def test_interchange_schema_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
-    pytest.importorskip("duckdb")
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(
         {
             "a": [1, 1, 2],
