@@ -665,7 +665,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         by_left: list[str] | None = None,
         by_right: list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
-        suffix: str = "_right",
+        suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
         return self._from_native_frame(

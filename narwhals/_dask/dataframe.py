@@ -334,12 +334,12 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        by_left: list[str] | None = None,
-        by_right: list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
-        suffix: str = "_right",
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
         return self._from_native_frame(

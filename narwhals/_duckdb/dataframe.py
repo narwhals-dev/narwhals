@@ -6,6 +6,7 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
+import duckdb
 from duckdb import ColumnExpression
 
 from narwhals._duckdb.utils import native_to_narwhals_dtype
@@ -22,7 +23,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import duckdb
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -264,15 +264,13 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        by_left: list[str] | None = None,
-        by_right: list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
-        suffix: str = "_right",
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
-        import duckdb
-
         lhs = self._native_frame
         rhs = other._native_frame
         conditions = []
@@ -290,7 +288,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
         condition = " and ".join(conditions)
-        select = [f'lhs."{x}"' for x in lhs.columns]
+        select = ["lhs.*"]
         for col in rhs.columns:
             if col in lhs.columns and (
                 right_on is None or col not in [right_on, *by_right]
