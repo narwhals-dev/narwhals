@@ -50,6 +50,7 @@ def test_interchange_ibis(
     tmpdir: pytest.TempdirFactory,
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]

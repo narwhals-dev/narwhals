@@ -261,6 +261,7 @@ def test_nested_dtypes() -> None:
 
 def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    pytest.importorskip("duckdb")
     if PANDAS_VERSION < (1, 1):
         request.applymarker(pytest.mark.xfail)
     df = pl.DataFrame(

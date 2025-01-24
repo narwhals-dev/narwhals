@@ -26,6 +26,7 @@ def test_interchange_ibis_to_pandas(
         request.applymarker(pytest.mark.xfail)
 
     ibis = pytest.importorskip("ibis")
+    pytest.importorskip("duckdb")
     df_raw = pd.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
