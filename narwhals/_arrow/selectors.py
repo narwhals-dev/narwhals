@@ -91,7 +91,7 @@ class ArrowSelector(ArrowExpr):
             f"ArrowSelector("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
+            f"root_names={self._evaluate_root_names}, "
             f"output_names={self._output_names}"
         )
 
@@ -100,7 +100,7 @@ class ArrowSelector(ArrowExpr):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
+            root_names=self._evaluate_root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
             version=self._version,

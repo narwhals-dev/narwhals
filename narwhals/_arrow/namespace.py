@@ -498,7 +498,7 @@ class ArrowThen(ArrowExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
+        self._evaluate_root_names = root_names
         self._output_names = output_names
         self._kwargs = kwargs
 

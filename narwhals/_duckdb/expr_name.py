@@ -16,7 +16,7 @@ class DuckDBExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.keep"
             raise AnonymousExprError.from_expr_name(msg)
@@ -36,7 +36,7 @@ class DuckDBExprNameNamespace:
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.map"
             raise AnonymousExprError.from_expr_name(msg)
@@ -59,7 +59,7 @@ class DuckDBExprNameNamespace:
         )
 
     def prefix(self: Self, prefix: str) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.prefix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -81,7 +81,7 @@ class DuckDBExprNameNamespace:
         )
 
     def suffix(self: Self, suffix: str) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.suffix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -104,7 +104,7 @@ class DuckDBExprNameNamespace:
         )
 
     def to_lowercase(self: Self) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.to_lowercase"
             raise AnonymousExprError.from_expr_name(msg)
@@ -127,7 +127,7 @@ class DuckDBExprNameNamespace:
         )
 
     def to_uppercase(self: Self) -> DuckDBExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.to_uppercase"
             raise AnonymousExprError.from_expr_name(msg)

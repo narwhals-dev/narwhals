@@ -128,27 +128,28 @@ def infer_new_root_output_names(
     If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
     and just set it to None.
     """
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
+    def func(df: CompliantDataFrame) -> list[str]:
+        root_names = expr._evaluate_root_names(df)
+        root_names = root_names.extend(root_name for comparand in kwargs.values() for root_name in  comparand._evaluate_root_names(df) if root_name not in root_names)
+        return root_names
 
-    if not (
-        (output_names is None and root_names is None)
-        or (output_names is not None and root_names is not None)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        raise AssertionError(msg)
-    return root_names, output_names
+    return func
+
+def infer_new_root_output_names(
+    expr: CompliantExpr[Any], **kwargs: Any
+) -> tuple[list[str] | None, list[str] | None]:
+    """Return new root and output names after chaining expressions.
+
+    Try tracking root and output names by combining them from all expressions appearing in kwargs.
+    If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
+    and just set it to None.
+    """
+    def func(df: CompliantDataFrame) -> list[str]:
+        root_names = expr._evaluate_root_names(df)
+        root_names = root_names.extend(root_name for comparand in kwargs.values() for root_name in  comparand._evaluate_root_names(df) if root_name not in root_names)
+        return root_names
+
+    return func
 
 
 @overload
@@ -273,7 +274,7 @@ def reuse_series_namespace_implementation(
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        root_names=expr._root_names,
+        root_names=expr._evaluate_root_names,
         output_names=expr._output_names,
         kwargs={**expr._kwargs, **kwargs},
     )
@@ -297,11 +298,11 @@ def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
 
 
 def combine_root_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    root_names = copy(parsed_exprs[0]._root_names)
+    root_names = copy(parsed_exprs[0]._evaluate_root_names)
     for arg in parsed_exprs[1:]:
         if root_names is not None:
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
+            if arg._evaluate_root_names is not None:
+                root_names.extend(arg._evaluate_root_names)
             else:
                 root_names = None
                 break

@@ -55,7 +55,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="all",
-            root_names=None,
+            evaluate_root_names=None,
             output_names=None,
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -92,7 +92,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="lit",
-            root_names=None,
+            evaluate_root_names=None,
             output_names=["literal"],
             returns_scalar=True,
             backend_version=self._backend_version,
@@ -116,7 +116,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="len",
-            root_names=None,
+            evaluate_root_names=None,
             output_names=["len"],
             returns_scalar=True,
             backend_version=self._backend_version,
@@ -133,7 +133,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -150,7 +150,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -167,7 +167,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -245,7 +245,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -263,7 +263,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -281,7 +281,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -335,7 +335,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(exprs),
+            evaluate_root_names=combine_root_names(exprs),
             output_names=reduce_output_names(exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
@@ -438,7 +438,7 @@ class DaskThen(DaskExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
+        self._evaluate_root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._kwargs = kwargs

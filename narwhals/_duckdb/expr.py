@@ -55,7 +55,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
+        self._evaluate_root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
@@ -304,7 +304,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             _alias,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
+            root_names=self._evaluate_root_names,
             output_names=[name],
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,

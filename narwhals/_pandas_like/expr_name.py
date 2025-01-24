@@ -16,7 +16,7 @@ class PandasLikeExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.keep"
@@ -38,7 +38,7 @@ class PandasLikeExprNameNamespace:
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.map"
@@ -62,7 +62,7 @@ class PandasLikeExprNameNamespace:
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.prefix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -84,7 +84,7 @@ class PandasLikeExprNameNamespace:
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.suffix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -107,7 +107,7 @@ class PandasLikeExprNameNamespace:
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.to_lowercase"
@@ -131,7 +131,7 @@ class PandasLikeExprNameNamespace:
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.to_uppercase"

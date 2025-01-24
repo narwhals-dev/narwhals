@@ -396,6 +396,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     def _extract_compliant(self: Self, arg: Any) -> Any:
+        breakpoint()
         from narwhals.expr import Expr
         from narwhals.series import Series
 
@@ -404,6 +405,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(arg, Series):
             return arg._compliant_series
         if isinstance(arg, Expr):
+            # here: alias to the left-most root name
+            # unless there's multiple outputs, in which case
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (

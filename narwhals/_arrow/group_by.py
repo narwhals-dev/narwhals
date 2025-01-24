@@ -144,7 +144,7 @@ def agg_arrow(
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
         if (
-            expr._depth != 1 or expr._root_names is None or expr._output_names is None
+            expr._depth != 1 or expr._evaluate_root_names is None or expr._output_names is None
         ):  # pragma: no cover
             msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
             raise AssertionError(msg)
@@ -164,10 +164,10 @@ def agg_arrow(
 
         new_column_names.extend(expr._output_names)
         expected_pyarrow_column_names.extend(
-            [f"{root_name}_{function_name}" for root_name in expr._root_names]
+            [f"{root_name}_{function_name}" for root_name in expr._evaluate_root_names]
         )
         aggs.extend(
-            [(root_name, function_name, option) for root_name in expr._root_names]
+            [(root_name, function_name, option) for root_name in expr._evaluate_root_names]
         )
 
     result_simple = grouped.aggregate(aggs)

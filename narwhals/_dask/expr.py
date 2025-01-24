@@ -45,7 +45,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
+        evaluate_root_names: Callable[[DaskLazyFrame], list[str]],
         output_names: list[str] | None,
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
@@ -57,7 +57,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
+        self._evaluate_root_names = evaluate_root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
@@ -96,7 +96,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
+            evaluate_root_names=lambda _df: list(column_names),
             output_names=list(column_names),
             returns_scalar=False,
             backend_version=backend_version,
@@ -120,7 +120,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
+            evaluate_root_names=lambda df: [df.columns[i] for i in column_indices],
             output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
@@ -142,24 +142,24 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             inputs = self._call(df)
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                name = _input.name
+                # name = _input.name
                 if self._returns_scalar:
                     _input = _input[0]
                 result = call(_input, **_kwargs)
                 if returns_scalar:
                     result = result.to_series()
-                result = result.rename(name)
+                # result = result.rename(name)
                 results.append(result)
             return results
 
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+        evaluate_root_names = infer_new_root_output_names(self, **kwargs)
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            root_names=root_names,
-            output_names=output_names,
+            evaluate_root_names=evaluate_root_names,
+            evaluate_aliases=self._evaluate_aliases,
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -175,7 +175,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
+            root_names=self._evaluate_root_names,
             output_names=[name],
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
@@ -680,7 +680,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._root_names,
+            root_names=self._evaluate_root_names,
             output_names=self._output_names,
             returns_scalar=False,
             backend_version=self._backend_version,

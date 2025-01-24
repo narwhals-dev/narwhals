@@ -35,7 +35,7 @@ class DaskSelectorNamespace:
             func,
             depth=0,
             function_name="type_selector",
-            root_names=None,
+            evaluate_root_names=None,
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
@@ -80,7 +80,7 @@ class DaskSelectorNamespace:
             func,
             depth=0,
             function_name="type_selector",
-            root_names=None,
+            evaluate_root_names=None,
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
@@ -95,7 +95,7 @@ class DaskSelector(DaskExpr):
             f"DaskSelector("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
+            f"root_names={self._evaluate_root_names}, "
             f"output_names={self._output_names}"
         )
 
@@ -104,7 +104,7 @@ class DaskSelector(DaskExpr):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
+            evaluate_root_names=self._evaluate_root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
@@ -124,7 +124,7 @@ class DaskSelector(DaskExpr):
                 call,
                 depth=0,
                 function_name="type_selector",
-                root_names=None,
+                evaluate_root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
@@ -146,7 +146,7 @@ class DaskSelector(DaskExpr):
                 call,
                 depth=0,
                 function_name="type_selector",
-                root_names=None,
+                evaluate_root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
@@ -168,7 +168,7 @@ class DaskSelector(DaskExpr):
                 call,
                 depth=0,
                 function_name="type_selector",
-                root_names=None,
+                evaluate_root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,

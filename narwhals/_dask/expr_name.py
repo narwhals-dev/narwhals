@@ -16,7 +16,7 @@ class DaskExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.keep"
@@ -29,7 +29,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=root_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
@@ -38,7 +38,7 @@ class DaskExprNameNamespace:
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.map"
@@ -53,7 +53,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=output_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
@@ -62,7 +62,7 @@ class DaskExprNameNamespace:
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.prefix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -75,7 +75,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=output_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
@@ -84,7 +84,7 @@ class DaskExprNameNamespace:
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
         if root_names is None:
             msg = ".name.suffix"
             raise AnonymousExprError.from_expr_name(msg)
@@ -98,7 +98,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=output_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
@@ -107,7 +107,7 @@ class DaskExprNameNamespace:
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.to_lowercase"
@@ -121,7 +121,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=output_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
@@ -130,7 +130,7 @@ class DaskExprNameNamespace:
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
-        root_names = self._compliant_expr._root_names
+        root_names = self._compliant_expr._evaluate_root_names
 
         if root_names is None:
             msg = ".name.to_uppercase"
@@ -144,7 +144,7 @@ class DaskExprNameNamespace:
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
+            evaluate_root_names=root_names,
             output_names=output_names,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
