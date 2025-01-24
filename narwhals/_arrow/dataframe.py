@@ -382,11 +382,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         *,
         left_on: str | None,
         right_on: str | None,
-        on: str | None,
-        by_left: str | list[str] | None,
-        by_right: str | list[str] | None,
-        by: str | list[str] | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
+        suffix: str = "_right",
     ) -> Self:
         msg = "join_asof is not yet supported on PyArrow tables"  # pragma: no cover
         raise NotImplementedError(msg)

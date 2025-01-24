@@ -246,6 +246,7 @@ class BaseFrame(Generic[FrameT]):
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
+        suffix: str = "_right",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
 
@@ -271,16 +272,13 @@ class BaseFrame(Generic[FrameT]):
             msg = "If `by` is specified, `by_left` and `by_right` should be None."
             raise ValueError(msg)
         if on is not None:
-            return self._from_compliant_dataframe(
-                self._compliant_frame.join_asof(
-                    self._extract_compliant(other),
-                    on=on,
-                    by_left=by_left,
-                    by_right=by_right,
-                    by=by,
-                    strategy=strategy,
-                )
-            )
+            left_on = right_on = on
+        if by is not None:
+            by_left = by_right = by
+        if isinstance(by_left, str):
+            by_left = [by_left]
+        if isinstance(by_right, str):
+            by_right = [by_right]
         return self._from_compliant_dataframe(
             self._compliant_frame.join_asof(
                 self._extract_compliant(other),
@@ -288,8 +286,8 @@ class BaseFrame(Generic[FrameT]):
                 right_on=right_on,
                 by_left=by_left,
                 by_right=by_right,
-                by=by,
                 strategy=strategy,
+                suffix=suffix,
             )
         )
 
@@ -2715,6 +2713,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
+        suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
 
@@ -2731,6 +2730,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             by_right: join on these columns before doing asof join.
             by: join on these columns before doing asof join.
             strategy: Join strategy. The default is "backward".
+            suffix: Suffix to append to columns with a duplicate name.
 
                   * *backward*: selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
                   * *forward*: selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
@@ -2891,6 +2891,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             by_right=by_right,
             by=by,
             strategy=strategy,
+            suffix=suffix,
         )
 
     # --- descriptive ---
@@ -4999,6 +5000,7 @@ class LazyFrame(BaseFrame[FrameT]):
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
+        suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
 
@@ -5026,6 +5028,8 @@ class LazyFrame(BaseFrame[FrameT]):
                   * *backward*: selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
                   * *forward*: selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
                   * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
+
+            suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
             A new joined LazyFrame.
@@ -5193,6 +5197,7 @@ class LazyFrame(BaseFrame[FrameT]):
             by_right=by_right,
             by=by,
             strategy=strategy,
+            suffix=suffix,
         )
 
     def clone(self: Self) -> Self:

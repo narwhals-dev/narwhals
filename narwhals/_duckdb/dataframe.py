@@ -264,23 +264,13 @@ class DuckDBLazyFrame:
         *,
         left_on: str | None = None,
         right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
+        by_left: list[str] | None = None,
+        by_right: list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
+        suffix: str = "_right",
     ) -> Self:
         import duckdb
 
-        if on is not None:
-            left_on = right_on = on
-        if by is not None:
-            by_left = by_right = by
-        if isinstance(by_left, str):
-            by_left = [by_left]
-        if isinstance(by_right, str):
-            by_right = [by_right]
-        suffix = "_right"
         lhs = self._native_frame
         rhs = other._native_frame
         conditions = []
