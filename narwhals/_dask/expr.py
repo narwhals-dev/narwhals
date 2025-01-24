@@ -13,7 +13,7 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._expression_parsing import infer_evaluate_root_names
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
@@ -38,6 +38,8 @@ if TYPE_CHECKING:
 
 class DaskExpr(CompliantExpr["dx.Series"]):
     _implementation: Implementation = Implementation.DASK
+    _root_names = None
+    _output_names = None
 
     def __init__(
         self: Self,
@@ -46,7 +48,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         depth: int,
         function_name: str,
         evaluate_root_names: Callable[[DaskLazyFrame], list[str]],
-        output_names: list[str] | None,
+        evaluate_aliases: Callable[[list[str]], list[str]],
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
@@ -58,7 +60,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._depth = depth
         self._function_name = function_name
         self._evaluate_root_names = evaluate_root_names
-        self._output_names = output_names
+        self._evaluate_aliases = evaluate_aliases
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
@@ -97,7 +99,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             depth=0,
             function_name="col",
             evaluate_root_names=lambda _df: list(column_names),
-            output_names=list(column_names),
+            evaluate_aliases=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -121,7 +123,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             depth=0,
             function_name="nth",
             evaluate_root_names=lambda df: [df.columns[i] for i in column_indices],
-            output_names=None,
+            evaluate_aliases=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -152,7 +154,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                 results.append(result)
             return results
 
-        evaluate_root_names = infer_new_root_output_names(self, **kwargs)
+        evaluate_root_names = infer_evaluate_root_names(self, **kwargs)
 
         return self.__class__(
             func,
@@ -167,16 +169,16 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def alias(self: Self, name: str) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            inputs = self._call(df)
-            return [_input.rename(name) for _input in inputs]
+        def func(root_names: list[str]) -> list[str]:
+            assert len(root_names) == 1, root_names
+            return [name]
 
         return self.__class__(
-            func,
+            self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._evaluate_root_names,
-            output_names=[name],
+            evaluate_root_names=self._evaluate_root_names,
+            evaluate_aliases = func,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,

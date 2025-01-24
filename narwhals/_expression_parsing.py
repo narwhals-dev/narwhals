@@ -128,14 +128,30 @@ def infer_new_root_output_names(
     If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
     and just set it to None.
     """
-    def func(df: CompliantDataFrame) -> list[str]:
-        root_names = expr._evaluate_root_names(df)
-        root_names = root_names.extend(root_name for comparand in kwargs.values() for root_name in  comparand._evaluate_root_names(df) if root_name not in root_names)
-        return root_names
+    root_names = copy(expr._root_names)
+    output_names = expr._output_names
+    for arg in list(kwargs.values()):
+        if root_names is not None and isinstance(arg, expr.__class__):
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
+            else:
+                root_names = None
+                output_names = None
+                break
+        elif root_names is None:
+            output_names = None
+            break
 
-    return func
+    if not (
+        (output_names is None and root_names is None)
+        or (output_names is not None and root_names is not None)
+    ):  # pragma: no cover
+        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        raise AssertionError(msg)
+    return root_names, output_names
 
-def infer_new_root_output_names(
+
+def infer_evaluate_root_names(
     expr: CompliantExpr[Any], **kwargs: Any
 ) -> tuple[list[str] | None, list[str] | None]:
     """Return new root and output names after chaining expressions.
@@ -146,7 +162,13 @@ def infer_new_root_output_names(
     """
     def func(df: CompliantDataFrame) -> list[str]:
         root_names = expr._evaluate_root_names(df)
-        root_names = root_names.extend(root_name for comparand in kwargs.values() for root_name in  comparand._evaluate_root_names(df) if root_name not in root_names)
+        root_names.extend(
+            root_name
+            for comparand in kwargs.values()
+            if hasattr(comparand, '__narwhals_expr__')
+            for root_name in  comparand._evaluate_root_names(df)
+            if root_name not in root_names
+        )
         return root_names
 
     return func

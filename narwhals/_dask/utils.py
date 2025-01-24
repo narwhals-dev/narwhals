@@ -55,7 +55,9 @@ def parse_exprs_and_named_exprs(
             # If there's a single output, then take the
             # left-most root name.
             root_names = root_names[:1]
-        # root_names = expr._evaluate_aliases(root_names)
+        if expr._evaluate_aliases is not None:
+            root_names = expr._evaluate_aliases(root_names)
+        # make it Some when we call `alias` or `.name`
         assert len(root_names) == len(_results)
         for name, _result in zip(root_names, _results):
             # objective:
