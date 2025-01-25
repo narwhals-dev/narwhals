@@ -50,19 +50,13 @@ def parse_exprs_and_named_exprs(
     for expr in exprs:
         _results = expr._call(df)
         return_scalar = getattr(expr, "_returns_scalar", False)
-        root_names = expr._evaluate_root_names(df)
-        if len(_results) == 1:
-            # If there's a single output, then take the
-            # left-most root name.
-            root_names = root_names[:1]
-        if expr._evaluate_aliases is not None:
-            root_names = expr._evaluate_aliases(root_names)
-        # make it Some when we call `alias` or `.name`
-        assert len(root_names) == len(_results)
-        for name, _result in zip(root_names, _results):
-            # objective:
-            # root_names = _result._root_names(df)
-            # results[_result.]
+        output_names = expr._evaluate_output_names(df)
+        if expr._alias_output_names is not None:
+            output_names = expr._alias_output_names(output_names)
+        if len(output_names) == len(_results):  # pragma: no cover
+            msg = f"Internal error: got output names {output_names}, but only got {len(_results)} results"
+            raise AssertionError(msg)
+        for name, _result in zip(output_names, _results):
             results[name] = _result[0] if return_scalar else _result
 
     for name, value in named_exprs.items():

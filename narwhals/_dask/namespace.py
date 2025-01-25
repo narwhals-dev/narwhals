@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -18,9 +19,8 @@ from narwhals._dask.utils import name_preserving_div
 from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
-from narwhals._expression_parsing import combine_evaluate_root_names
-from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import reduce_output_names
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -55,9 +55,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         return DaskExpr(
             func,
             depth=0,
-            function_name="all",
-            evaluate_root_names=lambda df: df.columns,
-            evaluate_aliases=None,
+            function_name="col",
+            evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -93,8 +93,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="lit",
-            evaluate_root_names=lambda df: df.columns,
-            evaluate_aliases=lambda _root_names: ["literal"],
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
@@ -117,8 +117,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             func,
             depth=0,
             function_name="len",
-            evaluate_root_names=lambda df: df.columns,
-            evaluate_aliases=lambda _root_names: ["len"],
+            evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
@@ -134,8 +134,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -151,8 +151,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -168,8 +168,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -246,8 +246,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -264,8 +264,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -282,8 +282,8 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            evaluate_root_names=combine_evaluate_root_names(exprs[0], *exprs[1:]),
-            evaluate_aliases=exprs[0]._evaluate_aliases,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -336,8 +336,10 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            evaluate_root_names=combine_root_names(exprs),
-            output_names=reduce_output_names(exprs),
+            evaluate_output_names=getattr(
+                exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(exprs[0], "_alias_output_names", None),
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
@@ -411,8 +413,10 @@ class DaskWhen:
             self,
             depth=0,
             function_name="whenthen",
-            evaluate_root_names=value._evaluate_root_names,
-            evaluate_aliases=value._evaluate_aliases,
+            evaluate_output_names=getattr(
+                value, "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(value, "_alias_output_names", None),
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -427,8 +431,8 @@ class DaskThen(DaskExpr):
         *,
         depth: int,
         function_name: str,
-        evaluate_root_names: list[str] | None,
-        evaluate_aliases: list[str] | None,
+        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
@@ -439,8 +443,8 @@ class DaskThen(DaskExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = evaluate_root_names
-        self._evaluate_aliases = evaluate_aliases
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
         self._kwargs = kwargs
 

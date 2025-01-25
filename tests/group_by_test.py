@@ -49,11 +49,7 @@ def test_invalid_group_by_dask() -> None:
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
+    nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")

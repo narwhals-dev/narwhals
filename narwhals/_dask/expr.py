@@ -13,7 +13,6 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import combine_evaluate_root_names
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
@@ -47,8 +46,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         *,
         depth: int,
         function_name: str,
-        evaluate_root_names: Callable[[DaskLazyFrame], Sequence[str]],
-        evaluate_aliases: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
@@ -59,8 +58,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_root_names = evaluate_root_names
-        self._evaluate_aliases = evaluate_aliases
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
@@ -98,8 +97,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="col",
-            evaluate_root_names=lambda _df: list(column_names),
-            evaluate_aliases=None,
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -122,8 +121,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="nth",
-            evaluate_root_names=lambda df: [df.columns[i] for i in column_indices],
-            evaluate_aliases=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -156,14 +155,12 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                     native_results.append(result_native)
             return native_results
 
-        evaluate_root_names = combine_evaluate_root_names(self, *other_exprs.values())
-
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            evaluate_root_names=evaluate_root_names,
-            evaluate_aliases=self._evaluate_aliases,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -181,8 +178,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            evaluate_root_names=self._evaluate_root_names,
-            evaluate_aliases=func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -682,14 +679,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             )
             raise NotImplementedError(msg)
 
-        # TODO(marco): should evaluate_root_names should also consider `keys`?
+        # TODO(marco): should evaluate_output_names should also consider `keys`?
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            evaluate_root_names=self._evaluate_root_names,
-            evaluate_aliases=self._evaluate_aliases,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,

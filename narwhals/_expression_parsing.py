@@ -152,29 +152,6 @@ def infer_new_root_output_names(
     return root_names, output_names
 
 
-def combine_evaluate_root_names(
-    expr: CompliantExpr[Any], *other_exprs: Any
-) -> Callable[[CompliantDataFrame | CompliantLazyFrame], Sequence[str]]:
-    """Combine expressions to get a new `evaluate_root_names` function.
-
-    We keep all root names from the left-most expression (`expr`), and
-    then append any new root names from the other expressions.
-    """
-
-    def func(df: CompliantDataFrame | CompliantLazyFrame) -> Sequence[str]:
-        root_names = expr._evaluate_root_names(df)  # type: ignore[attr-defined]
-        root_names.extend(
-            root_name
-            for comparand in other_exprs
-            if hasattr(comparand, "__narwhals_expr__")
-            for root_name in comparand._evaluate_root_names(df)
-            if root_name not in root_names
-        )
-        return root_names  # type: ignore[no-any-return]
-
-    return func
-
-
 @overload
 def reuse_series_implementation(
     expr: PandasLikeExprT,
@@ -339,6 +316,37 @@ def reduce_output_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str]
         if parsed_exprs[0]._output_names is not None
         else None
     )
+
+
+def combine_evaluate_output_names(
+    *exprs: CompliantExpr[Any],
+) -> Callable[[CompliantDataFrame | CompliantLazyFrame], Sequence[str]]:
+    # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
+    # first name of `expr1`.
+    def evaluate_output_names(
+        df: CompliantDataFrame | CompliantLazyFrame,
+    ) -> Sequence[str]:
+        if not hasattr(exprs[0], "__narwhals_expr__"):
+            return ["literal"]
+        return exprs[0]._evaluate_output_names(df)[:1]  # type: ignore[no-any-return, attr-defined]
+
+    return evaluate_output_names
+
+
+def combine_alias_output_names(
+    *exprs: CompliantExpr[Any],
+) -> Callable[[Sequence[str]], Sequence[str]] | None:
+    # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
+    # aliasing function of `expr1` and apply it to the first output name of `expr1`.
+    if not hasattr(exprs[0], "__narwhals_expr__"):
+        return None
+    if exprs[0]._alias_output_names is None:  # type: ignore[attr-defined]
+        return None
+
+    def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+        return exprs[0]._alias_output_names(names)[:1]  # type: ignore[no-any-return, attr-defined]
+
+    return alias_output_names
 
 
 def extract_compliant(

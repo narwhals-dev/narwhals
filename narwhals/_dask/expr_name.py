@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Callable
 
-from narwhals.exceptions import AnonymousExprError
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -20,8 +18,8 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=None,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=None,
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
@@ -33,8 +31,10 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=lambda root_names: [function(str(name)) for name in root_names],
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=lambda root_names: [
+                function(str(name)) for name in root_names
+            ],
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
@@ -46,8 +46,10 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=lambda root_names: [f'{prefix}{root_name}' for root_name in root_names],
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=lambda root_names: [
+                f"{prefix}{root_name}" for root_name in root_names
+            ],
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
@@ -59,8 +61,10 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=lambda root_names: [f'{root_name}{suffix}' for root_name in root_names],
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=lambda root_names: [
+                f"{root_name}{suffix}" for root_name in root_names
+            ],
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
@@ -72,8 +76,10 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=lambda root_names: [str(name).lower() for name in root_names],
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=lambda root_names: [
+                str(name).lower() for name in root_names
+            ],
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
@@ -85,8 +91,10 @@ class DaskExprNameNamespace:
             self._compliant_expr._call,
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            evaluate_root_names=self._compliant_expr._evaluate_root_names,
-            evaluate_aliases=lambda root_names: [str(name).upper() for name in root_names],
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=lambda root_names: [
+                str(name).upper() for name in root_names
+            ],
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
