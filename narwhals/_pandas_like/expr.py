@@ -423,7 +423,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
                 if function_name == "shift":
                     kwargs = {"periods": self._kwargs["n"]}
-                elif self._function_name == "rank":
+                elif function_name == "rank":
                     _method = self._kwargs.get("method", "average")
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,

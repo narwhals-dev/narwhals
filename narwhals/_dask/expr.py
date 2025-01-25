@@ -13,8 +13,8 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
@@ -663,10 +663,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            if self._output_names is None:
-                msg = "over"
-                raise AnonymousExprError.from_expr_name(msg)
-
+            _, aliases = evaluate_output_names_and_aliases(self, df, keys)
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp_native = (
@@ -674,7 +671,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                     .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
                     ._native_frame
                 )
-                return [tmp_native[name] for name in self._output_names]
+                return [tmp_native[name] for name in aliases]
             msg = (
                 "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
