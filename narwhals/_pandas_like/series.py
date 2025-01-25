@@ -925,7 +925,7 @@ class PandasLikeSeries(CompliantSeries):
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_samples=min_samples, center=center
+            window=window_size, min_periods=min_samples, center=center
         ).sum()
         return self._from_native_series(result)
 
@@ -937,7 +937,7 @@ class PandasLikeSeries(CompliantSeries):
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_samples=min_samples, center=center
+            window=window_size, min_periods=min_samples, center=center
         ).mean()
         return self._from_native_series(result)
 
@@ -950,7 +950,7 @@ class PandasLikeSeries(CompliantSeries):
         ddof: int,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_samples=min_samples, center=center
+            window=window_size, min_periods=min_samples, center=center
         ).var(ddof=ddof)
         return self._from_native_series(result)
 
@@ -963,7 +963,7 @@ class PandasLikeSeries(CompliantSeries):
         ddof: int,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_samples=min_samples, center=center
+            window=window_size, min_periods=min_samples, center=center
         ).std(ddof=ddof)
         return self._from_native_series(result)
 
