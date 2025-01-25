@@ -4,7 +4,6 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Sequence
 
 from narwhals.dtypes import DType
 from narwhals.utils import import_dtypes_module
@@ -66,18 +65,6 @@ def parse_exprs_and_named_exprs(
             raise ValueError(msg)
         native_results[col_alias] = native_series_list[0]
     return native_results
-
-
-def _columns_from_expr(
-    df: DuckDBLazyFrame, expr: DuckDBExpr
-) -> Sequence[duckdb.Expression]:
-    col_output_list = expr._call(df)
-    if expr._output_names is not None and (
-        len(col_output_list) != len(expr._output_names)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        raise AssertionError(msg)
-    return col_output_list
 
 
 @lru_cache(maxsize=16)
