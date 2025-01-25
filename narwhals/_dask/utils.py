@@ -46,7 +46,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: DaskExpr, **named_exprs: DaskExpr
 ) -> dict[str, dx.Series]:
-    results = {}
+    native_results = {}
     for expr in exprs:
         _results = expr._call(df)
         return_scalar = getattr(expr, "_returns_scalar", False)
@@ -56,9 +56,7 @@ def parse_exprs_and_named_exprs(
         if len(output_names) != len(_results):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(_results)} results"
             raise AssertionError(msg)
-        for name, _result in zip(output_names, _results):
-            results[name] = _result[0] if return_scalar else _result
-
+        native_results.update(zip(output_names, column_list))
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
@@ -66,8 +64,8 @@ def parse_exprs_and_named_exprs(
             raise AssertionError(msg)
         return_scalar = getattr(value, "_returns_scalar", False)
         for _result in _results:
-            results[name] = _result[0] if return_scalar else _result
-    return results
+            native_results[name] = _result[0] if return_scalar else _result
+    return native_results
 
 
 def add_row_index(

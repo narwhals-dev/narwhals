@@ -136,13 +136,13 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **other_exprs: Self | Any,
+        **expressibiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value) for key, value in other_exprs.items()
+                key: maybe_evaluate(df, value) for key, value in expressibiable_args.items()
             }
             for native_series in native_series_list:
                 if self._returns_scalar:
@@ -164,11 +164,11 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, **other_exprs},
+            kwargs={**self._kwargs, **expressibiable_args},
         )
 
     def alias(self: Self, name: str) -> Self:
-        def func(names: Sequence[str]) -> Sequence[str]:
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
                 raise ValueError(msg)
@@ -179,7 +179,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
+            alias_output_names=alias_output_names,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
