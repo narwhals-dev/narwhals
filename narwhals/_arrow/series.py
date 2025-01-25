@@ -843,10 +843,10 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -866,7 +866,7 @@ class ArrowSeries(CompliantSeries):
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_periods)._native_series,
+                (count_in_window >= min_samples)._native_series,
                 rolling_sum._native_series,
                 None,
             )
@@ -877,10 +877,10 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -901,7 +901,7 @@ class ArrowSeries(CompliantSeries):
         result = (
             self._from_native_series(
                 pc.if_else(
-                    (count_in_window >= min_periods)._native_series,
+                    (count_in_window >= min_samples)._native_series,
                     rolling_sum._native_series,
                     None,
                 )
@@ -914,11 +914,11 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -950,7 +950,7 @@ class ArrowSeries(CompliantSeries):
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_periods)._native_series,
+                (count_in_window >= min_samples)._native_series,
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
                 None,
             )
@@ -964,13 +964,13 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
         return (
             self.rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
             ** 0.5
         )

@@ -996,7 +996,7 @@ def validate_strict_and_pass_though(
 
 
 def _validate_rolling_arguments(
-    window_size: int, min_periods: int | None
+    window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
     if window_size < 1:
         msg = "window_size must be greater or equal than 1"
@@ -1010,25 +1010,25 @@ def _validate_rolling_arguments(
         )
         raise TypeError(msg)
 
-    if min_periods is not None:
-        if min_periods < 1:
-            msg = "min_periods must be greater or equal than 1"
+    if min_samples is not None:
+        if min_samples < 1:
+            msg = "min_samples must be greater or equal than 1"
             raise ValueError(msg)
 
-        if not isinstance(min_periods, int):
-            _type = min_periods.__class__.__name__
+        if not isinstance(min_samples, int):
+            _type = min_samples.__class__.__name__
             msg = (
-                f"argument 'min_periods': '{_type}' object cannot be "
+                f"argument 'min_samples': '{_type}' object cannot be "
                 "interpreted as an integer"
             )
             raise TypeError(msg)
-        if min_periods > window_size:
-            msg = "`min_periods` must be less or equal than `window_size`"
+        if min_samples > window_size:
+            msg = "`min_samples` must be less or equal than `window_size`"
             raise InvalidOperationError(msg)
     else:
-        min_periods = window_size
+        min_samples = window_size
 
-    return window_size, min_periods
+    return window_size, min_samples
 
 
 def generate_repr(header: str, native_repr: str) -> str:
