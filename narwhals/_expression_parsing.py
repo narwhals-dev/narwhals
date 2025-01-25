@@ -177,7 +177,7 @@ def reuse_series_implementation(
     attr: str,
     *,
     returns_scalar: bool = False,
-    **kwargs: Any,
+    **expressifiable_args: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
 
@@ -190,14 +190,15 @@ def reuse_series_implementation(
         returns_scalar: whether the Series version returns a scalar. In this case,
             the expression version should return a 1-row Series.
         args: arguments to pass to function.
-        kwargs: keyword arguments to pass to function.
+        expressifiable_args: keyword arguments to pass to function, which may
+            be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
     """
     plx = expr.__narwhals_namespace__()
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
         _kwargs = {  # type: ignore[var-annotated]
             arg_name: maybe_evaluate_expr(df, arg_value)
-            for arg_name, arg_value in kwargs.items()
+            for arg_name, arg_value in expressifiable_args.items()
         }
 
         # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
@@ -228,15 +229,13 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    root_names, output_names = infer_new_root_output_names(expr, **kwargs)
-
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
-        root_names=root_names,
-        output_names=output_names,
-        kwargs={**expr._kwargs, **kwargs},
+        evaluate_output_names=expr._evaluate_output_names,
+        alias_output_names=expr._alias_output_names,
+        kwargs={**expr._kwargs, **expressifiable_args},
     )
 
 
@@ -274,8 +273,8 @@ def reuse_series_namespace_implementation(
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        root_names=expr._root_names,
-        output_names=expr._output_names,
+        evaluate_output_names=expr._evaluate_output_names,
+        alias_output_names=expr._alias_output_names,
         kwargs={**expr._kwargs, **kwargs},
     )
 
@@ -412,3 +411,23 @@ def operation_aggregates(*args: IntoExpr | Any) -> bool:
     # expression does not aggregate, then broadcasting will take
     # place and the result will not be an aggregate.
     return all(getattr(x, "_aggregates", True) for x in args)
+
+
+def evaluate_output_names_and_aliases(
+    expr: CompliantExpr,
+    df: CompliantDataFrame | CompliantLazyFrame,
+    exclude: Sequence[str],
+) -> tuple[Sequence[str], Sequence[str]]:
+    output_names = expr._evaluate_output_names(df)  # type: ignore[attr-defined]
+    aliases = (
+        output_names
+        if expr._alias_output_names is None  # type: ignore[attr-defined]
+        else expr._alias_output_names(output_names)  # type: ignore[attr-defined]
+    )
+    if len(output_names) > 1:
+        # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
+        # the keys, else they would appear duplicated in the output.
+        output_names, aliases = zip(
+            *[(x, alias) for x, alias in zip(output_names, aliases) if x not in exclude]
+        )
+    return output_names, aliases

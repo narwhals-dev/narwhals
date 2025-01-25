@@ -36,6 +36,7 @@ def test_keep_raise_anonymous(constructor: Constructor) -> None:
         or df.implementation.is_polars()
         or df.implementation.is_pyspark()
         or df.implementation.is_duckdb()
+        or df.implementation.is_pyarrow()
         else pytest.raises(
             AnonymousExprError,
             match="Anonymous expressions are not supported in `.name.keep`.",
