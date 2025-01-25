@@ -657,7 +657,7 @@ class Expr:
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -682,7 +682,7 @@ class Expr:
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value, (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -746,7 +746,7 @@ class Expr:
                 half_life=half_life,
                 alpha=alpha,
                 adjust=adjust,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
             ),
             is_order_dependent=self._is_order_dependent,
@@ -3874,7 +3874,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -3892,7 +3892,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -3918,7 +3918,7 @@ class Expr:
             >>> def agnostic_rolling_sum(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_sum(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -3952,14 +3952,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[1,3,3,6]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             ),
             is_order_dependent=True,
@@ -3971,7 +3971,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -3989,7 +3989,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -4015,7 +4015,7 @@ class Expr:
             >>> def agnostic_rolling_mean(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_mean(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4049,14 +4049,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[1,1.5,1.5,3]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             ),
             is_order_dependent=True,
@@ -4068,7 +4068,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4087,7 +4087,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4114,7 +4114,7 @@ class Expr:
             >>> def agnostic_rolling_var(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_var(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_var(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4148,13 +4148,13 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[nan,0.5,0.5,2]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
             is_order_dependent=True,
             changes_length=self._changes_length,
@@ -4165,7 +4165,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4184,7 +4184,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4211,7 +4211,7 @@ class Expr:
             >>> def agnostic_rolling_std(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_std(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_std(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4245,14 +4245,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[nan,0.7071067811865476,0.7071067811865476,1.4142135623730951]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
                 ddof=ddof,
             ),

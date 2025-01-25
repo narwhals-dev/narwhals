@@ -308,7 +308,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         half_life: float | None,
         alpha: float | None,
         adjust: bool,
-        min_periods: int,
+        min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
         return reuse_series_implementation(
@@ -319,7 +319,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
+            min_samples=min_samples,
             ignore_nulls=ignore_nulls,
         )
 
@@ -563,14 +563,14 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
             self,
             "rolling_sum",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -578,14 +578,14 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
             self,
             "rolling_mean",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -593,7 +593,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -601,7 +601,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             self,
             "rolling_var",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )
@@ -610,7 +610,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -618,7 +618,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             self,
             "rolling_std",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )
