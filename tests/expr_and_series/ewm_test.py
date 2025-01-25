@@ -153,7 +153,7 @@ def test_ewm_mean_params(
     expected = {"a": [None, 4.0, 3.4285714285714284]}
     assert_equal_data(
         df.select(
-            nw.col("a").ewm_mean(alpha=0.5, adjust=True, min_periods=2, ignore_nulls=True)
+            nw.col("a").ewm_mean(alpha=0.5, adjust=True, min_samples=2, ignore_nulls=True)
         ),
         expected,
     )
