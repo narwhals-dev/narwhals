@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
@@ -50,13 +51,12 @@ def parse_exprs_and_named_exprs(
     for expr in exprs:
         native_series_list = expr._call(df)
         return_scalar = getattr(expr, "_returns_scalar", False)
-        output_names = expr._evaluate_output_names(df)
-        if expr._alias_output_names is not None:
-            output_names = expr._alias_output_names(output_names)
-        if len(output_names) != len(native_series_list):  # pragma: no cover
-            msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
+        _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+        if len(aliases) != len(native_series_list):  # pragma: no cover
+            msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
+        for native_series, alias in zip(native_series_list, aliases):
+            native_results[alias] = native_series[0] if return_scalar else native_series
     for name, value in named_exprs.items():
         native_series_list = value._call(df)
         if len(native_series_list) != 1:  # pragma: no cover
