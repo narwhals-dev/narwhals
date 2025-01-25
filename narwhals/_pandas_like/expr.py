@@ -17,7 +17,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
 
@@ -400,6 +399,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def over(self: Self, keys: list[str]) -> Self:
         if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
+            # TODO(marco): first, validate that it's depth-1. then, use re.sub.
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, keys)
@@ -449,14 +449,12 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         else:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if self._output_names is None:
-                    msg = "over"
-                    raise AnonymousExprError.from_expr_name(msg)
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp = df.simple_select(*keys).join(
                     tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
                 )
-                return [tmp[name] for name in self._output_names]
+                _, aliases = evaluate_output_names_and_aliases(self, df, keys)
+                return [tmp[name] for name in aliases]
 
         return self.__class__(
             func,

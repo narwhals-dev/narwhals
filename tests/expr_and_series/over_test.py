@@ -58,20 +58,6 @@ def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor)
     assert_equal_data(result, expected)
 
 
-def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
-    with pytest.raises(
-        ValueError,
-        match="Anonymous expressions|Named expressions must return a single column",
-    ):
-        df.with_columns(c_min=nw.all().min().over("a", "b"))
-
-
 def test_over_cumsum(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
@@ -179,8 +165,7 @@ def test_over_cumprod(
 
 def test_over_anonymous() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="Anonymous expressions"):
-        nw.from_native(df).select(nw.all().cum_max().over("a"))
+    nw.from_native(df).select(nw.all().cum_max().over("a"))
 
 
 def test_over_shift(
