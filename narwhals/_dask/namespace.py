@@ -55,7 +55,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         return DaskExpr(
             func,
             depth=0,
-            function_name="col",
+            function_name="all",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             returns_scalar=False,
@@ -110,7 +110,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                         npartitions=df._native_frame.npartitions,
                     )
                 ]
-            return [df._native_frame[df.columns[0]].size.to_series().rename("len")]
+            return [df._native_frame[df.columns[0]].size.to_series()]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
@@ -128,7 +128,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
+            return [reduce(lambda x, y: x & y, series)]
 
         return DaskExpr(
             call=func,
@@ -145,7 +145,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
+            return [reduce(lambda x, y: x | y, series)]
 
         return DaskExpr(
             call=func,
@@ -162,7 +162,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
+            return [reduce(lambda x, y: x + y, series)]
 
         return DaskExpr(
             call=func,
@@ -258,7 +258,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
 
-            return [dd.concat(series, axis=1).min(axis=1).rename(series[0].name)]
+            return [dd.concat(series, axis=1).min(axis=1)]
 
         return DaskExpr(
             call=func,
@@ -276,7 +276,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
 
-            return [dd.concat(series, axis=1).max(axis=1).rename(series[0].name)]
+            return [dd.concat(series, axis=1).max(axis=1)]
 
         return DaskExpr(
             call=func,
@@ -330,7 +330,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     init_value,
                 )
 
-            return [result.rename(null_mask[0].name)]
+            return [result]
 
         return DaskExpr(
             call=func,

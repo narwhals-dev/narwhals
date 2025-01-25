@@ -56,7 +56,7 @@ def parse_exprs_and_named_exprs(
         if len(output_names) != len(_results):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(_results)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, column_list))
+        native_results.update(zip(output_names, _results))
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
