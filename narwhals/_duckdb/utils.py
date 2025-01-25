@@ -17,14 +17,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def get_column_name(
-    df: DuckDBLazyFrame, column: duckdb.Expression, *, returns_scalar: bool
-) -> str:
-    if returns_scalar:
-        return str(df._native_frame.aggregate([column]).columns[0])
-    return str(df._native_frame.select(column).columns[0])
-
-
 def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
     from narwhals._duckdb.expr import DuckDBExpr
 

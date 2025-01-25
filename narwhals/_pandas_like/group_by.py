@@ -100,7 +100,7 @@ class PandasLikeGroupBy:
         nunique_aggs: dict[str, str] = {}
         simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
 
-        # ddof to (root_names, output_names) mapping
+        # ddof to (output_names, aliases) mapping
         std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
             lambda: ([], [])
         )
@@ -196,24 +196,24 @@ class PandasLikeGroupBy:
                 result_aggs.extend(
                     [
                         set_columns(
-                            self._grouped[std_root_names].std(ddof=ddof),
-                            columns=std_output_names,
+                            self._grouped[std_output_names].std(ddof=ddof),
+                            columns=std_aliases,
                             implementation=implementation,
                             backend_version=backend_version,
                         )
-                        for ddof, (std_root_names, std_output_names) in std_aggs.items()
+                        for ddof, (std_output_names, std_aliases) in std_aggs.items()
                     ]
                 )
             if var_aggs:
                 result_aggs.extend(
                     [
                         set_columns(
-                            self._grouped[var_root_names].var(ddof=ddof),
-                            columns=var_output_names,
+                            self._grouped[var_output_names].var(ddof=ddof),
+                            columns=var_aliases,
                             implementation=implementation,
                             backend_version=backend_version,
                         )
-                        for ddof, (var_root_names, var_output_names) in var_aggs.items()
+                        for ddof, (var_output_names, var_aliases) in var_aggs.items()
                     ]
                 )
 

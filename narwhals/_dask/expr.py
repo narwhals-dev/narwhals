@@ -37,8 +37,6 @@ if TYPE_CHECKING:
 
 class DaskExpr(CompliantExpr["dx.Series"]):
     _implementation: Implementation = Implementation.DASK
-    _root_names = None
-    _output_names = None
 
     def __init__(
         self: Self,

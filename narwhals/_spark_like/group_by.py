@@ -116,11 +116,11 @@ def agg_pyspark(
 
     simple_aggregations: dict[str, Column] = {}
     for expr in exprs:
-        output_names = expr._evaluate_output_names(df)  # type: ignore[attr-defined]
+        output_names = expr._evaluate_output_names(df)
         aliases = (
             output_names
-            if expr._alias_output_names is None  # type: ignore[attr-defined]
-            else expr._alias_output_names(output_names)  # type: ignore[attr-defined]
+            if expr._alias_output_names is None
+            else expr._alias_output_names(output_names)
         )
         if len(output_names) > 1:
             # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip

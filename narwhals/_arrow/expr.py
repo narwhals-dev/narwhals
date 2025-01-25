@@ -32,8 +32,6 @@ if TYPE_CHECKING:
 
 class ArrowExpr(CompliantExpr[ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
-    _root_names = None
-    _output_names = None
 
     def __init__(
         self: Self,

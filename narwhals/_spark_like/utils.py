@@ -109,20 +109,6 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def get_column_name(df: SparkLikeLazyFrame, column: Column) -> str:
-    return str(df._native_frame.select(column).columns[0])
-
-
-def _columns_from_expr(df: SparkLikeLazyFrame, expr: SparkLikeExpr) -> list[Column]:
-    col_output_list = expr._call(df)
-    if expr._output_names is not None and (
-        len(col_output_list) != len(expr._output_names)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        raise AssertionError(msg)
-    return col_output_list
-
-
 def parse_exprs_and_named_exprs(
     df: SparkLikeLazyFrame, *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
 ) -> dict[str, Column]:

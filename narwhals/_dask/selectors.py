@@ -94,9 +94,7 @@ class DaskSelector(DaskExpr):
         return (
             f"DaskSelector("
             f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            f"root_names={self._evaluate_output_names}, "
-            f"output_names={self._output_names}"
+            f"function_name={self._function_name})"
         )
 
     def _to_expr(self: Self) -> DaskExpr:

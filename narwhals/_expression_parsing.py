@@ -185,12 +185,11 @@ def reuse_series_implementation(
             else getattr(series, attr)(**_kwargs)
             for series in expr(df)  # type: ignore[arg-type]
         ]
-        if expr._output_names is not None and (
-            [s.name for s in out] != expr._output_names
-        ):  # pragma: no cover
+        _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+        if [s.name for s in out] != list(aliases):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
-                f"Expression output names: {expr._output_names}\n"
+                f"Expression aliases: {aliases}\n"
                 f"Series names: {[s.name for s in out]}"
             )
             raise AssertionError(msg)
@@ -273,7 +272,7 @@ def combine_evaluate_output_names(
     ) -> Sequence[str]:
         if not hasattr(exprs[0], "__narwhals_expr__"):
             return ["literal"]
-        return exprs[0]._evaluate_output_names(df)[:1]  # type: ignore[no-any-return, attr-defined]
+        return exprs[0]._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
 
@@ -285,11 +284,11 @@ def combine_alias_output_names(
     # aliasing function of `expr1` and apply it to the first output name of `expr1`.
     if not hasattr(exprs[0], "__narwhals_expr__"):
         return None
-    if exprs[0]._alias_output_names is None:  # type: ignore[attr-defined]
+    if exprs[0]._alias_output_names is None:
         return None
 
     def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-        return exprs[0]._alias_output_names(names)[:1]  # type: ignore[no-any-return, attr-defined]
+        return exprs[0]._alias_output_names(names)[:1]  # type: ignore[misc]
 
     return alias_output_names
 
@@ -364,11 +363,11 @@ def evaluate_output_names_and_aliases(
     df: CompliantDataFrame | CompliantLazyFrame,
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
-    output_names = expr._evaluate_output_names(df)  # type: ignore[attr-defined]
+    output_names = expr._evaluate_output_names(df)
     aliases = (
         output_names
-        if expr._alias_output_names is None  # type: ignore[attr-defined]
-        else expr._alias_output_names(output_names)  # type: ignore[attr-defined]
+        if expr._alias_output_names is None
+        else expr._alias_output_names(output_names)
     )
     if len(output_names) > 1:
         # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip

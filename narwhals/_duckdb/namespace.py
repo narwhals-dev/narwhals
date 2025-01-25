@@ -31,10 +31,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def get_column_name(df: DuckDBLazyFrame, column: duckdb.Expression) -> str:
-    return str(df._native_frame.select(column).columns[0])
-
-
 class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

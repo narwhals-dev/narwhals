@@ -47,9 +47,6 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 
 
 class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
-    _root_names = None
-    _output_names = None
-
     def __init__(
         self: Self,
         call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],

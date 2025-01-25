@@ -34,8 +34,6 @@ if TYPE_CHECKING:
 
 class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
-    _root_names = None
-    _output_names = None
 
     def __init__(
         self: Self,

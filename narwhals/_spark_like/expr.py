@@ -31,8 +31,6 @@ if TYPE_CHECKING:
 
 class SparkLikeExpr(CompliantExpr["Column"]):
     _implementation = Implementation.PYSPARK
-    _root_names = None
-    _output_names = None
 
     def __init__(
         self: Self,

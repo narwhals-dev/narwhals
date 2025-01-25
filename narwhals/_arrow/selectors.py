@@ -93,9 +93,7 @@ class ArrowSelector(ArrowExpr):
         return (
             f"ArrowSelector("
             f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
+            f"function_name={self._function_name})"
         )
 
     def _to_expr(self: Self) -> ArrowExpr:
