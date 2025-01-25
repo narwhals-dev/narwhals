@@ -83,7 +83,7 @@ class ArrowGroupBy:
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
 
-                new_column_names.append(output_names[0])
+                new_column_names.append(aliases[0])
                 expected_pyarrow_column_names.append(f"{self._keys[0]}_count")
                 aggs.append((self._keys[0], "count", pc.CountOptions(mode="all")))
 

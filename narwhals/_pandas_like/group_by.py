@@ -121,7 +121,7 @@ class PandasLikeGroupBy:
                     function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                         expr._function_name, expr._function_name
                     )
-                    for alias in output_names:
+                    for alias in aliases:
                         expected_old_names.append(f"{self._keys[0]}_{function_name}")
                         simple_aggs[self._keys[0]].append(function_name)
                         simple_agg_new_names.append(alias)
