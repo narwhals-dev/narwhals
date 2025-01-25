@@ -52,9 +52,7 @@ def test_renamed_taxicab_norm(
     assert_equal_data(result_v1, expected)
 
 
-def test_renamed_taxicab_norm_dataframe(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
@@ -68,9 +66,7 @@ def test_renamed_taxicab_norm_dataframe(
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe_narwhalify(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.

@@ -46,25 +46,26 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: DaskExpr, **named_exprs: DaskExpr
 ) -> dict[str, dx.Series]:
-    native_results = {}
+    native_results: dict[str, dx.Series] = {}
     for expr in exprs:
-        _results = expr._call(df)
+        native_series_list = expr._call(df)
         return_scalar = getattr(expr, "_returns_scalar", False)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
-        if len(output_names) != len(_results):  # pragma: no cover
-            msg = f"Internal error: got output names {output_names}, but only got {len(_results)} results"
+        if len(output_names) != len(native_series_list):  # pragma: no cover
+            msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, _results))
+        native_results.update(zip(output_names, native_series_list))
     for name, value in named_exprs.items():
-        _results = value._call(df)
-        if len(_results) != 1:  # pragma: no cover
+        native_series_list = value._call(df)
+        if len(native_series_list) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
         return_scalar = getattr(value, "_returns_scalar", False)
-        for _result in _results:
-            native_results[name] = _result[0] if return_scalar else _result
+        native_results[name] = (
+            native_series_list[0][0] if return_scalar else native_series_list[0]
+        )
     return native_results
 
 

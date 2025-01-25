@@ -36,7 +36,9 @@ def test_map_raise_anonymous(constructor: Constructor) -> None:
 
     context = (
         does_not_raise()
-        if df.implementation.is_polars() or df.implementation.is_dask() or df.implementation.is_pyspark()
+        if df.implementation.is_polars()
+        or df.implementation.is_dask()
+        or df.implementation.is_pyspark()
         else pytest.raises(
             AnonymousExprError,
             match="Anonymous expressions are not supported in `.name.map`.",

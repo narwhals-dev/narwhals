@@ -128,20 +128,20 @@ def parse_exprs_and_named_exprs(
 ) -> dict[str, Column]:
     native_results: dict[str, list[Column]] = {}
     for expr in exprs:
-        column_list = expr._call(df)
+        native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
-        if len(output_names) != len(column_list):  # pragma: no cover
-            msg = f"Internal error: got output names {output_names}, but only got {len(column_list)} results"
+        if len(output_names) != len(native_series_list):  # pragma: no cover
+            msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, column_list))
+        native_results.update(zip(output_names, native_series_list))
     for col_alias, expr in named_exprs.items():
-        col_output_list = expr._call(df)
-        if len(col_output_list) != 1:  # pragma: no cover
+        native_series_list = expr._call(df)
+        if len(native_series_list) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise ValueError(msg)
-        native_results[col_alias] = col_output_list[0]
+        native_results[col_alias] = native_series_list[0]
     return native_results
 
 
@@ -189,6 +189,7 @@ def _var(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column
 
     input_col = F.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)
+
 
 def binary_operation_returns_scalar(lhs: SparkLikeExpr, rhs: SparkLikeExpr | Any) -> bool:
     # If `rhs` is a SparkLikeExpr, we look at `_returns_scalar`. If it isn't,

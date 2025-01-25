@@ -142,7 +142,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value) for key, value in expressibiable_args.items()
+                key: maybe_evaluate(df, value)
+                for key, value in expressibiable_args.items()
             }
             for native_series in native_series_list:
                 if self._returns_scalar:

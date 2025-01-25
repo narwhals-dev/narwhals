@@ -1,20 +1,21 @@
 from __future__ import annotations
-from pyspark.sql.types import IntegerType
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Sequence, Callable
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from pyspark.sql import functions as F  # noqa: N812
+from pyspark.sql.types import IntegerType
 
-from narwhals._expression_parsing import combine_root_names, combine_alias_output_names, combine_evaluate_output_names
-from narwhals._expression_parsing import reduce_output_names
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
-from narwhals._spark_like.utils import get_column_name
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -351,10 +352,7 @@ class SparkLikeWhen:
             # `self._otherwise_value` is a scalar
             other_ = F.lit(self._otherwise_value)
 
-        return [
-            F.when(condition=condition, value=value_)
-            .otherwise(value=other_)
-        ]
+        return [F.when(condition=condition, value=value_).otherwise(value=other_)]
 
     def then(self: Self, value: SparkLikeExpr | Any) -> SparkLikeThen:
         self._then_value = value

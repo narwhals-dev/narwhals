@@ -9,11 +9,10 @@ from typing import Sequence
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
-from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
-from narwhals._spark_like.utils import get_column_name, binary_operation_returns_scalar
+from narwhals._spark_like.utils import binary_operation_returns_scalar
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
@@ -129,7 +128,10 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_results: list[Column] = []
             native_series_list = self._call(df)
-            other_native_series = {key: maybe_evaluate(df, value) for key, value in expressibiable_args.items()}
+            other_native_series = {
+                key: maybe_evaluate(df, value)
+                for key, value in expressibiable_args.items()
+            }
             for native_series in native_series_list:
                 column_result = call(native_series, **other_native_series)
                 native_results.append(column_result)
@@ -200,7 +202,10 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.floor(_input / other)
 
         return self._from_call(
-            _floordiv, "__floordiv__", other=other, returns_scalar=binary_operation_returns_scalar(self, other),
+            _floordiv,
+            "__floordiv__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:

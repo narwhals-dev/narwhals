@@ -1,7 +1,6 @@
 from __future__ import annotations
-import re
 
-from copy import copy
+import re
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
@@ -13,7 +12,6 @@ from pyspark.sql import functions as F  # noqa: N812
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._spark_like.utils import _std
 from narwhals._spark_like.utils import _var
-from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -128,18 +126,12 @@ def agg_pyspark(
             # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
             # the keys, else they would appear duplicated in the output.
             output_names, aliases = zip(
-                *[
-                    (x, alias)
-                    for x, alias in zip(output_names, aliases)
-                    if x not in keys
-                ]
+                *[(x, alias) for x, alias in zip(output_names, aliases) if x not in keys]
             )
         if expr._depth == 0:  # pragma: no cover
             # e.g. agg(nw.len()) # noqa: ERA001
             agg_func = get_spark_function(expr._function_name, **expr._kwargs)
-            simple_aggregations.update(
-                {alias: agg_func(keys[0]) for alias in aliases}
-            )
+            simple_aggregations.update({alias: agg_func(keys[0]) for alias in aliases})
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
