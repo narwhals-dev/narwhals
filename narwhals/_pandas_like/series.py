@@ -191,13 +191,13 @@ class PandasLikeSeries(CompliantSeries):
         half_life: float | None,
         alpha: float | None,
         adjust: bool,
-        min_periods: int,
+        min_samples: int,
         ignore_nulls: bool,
     ) -> PandasLikeSeries:
         ser = self._native_series
         mask_na = ser.isna()
         if self._implementation is Implementation.CUDF:
-            if (min_periods == 0 and not ignore_nulls) or (not mask_na.any()):
+            if (min_samples == 0 and not ignore_nulls) or (not mask_na.any()):
                 result = ser.ewm(
                     com=com, span=span, halflife=half_life, alpha=alpha, adjust=adjust
                 ).mean()
@@ -209,7 +209,7 @@ class PandasLikeSeries(CompliantSeries):
                 raise NotImplementedError(msg)
         else:
             result = ser.ewm(
-                com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
+                com, span, half_life, alpha, min_samples, adjust, ignore_na=ignore_nulls
             ).mean()
         result[mask_na] = None
         return self._from_native_series(result)
@@ -921,11 +921,11 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_periods=min_periods, center=center
+            window=window_size, min_samples=min_samples, center=center
         ).sum()
         return self._from_native_series(result)
 
@@ -933,11 +933,11 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_periods=min_periods, center=center
+            window=window_size, min_samples=min_samples, center=center
         ).mean()
         return self._from_native_series(result)
 
@@ -945,12 +945,12 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_periods=min_periods, center=center
+            window=window_size, min_samples=min_samples, center=center
         ).var(ddof=ddof)
         return self._from_native_series(result)
 
@@ -958,12 +958,12 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
         result = self._native_series.rolling(
-            window=window_size, min_periods=min_periods, center=center
+            window=window_size, min_samples=min_samples, center=center
         ).std(ddof=ddof)
         return self._from_native_series(result)
 
