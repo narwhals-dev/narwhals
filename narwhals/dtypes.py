@@ -711,7 +711,7 @@ class Array(DType):
 
     Arguments:
         inner: The datatype of the values within each array.
-        width: the length of each array.
+        shape: the length of each array.
 
     Examples:
         >>> import pandas as pd
@@ -724,11 +724,11 @@ class Array(DType):
         >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
 
         >>> nw.from_native(ser_pd, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
         >>> nw.from_native(ser_pl, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
         >>> nw.from_native(ser_pa, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
     """
 
     inner: DType | type[DType]
