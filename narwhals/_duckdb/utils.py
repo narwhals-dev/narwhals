@@ -5,13 +5,13 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+import duckdb
+
 from narwhals.dtypes import DType
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    import duckdb
-
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.utils import Version
@@ -26,8 +26,6 @@ def get_column_name(
 
 
 def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
-    import duckdb
-
     from narwhals._duckdb.expr import DuckDBExpr
 
     if isinstance(obj, DuckDBExpr):
