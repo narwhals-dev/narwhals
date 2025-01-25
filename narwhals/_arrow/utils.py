@@ -141,8 +141,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
             ]
         )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(
+            dtype.inner,  # type: ignore[union-attr]
+            version=version,
+        )
+        list_size = dtype.size  # type: ignore[union-attr]
+        return pa.list_(inner, list_size=list_size)
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -220,7 +225,7 @@ def broadcast_and_extract_dataframe_comparand(
 
     if isinstance(other, ArrowSeries):
         len_other = len(other)
-        if len_other == 1:
+        if len_other == 1 and length != 1:
             import numpy as np  # ignore-banned-import
 
             value = other._native_series[0]

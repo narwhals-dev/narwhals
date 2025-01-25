@@ -132,16 +132,11 @@ def native_to_narwhals_dtype(
             native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
         )
     if dtype == pl.Array:
-        if backend_version < (0, 20, 30):  # pragma: no cover
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.width,  # type: ignore[attr-defined]
-            )
-        else:
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.size,  # type: ignore[attr-defined]
-            )
+        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
+        return dtypes.Array(
+            inner=native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
+            shape=outer_shape,
+        )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
     return dtypes.Unknown()
@@ -205,8 +200,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
             ]
         )
     if dtype == dtypes.Array:  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
+        return pl.Array(
+            inner=narwhals_to_native_dtype(dtype.inner, version),  # type: ignore[union-attr]
+            shape=dtype.size,  # type: ignore[union-attr]
+        )
     return pl.Unknown()  # pragma: no cover
 
 

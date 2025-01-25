@@ -133,10 +133,13 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
         return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
-    if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
+    if match_ := re.match(r"(\w+)((?:\[\d+\])+)", duckdb_dtype):
+        duckdb_inner_type = match_.group(1)
+        duckdb_shape = match_.group(2)
+        shape = tuple(int(value) for value in re.findall(r"\[(\d+)\]", duckdb_shape))
         return dtypes.Array(
-            native_to_narwhals_dtype(match_.group(1), version),
-            int(match_.group(2)),
+            inner=native_to_narwhals_dtype(duckdb_inner_type, version),
+            shape=shape,
         )
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()
@@ -193,8 +196,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "todo"
-        raise NotImplementedError(msg)
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)  # type: ignore[union-attr]
+        while isinstance(dtype.inner, dtypes.Array):  # type: ignore[union-attr]
+            dtype = dtype.inner  # type: ignore[union-attr]
+        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
+        return f"{inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

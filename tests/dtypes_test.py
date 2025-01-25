@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from typing import TYPE_CHECKING
 from typing import Literal
 
 import numpy as np
@@ -14,6 +15,9 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -75,7 +79,7 @@ def test_array_valid() -> None:
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
-    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, 2)"
+    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, shape=(2,))"
     dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
@@ -83,7 +87,7 @@ def test_array_valid() -> None:
     assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
 
     with pytest.raises(
-        TypeError, match="`width` must be specified when initializing an `Array`"
+        TypeError, match="Array constructor is missing the required argument `shape`"
     ):
         dtype = nw.Array(nw.Int64)
 
@@ -133,13 +137,23 @@ def test_polars_2d_array() -> None:
     df = pl.DataFrame(
         {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
     )
-    assert nw.from_native(df).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64, 2), 3)
+    assert nw.from_native(df).collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
     assert nw.from_native(df.to_arrow()).collect_schema()["a"] == nw.Array(
-        nw.Array(nw.Int64, 2), 3
+        nw.Array(nw.Int64(), 2), 3
     )
     assert nw.from_native(
         df.to_pandas(use_pyarrow_extension_array=True)
-    ).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64, 2), 3)
+    ).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
+
+
+def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
+    df = nw.from_native(constructor(data)).with_columns(
+        a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
+    )
+    assert df.collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
 
 
 def test_second_time_unit() -> None:

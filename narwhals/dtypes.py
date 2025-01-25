@@ -731,14 +731,37 @@ class Array(DType):
         Array(Int32, 2)
     """
 
+    inner: DType | type[DType]
+    size: int
+    shape: tuple[int, ...]
+
     def __init__(
-        self: Self, inner: DType | type[DType], width: int | None = None
+        self: Self,
+        inner: DType | type[DType],
+        shape: int | tuple[int, ...] | None = None,
     ) -> None:
-        self.inner = inner
-        if width is None:
-            error = "`width` must be specified when initializing an `Array`"
-            raise TypeError(error)
-        self.width = width
+        inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
+
+        if shape is None:  # pragma: no cover
+            msg = "Array constructor is missing the required argument `shape`"
+            raise TypeError(msg)
+
+        if isinstance(shape, int):
+            self.inner = inner
+            self.size = shape
+            self.shape = (shape, *inner_shape)
+
+        elif isinstance(shape, tuple):
+            if len(shape) > 1:
+                inner = Array(inner, shape[1:])
+
+            self.inner = inner
+            self.size = shape[0]
+            self.shape = shape + inner_shape
+
+        else:
+            msg = f"invalid input for shape: {shape!r}"
+            raise TypeError(msg)
 
     def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
@@ -751,16 +774,24 @@ class Array(DType):
         if type(other) is type and issubclass(other, self.__class__):
             return True
         elif isinstance(other, self.__class__):
-            return self.inner == other.inner
+            if self.shape != other.shape:
+                return False
+            else:
+                return self.inner == other.inner
         else:
             return False
 
     def __hash__(self: Self) -> int:
-        return hash((self.__class__, self.inner, self.width))
+        return hash((self.__class__, self.inner, self.shape))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
+        # Get leaf type
+        dtype = self.inner
+        while isinstance(dtype, Array):
+            dtype = dtype.inner
+
         class_name = self.__class__.__name__
-        return f"{class_name}({self.inner!r}, {self.width})"
+        return f"{class_name}({dtype!r}, shape={self.shape})"
 
 
 class Date(TemporalType):
