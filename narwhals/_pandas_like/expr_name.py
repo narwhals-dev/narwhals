@@ -65,8 +65,8 @@ class PandasLikeExprNameNamespace:
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
-            alias_output_names=lambda root_names: [
-                f"{prefix}{root_name}" for root_name in root_names
+            alias_output_names=lambda output_names: [
+                f"{prefix}{output_name}" for output_name in output_names
             ],
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
@@ -86,8 +86,8 @@ class PandasLikeExprNameNamespace:
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
-            alias_output_names=lambda root_names: [
-                f"{root_name}{suffix}" for root_name in root_names
+            alias_output_names=lambda output_names: [
+                f"{output_name}{suffix}" for output_name in output_names
             ],
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
@@ -107,8 +107,8 @@ class PandasLikeExprNameNamespace:
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
-            alias_output_names=lambda root_names: [
-                str(name).lower() for name in root_names
+            alias_output_names=lambda output_names: [
+                str(name).lower() for name in output_names
             ],
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,
@@ -128,8 +128,8 @@ class PandasLikeExprNameNamespace:
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
-            alias_output_names=lambda root_names: [
-                str(name).upper() for name in root_names
+            alias_output_names=lambda output_names: [
+                str(name).upper() for name in output_names
             ],
             implementation=self._compliant_expr._implementation,
             backend_version=self._compliant_expr._backend_version,

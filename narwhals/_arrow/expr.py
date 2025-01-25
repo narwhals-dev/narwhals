@@ -395,13 +395,13 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            output_names, aliases = evaluate_output_names_and_aliases(self, df, keys)
+            _, aliases = evaluate_output_names_and_aliases(self, df, keys)
 
             tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.simple_select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
-            return [tmp[name].alias(alias) for name, alias in zip(output_names, aliases)]
+            return [tmp[alias] for alias in aliases]
 
         return self.__class__(
             func,

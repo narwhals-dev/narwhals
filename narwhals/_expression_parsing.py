@@ -3,7 +3,6 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -118,38 +117,6 @@ def parse_into_expr(
         series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
         return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
-
-
-def infer_new_root_output_names(
-    expr: CompliantExpr[Any], **kwargs: Any
-) -> tuple[list[str] | None, list[str] | None]:
-    """Return new root and output names after chaining expressions.
-
-    Try tracking root and output names by combining them from all expressions appearing in kwargs.
-    If any anonymous expression appears (e.g. nw.all()), then give up on tracking root names
-    and just set it to None.
-    """
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
-
-    if not (
-        (output_names is None and root_names is None)
-        or (output_names is not None and root_names is not None)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-        raise AssertionError(msg)
-    return root_names, output_names
 
 
 @overload
@@ -294,27 +261,6 @@ def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
     because then, we can use a fastpath in pandas.
     """
     return expr._depth < 2
-
-
-def combine_root_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    root_names = copy(parsed_exprs[0]._root_names)
-    for arg in parsed_exprs[1:]:
-        if root_names is not None:
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                break
-    return root_names
-
-
-def reduce_output_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    """Returns the left-most output name."""
-    return (
-        parsed_exprs[0]._output_names[:1]
-        if parsed_exprs[0]._output_names is not None
-        else None
-    )
 
 
 def combine_evaluate_output_names(
