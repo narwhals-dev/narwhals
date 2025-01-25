@@ -77,6 +77,7 @@ def test_array_valid() -> None:
     dtype = nw.Array(nw.Int64, 2)
     assert dtype == nw.Array(nw.Int64, 2)
     assert dtype == nw.Array
+    assert dtype != nw.Array(nw.Int64, 3)
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
     assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, shape=(2,))"
@@ -89,7 +90,10 @@ def test_array_valid() -> None:
     with pytest.raises(
         TypeError, match="Array constructor is missing the required argument `shape`"
     ):
-        dtype = nw.Array(nw.Int64)
+        nw.Array(nw.Int64)
+
+    with pytest.raises(TypeError, match="invalid input for shape"):
+        nw.Array(nw.Int64(), shape="invalid_type")  # type: ignore[arg-type]
 
 
 def test_struct_valid() -> None:
@@ -129,23 +133,7 @@ def test_struct_hashes() -> None:
     assert len({hash(tp) for tp in (dtypes)}) == 3
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION < (1,) or PANDAS_VERSION < (2, 2),
-    reason="`shape` is only available after 1.0",
-)
-def test_polars_2d_array() -> None:
-    df = pl.DataFrame(
-        {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
-    )
-    assert nw.from_native(df).collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
-    assert nw.from_native(df.to_arrow()).collect_schema()["a"] == nw.Array(
-        nw.Array(nw.Int64(), 2), 3
-    )
-    assert nw.from_native(
-        df.to_pandas(use_pyarrow_extension_array=True)
-    ).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
-
-
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="old pandas")
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
@@ -154,6 +142,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
     )
     assert df.collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
+    assert df.collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
 
 
 def test_second_time_unit() -> None:

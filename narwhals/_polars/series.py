@@ -130,7 +130,7 @@ class PolarsSeries:
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
@@ -138,7 +138,7 @@ class PolarsSeries:
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version)
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )

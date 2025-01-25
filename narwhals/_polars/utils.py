@@ -142,7 +142,9 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
+def narwhals_to_native_dtype(
+    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+) -> pl.DataType:
     import polars as pl
 
     dtypes = import_dtypes_module(version)
@@ -188,21 +190,23 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)
     if dtype == dtypes.List:
-        return pl.List(narwhals_to_native_dtype(dtype.inner, version))  # type: ignore[union-attr]
+        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
     if dtype == dtypes.Struct:
         return pl.Struct(
             fields=[
                 pl.Field(
                     name=field.name,
-                    dtype=narwhals_to_native_dtype(field.dtype, version),
+                    dtype=narwhals_to_native_dtype(field.dtype, version, backend_version),
                 )
                 for field in dtype.fields  # type: ignore[union-attr]
             ]
         )
     if dtype == dtypes.Array:  # pragma: no cover
+        size = dtype.size  # type: ignore[union-attr]
+        kwargs = {"width": size} if backend_version < (0, 20, 30) else {"shape": size}
         return pl.Array(
-            inner=narwhals_to_native_dtype(dtype.inner, version),  # type: ignore[union-attr]
-            shape=dtype.size,  # type: ignore[union-attr]
+            inner=narwhals_to_native_dtype(dtype.inner, version, backend_version),  # type: ignore[union-attr]
+            **kwargs,
         )
     return pl.Unknown()  # pragma: no cover
 
