@@ -34,7 +34,7 @@ class DaskSelectorNamespace:
         return DaskSelector(
             func,
             depth=0,
-            function_name="type_selector",
+            function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -79,7 +79,7 @@ class DaskSelectorNamespace:
         return DaskSelector(
             func,
             depth=0,
-            function_name="type_selector",
+            function_name="selector",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -129,7 +129,7 @@ class DaskSelector(DaskExpr):
             return DaskSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
+                function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
@@ -161,7 +161,7 @@ class DaskSelector(DaskExpr):
             return DaskSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
+                function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
@@ -189,7 +189,7 @@ class DaskSelector(DaskExpr):
             return DaskSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
+                function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,

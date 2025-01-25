@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -8,7 +9,6 @@ from typing import Sequence
 import dask.dataframe as dd
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals.utils import remove_prefix
 
 try:
     import dask.dataframe.dask_expr as dx
@@ -124,7 +124,7 @@ def agg_dask(
     for expr in exprs:
         if not (
             is_simple_aggregation(expr)
-            and remove_prefix(expr._function_name, "col->") in POLARS_TO_DASK_AGGREGATIONS
+            and re.sub(r"(\w+->)", "", expr._function_name) in POLARS_TO_DASK_AGGREGATIONS
         ):
             all_simple_aggs = False
             break
@@ -159,7 +159,7 @@ def agg_dask(
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            function_name = remove_prefix(expr._function_name, "col->")
+            function_name = re.sub(r"(\w+->)", "", expr._function_name)
             kwargs = (
                 {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}
             )
