@@ -205,7 +205,7 @@ def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # n
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_samples=min_samples)
+        s.rolling(window=window_size, center=center, min_periods=min_samples)
         .sum()
         .to_frame("a")
     )
