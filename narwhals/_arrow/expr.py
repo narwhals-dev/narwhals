@@ -12,6 +12,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
@@ -394,13 +395,13 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            output_names = self._evaluate_output_names(df)
+            output_names, aliases = evaluate_output_names_and_aliases(self, df, keys)
 
             tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.simple_select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
-            return [tmp[name] for name in output_names]
+            return [tmp[name].alias(alias) for name, alias in zip(output_names, aliases)]
 
         return self.__class__(
             func,

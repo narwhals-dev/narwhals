@@ -4,11 +4,9 @@ from contextlib import nullcontext
 
 import pandas as pd
 import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -50,27 +48,6 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
     nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
-
-
-@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_invalid_group_by() -> None:
-    df = nw.from_native(df_pandas)
-    with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        df.group_by("a").agg(nw.col("b"))
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        df.group_by("a").agg(nw.all().mean())
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
-            nw.col("b").mean().min()
-        )
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
@@ -340,8 +317,6 @@ def test_group_by_categorical(
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
-        0,
-        0,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 

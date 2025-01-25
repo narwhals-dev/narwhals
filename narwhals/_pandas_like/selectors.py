@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals.utils import import_dtypes_module
@@ -32,12 +33,15 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
+        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+            return [col for col in df.columns if df.schema[col] in dtypes]
+
         return PandasSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -80,9 +84,9 @@ class PandasSelectorNamespace:
         return PandasSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -96,8 +100,6 @@ class PandasSelector(PandasLikeExpr):
             f"PandasSelector("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
         )
 
     def _to_expr(self: Self) -> PandasLikeExpr:
@@ -105,8 +107,8 @@ class PandasSelector(PandasLikeExpr):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -116,17 +118,23 @@ class PandasSelector(PandasLikeExpr):
     def __sub__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                return [x for x in lhs if x.name not in {x.name for x in rhs}]
+                return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
+
+            def evaluate_output_names(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x not in rhs_names]
 
             return PandasSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
@@ -138,17 +146,27 @@ class PandasSelector(PandasLikeExpr):
     def __or__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [*(x for x in lhs if x.name not in {x.name for x in rhs}), *rhs]
+                return [
+                    *(x for x, name in zip(lhs, lhs_names) if name not in rhs_names),
+                    *rhs,
+                ]
+
+            def evaluate_output_names(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
             return PandasSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
@@ -160,17 +178,23 @@ class PandasSelector(PandasLikeExpr):
     def __and__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                return [x for x in lhs if x.name in {x.name for x in rhs}]
+                return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
+
+            def evaluate_output_names(df: PandasLikeDataFrame) -> list[Any]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x in rhs_names]
 
             return PandasSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,

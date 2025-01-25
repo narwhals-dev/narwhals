@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
-
-import pytest
-
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import AnonymousExprError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -29,19 +24,4 @@ def test_to_uppercase_after_alias(constructor: Constructor) -> None:
 def test_to_uppercase_raise_anonymous(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-
-    context = (
-        does_not_raise()
-        if df.implementation.is_polars()
-        or df.implementation.is_dask()
-        or df.implementation.is_pyspark()
-        or df.implementation.is_duckdb()
-        or df.implementation.is_pyarrow()
-        else pytest.raises(
-            AnonymousExprError,
-            match="Anonymous expressions are not supported in `.name.to_uppercase`.",
-        )
-    )
-
-    with context:
-        df.select(nw.all().name.to_uppercase())
+    df.select(nw.all().name.to_uppercase())

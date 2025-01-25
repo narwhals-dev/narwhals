@@ -233,7 +233,7 @@ def reuse_series_implementation(
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
-        evaluate_output_names=expr._evaluate_output_names,
+        evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
         kwargs={**expr._kwargs, **expressifiable_args},
     )
@@ -273,7 +273,7 @@ def reuse_series_namespace_implementation(
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        evaluate_output_names=expr._evaluate_output_names,
+        evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
         kwargs={**expr._kwargs, **kwargs},
     )
@@ -414,7 +414,7 @@ def operation_aggregates(*args: IntoExpr | Any) -> bool:
 
 
 def evaluate_output_names_and_aliases(
-    expr: CompliantExpr,
+    expr: CompliantExpr[Any],
     df: CompliantDataFrame | CompliantLazyFrame,
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
