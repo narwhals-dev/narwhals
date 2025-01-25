@@ -490,14 +490,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(_n_unique, "n_unique", returns_scalar=True)
 
     def over(self: Self, keys: list[str]) -> Self:
-        if self._output_names is None:
-            msg = (
-                "Anonymous expressions are not supported in over.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [expr.over(Window.partitionBy(*keys)) for expr in self._call(df)]
 

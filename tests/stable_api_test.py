@@ -58,9 +58,6 @@ def test_renamed_taxicab_norm_dataframe(
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     def func(df_any: Any) -> Any:
         df = nw_v1.from_native(df_any)
         df = df._l1_norm()
@@ -77,10 +74,6 @@ def test_renamed_taxicab_norm_dataframe_narwhalify(
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.
-
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     @nw_v1.narwhalify
     def func(df: Any) -> Any:
         return df._l1_norm()

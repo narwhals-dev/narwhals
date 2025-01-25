@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pyspark.sql.types import IntegerType
 
 import operator
 from functools import reduce
@@ -82,7 +83,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def len(self: Self) -> SparkLikeExpr:
         def func(_: SparkLikeLazyFrame) -> list[Column]:
-            return [F.count("*").alias("len")]
+            return [F.count("*")]
 
         return SparkLikeExpr(
             func,
@@ -99,8 +100,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def all_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
-            return [reduce(operator.and_, cols).alias(col_name)]
+            return [reduce(operator.and_, cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -117,8 +117,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def any_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
-            return [reduce(operator.or_, cols).alias(col_name)]
+            return [reduce(operator.or_, cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -134,15 +133,12 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def sum_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            import pyspark.sql.functions as F  # noqa: N812
-
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
             return [
                 reduce(
                     operator.add,
                     (F.coalesce(col, F.lit(0)) for col in cols),
-                ).alias(col_name)
+                )
             ]
 
         return SparkLikeExpr(
@@ -158,11 +154,8 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def mean_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        from pyspark.sql.types import IntegerType
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
             return [
                 (
                     reduce(operator.add, (F.coalesce(col, F.lit(0)) for col in cols))
@@ -170,7 +163,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                         operator.add,
                         (col.isNotNull().cast(IntegerType()) for col in cols),
                     )
-                ).alias(col_name)
+                )
             ]
 
         return SparkLikeExpr(
@@ -188,8 +181,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
-            return [F.greatest(*cols).alias(col_name)]
+            return [F.greatest(*cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -206,8 +198,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            col_name = get_column_name(df, cols[0])
-            return [F.least(*cols).alias(col_name)]
+            return [F.least(*cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -350,11 +341,9 @@ class SparkLikeWhen:
 
         if isinstance(self._then_value, SparkLikeExpr):
             value_ = self._then_value(df)[0]
-            col_name = get_column_name(df, value_)
         else:
             # `self._then_value` is a scalar
             value_ = F.lit(self._then_value)
-            col_name = "literal"
 
         if isinstance(self._otherwise_value, SparkLikeExpr):
             other_ = self._otherwise_value(df)[0]
@@ -365,7 +354,6 @@ class SparkLikeWhen:
         return [
             F.when(condition=condition, value=value_)
             .otherwise(value=other_)
-            .alias(col_name)
         ]
 
     def then(self: Self, value: SparkLikeExpr | Any) -> SparkLikeThen:

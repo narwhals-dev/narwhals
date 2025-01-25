@@ -65,7 +65,7 @@ def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) 
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    with pytest.raises(ValueError, match="Anonymous expressions"):
+    with pytest.raises(ValueError, match="Anonymous expressions|Named expressions must return a single column"):
         df.with_columns(c_min=nw.all().min().over("a", "b"))
 
 

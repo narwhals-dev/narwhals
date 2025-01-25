@@ -140,7 +140,7 @@ def parse_exprs_and_named_exprs(
         col_output_list = expr._call(df)
         if len(col_output_list) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
-            raise AssertionError(msg)
+            raise ValueError(msg)
         native_results[col_alias] = col_output_list[0]
     return native_results
 
