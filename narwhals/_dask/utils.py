@@ -53,7 +53,7 @@ def parse_exprs_and_named_exprs(
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
-        if len(output_names) == len(_results):  # pragma: no cover
+        if len(output_names) != len(_results):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(_results)} results"
             raise AssertionError(msg)
         for name, _result in zip(output_names, _results):
