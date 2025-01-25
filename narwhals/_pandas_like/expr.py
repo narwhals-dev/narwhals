@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -7,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._pandas_like.expr_cat import PandasLikeExprCatNamespace
 from narwhals._pandas_like.expr_dt import PandasLikeExprDateTimeNamespace
@@ -31,16 +33,16 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
-    "col->cum_sum": "cumsum",
-    "col->cum_min": "cummin",
-    "col->cum_max": "cummax",
-    "col->cum_prod": "cumprod",
+    "cum_sum": "cumsum",
+    "cum_min": "cummin",
+    "cum_max": "cummax",
+    "cum_prod": "cumprod",
     # Pandas cumcount starts counting from 0 while Polars starts from 1
     # Pandas cumcount counts nulls while Polars does not
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
-    "col->cum_count": "cumsum",
-    "col->shift": "shift",
-    "col->rank": "rank",
+    "cum_count": "cumsum",
+    "shift": "shift",
+    "rank": "rank",
 }
 
 
@@ -398,8 +400,11 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def over(self: Self, keys: list[str]) -> Self:
-        if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
-            # TODO(marco): first, validate that it's depth-1. then, use re.sub.
+        if (
+            is_simple_aggregation(self)
+            and (function_name := re.sub(r"(\w+->)", "", self._function_name))
+            in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT
+        ):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, keys)
@@ -412,13 +417,13 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                if self._function_name == "col->cum_count":
+                if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
-                if self._function_name == "col->shift":
+                if function_name == "shift":
                     kwargs = {"periods": self._kwargs["n"]}
-                elif self._function_name == "col->rank":
+                elif self._function_name == "rank":
                     _method = self._kwargs.get("method", "average")
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,
@@ -433,7 +438,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     df._native_frame.groupby(list(keys), as_index=False)[
                         list(output_names)
                     ],
-                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
+                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                 )(**kwargs)
 
                 result_frame = df._from_native_frame(
