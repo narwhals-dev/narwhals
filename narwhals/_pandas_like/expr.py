@@ -432,11 +432,14 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
-                    df._native_frame.groupby(list(keys), as_index=False)[
+                    df._native_frame.groupby([df._native_frame[key] for key in keys])[
                         list(output_names)
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                 )(**kwargs)
+
+                # how else to do this...
+                #
 
                 result_frame = df._from_native_frame(
                     rename(

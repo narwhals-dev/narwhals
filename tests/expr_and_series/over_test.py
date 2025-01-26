@@ -174,9 +174,11 @@ def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
         if df.implementation.is_pyarrow()
         else pytest.raises(KeyError)  # type: ignore[arg-type]
         if df.implementation.is_modin()
+        or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 4))
+        # TODO(unassigned): bug in old pandas + modin.
+        # df.groupby('a')[['a', 'b']].cum_sum() excludes `'a'` from result
         else does_not_raise()
     )
-    # TODO(unassigned): why does modin raise here? bug in modin?
     with context:
         result = df.with_columns(
             nw.all().cum_sum().over("a").name.suffix("_cum_sum")
