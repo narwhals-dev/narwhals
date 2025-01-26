@@ -129,7 +129,7 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(boolean() + numeric())
 
 
-@pytest.mark.skipif(is_windows())
+@pytest.mark.skipif(is_windows(), reason="windows is what it is")
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
