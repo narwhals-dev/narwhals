@@ -13,6 +13,7 @@ from narwhals._expression_parsing import operation_aggregates
 from narwhals._expression_parsing import operation_changes_length
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -2702,6 +2703,9 @@ class Expr:
             │ 3   ┆ 2   ┆ 3   │
             └─────┴─────┴─────┘
         """
+        if self._changes_length:
+            msg = "`.over()` can not be used for expressions which change length."
+            raise LengthChangingExprError(msg)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
             self._is_order_dependent,
