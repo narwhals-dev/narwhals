@@ -437,10 +437,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                 )(**kwargs)
-
-                # how else to do this...
-                #
-
                 result_frame = df._from_native_frame(
                     rename(
                         res_native,
