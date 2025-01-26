@@ -105,13 +105,6 @@ def test_lit_operation(
         and DASK_VERSION < (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and col_name in {
-        "left_lit_with_agg",
-        "left_scalar_with_agg",
-        "right_lit_with_agg",
-        "right_lit",
-    }:
-        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
