@@ -311,7 +311,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 left_on=left_on,
                 right_on=right_on,
                 suffixes=("", suffix),
-            ).reset_index(drop=True)
+            )
             extra = []
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:

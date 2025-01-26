@@ -369,7 +369,7 @@ def evaluate_output_names_and_aliases(
         if expr._alias_output_names is None
         else expr._alias_output_names(output_names)
     )
-    if expr._function_name.split("->", maxsplit=0)[0] in {"all", "selector"}:
+    if expr._function_name.split("->", maxsplit=1)[0] in {"all", "selector"}:
         # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
         # the keys, else they would appear duplicated in the output.
         output_names, aliases = zip(

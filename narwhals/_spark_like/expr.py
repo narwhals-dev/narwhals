@@ -121,14 +121,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **expressibiable_args: Self | Any,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_results: list[Column] = []
             native_series_list = self._call(df)
             other_native_series = {
                 key: maybe_evaluate(df, value)
-                for key, value in expressibiable_args.items()
+                for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
                 column_result = call(native_series, **other_native_series)
@@ -144,7 +144,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=expressibiable_args,
+            kwargs=expressifiable_args,
         )
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]

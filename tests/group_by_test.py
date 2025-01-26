@@ -44,11 +44,6 @@ def test_invalid_group_by_dask() -> None:
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
 
-    with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
-
-    nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
-
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -70,6 +65,16 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     for key, _ in df.group_by(["a", "b"]):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
+
+
+def test_group_by_nw_all(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
+    result = df.group_by("a").agg(nw.all().sum()).sort("a")
+    expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.all().sum().name.suffix("_sum")).sort("a")
+    expected = {"a": [1, 2], "b_sum": [9, 6], "c_sum": [15, 9]}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(

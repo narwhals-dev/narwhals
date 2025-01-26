@@ -134,14 +134,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **expressibiable_args: Self | Any,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
                 key: maybe_evaluate(df, value)
-                for key, value in expressibiable_args.items()
+                for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
                 if self._returns_scalar:
@@ -163,7 +163,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, **expressibiable_args},
+            kwargs={**self._kwargs, **expressifiable_args},
         )
 
     def alias(self: Self, name: str) -> Self:
