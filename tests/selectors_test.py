@@ -134,7 +134,7 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor) and POLARS_VERSION < (1, 12):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (1, 12):
         # bug in old pyarrow
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) or "pyspark" in str(constructor):
