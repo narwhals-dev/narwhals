@@ -111,13 +111,13 @@ class ArrowSelector(ArrowExpr):
     def __sub__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[Any]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
 
-            def evaluate_output_names(df: ArrowDataFrame) -> list[Any]:
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x not in rhs_names]
@@ -138,7 +138,7 @@ class ArrowSelector(ArrowExpr):
     def __or__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[Any]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -148,7 +148,7 @@ class ArrowSelector(ArrowExpr):
                     *rhs,
                 ]
 
-            def evaluate_output_names(df: ArrowDataFrame) -> list[Any]:
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
@@ -169,13 +169,13 @@ class ArrowSelector(ArrowExpr):
     def __and__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[Any]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
 
-            def evaluate_output_names(df: ArrowDataFrame) -> list[Any]:
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x in rhs_names]

@@ -14,6 +14,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:
+        import dask_expr as dx
+
 
 class DaskSelectorNamespace:
     def __init__(
@@ -23,7 +28,7 @@ class DaskSelectorNamespace:
         self._version = version
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
             ]
@@ -73,7 +78,7 @@ class DaskSelectorNamespace:
         return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> DaskSelector:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [df._native_frame[col] for col in df.columns]
 
         return DaskSelector(
@@ -113,13 +118,13 @@ class DaskSelector(DaskExpr):
     def __sub__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
         if isinstance(other, DaskSelector):
 
-            def call(df: DaskLazyFrame) -> list[Any]:
+            def call(df: DaskLazyFrame) -> list[dx.Series]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
 
-            def evaluate_output_names(df: DaskLazyFrame) -> list[Any]:
+            def evaluate_output_names(df: DaskLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x not in rhs_names]
@@ -141,7 +146,7 @@ class DaskSelector(DaskExpr):
     def __or__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
         if isinstance(other, DaskSelector):
 
-            def call(df: DaskLazyFrame) -> list[Any]:
+            def call(df: DaskLazyFrame) -> list[dx.Series]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -151,7 +156,7 @@ class DaskSelector(DaskExpr):
                     *rhs,
                 ]
 
-            def evaluate_output_names(df: DaskLazyFrame) -> list[Any]:
+            def evaluate_output_names(df: DaskLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
@@ -173,13 +178,13 @@ class DaskSelector(DaskExpr):
     def __and__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
         if isinstance(other, DaskSelector):
 
-            def call(df: DaskLazyFrame) -> list[Any]:
+            def call(df: DaskLazyFrame) -> list[dx.Series]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
 
-            def evaluate_output_names(df: DaskLazyFrame) -> list[Any]:
+            def evaluate_output_names(df: DaskLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x in rhs_names]
