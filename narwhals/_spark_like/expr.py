@@ -124,16 +124,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            native_results: list[Column] = []
             native_series_list = self._call(df)
             other_native_series = {
                 key: maybe_evaluate(df, value)
                 for key, value in expressifiable_args.items()
             }
-            for native_series in native_series_list:
-                column_result = call(native_series, **other_native_series)
-                native_results.append(column_result)
-            return native_results
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
 
         return self.__class__(
             func,
