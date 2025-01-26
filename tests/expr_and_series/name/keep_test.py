@@ -24,6 +24,6 @@ def test_keep_after_alias(constructor: Constructor) -> None:
 def test_keep_anonymous(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    result = df.select(nw.nth(1).alias("fdfsad").name.keep())
-    expected = {"BAR": [4, 5, 6]}
+    result = df.select("foo").select(nw.all().alias("fdfsad").name.keep())
+    expected = {"foo": [1, 2, 3]}
     assert_equal_data(result, expected)
