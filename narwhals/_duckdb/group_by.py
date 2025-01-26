@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING
-
-from narwhals._expression_parsing import parse_into_exprs
-from narwhals.exceptions import AnonymousExprError
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.typing import IntoDuckDBExpr
+    from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBGroupBy:
@@ -26,28 +22,32 @@ class DuckDBGroupBy:
             self._compliant_frame = compliant_frame
         self._keys = keys
 
-    def agg(
-        self: Self,
-        *aggs: IntoDuckDBExpr,
-        **named_aggs: IntoDuckDBExpr,
-    ) -> DuckDBLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._compliant_frame.__narwhals_namespace__(),
-            **named_aggs,
-        )
-        output_names: list[str] = copy(self._keys)
+    def agg(self: Self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
+        agg_columns = self._keys.copy()
+        df = self._compliant_frame
         for expr in exprs:
-            if expr._output_names is None:  # pragma: no cover
-                msg = "group_by.agg"
-                raise AnonymousExprError.from_expr_name(msg)
+            output_names = expr._evaluate_output_names(df)
+            aliases = (
+                output_names
+                if expr._alias_output_names is None
+                else expr._alias_output_names(output_names)
+            )
+            native_expressions = expr(df)
+            exclude = (
+                self._keys
+                if expr._function_name.split("->", maxsplit=1)[0] in ("all", "selector")
+                else []
+            )
+            agg_columns.extend(
+                [
+                    native_expression.alias(alias)
+                    for native_expression, output_name, alias in zip(
+                        native_expressions, output_names, aliases
+                    )
+                    if output_name not in exclude
+                ]
+            )
 
-            output_names.extend(expr._output_names)
-
-        agg_columns = [
-            *self._keys,
-            *(x for expr in exprs for x in expr(self._compliant_frame)),
-        ]
         return self._compliant_frame._from_native_frame(
             self._compliant_frame._native_frame.aggregate(
                 agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)

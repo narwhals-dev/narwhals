@@ -34,7 +34,7 @@ def test_clip_expr_expressified(
 
     data = {"a": [1, 2, 3, -4, 5], "lb": [3, 2, 1, 1, 1], "ub": [4, 4, 2, 2, 2]}
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").clip(nw.col("lb"), nw.col("ub") + 1))
+    result = df.select(nw.col("a").clip("lb", nw.col("ub") + 1))
     expected_dict = {"a": [3, 2, 3, 1, 3]}
     assert_equal_data(result, expected_dict)
 

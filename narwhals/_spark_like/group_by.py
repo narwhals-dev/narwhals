@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from copy import copy
+import re
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,12 +10,9 @@ from typing import Sequence
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._spark_like.utils import _std
 from narwhals._spark_like.utils import _var
-from narwhals.exceptions import AnonymousExprError
 from narwhals.utils import parse_version
-from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -23,7 +20,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
+    from narwhals._spark_like.typing import SparkLikeExpr
     from narwhals.typing import CompliantExpr
 
 
@@ -45,22 +42,8 @@ class SparkLikeLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoSparkLikeExpr,
-        **named_aggs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
     ) -> SparkLikeLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
-        output_names: list[str] = copy(self._keys)
-        for expr in exprs:
-            if expr._output_names is None:  # pragma: no cover
-                msg = "group_by.agg"
-                raise AnonymousExprError.from_expr_name(msg)
-
-            output_names.extend(expr._output_names)
-
         return agg_pyspark(
             self._df,
             self._grouped,
@@ -133,31 +116,32 @@ def agg_pyspark(
 
     simple_aggregations: dict[str, Column] = {}
     for expr in exprs:
+        output_names = expr._evaluate_output_names(df)
+        aliases = (
+            output_names
+            if expr._alias_output_names is None
+            else expr._alias_output_names(output_names)
+        )
+        if len(output_names) > 1:
+            # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
+            # the keys, else they would appear duplicated in the output.
+            output_names, aliases = zip(
+                *[(x, alias) for x, alias in zip(output_names, aliases) if x not in keys]
+            )
         if expr._depth == 0:  # pragma: no cover
             # e.g. agg(nw.len()) # noqa: ERA001
-            if expr._output_names is None:  # pragma: no cover
-                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                raise AssertionError(msg)
             agg_func = get_spark_function(expr._function_name, **expr._kwargs)
-            simple_aggregations.update(
-                {output_name: agg_func(keys[0]) for output_name in expr._output_names}
-            )
+            simple_aggregations.update({alias: agg_func(keys[0]) for alias in aliases})
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
-        if (
-            expr._depth != 1 or expr._root_names is None or expr._output_names is None
-        ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
-
-        function_name = remove_prefix(expr._function_name, "col->")
+        function_name = re.sub(r"(\w+->)", "", expr._function_name)
         agg_func = get_spark_function(function_name, **expr._kwargs)
 
         simple_aggregations.update(
             {
-                output_name: agg_func(root_name)
-                for root_name, output_name in zip(expr._root_names, expr._output_names)
+                alias: agg_func(output_name)
+                for alias, output_name in zip(aliases, output_names)
             }
         )
 

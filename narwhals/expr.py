@@ -13,6 +13,7 @@ from narwhals._expression_parsing import operation_aggregates
 from narwhals._expression_parsing import operation_changes_length
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -264,7 +265,7 @@ class Expr:
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__eq__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -274,7 +275,7 @@ class Expr:
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ne__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -284,7 +285,7 @@ class Expr:
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__and__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -293,9 +294,9 @@ class Expr:
 
     def __rand__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__and__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__and__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -307,7 +308,7 @@ class Expr:
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__or__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -316,9 +317,9 @@ class Expr:
 
     def __ror__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__or__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__or__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -330,7 +331,7 @@ class Expr:
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__add__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -339,9 +340,9 @@ class Expr:
 
     def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__add__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__add__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -353,7 +354,7 @@ class Expr:
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -362,9 +363,9 @@ class Expr:
 
     def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__sub__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__sub__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -376,7 +377,7 @@ class Expr:
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__truediv__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -385,9 +386,9 @@ class Expr:
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__truediv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__truediv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -399,7 +400,7 @@ class Expr:
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mul__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -408,9 +409,9 @@ class Expr:
 
     def __rmul__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mul__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mul__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -422,7 +423,7 @@ class Expr:
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__le__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -432,7 +433,7 @@ class Expr:
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__lt__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -442,7 +443,7 @@ class Expr:
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__gt__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -452,7 +453,7 @@ class Expr:
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ge__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -462,7 +463,7 @@ class Expr:
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__pow__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -471,9 +472,9 @@ class Expr:
 
     def __rpow__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__pow__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__pow__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -485,7 +486,7 @@ class Expr:
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -494,9 +495,9 @@ class Expr:
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__floordiv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__floordiv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -508,7 +509,7 @@ class Expr:
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mod__(
-                extract_compliant(plx, other)
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
             is_order_dependent=operation_is_order_dependent(self, other),
             changes_length=operation_changes_length(self, other),
@@ -517,9 +518,9 @@ class Expr:
 
     def __rmod__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mod__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mod__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
         return self.__class__(
             func,
@@ -657,7 +658,7 @@ class Expr:
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -682,7 +683,7 @@ class Expr:
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value, (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -746,7 +747,7 @@ class Expr:
                 half_life=half_life,
                 alpha=alpha,
                 adjust=adjust,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
             ),
             is_order_dependent=self._is_order_dependent,
@@ -1977,8 +1978,8 @@ class Expr:
         """Check if this expression is between the given lower and upper bounds.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are interpreted as column names.
+            upper_bound: Upper bound value. String literals are interpreted as column names.
             closed: Define which sides of the interval are closed (inclusive).
 
         Returns:
@@ -2035,8 +2036,8 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_between(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
                 closed,
             ),
             is_order_dependent=operation_is_order_dependent(
@@ -2107,7 +2108,7 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other)
+                    extract_compliant(plx, other, parse_column_name_as_expr=False)
                 ),
                 self._is_order_dependent,
                 changes_length=self._changes_length,
@@ -2179,7 +2180,10 @@ class Expr:
         flat_predicates = flatten(predicates)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flat_predicates],
+                *[
+                    extract_compliant(plx, pred, parse_column_name_as_expr=True)
+                    for pred in flat_predicates
+                ],
             ),
             is_order_dependent=operation_is_order_dependent(*flat_predicates),
             changes_length=True,
@@ -2699,6 +2703,9 @@ class Expr:
             │ 3   ┆ 2   ┆ 3   │
             └─────┴─────┴─────┘
         """
+        if self._changes_length:
+            msg = "`.over()` can not be used for expressions which change length."
+            raise LengthChangingExprError(msg)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
             self._is_order_dependent,
@@ -3321,8 +3328,8 @@ class Expr:
         r"""Clip values in the Series.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are treated as column names.
+            upper_bound: Upper bound value. String literals are treated as column names.
 
         Returns:
             A new expression.
@@ -3453,8 +3460,8 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
             ),
             is_order_dependent=operation_is_order_dependent(
                 self, lower_bound, upper_bound
@@ -3871,7 +3878,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -3889,7 +3896,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -3915,7 +3922,7 @@ class Expr:
             >>> def agnostic_rolling_sum(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_sum(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -3949,14 +3956,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[1,3,3,6]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             ),
             is_order_dependent=True,
@@ -3968,7 +3975,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -3986,7 +3993,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -4012,7 +4019,7 @@ class Expr:
             >>> def agnostic_rolling_mean(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_mean(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4046,14 +4053,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[1,1.5,1.5,3]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             ),
             is_order_dependent=True,
@@ -4065,7 +4072,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4084,7 +4091,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4111,7 +4118,7 @@ class Expr:
             >>> def agnostic_rolling_var(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_var(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_var(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4145,13 +4152,13 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[nan,0.5,0.5,2]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
             is_order_dependent=True,
             changes_length=self._changes_length,
@@ -4162,7 +4169,7 @@ class Expr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4181,7 +4188,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4208,7 +4215,7 @@ class Expr:
             >>> def agnostic_rolling_std(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_std(window_size=3, min_periods=1)
+            ...         b=nw.col("a").rolling_std(window_size=3, min_samples=1)
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -4242,14 +4249,14 @@ class Expr:
             a: [[1,2,null,4]]
             b: [[nan,0.7071067811865476,0.7071067811865476,1.4142135623730951]]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
                 ddof=ddof,
             ),

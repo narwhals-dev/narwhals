@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from duckdb import ColumnExpression
-from duckdb import Expression
 
 from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._duckdb.utils import get_column_name
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    import duckdb
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -27,17 +26,20 @@ class DuckDBSelectorNamespace:
         self._version = version
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DuckDBSelector:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [
                 ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
             ]
 
+        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+            return [col for col in df.columns if df.schema[col] in dtypes]
+
         return DuckDBSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
@@ -63,6 +65,10 @@ class DuckDBSelectorNamespace:
             ],
         )
 
+    def categorical(self: Self) -> DuckDBSelector:
+        dtypes = import_dtypes_module(self._version)
+        return self.by_dtype([dtypes.Categorical])
+
     def string(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
@@ -72,15 +78,15 @@ class DuckDBSelectorNamespace:
         return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> DuckDBSelector:
-        def func(df: DuckDBLazyFrame) -> list[Any]:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [ColumnExpression(col) for col in df.columns]
 
         return DuckDBSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
@@ -93,9 +99,7 @@ class DuckDBSelector(DuckDBExpr):
         return (
             f"DuckDBSelector("
             f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
+            f"function_name={self._function_name})"
         )
 
     def _to_expr(self: Self) -> DuckDBExpr:
@@ -103,8 +107,8 @@ class DuckDBSelector(DuckDBExpr):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
             version=self._version,
@@ -114,25 +118,23 @@ class DuckDBSelector(DuckDBExpr):
     def __sub__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
         if isinstance(other, DuckDBSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[Any]:
+            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                lhs_names = [
-                    get_column_name(df, x, returns_scalar=self._returns_scalar)
-                    for x in lhs
-                ]
-                rhs_names = {
-                    get_column_name(df, x, returns_scalar=other._returns_scalar)
-                    for x in rhs
-                }
-                return [col for col, name in zip(lhs, lhs_names) if name not in rhs_names]
+                return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
+
+            def evaluate_output_names(df: DuckDBLazyFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x not in rhs_names]
 
             return DuckDBSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
@@ -144,28 +146,27 @@ class DuckDBSelector(DuckDBExpr):
     def __or__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
         if isinstance(other, DuckDBSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[Column]:
+            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 rhs = other._call(df)
-                lhs_names = [
-                    get_column_name(df, x, returns_scalar=self._returns_scalar)
-                    for x in lhs
-                ]
-                rhs_names = [
-                    get_column_name(df, x, returns_scalar=other._returns_scalar)
-                    for x in rhs
-                ]
                 return [
-                    *(col for col, name in zip(lhs, lhs_names) if name not in rhs_names),
+                    *(x for x, name in zip(lhs, lhs_names) if name not in rhs_names),
                     *rhs,
                 ]
+
+            def evaluate_output_names(df: DuckDBLazyFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
             return DuckDBSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
@@ -177,25 +178,23 @@ class DuckDBSelector(DuckDBExpr):
     def __and__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
         if isinstance(other, DuckDBSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[Any]:
+            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                lhs_names = [
-                    get_column_name(df, x, returns_scalar=self._returns_scalar)
-                    for x in lhs
-                ]
-                rhs_names = {
-                    get_column_name(df, x, returns_scalar=other._returns_scalar)
-                    for x in rhs
-                }
-                return [col for col, name in zip(lhs, lhs_names) if name in rhs_names]
+                return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
+
+            def evaluate_output_names(df: DuckDBLazyFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x in rhs_names]
 
             return DuckDBSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,

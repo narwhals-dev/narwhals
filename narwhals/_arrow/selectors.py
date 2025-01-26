@@ -29,12 +29,15 @@ class ArrowSelectorNamespace:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
+        def evalute_output_names(df: ArrowDataFrame) -> Sequence[str]:
+            return [col for col in df.columns if df.schema[col] in dtypes]
+
         return ArrowSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"dtypes": dtypes},
@@ -44,10 +47,12 @@ class ArrowSelectorNamespace:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
+                dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
                 dtypes.Int16,
                 dtypes.Int8,
+                dtypes.UInt128,
                 dtypes.UInt64,
                 dtypes.UInt32,
                 dtypes.UInt16,
@@ -76,9 +81,9 @@ class ArrowSelectorNamespace:
         return ArrowSelector(
             func,
             depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
+            function_name="selector",
+            evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={},
@@ -90,9 +95,7 @@ class ArrowSelector(ArrowExpr):
         return (
             f"ArrowSelector("
             f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
+            f"function_name={self._function_name})"
         )
 
     def _to_expr(self: Self) -> ArrowExpr:
@@ -100,8 +103,8 @@ class ArrowSelector(ArrowExpr):
             self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             kwargs=self._kwargs,
@@ -111,16 +114,22 @@ class ArrowSelector(ArrowExpr):
         if isinstance(other, ArrowSelector):
 
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                return [x for x in lhs if x.name not in {x.name for x in rhs}]
+                return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
+
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x not in rhs_names]
 
             return ArrowSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
                 kwargs={**self._kwargs, "other": other},
@@ -131,17 +140,27 @@ class ArrowSelector(ArrowExpr):
     def __or__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-                lhs = self(df)
-                rhs = other(df)
-                return [*(x for x in lhs if x.name not in {x.name for x in rhs}), *rhs]
+            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                lhs = self._call(df)
+                rhs = other._call(df)
+                return [
+                    *(x for x, name in zip(lhs, lhs_names) if name not in rhs_names),
+                    *rhs,
+                ]
+
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
             return ArrowSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
                 kwargs={**self._kwargs, "other": other},
@@ -153,16 +172,22 @@ class ArrowSelector(ArrowExpr):
         if isinstance(other, ArrowSelector):
 
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
-                rhs = other._call(df)
-                return [x for x in lhs if x.name in {x.name for x in rhs}]
+                return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
+
+            def evaluate_output_names(df: ArrowDataFrame) -> list[str]:
+                lhs_names = self._evaluate_output_names(df)
+                rhs_names = other._evaluate_output_names(df)
+                return [x for x in lhs_names if x in rhs_names]
 
             return ArrowSelector(
                 call,
                 depth=0,
-                function_name="type_selector",
-                root_names=None,
-                output_names=None,
+                function_name="selector",
+                evaluate_output_names=evaluate_output_names,
+                alias_output_names=None,
                 backend_version=self._backend_version,
                 version=self._version,
                 kwargs={**self._kwargs, "other": other},

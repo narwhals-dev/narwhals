@@ -868,7 +868,7 @@ def pivot_table(
     if df._implementation is Implementation.CUDF:
         if any(
             x == dtypes.Categorical
-            for x in df.select(*[*values, *index, *columns]).schema.values()
+            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
         ):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)

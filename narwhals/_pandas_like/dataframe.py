@@ -3,7 +3,6 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
@@ -22,7 +21,6 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
@@ -48,8 +46,11 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
-class PandasLikeDataFrame:
+
+class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -347,22 +348,21 @@ class PandasLikeDataFrame:
         return self.schema
 
     # --- reshape ---
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(
+            select_columns_by_name(
+                self._native_frame,
+                list(column_names),
+                self._backend_version,
+                self._implementation,
+            )
+        )
+
     def select(
         self: Self,
         *exprs: IntoPandasLikeExpr,
         **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple slice => fastpath!
-            column_names = list(exprs)
-            return self._from_native_frame(
-                select_columns_by_name(
-                    self._native_frame,
-                    column_names,  # type: ignore[arg-type]
-                    self._backend_version,
-                    self._implementation,
-                )
-            )
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -482,12 +482,10 @@ class PandasLikeDataFrame:
     # --- transform ---
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -495,7 +493,7 @@ class PandasLikeDataFrame:
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
         return self._from_native_frame(
-            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+            df.sort_values(list(by), ascending=ascending, na_position=na_position)
         )
 
     # --- convert ---
@@ -662,13 +660,12 @@ class PandasLikeDataFrame:
         self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
         return self._from_native_frame(
@@ -677,12 +674,10 @@ class PandasLikeDataFrame:
                 other._native_frame,
                 left_on=left_on,
                 right_on=right_on,
-                on=on,
                 left_by=by_left,
                 right_by=by_right,
-                by=by,
                 direction=strategy,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             ),
         )
 
