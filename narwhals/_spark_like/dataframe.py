@@ -94,7 +94,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -135,7 +135,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001

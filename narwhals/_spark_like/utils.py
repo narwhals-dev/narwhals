@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 
 from pyspark.sql import functions as F  # noqa: N812
 
@@ -110,25 +111,28 @@ def narwhals_to_native_dtype(
 
 
 def parse_exprs_and_named_exprs(
-    df: SparkLikeLazyFrame, *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
-) -> dict[str, Column]:
-    native_results: dict[str, list[Column]] = {}
-    for expr in exprs:
-        native_series_list = expr._call(df)
-        output_names = expr._evaluate_output_names(df)
-        if expr._alias_output_names is not None:
-            output_names = expr._alias_output_names(output_names)
-        if len(output_names) != len(native_series_list):  # pragma: no cover
-            msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
-            raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
-    for col_alias, expr in named_exprs.items():
-        native_series_list = expr._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
-        native_results[col_alias] = native_series_list[0]
-    return native_results
+    df: SparkLikeLazyFrame,
+) -> Callable[..., dict[str, Column]]:
+    def func(*exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr) -> dict[str, Column]:
+        native_results: dict[str, list[Column]] = {}
+        for expr in exprs:
+            native_series_list = expr._call(df)
+            output_names = expr._evaluate_output_names(df)
+            if expr._alias_output_names is not None:
+                output_names = expr._alias_output_names(output_names)
+            if len(output_names) != len(native_series_list):  # pragma: no cover
+                msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
+                raise AssertionError(msg)
+            native_results.update(zip(output_names, native_series_list))
+        for col_alias, expr in named_exprs.items():
+            native_series_list = expr._call(df)
+            if len(native_series_list) != 1:  # pragma: no cover
+                msg = "Named expressions must return a single column"
+                raise ValueError(msg)
+            native_results[col_alias] = native_series_list[0]
+        return native_results
+
+    return func
 
 
 def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:

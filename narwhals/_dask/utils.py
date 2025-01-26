@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -44,29 +45,32 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     return obj
 
 
-def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, *exprs: DaskExpr, **named_exprs: DaskExpr
-) -> dict[str, dx.Series]:
-    native_results: dict[str, dx.Series] = {}
-    for expr in exprs:
-        native_series_list = expr._call(df)
-        return_scalar = getattr(expr, "_returns_scalar", False)
-        _, aliases = evaluate_output_names_and_aliases(expr, df, [])
-        if len(aliases) != len(native_series_list):  # pragma: no cover
-            msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
-            raise AssertionError(msg)
-        for native_series, alias in zip(native_series_list, aliases):
-            native_results[alias] = native_series[0] if return_scalar else native_series
-    for name, value in named_exprs.items():
-        native_series_list = value._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise AssertionError(msg)
-        return_scalar = getattr(value, "_returns_scalar", False)
-        native_results[name] = (
-            native_series_list[0][0] if return_scalar else native_series_list[0]
-        )
-    return native_results
+def parse_exprs_and_named_exprs(df: DaskLazyFrame) -> Callable[..., dict[str, dx.Series]]:
+    def func(*exprs: DaskExpr, **named_exprs: DaskExpr) -> dict[str, dx.Series]:
+        native_results: dict[str, dx.Series] = {}
+        for expr in exprs:
+            native_series_list = expr._call(df)
+            return_scalar = getattr(expr, "_returns_scalar", False)
+            _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+            if len(aliases) != len(native_series_list):  # pragma: no cover
+                msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
+                raise AssertionError(msg)
+            for native_series, alias in zip(native_series_list, aliases):
+                native_results[alias] = (
+                    native_series[0] if return_scalar else native_series
+                )
+        for name, value in named_exprs.items():
+            native_series_list = value._call(df)
+            if len(native_series_list) != 1:  # pragma: no cover
+                msg = "Named expressions must return a single column"
+                raise AssertionError(msg)
+            return_scalar = getattr(value, "_returns_scalar", False)
+            native_results[name] = (
+                native_series_list[0][0] if return_scalar else native_series_list[0]
+            )
+        return native_results
+
+    return func
 
 
 def add_row_index(
