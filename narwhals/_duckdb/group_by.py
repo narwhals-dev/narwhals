@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -26,22 +28,7 @@ class DuckDBGroupBy:
         agg_columns = self._keys.copy()
         df = self._compliant_frame
         for expr in exprs:
-            output_names = expr._evaluate_output_names(df)
-            aliases = (
-                output_names
-                if expr._alias_output_names is None
-                else expr._alias_output_names(output_names)
-            )
-            if len(output_names) > 1:
-                # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
-                # the keys, else they would appear duplicated in the output.
-                output_names, aliases = zip(
-                    *[
-                        (x, alias)
-                        for x, alias in zip(output_names, aliases)
-                        if x not in self._keys
-                    ]
-                )
+            _, aliases = evaluate_output_names_and_aliases(expr, df, self._keys)
             native_expressions = expr(df)
             agg_columns.extend(
                 [

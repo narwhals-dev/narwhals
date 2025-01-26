@@ -393,7 +393,15 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            _, aliases = evaluate_output_names_and_aliases(self, df, keys)
+            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+            if overlap := set(output_names).intersection(keys):
+                # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                # we just don't support it yet.
+                msg = (
+                    f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                    "This is not yet supported."
+                )
+                raise NotImplementedError(msg)
 
             tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.simple_select(*keys).join(

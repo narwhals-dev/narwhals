@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
+
 import pandas as pd
 import pytest
 
@@ -163,9 +165,49 @@ def test_over_cumprod(
     assert_equal_data(result, expected)
 
 
-def test_over_anonymous() -> None:
-    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    nw.from_native(df).select(nw.all().cum_max().over("a"))
+def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    context = (
+        pytest.raises(NotImplementedError)
+        if df.implementation.is_pyarrow()
+        else pytest.raises(KeyError)  # type: ignore[arg-type]
+        if df.implementation.is_modin()
+        else does_not_raise()
+    )
+    # TODO(unassigned): why does modin raise here? bug in modin?
+    with context:
+        result = df.with_columns(
+            nw.all().cum_sum().over("a").name.suffix("_cum_sum")
+        ).sort("a", "b")
+        expected = {
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "a_cum_sum": [1, 2, 2],
+            "b_cum_sum": [4, 9, 6],
+        }
+        assert_equal_data(result, expected)
+
+
+def test_over_anonymous_reduction(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    context = (
+        pytest.raises(NotImplementedError)
+        if df.implementation.is_pyarrow() or df.implementation.is_pandas_like()
+        else does_not_raise()
+    )
+    with context:
+        result = (
+            nw.from_native(df)
+            .with_columns(nw.all().sum().over("a").name.suffix("_sum"))
+            .sort("a", "b")
+        )
+        expected = {
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "a_sum": [2, 2, 2],
+            "b_sum": [9, 9, 6],
+        }
+        assert_equal_data(result, expected)
 
 
 def test_over_shift(

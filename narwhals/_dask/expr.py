@@ -661,7 +661,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            _, aliases = evaluate_output_names_and_aliases(self, df, keys)
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp_native = (
@@ -670,12 +670,11 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                     ._native_frame
                 )
                 return [tmp_native[name] for name in aliases]
+            # https://github.com/dask/dask/issues/6659
             msg = (
                 "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
             raise NotImplementedError(msg)
-
-        # TODO(marco): should evaluate_output_names should also consider `keys`?
 
         return self.__class__(
             func,

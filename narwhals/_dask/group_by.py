@@ -8,6 +8,7 @@ from typing import Sequence
 
 import dask.dataframe as dd
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 
 try:
@@ -132,22 +133,7 @@ def agg_dask(
     if all_simple_aggs:
         simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
         for expr in exprs:
-            output_names = expr._evaluate_output_names(df)
-            aliases = (
-                output_names
-                if expr._alias_output_names is None
-                else expr._alias_output_names(output_names)
-            )
-            if len(output_names) > 1:
-                # For multi-output aggregations, e.g. `df.group_by('a').agg(nw.all().mean())`, we skip
-                # the keys, else they would appear duplicated in the output.
-                output_names, aliases = zip(
-                    *[
-                        (x, alias)
-                        for x, alias in zip(output_names, aliases)
-                        if x not in keys
-                    ]
-                )
+            output_names, aliases = evaluate_output_names_and_aliases(expr, df, keys)
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
                 function_name = POLARS_TO_DASK_AGGREGATIONS.get(
