@@ -104,7 +104,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *exprs: DuckDBExpr,
         **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(self._native_frame.limit(0))
@@ -139,7 +139,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *exprs: DuckDBExpr,
         **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
         result = []
         for col in self._native_frame.columns:
             if col in new_columns_map:

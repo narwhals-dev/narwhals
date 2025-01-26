@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 import pytest
 
@@ -15,6 +16,7 @@ from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+from tests.utils import is_windows
 
 data = {
     "a": [1, 1, 2],
@@ -125,3 +127,27 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
     ):
         df.select(boolean() + numeric())
+
+
+@pytest.mark.skipif(is_windows(), reason="windows is what it is")
+def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
+        # bug in old polars
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
+        # bug in old pyarrow
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+        # replace_time_zone not implemented
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
+    df = nw.from_native(constructor(data)).with_columns(
+        b=nw.col("a").dt.replace_time_zone("Asia/Katmandu")
+    )
+    result = df.select(nw.selectors.by_dtype(nw.Datetime)).collect_schema().names()
+    expected = ["a", "b"]
+    assert result == expected
+    result = df.select(nw.selectors.by_dtype(nw.Int64())).collect_schema().names()
+    expected = ["c"]
+    assert result == expected

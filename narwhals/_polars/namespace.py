@@ -13,6 +13,7 @@ import polars as pl
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals.dtypes import DType
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
-    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -35,8 +35,6 @@ class PolarsNamespace:
         self._version = version
 
     def __getattr__(self: Self, attr: str) -> Any:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -50,8 +48,6 @@ class PolarsNamespace:
         return func
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         if self._backend_version < (1, 0, 0):
@@ -62,8 +58,6 @@ class PolarsNamespace:
         )
 
     def len(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         if self._backend_version < (0, 20, 5):
@@ -114,8 +108,6 @@ class PolarsNamespace:
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         if dtype is not None:
@@ -129,8 +121,6 @@ class PolarsNamespace:
         )
 
     def mean_horizontal(self: Self, *exprs: IntoPolarsExpr) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         polars_exprs = cast("list[PolarsExpr]", parse_into_exprs(*exprs, namespace=self))
@@ -155,8 +145,6 @@ class PolarsNamespace:
         separator: str,
         ignore_nulls: bool,
     ) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         pl_exprs: list[pl.Expr] = [
@@ -215,14 +203,16 @@ class PolarsSelectors:
         self._backend_version = backend_version
 
     def by_dtype(self: Self, dtypes: Iterable[DType]) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
+        native_dtypes = [
+            narwhals_to_native_dtype(dtype, self._version).__class__
+            if isinstance(dtype, type) and issubclass(dtype, DType)
+            else narwhals_to_native_dtype(dtype, self._version)
+            for dtype in dtypes
+        ]
         return PolarsExpr(
-            pl.selectors.by_dtype(
-                [narwhals_to_native_dtype(dtype, self._version) for dtype in dtypes]
-            ),
+            pl.selectors.by_dtype(native_dtypes),
             version=self._version,
             backend_version=self._backend_version,
         )

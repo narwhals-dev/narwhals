@@ -6,6 +6,9 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
+from pyspark.sql import Window
+from pyspark.sql import functions as F  # noqa: N812
+
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.typing import CompliantLazyFrame
@@ -94,8 +97,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns = parse_exprs_and_named_exprs(
-            self, *exprs, with_columns_context=False, **named_exprs
+        new_columns, returns_scalar = parse_exprs_and_named_exprs(self)(
+            *exprs, **named_exprs
         )
 
         if not new_columns:
@@ -107,8 +110,38 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
             return self._from_native_frame(spark_df)
 
-        new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
-        return self._from_native_frame(self._native_frame.select(*new_columns_list))
+        if all(returns_scalar):
+            new_columns_list = [
+                col.alias(col_name) for col_name, col in new_columns.items()
+            ]
+            return self._from_native_frame(self._native_frame.agg(*new_columns_list))
+        else:
+            new_columns_list = [
+                col.over(Window.partitionBy(F.lit(1))).alias(col_name)
+                if _returns_scalar
+                else col.alias(col_name)
+                for (col_name, col), _returns_scalar in zip(
+                    new_columns.items(), returns_scalar
+                )
+            ]
+            return self._from_native_frame(self._native_frame.select(*new_columns_list))
+
+    def with_columns(
+        self: Self,
+        *exprs: SparkLikeExpr,
+        **named_exprs: SparkLikeExpr,
+    ) -> Self:
+        new_columns, returns_scalar = parse_exprs_and_named_exprs(self)(
+            *exprs, **named_exprs
+        )
+
+        new_columns_map = {
+            col_name: col.over(Window.partitionBy(F.lit(1))) if _returns_scalar else col
+            for (col_name, col), _returns_scalar in zip(
+                new_columns.items(), returns_scalar
+            )
+        }
+        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def filter(self: Self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
@@ -131,16 +164,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
-
-    def with_columns(
-        self: Self,
-        *exprs: SparkLikeExpr,
-        **named_exprs: SparkLikeExpr,
-    ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(
-            self, *exprs, with_columns_context=True, **named_exprs
-        )
-        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         columns_to_drop = parse_columns_to_drop(

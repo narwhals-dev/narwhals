@@ -140,7 +140,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            returns_scalar=self._returns_scalar or returns_scalar,
+            returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
             kwargs=expressifiable_args,
