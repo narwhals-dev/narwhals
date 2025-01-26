@@ -139,7 +139,9 @@ class SparkLikeSelector(SparkLikeExpr):
                 kwargs={},
             )
         else:
-            return self._to_expr() - other
+            return self._to_expr() - (
+                other if isinstance(other, SparkLikeExpr) else F.lit(other)
+            )
 
     def __or__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
         if isinstance(other, SparkLikeSelector):
@@ -171,7 +173,9 @@ class SparkLikeSelector(SparkLikeExpr):
                 kwargs={},
             )
         else:
-            return self._to_expr() | other
+            return self._to_expr() | (
+                other if isinstance(other, SparkLikeExpr) else F.lit(other)
+            )
 
     def __and__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
         if isinstance(other, SparkLikeSelector):
@@ -199,7 +203,9 @@ class SparkLikeSelector(SparkLikeExpr):
                 kwargs={},
             )
         else:
-            return self._to_expr() & other
+            return self._to_expr() & (
+                other if isinstance(other, SparkLikeExpr) else F.lit(other)
+            )
 
     def __invert__(self: Self) -> SparkLikeSelector:
         return (

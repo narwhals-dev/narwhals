@@ -79,6 +79,7 @@ def test_categorical(
         (boolean() & True, ["d"]),
         (boolean() | True, ["d"]),
         (numeric() - 1, ["a", "c"]),
+        (numeric() - nw.col("a"), ["a", "c"]),
         (all(), ["a", "b", "c", "d"]),
     ],
 )
