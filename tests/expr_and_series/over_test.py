@@ -188,11 +188,19 @@ def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
         assert_equal_data(result, expected)
 
 
-def test_over_anonymous_reduction(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+def test_over_anonymous_reduction(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+        # TODO(unassigned): we should be able to support these
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
-        if df.implementation.is_pyarrow() or df.implementation.is_pandas_like()
+        if df.implementation.is_pyarrow()
+        or df.implementation.is_pandas_like()
+        or df.implementation.is_dask()
         else does_not_raise()
     )
     with context:
