@@ -65,7 +65,7 @@ class DuckDBSelectorNamespace:
             ],
         )
 
-    def categorical(self: Self) -> DuckDBSelector:
+    def categorical(self: Self) -> DuckDBSelector:  # pragma: no cover
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
