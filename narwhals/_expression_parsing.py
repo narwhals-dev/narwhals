@@ -42,9 +42,22 @@ def evaluate_into_expr(
     df: CompliantDataFrame | CompliantLazyFrame,
     into_expr: IntoCompliantExpr[CompliantSeriesT_co],
 ) -> Sequence[CompliantSeriesT_co]:
-    """Return list of raw columns."""
+    """Return list of raw columns.
+
+    This is only use for eager backends (pandas, PyArrow), where we
+    alias operations at each step. As a safety precaution, here we
+    can check that the expected result names match those we were
+    expecting from the various `evaluate_output_names` / `alias_output_names`
+    calls. Note that for PySpark / DuckDB, we are less free to liberally
+    set aliases whenever we want.
+    """
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
-    return expr(df)
+    _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+    result = expr(df)
+    if list(aliases) != [s.name for s in result]:  # pragma: no cover
+        msg = f"Safety assertion failed, expected {aliases}, got {result}"
+        raise AssertionError(msg)
+    return result
 
 
 def evaluate_into_exprs(
@@ -270,8 +283,9 @@ def combine_evaluate_output_names(
     def evaluate_output_names(
         df: CompliantDataFrame | CompliantLazyFrame,
     ) -> Sequence[str]:
-        if not hasattr(exprs[0], "__narwhals_expr__"):
-            return ["literal"]
+        if not hasattr(exprs[0], "__narwhals_expr__"):  # pragma: no cover
+            msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
+            raise AssertionError(msg)
         return exprs[0]._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
@@ -282,8 +296,6 @@ def combine_alias_output_names(
 ) -> Callable[[Sequence[str]], Sequence[str]] | None:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
     # aliasing function of `expr1` and apply it to the first output name of `expr1`.
-    if not hasattr(exprs[0], "__narwhals_expr__"):
-        return None
     if exprs[0]._alias_output_names is None:
         return None
 
