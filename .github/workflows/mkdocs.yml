@@ -20,7 +20,6 @@ jobs:
           python-version: 3.x
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
 
-
       - uses: actions/cache@v4
         with:
           key: mkdocs-material-${{ env.cache_id }}
@@ -30,6 +29,6 @@ jobs:
       - name: griffe
         # hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
         run: pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
-      - run: pip install -e .[docs]
+      - run: pip install -e .[docs,pyspark,dask,duckdb]
 
       - run: mkdocs gh-deploy --force
