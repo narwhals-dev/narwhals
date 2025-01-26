@@ -14,6 +14,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -218,11 +219,15 @@ class PolarsSelectors:
         import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
-
+        native_dtypes = []
+        for dtype in dtypes:
+            native_dtype_instantiated = narwhals_to_native_dtype(dtype, self._version)
+            if issubclass(dtype, DType):
+                native_dtypes.append(native_dtype_instantiated.__class__)
+            else:
+                native_dtypes.append(native_dtype_instantiated)
         return PolarsExpr(
-            pl.selectors.by_dtype(
-                [narwhals_to_native_dtype(dtype, self._version) for dtype in dtypes]
-            ),
+            pl.selectors.by_dtype(native_dtypes),
             version=self._version,
             backend_version=self._backend_version,
         )
