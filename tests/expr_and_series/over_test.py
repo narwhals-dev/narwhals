@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import LengthChangingExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -207,3 +210,13 @@ def test_over_cum_reverse() -> None:
         match=r"Cumulative operation with `reverse=True` is not supported",
     ):
         nw.from_native(df).select(nw.col("b").cum_max(reverse=True).over("a"))
+
+
+def test_over_raise_len_change(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        LengthChangingExprError,
+        match=re.escape("`.over()` can not be used for expressions which change length."),
+    ):
+        nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
