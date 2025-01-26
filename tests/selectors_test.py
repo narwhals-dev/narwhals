@@ -11,6 +11,7 @@ from narwhals.stable.v1.selectors import by_dtype
 from narwhals.stable.v1.selectors import categorical
 from narwhals.stable.v1.selectors import numeric
 from narwhals.stable.v1.selectors import string
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -79,7 +80,6 @@ def test_categorical(
         (boolean() & True, ["d"]),
         (boolean() | True, ["d"]),
         (numeric() - 1, ["a", "c"]),
-        (numeric() - nw.col("a"), ["a", "c"]),
         (all(), ["a", "b", "c", "d"]),
     ],
 )
@@ -94,6 +94,21 @@ def test_set_ops(
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected
+
+
+def test_subtract_expr(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 27):
+        # In old Polars versions, cs.numeric() - col('a')
+        # would exclude column 'a' from the result, as opposed to
+        # subtracting it.
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data))
+    result = df.select(numeric() - nw.col("a"))
+    expected = {"a": [0, 0, 0], "c": [3.1, 4.0, 4.0]}
+    assert_equal_data(result, expected)
 
 
 def test_set_ops_invalid(constructor: Constructor) -> None:
