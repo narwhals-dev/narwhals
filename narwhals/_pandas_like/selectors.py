@@ -52,10 +52,12 @@ class PandasSelectorNamespace:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
+                dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
                 dtypes.Int16,
                 dtypes.Int8,
+                dtypes.UInt128,
                 dtypes.UInt64,
                 dtypes.UInt32,
                 dtypes.UInt16,
