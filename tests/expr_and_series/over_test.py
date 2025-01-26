@@ -174,7 +174,7 @@ def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
         if df.implementation.is_pyarrow()
         else pytest.raises(KeyError)  # type: ignore[arg-type]
         if df.implementation.is_modin()
-        or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 4))
+        or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
         # TODO(unassigned): bug in old pandas + modin.
         # df.groupby('a')[['a', 'b']].cum_sum() excludes `'a'` from result
         else does_not_raise()
@@ -195,7 +195,7 @@ def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
 def test_over_anonymous_reduction(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+    if "duckdb" in str(constructor):
         # TODO(unassigned): we should be able to support these
         request.applymarker(pytest.mark.xfail)
 
