@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 import pytest
 
@@ -117,3 +118,13 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
     ):
         df.select(boolean() + numeric())
+
+
+def test_tz_aware(constructor: Constructor) -> None:
+    data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
+    df = nw.from_native(constructor(data)).with_columns(
+        b=nw.col("a").dt.replace_time_zone("Asia/Katmandu")
+    )
+    result = df.select(nw.selectors.by_dtype(nw.Datetime)).collect_schema().names()
+    expected = ["a", "b"]
+    assert result == expected

@@ -13,8 +13,8 @@ import polars as pl
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals.utils import Implementation
 from narwhals.dtypes import DType
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
-    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -219,10 +218,11 @@ class PolarsSelectors:
         import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
-        native_dtypes = []
+
+        native_dtypes: list[pl.DataType | type[pl.DataType]] = []
         for dtype in dtypes:
             native_dtype_instantiated = narwhals_to_native_dtype(dtype, self._version)
-            if issubclass(dtype, DType):
+            if isinstance(dtype, type) and issubclass(dtype, DType):
                 native_dtypes.append(native_dtype_instantiated.__class__)
             else:
                 native_dtypes.append(native_dtype_instantiated)
