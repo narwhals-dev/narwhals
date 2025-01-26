@@ -168,9 +168,6 @@ class PandasLikeGroupBy:
                     )
                     raise AssertionError(msg)
 
-                # can't remember the logic here...ffs, need to work through it again.
-                # this is the real test...
-
                 # Rename columns, being very careful
                 expected_old_names_indices: dict[str, list[int]] = (
                     collections.defaultdict(list)
