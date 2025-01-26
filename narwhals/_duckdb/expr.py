@@ -17,10 +17,8 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import binary_operation_returns_scalar
-from narwhals._duckdb.utils import get_column_name
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
@@ -43,8 +41,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         # Whether the expression is a length-1 Column resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
@@ -55,8 +53,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
@@ -89,8 +87,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -113,8 +111,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -127,44 +125,29 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **kwargs: Any,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            results = []
-            inputs = self._call(df)
-            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
-            for _input in inputs:
-                input_col_name = get_column_name(
-                    df, _input, returns_scalar=self._returns_scalar
-                )
-                if self._returns_scalar:
-                    # TODO(marco): once WindowExpression is supported, then
-                    # we may need to call it with `over(1)` here,
-                    # depending on the context?
-                    pass
-
-                column_result = call(_input, **_kwargs)
-                column_result = column_result.alias(input_col_name)
-                if returns_scalar:
-                    # TODO(marco): once WindowExpression is supported, then
-                    # we may need to call it with `over(1)` here,
-                    # depending on the context?
-                    pass
-                results.append(column_result)
-            return results
-
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+            native_series_list = self._call(df)
+            other_native_series = {
+                key: maybe_evaluate(df, value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            root_names=root_names,
-            output_names=output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            kwargs=expressifiable_args,
         )
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
@@ -295,17 +278,20 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def alias(self: Self, name: str) -> Self:
-        def _alias(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [col.alias(name) for col in self._call(df)]
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
 
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
-            _alias,
+            self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=[name],
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,

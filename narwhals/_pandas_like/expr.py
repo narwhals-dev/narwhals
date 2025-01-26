@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._pandas_like.expr_cat import PandasLikeExprCatNamespace
 from narwhals._pandas_like.expr_dt import PandasLikeExprDateTimeNamespace
@@ -16,7 +19,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
 
@@ -31,16 +33,16 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
-    "col->cum_sum": "cumsum",
-    "col->cum_min": "cummin",
-    "col->cum_max": "cummax",
-    "col->cum_prod": "cumprod",
+    "cum_sum": "cumsum",
+    "cum_min": "cummin",
+    "cum_max": "cummax",
+    "cum_prod": "cumprod",
     # Pandas cumcount starts counting from 0 while Polars starts from 1
     # Pandas cumcount counts nulls while Polars does not
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
-    "col->cum_count": "cumsum",
-    "col->shift": "shift",
-    "col->rank": "rank",
+    "cum_count": "cumsum",
+    "shift": "shift",
+    "rank": "rank",
 }
 
 
@@ -51,8 +53,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -61,8 +63,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
@@ -76,8 +78,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             f"PandasLikeExpr("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
             ")"
         )
 
@@ -120,8 +120,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             implementation=implementation,
             backend_version=backend_version,
             version=version,
@@ -151,8 +151,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             implementation=implementation,
             backend_version=backend_version,
             version=version,
@@ -376,14 +376,20 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def alias(self: Self, name: str) -> Self:
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
+
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
             lambda df: [series.alias(name) for series in self._call(df)],
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=[name],
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -391,15 +397,14 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def over(self: Self, keys: list[str]) -> Self:
-        if self._function_name in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT:
+        if (
+            is_simple_aggregation(self)
+            and (function_name := re.sub(r"(\w+->)", "", self._function_name))
+            in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT
+        ):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if (
-                    self._output_names is None or self._root_names is None
-                ):  # pragma: no cover
-                    # Technically unreachable, but keep this for safety
-                    msg = "over"
-                    raise AnonymousExprError.from_expr_name(msg)
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
                 reverse = self._kwargs.get("reverse", False)
                 if reverse:
@@ -409,13 +414,13 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                if self._function_name == "col->cum_count":
+                if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(*self._root_names).is_null())
+                    df = df.with_columns(~plx.col(*output_names).is_null())
 
-                if self._function_name == "col->shift":
+                if function_name == "shift":
                     kwargs = {"periods": self._kwargs["n"]}
-                elif self._function_name == "col->rank":
+                elif function_name == "rank":
                     _method = self._kwargs.get("method", "average")
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,
@@ -427,40 +432,46 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
-                    df._native_frame.groupby(list(keys), as_index=False)[
-                        self._root_names
+                    df._native_frame.groupby([df._native_frame[key] for key in keys])[
+                        list(output_names)
                     ],
-                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[self._function_name],
+                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                 )(**kwargs)
-
                 result_frame = df._from_native_frame(
                     rename(
                         res_native,
-                        columns=dict(zip(self._root_names, self._output_names)),
+                        columns=dict(zip(output_names, aliases)),
                         implementation=self._implementation,
                         backend_version=self._backend_version,
                     )
                 )
-                return [result_frame[name] for name in self._output_names]
+                return [result_frame[name] for name in aliases]
 
         else:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if self._output_names is None:
-                    msg = "over"
-                    raise AnonymousExprError.from_expr_name(msg)
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+                if overlap := set(output_names).intersection(keys):
+                    # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                    # we just don't support it yet.
+                    msg = (
+                        f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                        "This is not yet supported."
+                    )
+                    raise NotImplementedError(msg)
+
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp = df.simple_select(*keys).join(
                     tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
                 )
-                return [tmp[name] for name in self._output_names]
+                return [tmp[name] for name in aliases]
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -536,8 +547,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
