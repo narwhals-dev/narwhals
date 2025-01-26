@@ -126,7 +126,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate(df, value, returns_scalar=returns_scalar)
                 for key, value in expressifiable_args.items()
             }
             return [
@@ -349,26 +349,30 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(F.sum, "sum", returns_scalar=True)
 
     def std(self: Self, ddof: int) -> Self:
-        from functools import partial
-
         import numpy as np  # ignore-banned-import
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
-
-        return self._from_call(func, "std", returns_scalar=True, ddof=ddof)
+        return self._from_call(
+            _std,
+            "std",
+            returns_scalar=True,
+            ddof=ddof,
+            np_version=parse_version(np.__version__),
+        )
 
     def var(self: Self, ddof: int) -> Self:
-        from functools import partial
-
         import numpy as np  # ignore-banned-import
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
-
-        return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
+        return self._from_call(
+            _var,
+            "var",
+            returns_scalar=True,
+            ddof=ddof,
+            np_version=parse_version(np.__version__),
+        )
 
     def clip(
         self: Self,

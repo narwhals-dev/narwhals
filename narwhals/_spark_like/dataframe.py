@@ -8,6 +8,7 @@ from typing import Sequence
 
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import parse_columns_to_drop
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-from narwhals.typing import CompliantLazyFrame
 
 
 class SparkLikeLazyFrame(CompliantLazyFrame):
@@ -94,7 +94,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns = parse_exprs_and_named_exprs(
+            self, *exprs, with_columns_context=False, **named_exprs
+        )
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -135,7 +137,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs_and_named_exprs(
+            self, *exprs, with_columns_context=True, **named_exprs
+        )
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
