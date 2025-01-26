@@ -16,6 +16,7 @@ from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+from tests.utils import is_windows
 
 data = {
     "a": [1, 1, 2],
@@ -128,9 +129,13 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(boolean() + numeric())
 
 
+@pytest.mark.skipif(is_windows())
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+        # replace_time_zone not implemented
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
