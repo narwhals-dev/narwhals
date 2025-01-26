@@ -128,7 +128,11 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(boolean() + numeric())
 
 
-def test_tz_aware(constructor: Constructor) -> None:
+def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
+        # bug in old polars
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
     df = nw.from_native(constructor(data)).with_columns(
         b=nw.col("a").dt.replace_time_zone("Asia/Katmandu")
