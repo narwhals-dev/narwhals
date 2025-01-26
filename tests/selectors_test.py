@@ -148,3 +148,6 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
     result = df.select(nw.selectors.by_dtype(nw.Datetime)).collect_schema().names()
     expected = ["a", "b"]
     assert result == expected
+    result = df.select(nw.selectors.by_dtype(nw.Int64())).collect_schema().names()
+    expected = ["c"]
+    assert result == expected
