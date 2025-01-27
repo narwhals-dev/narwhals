@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
+def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, returns_scalar: bool) -> Any:
     from narwhals._duckdb.expr import DuckDBExpr
 
     if isinstance(obj, DuckDBExpr):
@@ -27,8 +27,19 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._returns_scalar:
-            msg = "Reductions are not yet supported for DuckDB, at least until they implement duckdb.WindowExpression"
+        if (
+            obj._returns_scalar
+            and obj._function_name.split("->", maxsplit=1)[0] != "lit"
+            and not returns_scalar
+        ):
+            # Returns scalar, but overall expression doesn't.
+            # Not yet supported.
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
             raise NotImplementedError(msg)
         return column_result
     return duckdb.ConstantExpression(obj)
@@ -36,11 +47,16 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
 
 def parse_exprs_and_named_exprs(
     df: DuckDBLazyFrame,
-) -> Callable[..., dict[str, duckdb.Expression]]:
+) -> Callable[..., tuple[dict[str, duckdb.Expression], list[bool]]]:
     def func(
         *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
-    ) -> dict[str, duckdb.Expression]:
+    ) -> tuple[dict[str, duckdb.Expression], list[bool]]:
         native_results: dict[str, list[duckdb.Expression]] = {}
+
+        # `returns_scalar` keeps track if an expression returns a scalar and is not lit.
+        # Notice that lit is quite special case, since it gets broadcasted by DuckDB
+        # without the need of a window function.
+        returns_scalar: list[bool] = []
         for expr in exprs:
             native_series_list = expr._call(df)
             output_names = expr._evaluate_output_names(df)
@@ -50,13 +66,24 @@ def parse_exprs_and_named_exprs(
                 msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
                 raise AssertionError(msg)
             native_results.update(zip(output_names, native_series_list))
+            returns_scalar.extend(
+                [
+                    expr._returns_scalar
+                    and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+                ]
+                * len(output_names)
+            )
         for col_alias, expr in named_exprs.items():
             native_series_list = expr._call(df)
             if len(native_series_list) != 1:  # pragma: no cover
                 msg = "Named expressions must return a single column"
                 raise ValueError(msg)
             native_results[col_alias] = native_series_list[0]
-        return native_results
+            returns_scalar.append(
+                expr._returns_scalar
+                and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+            )
+        return native_results, returns_scalar
 
     return func
 

@@ -126,7 +126,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate(df, value, returns_scalar=returns_scalar)
                 for key, value in expressifiable_args.items()
             }
             return [

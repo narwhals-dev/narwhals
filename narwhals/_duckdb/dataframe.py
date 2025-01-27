@@ -104,19 +104,27 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *exprs: DuckDBExpr,
         **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
+        new_columns_map, returns_scalar = parse_exprs_and_named_exprs(self)(
+            *exprs, **named_exprs
+        )
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(self._native_frame.limit(0))
 
-        if all(getattr(x, "_returns_scalar", False) for x in exprs) and all(
-            getattr(x, "_returns_scalar", False) for x in named_exprs.values()
-        ):
+        if all(returns_scalar):
             return self._from_native_frame(
                 self._native_frame.aggregate(
                     [val.alias(col) for col, val in new_columns_map.items()]
                 )
             )
+        if any(returns_scalar):
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
+            raise NotImplementedError(msg)
 
         return self._from_native_frame(
             self._native_frame.select(
@@ -139,7 +147,18 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *exprs: DuckDBExpr,
         **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
+        new_columns_map, returns_scalar = parse_exprs_and_named_exprs(self)(
+            *exprs, **named_exprs
+        )
+
+        if any(returns_scalar):
+            msg = (
+                "Expressions which return scalars are not yet supported in `with_columns`\n"
+                "for the DuckDB backend. Once they introduce duckdb.WindowExpression to \n"
+                "their Python API, we'll be able to support this."
+            )
+            raise NotImplementedError(msg)
+
         result = []
         for col in self._native_frame.columns:
             if col in new_columns_map:
