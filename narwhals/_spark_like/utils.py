@@ -8,13 +8,14 @@ from typing import Callable
 from pyspark.sql import Column
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
+from pyspark.sql import types as pyspark_types
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from pyspark.sql import types as pyspark_types
+    from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -27,8 +28,6 @@ def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
 ) -> DType:  # pragma: no cover
-    from pyspark.sql import types as pyspark_types
-
     dtypes = import_dtypes_module(version=version)
 
     if isinstance(dtype, pyspark_types.DoubleType):
@@ -69,8 +68,6 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> pyspark_types.DataType:
-    from pyspark.sql import types as pyspark_types
-
     dtypes = import_dtypes_module(version)
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -133,7 +130,10 @@ def parse_exprs_and_named_exprs(
                 raise AssertionError(msg)
             native_results.update(zip(output_names, native_series_list))
             returns_scalar.extend(
-                [expr._returns_scalar and expr._function_name != "lit"]
+                [
+                    expr._returns_scalar
+                    and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+                ]
                 * len(output_names)
             )
         for col_alias, expr in named_exprs.items():
@@ -142,7 +142,11 @@ def parse_exprs_and_named_exprs(
                 msg = "Named expressions must return a single column"
                 raise ValueError(msg)
             native_results[col_alias] = native_series_list[0]
-            returns_scalar.append(expr._returns_scalar and expr._function_name != "lit")
+            returns_scalar.append(
+                expr._returns_scalar
+                and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+            )
+
         return native_results, returns_scalar
 
     return func
@@ -162,7 +166,7 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, returns_scalar: bool) ->
             # Let PySpark do its broadcasting
             return column_result.over(Window.partitionBy(F.lit(1)))
         return column_result
-    return obj
+    return F.lit(obj)
 
 
 def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:

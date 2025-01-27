@@ -48,7 +48,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -58,7 +57,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -92,7 +90,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -116,7 +113,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def _from_call(
@@ -147,7 +143,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=expressifiable_args,
         )
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
@@ -295,7 +290,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
         )
 
     def abs(self: Self) -> Self:
@@ -538,16 +532,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(
-            _input: duckdb.Expression, dtype: DType | type[DType]
-        ) -> duckdb.Expression:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(native_dtype)
 
         return self._from_call(
             func,
             "cast",
-            dtype=dtype,
             returns_scalar=self._returns_scalar,
         )
 

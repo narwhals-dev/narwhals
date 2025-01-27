@@ -43,7 +43,6 @@ class DuckDBSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs={},
         )
 
     def numeric(self: Self) -> DuckDBSelector:
@@ -90,7 +89,6 @@ class DuckDBSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs={},
         )
 
 
@@ -112,7 +110,6 @@ class DuckDBSelector(DuckDBExpr):
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
             version=self._version,
-            kwargs={},
         )
 
     def __sub__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
@@ -138,7 +135,6 @@ class DuckDBSelector(DuckDBExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() - other
@@ -170,7 +166,6 @@ class DuckDBSelector(DuckDBExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() | other
@@ -198,7 +193,6 @@ class DuckDBSelector(DuckDBExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() & other

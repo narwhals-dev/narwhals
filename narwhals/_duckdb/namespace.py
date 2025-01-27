@@ -58,7 +58,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def concat(
@@ -142,11 +141,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={
-                "exprs": exprs,
-                "separator": separator,
-                "ignore_nulls": ignore_nulls,
-            },
         )
 
     def all_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -163,7 +157,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -180,7 +173,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -197,7 +189,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -214,7 +205,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -236,7 +226,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
@@ -261,7 +250,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def when(
@@ -303,7 +291,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def len(self: Self) -> DuckDBExpr:
@@ -319,7 +306,6 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
 
@@ -378,7 +364,6 @@ class DuckDBWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"value": value},
         )
 
 
@@ -394,7 +379,6 @@ class DuckDBThen(DuckDBExpr):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -404,7 +388,6 @@ class DuckDBThen(DuckDBExpr):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
-        self._kwargs = kwargs
 
     def otherwise(self: Self, value: DuckDBExpr | Any) -> DuckDBExpr:
         # type ignore because we are setting the `_call` attribute to a

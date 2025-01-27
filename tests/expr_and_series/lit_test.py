@@ -131,10 +131,7 @@ def test_lit_operation_in_with_columns(
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(expr.alias(col_name))
-    expected = {
-        "a": data["a"],
-        col_name: expected_result,
-    }
+    expected = {"a": data["a"], col_name: expected_result}
     assert_equal_data(result, expected)
 
 
