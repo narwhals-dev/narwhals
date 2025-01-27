@@ -161,7 +161,11 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, returns_scalar: bool) ->
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._returns_scalar and obj._function_name != "lit" and not returns_scalar:
+        if (
+            obj._returns_scalar
+            and obj._function_name.split("->", maxsplit=1)[0] != "lit"
+            and not returns_scalar
+        ):
             # Returns scalar, but overall expression doesn't.
             # Let PySpark do its broadcasting
             return column_result.over(Window.partitionBy(F.lit(1)))
