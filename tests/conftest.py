@@ -224,7 +224,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             constructor in ("pandas[nullable]", "pandas[pyarrow]")
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ):
+        ):  # pragma: no cover
             continue
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
