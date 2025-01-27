@@ -17,8 +17,8 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import ExprKind
-from narwhals._duckdb.utils import binary_operation_expr_kind
 from narwhals._duckdb.utils import maybe_evaluate
+from narwhals._duckdb.utils import n_ary_operation_expr_kind
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
@@ -159,7 +159,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input & other,
             "__and__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __or__(self: Self, other: DuckDBExpr) -> Self:
@@ -167,7 +167,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input | other,
             "__or__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __add__(self: Self, other: DuckDBExpr) -> Self:
@@ -175,7 +175,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input + other,
             "__add__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __truediv__(self: Self, other: DuckDBExpr) -> Self:
@@ -183,7 +183,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input / other,
             "__truediv__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
@@ -191,7 +191,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __mod__(self: Self, other: DuckDBExpr) -> Self:
@@ -199,7 +199,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input.__mod__(other),
             "__mod__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __sub__(self: Self, other: DuckDBExpr) -> Self:
@@ -207,7 +207,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input - other,
             "__sub__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __mul__(self: Self, other: DuckDBExpr) -> Self:
@@ -215,7 +215,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input * other,
             "__mul__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __pow__(self: Self, other: DuckDBExpr) -> Self:
@@ -223,7 +223,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input**other,
             "__pow__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __lt__(self: Self, other: DuckDBExpr) -> Self:
@@ -231,7 +231,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input < other,
             "__lt__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __gt__(self: Self, other: DuckDBExpr) -> Self:
@@ -239,7 +239,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input > other,
             "__gt__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __le__(self: Self, other: DuckDBExpr) -> Self:
@@ -247,7 +247,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input <= other,
             "__le__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __ge__(self: Self, other: DuckDBExpr) -> Self:
@@ -255,7 +255,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input >= other,
             "__ge__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __eq__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
@@ -263,7 +263,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input == other,
             "__eq__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __ne__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
@@ -271,7 +271,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             lambda _input, other: _input != other,
             "__ne__",
             other=other,
-            expr_kind=binary_operation_expr_kind(self, other),
+            expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __invert__(self: Self) -> Self:

@@ -192,16 +192,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def binary_operation_expr_kind(lhs: DuckDBExpr, rhs: DuckDBExpr | Any) -> ExprKind:
-    # if rhs isn't an expression, then we just preserve the kind of lhs.
-    # If `rhs` is a DuckDBExpr, we look at `_returns_scalar`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
-    # to `True`.
-    if not hasattr(rhs, "__narwhals_expr__"):
-        return lhs._expr_kind
-    assert hasattr(rhs, "_expr_kind")  # help mypy  # noqa: S101
-    if lhs._expr_kind is ExprKind.LITERAL and rhs._expr_kind is ExprKind.LITERAL:
+def n_ary_operation_expr_kind(*args: DuckDBExpr | Any) -> ExprKind:
+    if all(
+        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
+    ):
         return ExprKind.LITERAL
-    if lhs._expr_kind is ExprKind.TRANSFORM or rhs._expr_kind is ExprKind.TRANSFORM:
+    if any(
+        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
+    ):
         return ExprKind.TRANSFORM
     return ExprKind.AGGREGATION

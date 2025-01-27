@@ -19,6 +19,7 @@ from duckdb import FunctionExpression
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import ExprKind
+from narwhals._duckdb.utils import n_ary_operation_expr_kind
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -139,7 +140,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -155,7 +156,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -171,7 +172,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="or_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -187,7 +188,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -203,7 +204,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -224,7 +225,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -248,7 +249,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
