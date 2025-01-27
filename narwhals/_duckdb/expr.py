@@ -48,7 +48,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -58,7 +57,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -92,7 +90,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -116,7 +113,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def _from_call(
@@ -147,7 +143,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=expressifiable_args,
         )
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
@@ -295,7 +290,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
         )
 
     def abs(self: Self) -> Self:
