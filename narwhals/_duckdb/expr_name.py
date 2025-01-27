@@ -20,7 +20,7 @@ class DuckDBExprNameNamespace:
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
             alias_output_names=None,
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
@@ -34,7 +34,7 @@ class DuckDBExprNameNamespace:
             alias_output_names=lambda output_names: [
                 function(str(name)) for name in output_names
             ],
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
@@ -48,7 +48,7 @@ class DuckDBExprNameNamespace:
             alias_output_names=lambda output_names: [
                 f"{prefix}{output_name}" for output_name in output_names
             ],
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
@@ -62,7 +62,7 @@ class DuckDBExprNameNamespace:
             alias_output_names=lambda output_names: [
                 f"{output_name}{suffix}" for output_name in output_names
             ],
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
@@ -76,7 +76,7 @@ class DuckDBExprNameNamespace:
             alias_output_names=lambda output_names: [
                 str(name).lower() for name in output_names
             ],
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
@@ -90,7 +90,7 @@ class DuckDBExprNameNamespace:
             alias_output_names=lambda output_names: [
                 str(name).upper() for name in output_names
             ],
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )
