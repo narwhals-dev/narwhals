@@ -27,11 +27,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, returns_scalar: bool) -> An
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if (
-            obj._returns_scalar
-            and obj._function_name.split("->", maxsplit=1)[0] != "lit"
-            and not returns_scalar
-        ):
+        if obj._returns_scalar and not returns_scalar:
             # Returns scalar, but overall expression doesn't.
             # Not yet supported.
             msg = (
@@ -53,9 +49,7 @@ def parse_exprs_and_named_exprs(
     ) -> tuple[dict[str, duckdb.Expression], list[bool]]:
         native_results: dict[str, list[duckdb.Expression]] = {}
 
-        # `returns_scalar` keeps track if an expression returns a scalar and is not lit.
-        # Notice that lit is quite special case, since it gets broadcasted by DuckDB
-        # without the need of a window function.
+        # `returns_scalar` keeps track if an expression returns a scalar.
         returns_scalar: list[bool] = []
         for expr in exprs:
             native_series_list = expr._call(df)
@@ -66,23 +60,14 @@ def parse_exprs_and_named_exprs(
                 msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
                 raise AssertionError(msg)
             native_results.update(zip(output_names, native_series_list))
-            returns_scalar.extend(
-                [
-                    expr._returns_scalar
-                    and expr._function_name.split("->", maxsplit=1)[0] != "lit"
-                ]
-                * len(output_names)
-            )
+            returns_scalar.extend([expr._returns_scalar] * len(output_names))
         for col_alias, expr in named_exprs.items():
             native_series_list = expr._call(df)
             if len(native_series_list) != 1:  # pragma: no cover
                 msg = "Named expressions must return a single column"
                 raise ValueError(msg)
             native_results[col_alias] = native_series_list[0]
-            returns_scalar.append(
-                expr._returns_scalar
-                and expr._function_name.split("->", maxsplit=1)[0] != "lit"
-            )
+            returns_scalar.append(expr._returns_scalar)
         return native_results, returns_scalar
 
     return func
