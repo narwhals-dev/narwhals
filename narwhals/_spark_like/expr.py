@@ -122,7 +122,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate(df, value, returns_scalar=returns_scalar)
                 for key, value in expressifiable_args.items()
             }
             return [
@@ -136,7 +136,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            returns_scalar=self._returns_scalar or returns_scalar,
+            returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -349,7 +349,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
 
-        return self._from_call(func, f"std[{ddof}]", returns_scalar=True)
+        return self._from_call(func, "std", returns_scalar=True)
 
     def var(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -360,7 +360,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
 
-        return self._from_call(func, f"var[{ddof}]", returns_scalar=True)
+        return self._from_call(func, "var", returns_scalar=True)
 
     def clip(
         self: Self,

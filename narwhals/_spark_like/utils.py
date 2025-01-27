@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from pyspark.sql import Column
+from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 from pyspark.sql import types as pyspark_types
-from pyspark.sql.window import Window
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
@@ -109,9 +110,16 @@ def narwhals_to_native_dtype(
 
 def parse_exprs_and_named_exprs(
     df: SparkLikeLazyFrame,
-) -> Callable[..., dict[str, Column]]:
-    def func(*exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr) -> dict[str, Column]:
+) -> Callable[..., tuple[dict[str, Column], list[bool]]]:
+    def func(
+        *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
+    ) -> tuple[dict[str, Column], list[bool]]:
         native_results: dict[str, list[Column]] = {}
+
+        # `returns_scalar` keeps track if an expression returns a scalar and is not lit.
+        # Notice that lit is quite special case, since it gets broadcasted by pyspark
+        # without the need of adding `.over(Window.partitionBy(F.lit(1)))`
+        returns_scalar: list[bool] = []
         for expr in exprs:
             native_series_list = expr._call(df)
             output_names = expr._evaluate_output_names(df)
@@ -121,18 +129,30 @@ def parse_exprs_and_named_exprs(
                 msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
                 raise AssertionError(msg)
             native_results.update(zip(output_names, native_series_list))
+            returns_scalar.extend(
+                [
+                    expr._returns_scalar
+                    and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+                ]
+                * len(output_names)
+            )
         for col_alias, expr in named_exprs.items():
             native_series_list = expr._call(df)
             if len(native_series_list) != 1:  # pragma: no cover
                 msg = "Named expressions must return a single column"
                 raise ValueError(msg)
             native_results[col_alias] = native_series_list[0]
-        return native_results
+            returns_scalar.append(
+                expr._returns_scalar
+                and expr._function_name.split("->", maxsplit=1)[0] != "lit"
+            )
+
+        return native_results, returns_scalar
 
     return func
 
 
-def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
+def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, returns_scalar: bool) -> Column:
     from narwhals._spark_like.expr import SparkLikeExpr
 
     if isinstance(obj, SparkLikeExpr):
@@ -141,8 +161,13 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._returns_scalar:
-            # Return scalar, let PySpark do its broadcasting
+        if (
+            obj._returns_scalar
+            and obj._function_name.split("->", maxsplit=1)[0] != "lit"
+            and not returns_scalar
+        ):
+            # Returns scalar, but overall expression doesn't.
+            # Let PySpark do its broadcasting
             return column_result.over(Window.partitionBy(F.lit(1)))
         return column_result
     return F.lit(obj)

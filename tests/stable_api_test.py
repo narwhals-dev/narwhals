@@ -22,7 +22,7 @@ def remove_docstring_examples(doc: str) -> str:
 def test_renamed_taxicab_norm(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
