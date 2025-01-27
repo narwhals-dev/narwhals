@@ -14,6 +14,7 @@ import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
@@ -218,6 +219,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
+        if constructor in ("pandas[nullable]", "pandas[pyarrow]") and PANDAS_VERSION < (
+            1,
+            5,
+        ):
+            continue
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
