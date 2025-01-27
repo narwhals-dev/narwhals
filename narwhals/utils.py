@@ -326,10 +326,10 @@ def import_dtypes_module(version: Version) -> DTypes:
     return dtypes  # type: ignore[return-value]
 
 
-def remove_prefix(text: str, prefix: str) -> str:
+def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
     if text.startswith(prefix):
         return text[len(prefix) :]
-    return text  # pragma: no cover
+    return text
 
 
 def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover

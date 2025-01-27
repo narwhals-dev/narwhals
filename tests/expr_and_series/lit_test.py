@@ -85,7 +85,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
         ("right_scalar_with_agg", nw.col("a").mean() - 1, [1]),
     ],
 )
-def test_lit_operation(
+def test_lit_operation_in_select(
     constructor: Constructor,
     col_name: str,
     expr: nw.Expr,
@@ -105,19 +105,36 @@ def test_lit_operation(
         and DASK_VERSION < (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and col_name in {
-        "left_lit_with_agg",
-        "left_scalar_with_agg",
-        "right_lit_with_agg",
-        "right_lit",
-    }:
-        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.select(expr.alias(col_name))
     expected = {col_name: expected_result}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("col_name", "expr", "expected_result"),
+    [
+        ("lit_and_scalar", (nw.lit(2) + 1), [3, 3, 3]),
+        ("scalar_and_lit", (1 + nw.lit(2)), [3, 3, 3]),
+    ],
+)
+def test_lit_operation_in_with_columns(
+    constructor: Constructor,
+    col_name: str,
+    expr: nw.Expr,
+    expected_result: list[int],
+    request: pytest.FixtureRequest,
+) -> None:
+    if "duckdb" in str(constructor) and col_name == "scalar_and_lit":
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 3, 2]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw).lazy()
+    result = df.with_columns(expr.alias(col_name))
+    expected = {"a": data["a"], col_name: expected_result}
     assert_equal_data(result, expected)
 
 

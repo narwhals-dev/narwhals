@@ -71,7 +71,6 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
                 for i in range(dtype.num_fields)
             ]
         )
-
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if pa.types.is_fixed_size_list(dtype):

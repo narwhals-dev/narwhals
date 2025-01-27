@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.23.0"
+version = "1.24.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -168,13 +168,16 @@ filterwarnings = [
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+  # Warning raised by PyArrow nightly just by importing pandas
+  'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow'
 
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
-  "PYARROW_IGNORE_TIMEZONE=1"
+  "PYARROW_IGNORE_TIMEZONE=1",
+  "TZ=UTC",
 ]
 
 [tool.coverage.run]

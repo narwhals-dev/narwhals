@@ -14,12 +14,15 @@ import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
+
+MIN_PANDAS_NULLABLE_VERSION = (1, 5)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -218,6 +221,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
+        if (
+            constructor in ("pandas[nullable]", "pandas[pyarrow]")
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+        ):  # pragma: no cover
+            continue
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)

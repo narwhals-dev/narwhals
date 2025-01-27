@@ -9,11 +9,10 @@ from typing import Sequence
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
-from narwhals._expression_parsing import infer_new_root_output_names
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
-from narwhals._spark_like.utils import get_column_name
+from narwhals._spark_like.utils import binary_operation_returns_scalar
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
@@ -39,24 +38,22 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         # Whether the expression is a length-1 Column resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -85,12 +82,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -108,12 +104,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def _from_call(
@@ -122,32 +117,28 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **kwargs: Any,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            results = []
-            inputs = self._call(df)
-            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
-            for _input in inputs:
-                input_col_name = get_column_name(df, _input)
-                column_result = call(_input, **_kwargs)
-                if not returns_scalar:
-                    column_result = column_result.alias(input_col_name)
-                results.append(column_result)
-            return results
-
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+            native_series_list = self._call(df)
+            other_native_series = {
+                key: maybe_evaluate(df, value, returns_scalar=returns_scalar)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            root_names=root_names,
-            output_names=output_names,
-            returns_scalar=self._returns_scalar or returns_scalar,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
         )
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
@@ -155,7 +146,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__eq__(other),
             "__eq__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ne__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
@@ -163,7 +154,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__ne__(other),
             "__ne__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __add__(self: Self, other: SparkLikeExpr) -> Self:
@@ -171,7 +162,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__add__(other),
             "__add__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __sub__(self: Self, other: SparkLikeExpr) -> Self:
@@ -179,7 +170,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__sub__(other),
             "__sub__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
@@ -187,7 +178,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__mul__(other),
             "__mul__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __truediv__(self: Self, other: SparkLikeExpr) -> Self:
@@ -195,7 +186,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__truediv__(other),
             "__truediv__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __floordiv__(self: Self, other: SparkLikeExpr) -> Self:
@@ -203,7 +194,10 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return F.floor(_input / other)
 
         return self._from_call(
-            _floordiv, "__floordiv__", other=other, returns_scalar=False
+            _floordiv,
+            "__floordiv__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:
@@ -211,7 +205,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__pow__(other),
             "__pow__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __mod__(self: Self, other: SparkLikeExpr) -> Self:
@@ -219,7 +213,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__mod__(other),
             "__mod__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __ge__(self: Self, other: SparkLikeExpr) -> Self:
@@ -227,7 +221,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__ge__(other),
             "__ge__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __gt__(self: Self, other: SparkLikeExpr) -> Self:
@@ -235,7 +229,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input > other,
             "__gt__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __le__(self: Self, other: SparkLikeExpr) -> Self:
@@ -243,7 +237,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__le__(other),
             "__le__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __lt__(self: Self, other: SparkLikeExpr) -> Self:
@@ -251,7 +245,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__lt__(other),
             "__lt__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __and__(self: Self, other: SparkLikeExpr) -> Self:
@@ -259,7 +253,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__and__(other),
             "__and__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __or__(self: Self, other: SparkLikeExpr) -> Self:
@@ -267,7 +261,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             lambda _input, other: _input.__or__(other),
             "__or__",
             other=other,
-            returns_scalar=False,
+            returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
     def __invert__(self: Self) -> Self:
@@ -281,21 +275,23 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(F.abs, "abs", returns_scalar=self._returns_scalar)
 
     def alias(self: Self, name: str) -> Self:
-        def _alias(df: SparkLikeLazyFrame) -> list[Column]:
-            return [col.alias(name) for col in self._call(df)]
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
 
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
-            _alias,
+            self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=[name],
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
         )
 
     def all(self: Self) -> Self:
@@ -305,13 +301,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(F.bool_or, "any", returns_scalar=True)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def _cast(_input: Column, dtype: DType | type[DType]) -> Column:
+        def _cast(_input: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(spark_dtype)
 
-        return self._from_call(
-            _cast, "cast", dtype=dtype, returns_scalar=self._returns_scalar
-        )
+        return self._from_call(_cast, "cast", returns_scalar=self._returns_scalar)
 
     def count(self: Self) -> Self:
         return self._from_call(F.count, "count", returns_scalar=True)
@@ -355,7 +349,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
 
-        return self._from_call(func, "std", returns_scalar=True, ddof=ddof)
+        return self._from_call(func, "std", returns_scalar=True)
 
     def var(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -366,7 +360,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
 
-        return self._from_call(func, "var", returns_scalar=True, ddof=ddof)
+        return self._from_call(func, "var", returns_scalar=True)
 
     def clip(
         self: Self,
@@ -441,13 +435,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def is_in(self: Self, values: Sequence[Any]) -> Self:
-        def _is_in(_input: Column, values: Sequence[Any]) -> Column:
+        def _is_in(_input: Column) -> Column:
             return _input.isin(values)
 
         return self._from_call(
             _is_in,
             "is_in",
-            values=values,
             returns_scalar=self._returns_scalar,
         )
 
@@ -468,13 +461,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(_len, "len", returns_scalar=True)
 
     def round(self: Self, decimals: int) -> Self:
-        def _round(_input: Column, decimals: int) -> Column:
+        def _round(_input: Column) -> Column:
             return F.round(_input, decimals)
 
         return self._from_call(
             _round,
             "round",
-            decimals=decimals,
             returns_scalar=self._returns_scalar,
         )
 
@@ -490,14 +482,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(_n_unique, "n_unique", returns_scalar=True)
 
     def over(self: Self, keys: list[str]) -> Self:
-        if self._output_names is None:
-            msg = (
-                "Anonymous expressions are not supported in over.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [expr.over(Window.partitionBy(*keys)) for expr in self._call(df)]
 
@@ -505,12 +489,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             returns_scalar=False,
-            kwargs={**self._kwargs, "keys": keys},
         )
 
     def is_null(self: Self) -> Self:
