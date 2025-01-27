@@ -147,7 +147,7 @@ def agg_dask(
             # e.g. agg(nw.mean('a')) # noqa: ERA001
             function_name = re.sub(r"(\w+->)", "", expr._function_name)
             kwargs = (
-                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}
+                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}  # type: ignore[attr-defined]
             )
 
             agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)

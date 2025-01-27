@@ -60,13 +60,13 @@ class SparkLikeLazyGroupBy:
         )
 
 
-def get_spark_function(function_name: str, **kwargs: Any) -> Column:
-    if function_name in {"std", "var"}:
+def get_spark_function(function_name: str) -> Column:
+    if (stem := function_name.split("[", maxsplit=1)[0]) in ("std", "var"):
         import numpy as np  # ignore-banned-import
 
         return partial(
-            _std if function_name == "std" else _var,
-            ddof=kwargs["ddof"],
+            _std if stem == "std" else _var,
+            ddof=int(function_name.split("[", maxsplit=1)[1].rstrip("]")),
             np_version=parse_version(np.__version__),
         )
 
@@ -130,13 +130,13 @@ def agg_pyspark(
             )
         if expr._depth == 0:  # pragma: no cover
             # e.g. agg(nw.len()) # noqa: ERA001
-            agg_func = get_spark_function(expr._function_name, **expr._kwargs)
+            agg_func = get_spark_function(expr._function_name)
             simple_aggregations.update({alias: agg_func(keys[0]) for alias in aliases})
             continue
 
         # e.g. agg(nw.mean('a')) # noqa: ERA001
         function_name = re.sub(r"(\w+->)", "", expr._function_name)
-        agg_func = get_spark_function(function_name, **expr._kwargs)
+        agg_func = get_spark_function(function_name)
 
         simple_aggregations.update(
             {

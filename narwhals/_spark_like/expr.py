@@ -45,7 +45,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -55,7 +54,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -89,7 +87,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -112,7 +109,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def _from_call(
@@ -143,7 +139,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=expressifiable_args,
         )
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
@@ -297,7 +292,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
         )
 
     def all(self: Self) -> Self:
@@ -355,7 +349,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
 
-        return self._from_call(func, "std", returns_scalar=True)
+        return self._from_call(func, f"std[{ddof}]", returns_scalar=True)
 
     def var(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -364,9 +358,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
+        func = partial(_var, ddof=F.lit(ddof), np_version=parse_version(np.__version__))
 
-        return self._from_call(func, "var", returns_scalar=True)
+        return self._from_call(func, f"var[{ddof}]", returns_scalar=True)
 
     def clip(
         self: Self,
@@ -500,7 +494,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             backend_version=self._backend_version,
             version=self._version,
             returns_scalar=False,
-            kwargs={**self._kwargs, "keys": keys},
         )
 
     def is_null(self: Self) -> Self:

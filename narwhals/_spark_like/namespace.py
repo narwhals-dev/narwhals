@@ -54,7 +54,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
@@ -86,7 +85,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def len(self: Self) -> SparkLikeExpr:
@@ -102,7 +100,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def all_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -119,7 +116,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -136,7 +132,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -158,7 +153,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -183,7 +177,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -200,7 +193,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -217,7 +209,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -311,11 +302,6 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={
-                "exprs": exprs,
-                "separator": separator,
-                "ignore_nulls": ignore_nulls,
-            },
         )
 
     def when(self: Self, *predicates: SparkLikeExpr) -> SparkLikeWhen:
@@ -375,7 +361,6 @@ class SparkLikeWhen:
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"value": value},
         )
 
 
@@ -391,7 +376,6 @@ class SparkLikeThen(SparkLikeExpr):
         returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -401,7 +385,6 @@ class SparkLikeThen(SparkLikeExpr):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
-        self._kwargs = kwargs
 
     def otherwise(self: Self, value: SparkLikeExpr | Any) -> SparkLikeExpr:
         # type ignore because we are setting the `_call` attribute to a

@@ -41,7 +41,6 @@ class SparkLikeSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs={},
         )
 
     def numeric(self: Self) -> SparkLikeSelector:
@@ -88,7 +87,6 @@ class SparkLikeSelectorNamespace:
             backend_version=self._backend_version,
             returns_scalar=False,
             version=self._version,
-            kwargs={},
         )
 
 
@@ -110,7 +108,6 @@ class SparkLikeSelector(SparkLikeExpr):
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
             version=self._version,
-            kwargs={},
         )
 
     def __sub__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
@@ -136,7 +133,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() - other
@@ -168,7 +164,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() | other
@@ -196,7 +191,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
                 version=self._version,
-                kwargs={},
             )
         else:
             return self._to_expr() & other
