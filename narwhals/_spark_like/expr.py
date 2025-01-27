@@ -358,7 +358,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=F.lit(ddof), np_version=parse_version(np.__version__))
+        func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
 
         return self._from_call(func, f"var[{ddof}]", returns_scalar=True)
 
