@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
 
+MIN_PANDAS_NULLABLE_VERSION = (1, 5)
+
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
 # a way to run `python -m cudf.pandas -m pytest` and control which constructors
@@ -219,10 +221,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
-        min_pandas_nullable_version = (1, 5)
         if (
             constructor in ("pandas[nullable]", "pandas[pyarrow]")
-            and min_pandas_nullable_version > PANDAS_VERSION
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
         ):
             continue
         if constructor in EAGER_CONSTRUCTORS:
