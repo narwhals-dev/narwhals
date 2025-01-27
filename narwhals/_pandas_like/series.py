@@ -623,10 +623,13 @@ class PandasLikeSeries(CompliantSeries):
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
+        dtype_backend = get_dtype_backend(
+            dtype=self._native_series.dtype, implementation=self._implementation
+        )
         dtype = (
             narwhals_to_native_dtype(
                 return_dtype,
-                self._native_series.dtype,
+                dtype_backend,
                 self._implementation,
                 self._backend_version,
                 self._version,

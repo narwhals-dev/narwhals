@@ -6,6 +6,8 @@ from typing import Any
 from typing import Callable
 
 from pyspark.sql import functions as F  # noqa: N812
+from pyspark.sql import types as pyspark_types
+from pyspark.sql.window import Window
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
@@ -13,7 +15,6 @@ from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
-    from pyspark.sql import types as pyspark_types
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -26,8 +27,6 @@ def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
 ) -> DType:  # pragma: no cover
-    from pyspark.sql import types as pyspark_types
-
     dtypes = import_dtypes_module(version=version)
 
     if isinstance(dtype, pyspark_types.DoubleType):
@@ -68,8 +67,6 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> pyspark_types.DataType:
-    from pyspark.sql import types as pyspark_types
-
     dtypes = import_dtypes_module(version)
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -146,11 +143,9 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
         column_result = column_results[0]
         if obj._returns_scalar:
             # Return scalar, let PySpark do its broadcasting
-            from pyspark.sql.window import Window
-
             return column_result.over(Window.partitionBy(F.lit(1)))
         return column_result
-    return obj
+    return F.lit(obj)
 
 
 def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:

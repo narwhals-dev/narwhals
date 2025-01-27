@@ -23,7 +23,6 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> SparkLikeExpr:
@@ -38,7 +37,6 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "function": function},
         )
 
     def prefix(self: Self, prefix: str) -> SparkLikeExpr:
@@ -53,7 +51,6 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> SparkLikeExpr:
@@ -68,7 +65,6 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> SparkLikeExpr:
@@ -83,7 +79,6 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
         )
 
     def to_uppercase(self: Self) -> SparkLikeExpr:
@@ -98,5 +93,4 @@ class SparkLikeExprNameNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
         )
