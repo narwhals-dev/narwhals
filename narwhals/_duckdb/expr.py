@@ -538,16 +538,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(
-            _input: duckdb.Expression, dtype: DType | type[DType]
-        ) -> duckdb.Expression:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(native_dtype)
 
         return self._from_call(
             func,
             "cast",
-            dtype=dtype,
             returns_scalar=self._returns_scalar,
         )
 

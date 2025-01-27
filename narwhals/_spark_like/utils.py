@@ -9,7 +9,6 @@ from pyspark.sql import functions as F  # noqa: N812
 from pyspark.sql import types as pyspark_types
 from pyspark.sql.window import Window
 
-from narwhals.dtypes import DType
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -145,8 +145,6 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Any:
             # Return scalar, let PySpark do its broadcasting
             return column_result.over(Window.partitionBy(F.lit(1)))
         return column_result
-    if isinstance_or_issubclass(obj, DType):
-        return obj
     return F.lit(obj)
 
 

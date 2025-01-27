@@ -8,13 +8,13 @@ from typing import Callable
 
 import duckdb
 
-from narwhals.dtypes import DType
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
@@ -31,8 +31,6 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
             msg = "Reductions are not yet supported for DuckDB, at least until they implement duckdb.WindowExpression"
             raise NotImplementedError(msg)
         return column_result
-    if isinstance_or_issubclass(obj, DType):
-        return obj
     return duckdb.ConstantExpression(obj)
 
 
