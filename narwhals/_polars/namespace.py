@@ -225,8 +225,6 @@ class PolarsSelectors:
         )
 
     def numeric(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
@@ -236,8 +234,6 @@ class PolarsSelectors:
         )
 
     def boolean(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
@@ -247,8 +243,6 @@ class PolarsSelectors:
         )
 
     def string(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
@@ -258,8 +252,6 @@ class PolarsSelectors:
         )
 
     def categorical(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
@@ -269,8 +261,6 @@ class PolarsSelectors:
         )
 
     def all(self: Self) -> PolarsExpr:
-        import polars as pl
-
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(

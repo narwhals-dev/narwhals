@@ -79,8 +79,6 @@ class PolarsExpr:
             **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_expr(
                 pl.when(~expr.is_null()).then(native_expr).otherwise(None)
             )
@@ -352,14 +350,10 @@ class PolarsExprListNamespace:
         native_result = native_expr.list.len()
 
         if self._expr._backend_version < (1, 16):  # pragma: no cover
-            import polars as pl
-
             native_result: pl.Expr = (  # type: ignore[no-redef]
                 pl.when(~native_expr.is_null()).then(native_result).cast(pl.UInt32())
             )
         elif self._expr._backend_version < (1, 17):  # pragma: no cover
-            import polars as pl
-
             native_result = native_result.cast(pl.UInt32())
 
         return self._expr._from_native_expr(native_result)

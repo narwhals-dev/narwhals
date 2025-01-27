@@ -315,8 +315,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
-            import duckdb
-
             rel = self._native_frame
             # Sanitise input
             if any(x not in rel.columns for x in subset):
@@ -365,8 +363,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(result)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        import duckdb
-
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)

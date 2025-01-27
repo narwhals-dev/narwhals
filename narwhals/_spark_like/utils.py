@@ -15,8 +15,6 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
-
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType

@@ -101,8 +101,6 @@ class PolarsDataFrame:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            import polars as pl
-
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
                 return self._from_native_object(
@@ -176,7 +174,6 @@ class PolarsDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            import polars as pl
 
             if (
                 isinstance(item, tuple)
@@ -412,8 +409,6 @@ class PolarsLazyFrame:
             }
 
     def collect(self: Self) -> PolarsDataFrame:
-        import polars as pl
-
         try:
             result = self._native_frame.collect()
         except pl.exceptions.ColumnNotFoundError as e:
