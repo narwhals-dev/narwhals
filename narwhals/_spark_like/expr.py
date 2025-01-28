@@ -381,7 +381,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             _std,
             ddof=ddof,
             np_version=parse_version(np.__version__),
-            functions=self._F(),
+            functions=self._F,
         )
 
         return self._from_call(func, "std", expr_kind=ExprKind.AGGREGATION)
@@ -397,7 +397,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             _var,
             ddof=ddof,
             np_version=parse_version(np.__version__),
-            functions=self._F(),
+            functions=self._F,
         )
 
         return self._from_call(func, "var", expr_kind=ExprKind.AGGREGATION)
@@ -411,18 +411,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             result = _input
             if lower_bound is not None:
                 # Convert lower_bound to a literal Column
-                result = (
-                    self._F()
-                    .when(result < lower_bound, self._F.lit(lower_bound))
-                    .otherwise(result)
-                )
+                result = self._F.when(
+                    result < lower_bound, self._F.lit(lower_bound)
+                ).otherwise(result)
             if upper_bound is not None:
                 # Convert upper_bound to a literal Column
-                result = (
-                    self._F()
-                    .when(result > upper_bound, self._F.lit(upper_bound))
-                    .otherwise(result)
-                )
+                result = self._F.when(
+                    result > upper_bound, self._F.lit(upper_bound)
+                ).otherwise(result)
             return result
 
         return self._from_call(
@@ -459,7 +455,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def is_duplicated(self: Self) -> Self:
         def _is_duplicated(_input: Column) -> Column:
             # Create a window spec that treats each value separately.
-            return self._F().count("*").over(self._Window.partitionBy(_input)) > 1
+            return self._F.count("*").over(self._Window.partitionBy(_input)) > 1
 
         return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
 
@@ -472,10 +468,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                 & (_input != self._F.lit(float("inf")))
                 & (_input != self._F.lit(float("-inf")))
             )
-            return (
-                self._F()
-                .when(~self._F.isnull(_input), is_finite_condition)
-                .otherwise(None)
+            return self._F.when(~self._F.isnull(_input), is_finite_condition).otherwise(
+                None
             )
 
         return self._from_call(_is_finite, "is_finite", expr_kind=self._expr_kind)
@@ -493,7 +487,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:
             # Create a window spec that treats each value separately
-            return self._F().count("*").over(self._Window.partitionBy(_input)) == 1
+            return self._F.count("*").over(self._Window.partitionBy(_input)) == 1
 
         return self._from_call(_is_unique, "is_unique", expr_kind=self._expr_kind)
 
@@ -520,7 +514,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
             return self._F.count_distinct(_input) + self._F.max(
-                self._F().isnull(_input).cast(self._native_types().IntegerType())
+                self._F.isnull(_input).cast(self._native_types().IntegerType())
             )
 
         return self._from_call(_n_unique, "n_unique", expr_kind=ExprKind.AGGREGATION)
@@ -545,10 +539,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def is_nan(self: Self) -> Self:
         def _is_nan(_input: Column) -> Column:
-            return (
-                self._F()
-                .when(self._F.isnull(_input), None)
-                .otherwise(self._F.isnan(_input))
+            return self._F.when(self._F.isnull(_input), None).otherwise(
+                self._F.isnan(_input)
             )
 
         return self._from_call(_is_nan, "is_nan", expr_kind=self._expr_kind)
