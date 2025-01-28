@@ -17,6 +17,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -394,4 +395,53 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
+        return self._from_native_frame(duckdb.sql(query))
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        from narwhals.exceptions import InvalidOperationError
+
+        dtypes = import_dtypes_module(self._version)
+
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        rel = self._native_frame  # noqa: F841
+        columns = self.columns
+        select_unnest_statement = ", ".join(
+            f'unnest("{col}") as "{col}"' if col in to_explode else f'"{col}"'
+            for col in columns
+        )
+        select_null_statement = ", ".join(
+            f'NULL as "{col}"' if col in to_explode else f'"{col}"' for col in columns
+        )
+        where_condition = " and ".join(
+            f'"{col}" is not null and len("{col}") > 0' for col in to_explode
+        )
+
+        query = f"""
+            (
+                select {select_unnest_statement}
+                from rel
+                where {where_condition}
+            )
+            union
+            (
+                select {select_null_statement}
+                from rel
+                where not ({where_condition})
+            );
+        """  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))

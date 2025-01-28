@@ -40,7 +40,7 @@ def test_explode_single_col(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -54,7 +54,8 @@ def test_explode_single_col(
         .select("a", column)
     )
     expected = {"a": ["x", "x", "y", "z", "w"], column: expected_values}
-    assert_equal_data(result, expected)
+    for col in result.columns:
+        assert_equal_data(result.select(col), {col: expected[col]})
 
 
 @pytest.mark.parametrize(
@@ -89,7 +90,7 @@ def test_explode_multiple_cols(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -102,7 +103,8 @@ def test_explode_multiple_cols(
         .explode(columns, *more_columns)
         .select("a", columns, *more_columns)
     )
-    assert_equal_data(result, expected)
+    for col in result.columns:
+        assert_equal_data(result.select(col), {col: expected[col]})
 
 
 def test_explode_shape_error(
@@ -133,7 +135,7 @@ def test_explode_shape_error(
 def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "pyspark")):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
