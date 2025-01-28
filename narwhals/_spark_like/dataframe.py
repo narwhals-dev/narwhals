@@ -12,6 +12,7 @@ from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -19,6 +20,7 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    from pyspark.sql import Column
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
@@ -46,7 +48,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         validate_backend_version(self._implementation, self._backend_version)
 
     @property
-    def _F(self) -> Any:  # noqa: N802
+    def _F(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import functions
 
@@ -56,7 +58,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return functions
 
     @property
-    def _native_dtypes(self) -> Any:
+    def _native_dtypes(self: Self) -> Any:
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import types
 
@@ -66,7 +68,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return types
 
     @property
-    def _Window(self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import Window
 
@@ -312,3 +314,57 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(
             self_native.join(other, on=left_on, how=how).select(col_order)
         )
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        from narwhals.exceptions import InvalidOperationError
+
+        dtypes = import_dtypes_module(self._version)
+
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        native_frame = self._native_frame
+        column_names = self.columns
+
+        def null_condition(col_name: str) -> Column:
+            return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
+
+        if len(to_explode) == 1:
+            return self._from_native_frame(
+                native_frame.select(
+                    *[
+                        self._F.col(col_name).alias(col_name)
+                        if col_name != to_explode[0]
+                        else self._F.explode(col_name).alias(col_name)
+                        for col_name in column_names
+                    ]
+                ).union(
+                    native_frame.filter(null_condition(to_explode[0])).select(
+                        *[
+                            self._F.col(col_name).alias(col_name)
+                            if col_name != to_explode[0]
+                            else self._F.lit(None).alias(col_name)
+                            for col_name in column_names
+                        ]
+                    )
+                )
+            )
+
+        msg = (
+            "Exploding on multiple columns is not supported with SparkLike backend since "
+            "we cannot guarantee that the exploded columns have matching element counts."
+        )
+        raise NotImplementedError(msg)

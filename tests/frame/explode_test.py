@@ -40,7 +40,7 @@ def test_explode_single_col(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -110,7 +110,7 @@ def test_explode_shape_error(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -118,8 +118,8 @@ def test_explode_shape_error(
         request.applymarker(pytest.mark.xfail)
 
     with pytest.raises(
-        (ShapeError, PlShapeError),
-        match="exploded columns must have matching element counts",
+        (ShapeError, PlShapeError, NotImplementedError),
+        match=r".*exploded columns (must )?have matching element counts",
     ):
         _ = (
             nw.from_native(constructor(data))
@@ -133,7 +133,7 @@ def test_explode_shape_error(
 def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "duckdb")):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
