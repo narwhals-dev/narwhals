@@ -331,7 +331,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def _cast(_input: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_types()
+                dtype, self._version, self._native_types
             )
             return _input.cast(spark_dtype)
 
@@ -514,7 +514,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
             return self._F.count_distinct(_input) + self._F.max(
-                self._F.isnull(_input).cast(self._native_types().IntegerType())
+                self._F.isnull(_input).cast(self._native_types.IntegerType())
             )
 
         return self._from_call(_n_unique, "n_unique", expr_kind=ExprKind.AGGREGATION)
