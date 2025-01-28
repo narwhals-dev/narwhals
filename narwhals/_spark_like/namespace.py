@@ -18,6 +18,7 @@ from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import ExprKind
+from narwhals._spark_like.utils import n_ary_operation_expr_kind
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -81,7 +82,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            expr_kind=ExprKind.AGGREGATION,
+            expr_kind=ExprKind.LITERAL,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -110,7 +111,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -125,7 +126,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -145,7 +146,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -168,7 +169,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -183,7 +184,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -198,7 +199,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -290,7 +291,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=ExprKind.TRANSFORM,
+            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
