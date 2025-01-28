@@ -35,12 +35,12 @@ if TYPE_CHECKING:
 
 class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
+    _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,
         call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
         *,
-        depth: int,
         function_name: str,
         evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
@@ -49,7 +49,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         version: Version,
     ) -> None:
         self._call = call
-        self._depth = depth
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
@@ -82,7 +81,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
         return cls(
             func,
-            depth=0,
             function_name="col",
             evaluate_output_names=lambda _df: list(column_names),
             alias_output_names=None,
@@ -105,7 +103,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
         return cls(
             func,
-            depth=0,
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
@@ -145,7 +142,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -288,11 +284,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
                 raise ValueError(msg)
             return [name]
 
-        # Define this one manually, so that we can
-        # override `output_names` and not increase depth
         return self.__class__(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
