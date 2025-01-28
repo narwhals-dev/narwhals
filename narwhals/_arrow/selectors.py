@@ -8,6 +8,8 @@ from narwhals._arrow.expr import ArrowExpr
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
+import re
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -41,6 +43,24 @@ class ArrowSelectorNamespace:
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"dtypes": dtypes},
+        )
+
+    def matches(self: Self, pattern: str) -> ArrowSelector:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [df[col] for col in df.columns if re.search(pattern, col)]
+        
+        def evalute_output_names(df: ArrowDataFrame) -> Sequence[str]:
+            return [col for col in df.columns if re.search(pattern, col)]
+
+        return ArrowSelector(
+            func,
+            depth=0,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"pattern": pattern},
         )
 
     def numeric(self: Self) -> ArrowSelector:

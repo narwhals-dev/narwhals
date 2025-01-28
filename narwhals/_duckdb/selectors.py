@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -34,6 +35,25 @@ class DuckDBSelectorNamespace:
 
         def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
+
+        return DuckDBSelector(
+            func,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
+            version=self._version,
+        )
+
+    def matches(self: Self, pattern: str) -> DuckDBSelector:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            return [
+                ColumnExpression(col) for col in df.columns if re.search(pattern, col)
+            ]
+
+        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+            return [col for col in df.columns if re.search(pattern, col)]
 
         return DuckDBSelector(
             func,
