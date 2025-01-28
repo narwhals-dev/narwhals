@@ -9,6 +9,7 @@ from typing import Sequence
 from pyspark.sql import Window
 from pyspark.sql import functions as F  # noqa: N812
 
+from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.typing import CompliantLazyFrame
@@ -97,9 +98,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, returns_scalar = parse_exprs_and_named_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -110,7 +109,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
             return self._from_native_frame(spark_df)
 
-        if all(returns_scalar):
+        if not any(expr_kind is ExprKind.TRANSFORM for expr_kind in expr_kinds):
             new_columns_list = [
                 col.alias(col_name) for col_name, col in new_columns.items()
             ]
@@ -118,11 +117,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         else:
             new_columns_list = [
                 col.over(Window.partitionBy(F.lit(1))).alias(col_name)
-                if _returns_scalar
+                if expr_kind is ExprKind.AGGREGATION
                 else col.alias(col_name)
-                for (col_name, col), _returns_scalar in zip(
-                    new_columns.items(), returns_scalar
-                )
+                for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
             ]
             return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
@@ -131,15 +128,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, returns_scalar = parse_exprs_and_named_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         new_columns_map = {
-            col_name: col.over(Window.partitionBy(F.lit(1))) if _returns_scalar else col
-            for (col_name, col), _returns_scalar in zip(
-                new_columns.items(), returns_scalar
-            )
+            col_name: col.over(Window.partitionBy(F.lit(1)))
+            if expr_kind is ExprKind.AGGREGATION
+            else col
+            for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
         }
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 

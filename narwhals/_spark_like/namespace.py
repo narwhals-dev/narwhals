@@ -17,6 +17,7 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
+from narwhals._spark_like.utils import ExprKind
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="all",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -80,7 +81,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            returns_scalar=True,
+            expr_kind=ExprKind.AGGREGATION,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -94,7 +95,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            returns_scalar=True,
+            expr_kind=ExprKind.AGGREGATION,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -109,7 +110,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -124,7 +125,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -144,7 +145,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -167,7 +168,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -182,7 +183,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -197,7 +198,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -289,7 +290,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -298,7 +299,10 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
         return SparkLikeWhen(
-            condition, self._backend_version, returns_scalar=False, version=self._version
+            condition,
+            self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
+            version=self._version,
         )
 
 
@@ -310,14 +314,14 @@ class SparkLikeWhen:
         then_value: Any | None = None,
         otherwise_value: Any | None = None,
         *,
-        returns_scalar: bool,
+        expr_kind: ExprKind,
         version: Version,
     ) -> None:
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherwise_value
-        self._returns_scalar = returns_scalar
+        self._expr_kind = expr_kind
         self._version = version
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
@@ -347,7 +351,7 @@ class SparkLikeWhen:
                 value, "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(value, "_alias_output_names", None),
-            returns_scalar=self._returns_scalar,
+            expr_kind=self._expr_kind,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -361,7 +365,7 @@ class SparkLikeThen(SparkLikeExpr):
         function_name: str,
         evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        returns_scalar: bool,
+        expr_kind: ExprKind,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
@@ -371,7 +375,7 @@ class SparkLikeThen(SparkLikeExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._returns_scalar = returns_scalar
+        self._expr_kind = expr_kind
 
     def otherwise(self: Self, value: SparkLikeExpr | Any) -> SparkLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
