@@ -6,9 +6,6 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from pyspark.sql import Window
-from pyspark.sql import functions as F  # noqa: N812
-
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -31,7 +28,6 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExpr(CompliantExpr["Column"]):
-    _implementation = Implementation.PYSPARK
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
@@ -44,6 +40,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         expr_kind: ExprKind,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> None:
         self._call = call
         self._function_name = function_name
@@ -52,9 +49,40 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._expr_kind = expr_kind
         self._backend_version = backend_version
         self._version = version
+        self._implementation = implementation
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
+
+    @property
+    def _F(self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import functions
+
+            return functions
+        from pyspark.sql import functions
+
+        return functions
+
+    @property
+    def _native_types(self) -> Any:
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import types
+
+            return types
+        from pyspark.sql import types
+
+        return types
+
+    @property
+    def _Window(self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import Window
+
+            return Window
+        from pyspark.sql import Window
+
+        return Window
 
     def __narwhals_expr__(self: Self) -> None: ...
 
@@ -63,7 +91,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version, version=self._version
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     @classmethod
@@ -72,9 +102,10 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         *column_names: str,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> Self:
-        def func(_: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col_name) for col_name in column_names]
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(col_name) for col_name in column_names]
 
         return cls(
             func,
@@ -84,6 +115,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=ExprKind.TRANSFORM,
             backend_version=backend_version,
             version=version,
+            implementation=implementation,
         )
 
     @classmethod
@@ -92,10 +124,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         *column_indices: int,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
-            return [F.col(columns[i]) for i in column_indices]
+            return [df._F.col(columns[i]) for i in column_indices]
 
         return cls(
             func,
@@ -105,6 +138,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=ExprKind.TRANSFORM,
             backend_version=backend_version,
             version=version,
+            implementation=implementation,
         )
 
     def _from_call(
@@ -134,6 +168,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=expr_kind,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
@@ -186,7 +221,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __floordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _floordiv(_input: Column, other: Column) -> Column:
-            return F.floor(_input / other)
+            return self._F.floor(_input / other)
 
         return self._from_call(
             _floordiv,
@@ -267,7 +302,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def abs(self: Self) -> Self:
-        return self._from_call(F.abs, "abs", expr_kind=self._expr_kind)
+        return self._from_call(self._F.abs, "abs", expr_kind=self._expr_kind)
 
     def alias(self: Self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
@@ -284,29 +319,32 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=self._expr_kind,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def all(self: Self) -> Self:
-        return self._from_call(F.bool_and, "all", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.bool_and, "all", expr_kind=ExprKind.AGGREGATION)
 
     def any(self: Self) -> Self:
-        return self._from_call(F.bool_or, "any", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.bool_or, "any", expr_kind=ExprKind.AGGREGATION)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def _cast(_input: Column) -> Column:
-            spark_dtype = narwhals_to_native_dtype(dtype, self._version)
+            spark_dtype = narwhals_to_native_dtype(
+                dtype, self._version, self._native_types
+            )
             return _input.cast(spark_dtype)
 
         return self._from_call(_cast, "cast", expr_kind=self._expr_kind)
 
     def count(self: Self) -> Self:
-        return self._from_call(F.count, "count", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.count, "count", expr_kind=ExprKind.AGGREGATION)
 
     def max(self: Self) -> Self:
-        return self._from_call(F.max, "max", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.max, "max", expr_kind=ExprKind.AGGREGATION)
 
     def mean(self: Self) -> Self:
-        return self._from_call(F.mean, "mean", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.mean, "mean", expr_kind=ExprKind.AGGREGATION)
 
     def median(self: Self) -> Self:
         def _median(_input: Column) -> Column:
@@ -314,23 +352,23 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
             if parse_version(pyspark.__version__) < (3, 4):
                 # Use percentile_approx with default accuracy parameter (10000)
-                return F.percentile_approx(_input.cast("double"), 0.5)
+                return self._F.percentile_approx(_input.cast("double"), 0.5)
 
-            return F.median(_input)
+            return self._F.median(_input)
 
         return self._from_call(_median, "median", expr_kind=ExprKind.AGGREGATION)
 
     def min(self: Self) -> Self:
-        return self._from_call(F.min, "min", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.min, "min", expr_kind=ExprKind.AGGREGATION)
 
     def null_count(self: Self) -> Self:
         def _null_count(_input: Column) -> Column:
-            return F.count_if(F.isnull(_input))
+            return self._F.count_if(self._F.isnull(_input))
 
         return self._from_call(_null_count, "null_count", expr_kind=ExprKind.AGGREGATION)
 
     def sum(self: Self) -> Self:
-        return self._from_call(F.sum, "sum", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.sum, "sum", expr_kind=ExprKind.AGGREGATION)
 
     def std(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -339,7 +377,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(_std, ddof=ddof, np_version=parse_version(np.__version__))
+        func = partial(
+            _std,
+            ddof=ddof,
+            np_version=parse_version(np.__version__),
+            functions=self._F,
+        )
 
         return self._from_call(func, "std", expr_kind=ExprKind.AGGREGATION)
 
@@ -350,7 +393,12 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=ddof, np_version=parse_version(np.__version__))
+        func = partial(
+            _var,
+            ddof=ddof,
+            np_version=parse_version(np.__version__),
+            functions=self._F,
+        )
 
         return self._from_call(func, "var", expr_kind=ExprKind.AGGREGATION)
 
@@ -363,14 +411,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             result = _input
             if lower_bound is not None:
                 # Convert lower_bound to a literal Column
-                result = F.when(result < lower_bound, F.lit(lower_bound)).otherwise(
-                    result
-                )
+                result = self._F.when(
+                    result < lower_bound, self._F.lit(lower_bound)
+                ).otherwise(result)
             if upper_bound is not None:
                 # Convert upper_bound to a literal Column
-                result = F.when(result > upper_bound, F.lit(upper_bound)).otherwise(
-                    result
-                )
+                result = self._F.when(
+                    result > upper_bound, self._F.lit(upper_bound)
+                ).otherwise(result)
             return result
 
         return self._from_call(
@@ -407,7 +455,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def is_duplicated(self: Self) -> Self:
         def _is_duplicated(_input: Column) -> Column:
             # Create a window spec that treats each value separately.
-            return F.count("*").over(Window.partitionBy(_input)) > 1
+            return self._F.count("*").over(self._Window.partitionBy(_input)) > 1
 
         return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
 
@@ -416,9 +464,13 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
             # preserved
             is_finite_condition = (
-                ~F.isnan(_input) & (_input != float("inf")) & (_input != float("-inf"))
+                ~self._F.isnan(_input)
+                & (_input != self._F.lit(float("inf")))
+                & (_input != self._F.lit(float("-inf")))
             )
-            return F.when(~F.isnull(_input), is_finite_condition).otherwise(None)
+            return self._F.when(~self._F.isnull(_input), is_finite_condition).otherwise(
+                None
+            )
 
         return self._from_call(_is_finite, "is_finite", expr_kind=self._expr_kind)
 
@@ -435,20 +487,20 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:
             # Create a window spec that treats each value separately
-            return F.count("*").over(Window.partitionBy(_input)) == 1
+            return self._F.count("*").over(self._Window.partitionBy(_input)) == 1
 
         return self._from_call(_is_unique, "is_unique", expr_kind=self._expr_kind)
 
     def len(self: Self) -> Self:
         def _len(_input: Column) -> Column:
             # Use count(*) to count all rows including nulls
-            return F.count("*")
+            return self._F.count("*")
 
         return self._from_call(_len, "len", expr_kind=ExprKind.AGGREGATION)
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
-            return F.round(_input, decimals)
+            return self._F.round(_input, decimals)
 
         return self._from_call(
             _round,
@@ -457,19 +509,19 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         )
 
     def skew(self: Self) -> Self:
-        return self._from_call(F.skewness, "skew", expr_kind=ExprKind.AGGREGATION)
+        return self._from_call(self._F.skewness, "skew", expr_kind=ExprKind.AGGREGATION)
 
     def n_unique(self: Self) -> Self:
-        from pyspark.sql.types import IntegerType
-
         def _n_unique(_input: Column) -> Column:
-            return F.count_distinct(_input) + F.max(F.isnull(_input).cast(IntegerType()))
+            return self._F.count_distinct(_input) + self._F.max(
+                self._F.isnull(_input).cast(self._native_types.IntegerType())
+            )
 
         return self._from_call(_n_unique, "n_unique", expr_kind=ExprKind.AGGREGATION)
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [expr.over(Window.partitionBy(*keys)) for expr in self._call(df)]
+            return [expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)]
 
         return self.__class__(
             func,
@@ -478,15 +530,18 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
             expr_kind=ExprKind.TRANSFORM,
         )
 
     def is_null(self: Self) -> Self:
-        return self._from_call(F.isnull, "is_null", expr_kind=self._expr_kind)
+        return self._from_call(self._F.isnull, "is_null", expr_kind=self._expr_kind)
 
     def is_nan(self: Self) -> Self:
         def _is_nan(_input: Column) -> Column:
-            return F.when(F.isnull(_input), None).otherwise(F.isnan(_input))
+            return self._F.when(self._F.isnull(_input), None).otherwise(
+                self._F.isnan(_input)
+            )
 
         return self._from_call(_is_nan, "is_nan", expr_kind=self._expr_kind)
 

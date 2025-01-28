@@ -64,4 +64,5 @@ class SparkLikeExprNameNamespace:
             expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
+            implementation=self._compliant_expr._implementation,
         )

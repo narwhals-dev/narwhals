@@ -6,16 +6,14 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
-from pyspark.sql import Column
-from pyspark.sql import Window
-from pyspark.sql import functions as F  # noqa: N812
-from pyspark.sql import types as pyspark_types
-
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    import pyspark.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -43,65 +41,66 @@ class ExprKind(Enum):
 def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
+    spark_types: ModuleType,
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
 
-    if isinstance(dtype, pyspark_types.DoubleType):
+    if isinstance(dtype, spark_types.DoubleType):
         return dtypes.Float64()
-    if isinstance(dtype, pyspark_types.FloatType):
+    if isinstance(dtype, spark_types.FloatType):
         return dtypes.Float32()
-    if isinstance(dtype, pyspark_types.LongType):
+    if isinstance(dtype, spark_types.LongType):
         return dtypes.Int64()
-    if isinstance(dtype, pyspark_types.IntegerType):
+    if isinstance(dtype, spark_types.IntegerType):
         return dtypes.Int32()
-    if isinstance(dtype, pyspark_types.ShortType):
+    if isinstance(dtype, spark_types.ShortType):
         return dtypes.Int16()
-    if isinstance(dtype, pyspark_types.ByteType):
+    if isinstance(dtype, spark_types.ByteType):
         return dtypes.Int8()
     string_types = [
-        pyspark_types.StringType,
-        pyspark_types.VarcharType,
-        pyspark_types.CharType,
+        spark_types.StringType,
+        spark_types.VarcharType,
+        spark_types.CharType,
     ]
     if any(isinstance(dtype, t) for t in string_types):
         return dtypes.String()
-    if isinstance(dtype, pyspark_types.BooleanType):
+    if isinstance(dtype, spark_types.BooleanType):
         return dtypes.Boolean()
-    if isinstance(dtype, pyspark_types.DateType):
+    if isinstance(dtype, spark_types.DateType):
         return dtypes.Date()
     datetime_types = [
-        pyspark_types.TimestampType,
-        pyspark_types.TimestampNTZType,
+        spark_types.TimestampType,
+        spark_types.TimestampNTZType,
     ]
     if any(isinstance(dtype, t) for t in datetime_types):
         return dtypes.Datetime()
-    if isinstance(dtype, pyspark_types.DecimalType):  # pragma: no cover
+    if isinstance(dtype, spark_types.DecimalType):  # pragma: no cover
         # TODO(unassigned): cover this in dtypes_test.py
         return dtypes.Decimal()
     return dtypes.Unknown()
 
 
 def narwhals_to_native_dtype(
-    dtype: DType | type[DType], version: Version
+    dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> pyspark_types.DataType:
     dtypes = import_dtypes_module(version)
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return pyspark_types.DoubleType()
+        return spark_types.DoubleType()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return pyspark_types.FloatType()
+        return spark_types.FloatType()
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return pyspark_types.LongType()
+        return spark_types.LongType()
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return pyspark_types.IntegerType()
+        return spark_types.IntegerType()
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return pyspark_types.ShortType()
+        return spark_types.ShortType()
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return pyspark_types.ByteType()
+        return spark_types.ByteType()
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return pyspark_types.StringType()
+        return spark_types.StringType()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return pyspark_types.BooleanType()
+        return spark_types.BooleanType()
     if isinstance_or_issubclass(dtype, (dtypes.Date, dtypes.Datetime)):
         msg = "Converting to Date or Datetime dtype is not supported yet"
         raise NotImplementedError(msg)
@@ -163,36 +162,42 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> 
         if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
             # Returns scalar, but overall expression doesn't.
             # Let PySpark do its broadcasting
-            return column_result.over(Window.partitionBy(F.lit(1)))
+            return column_result.over(df._Window().partitionBy(df._F.lit(1)))
         return column_result
-    return F.lit(obj)
+    return df._F.lit(obj)
 
 
-def _std(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:
+def _std(
+    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+) -> Column:
     if np_version > (2, 0):
         if ddof == 1:
-            return F.stddev_samp(_input)
+            return functions.stddev_samp(_input)
 
-        n_rows = F.count(_input)
-        return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
+        n_rows = functions.count(_input)
+        return functions.stddev_samp(_input) * functions.sqrt(
+            (n_rows - 1) / (n_rows - ddof)
+        )
 
     from pyspark.pandas.spark.functions import stddev
 
-    input_col = F.col(_input) if isinstance(_input, str) else _input
+    input_col = functions.col(_input) if isinstance(_input, str) else _input
     return stddev(input_col, ddof=ddof)
 
 
-def _var(_input: Column | str, ddof: int, np_version: tuple[int, ...]) -> Column:
+def _var(
+    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+) -> Column:
     if np_version > (2, 0):
         if ddof == 1:
-            return F.var_samp(_input)
+            return functions.var_samp(_input)
 
-        n_rows = F.count(_input)
-        return F.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
+        n_rows = functions.count(_input)
+        return functions.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
 
     from pyspark.pandas.spark.functions import var
 
-    input_col = F.col(_input) if isinstance(_input, str) else _input
+    input_col = functions.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)
 
 

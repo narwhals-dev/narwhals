@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import overload
 
-from pyspark.sql import functions as F  # noqa: N812
-
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
@@ -18,7 +16,7 @@ class SparkLikeExprStringNamespace:
 
     def len_chars(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            F.char_length,
+            self._compliant_expr._F.char_length,
             "len",
             expr_kind=self._compliant_expr._expr_kind,
         )
@@ -27,8 +25,16 @@ class SparkLikeExprStringNamespace:
         self: Self, pattern: str, value: str, *, literal: bool
     ) -> SparkLikeExpr:
         def func(_input: Column) -> Column:
-            replace_all_func = F.replace if literal else F.regexp_replace
-            return replace_all_func(_input, F.lit(pattern), F.lit(value))
+            replace_all_func = (
+                self._compliant_expr._F.replace
+                if literal
+                else self._compliant_expr._F.regexp_replace
+            )
+            return replace_all_func(
+                _input,
+                self._compliant_expr._F.lit(pattern),
+                self._compliant_expr._F.lit(value),
+            )
 
         return self._compliant_expr._from_call(
             func,
@@ -41,7 +47,9 @@ class SparkLikeExprStringNamespace:
 
         def func(_input: Column) -> Column:
             to_remove = characters if characters is not None else string.whitespace
-            return F.btrim(_input, F.lit(to_remove))
+            return self._compliant_expr._F.btrim(
+                _input, self._compliant_expr._F.lit(to_remove)
+            )
 
         return self._compliant_expr._from_call(
             func,
@@ -51,22 +59,30 @@ class SparkLikeExprStringNamespace:
 
     def starts_with(self: Self, prefix: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            lambda _input: F.startswith(_input, F.lit(prefix)),
+            lambda _input: self._compliant_expr._F.startswith(
+                _input, self._compliant_expr._F.lit(prefix)
+            ),
             "starts_with",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
     def ends_with(self: Self, suffix: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            lambda _input: F.endswith(_input, F.lit(suffix)),
+            lambda _input: self._compliant_expr._F.endswith(
+                _input, self._compliant_expr._F.lit(suffix)
+            ),
             "ends_with",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
     def contains(self: Self, pattern: str, *, literal: bool) -> SparkLikeExpr:
         def func(_input: Column) -> Column:
-            contains_func = F.contains if literal else F.regexp
-            return contains_func(_input, F.lit(pattern))
+            contains_func = (
+                self._compliant_expr._F.contains
+                if literal
+                else self._compliant_expr._F.regexp
+            )
+            return contains_func(_input, self._compliant_expr._F.lit(pattern))
 
         return self._compliant_expr._from_call(
             func,
@@ -78,10 +94,16 @@ class SparkLikeExprStringNamespace:
         # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
         # The position is not zero based, but 1 based index.
         def func(_input: Column) -> Column:
-            col_length = F.char_length(_input)
+            col_length = self._compliant_expr._F.char_length(_input)
 
-            _offset = col_length + F.lit(offset + 1) if offset < 0 else F.lit(offset + 1)
-            _length = F.lit(length) if length is not None else col_length
+            _offset = (
+                col_length + self._compliant_expr._F.lit(offset + 1)
+                if offset < 0
+                else self._compliant_expr._F.lit(offset + 1)
+            )
+            _length = (
+                self._compliant_expr._F.lit(length) if length is not None else col_length
+            )
             return _input.substr(_offset, _length)
 
         return self._compliant_expr._from_call(
@@ -92,22 +114,26 @@ class SparkLikeExprStringNamespace:
 
     def to_uppercase(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            F.upper,
+            self._compliant_expr._F.upper,
             "to_uppercase",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
     def to_lowercase(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            F.lower,
+            self._compliant_expr._F.lower,
             "to_lowercase",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
     def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:  # noqa: A002
         return self._compliant_expr._from_call(
-            lambda _input: F.to_timestamp(
-                F.replace(_input, F.lit("T"), F.lit(" ")),
+            lambda _input: self._compliant_expr._F.to_timestamp(
+                self._compliant_expr._F.replace(
+                    _input,
+                    self._compliant_expr._F.lit("T"),
+                    self._compliant_expr._F.lit(" "),
+                ),
                 format=strptime_to_pyspark_format(format),
             ),
             "to_datetime",
