@@ -76,11 +76,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return Window
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
-        if self._implementation in (Implementation.PYSPARK, Implementation.SQLFRAME):
-            return self._implementation.to_native_namespace()
-
-        msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        return self._implementation.to_native_namespace()
 
     def __narwhals_namespace__(self: Self) -> SparkLikeNamespace:
         from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -138,11 +134,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
         if not new_columns:
             # return empty dataframe, like Polars does
-            raise AssertionError
-            from pyspark.sql.types import StructType
-
             spark_session = self._native_frame.sparkSession
-            spark_df = spark_session.createDataFrame([], StructType([]))
+            spark_df = spark_session.createDataFrame(
+                [], self._native_dtypes.StructType([])
+            )
 
             return self._from_native_frame(spark_df)
 
