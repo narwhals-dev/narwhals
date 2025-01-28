@@ -9,6 +9,7 @@ from typing import Sequence
 import duckdb
 from duckdb import ColumnExpression
 
+from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
@@ -109,14 +110,24 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(self._native_frame.limit(0))
 
-        if all(getattr(x, "_returns_scalar", False) for x in exprs) and all(
-            getattr(x, "_returns_scalar", False) for x in named_exprs.values()
+        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs) and not any(
+            expr._expr_kind is ExprKind.TRANSFORM for expr in named_exprs.values()
         ):
             return self._from_native_frame(
                 self._native_frame.aggregate(
                     [val.alias(col) for col, val in new_columns_map.items()]
                 )
             )
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
+            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
+        ):
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
+            raise NotImplementedError(msg)
 
         return self._from_native_frame(
             self._native_frame.select(
@@ -140,6 +151,18 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         **named_exprs: DuckDBExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
+
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
+            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
+        ):
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
+            raise NotImplementedError(msg)
+
         result = []
         for col in self._native_frame.columns:
             if col in new_columns_map:

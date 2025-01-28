@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from enum import Enum
+from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -18,7 +20,22 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
+class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with.
+
+    Composition rule is:
+    - LITERAL vs LITERAL -> LITERAL
+    - TRANSFORM vs anything -> TRANSFORM
+    - anything vs TRANSFORM -> TRANSFORM
+    - all remaining cases -> AGGREGATION
+    """
+
+    LITERAL = auto()  # e.g. nw.lit(1)
+    AGGREGATION = auto()  # e.g. nw.col('a').mean()
+    TRANSFORM = auto()  # e.g. nw.col('a').round()
+
+
+def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
     from narwhals._duckdb.expr import DuckDBExpr
 
     if isinstance(obj, DuckDBExpr):
@@ -27,8 +44,15 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._returns_scalar:
-            msg = "Reductions are not yet supported for DuckDB, at least until they implement duckdb.WindowExpression"
+        if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
+            # Returns scalar, but overall expression doesn't.
+            # Not yet supported.
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
             raise NotImplementedError(msg)
         return column_result
     return duckdb.ConstantExpression(obj)
@@ -40,7 +64,7 @@ def parse_exprs_and_named_exprs(
     def func(
         *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
     ) -> dict[str, duckdb.Expression]:
-        native_results: dict[str, list[duckdb.Expression]] = {}
+        native_results: dict[str, duckdb.Expression] = {}
         for expr in exprs:
             native_series_list = expr._call(df)
             output_names = expr._evaluate_output_names(df)
@@ -177,8 +201,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def binary_operation_returns_scalar(lhs: DuckDBExpr, rhs: DuckDBExpr | Any) -> bool:
-    # If `rhs` is a DuckDBExpr, we look at `_returns_scalar`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
-    # to `True`.
-    return lhs._returns_scalar and getattr(rhs, "_returns_scalar", True)
+def n_ary_operation_expr_kind(*args: DuckDBExpr | Any) -> ExprKind:
+    if all(
+        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
+    ):
+        return ExprKind.LITERAL
+    if any(
+        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
+    ):
+        return ExprKind.TRANSFORM
+    return ExprKind.AGGREGATION
