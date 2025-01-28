@@ -19,49 +19,49 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             F.to_date,
             "date",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def year(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.year,
             "year",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def month(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.month,
             "month",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def day(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.day,
             "day",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def hour(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.hour,
             "hour",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def minute(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.minute,
             "minute",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def second(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.second,
             "second",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def millisecond(self: Self) -> SparkLikeExpr:
@@ -71,7 +71,7 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             _millisecond,
             "millisecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def microsecond(self: Self) -> SparkLikeExpr:
@@ -81,7 +81,7 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             _microsecond,
             "microsecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def nanosecond(self: Self) -> SparkLikeExpr:
@@ -91,14 +91,14 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             _nanosecond,
             "nanosecond",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def ordinal_day(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             F.dayofyear,
             "ordinal_day",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def weekday(self: Self) -> SparkLikeExpr:
@@ -109,5 +109,5 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             _weekday,
             "weekday",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )

@@ -61,7 +61,7 @@ class SparkLikeExprNameNamespace:
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
             alias_output_names=alias_output_names,
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
         )

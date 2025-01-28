@@ -8,6 +8,7 @@ from typing import Sequence
 from pyspark.sql import functions as F  # noqa: N812
 
 from narwhals._spark_like.expr import SparkLikeExpr
+from narwhals._spark_like.utils import ExprKind
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -101,7 +102,7 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -117,7 +118,7 @@ class SparkLikeSelector(SparkLikeExpr):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
-            returns_scalar=self._returns_scalar,
+            expr_kind=self._expr_kind,
             version=self._version,
         )
 
@@ -141,7 +142,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
@@ -171,7 +172,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
@@ -197,7 +198,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
