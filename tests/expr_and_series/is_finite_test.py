@@ -25,8 +25,6 @@ def test_is_finite_expr(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_finite())
-    breakpoint()
-    result.to_native().show()
     assert_equal_data(result, expected)
 
 
