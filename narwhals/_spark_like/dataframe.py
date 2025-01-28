@@ -51,7 +51,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from sqlframe.duckdb import functions
 
             return functions
-        raise AssertionError
+        from pyspark.sql import functions
+
+        return functions
 
     @property
     def _native_dtypes(self) -> Any:
@@ -59,7 +61,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from sqlframe.duckdb import types
 
             return types
-        raise AssertionError
+        from pyspark.sql import types
+
+        return types
 
     @property
     def _Window(self) -> Any:  # noqa: N802
@@ -67,7 +71,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from sqlframe.duckdb import Window
 
             return Window
-        raise AssertionError
+        from pyspark.sql import Window
+
+        return Window
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         if self._implementation in (Implementation.PYSPARK, Implementation.SQLFRAME):
