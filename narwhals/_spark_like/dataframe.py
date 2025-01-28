@@ -312,3 +312,21 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(
             self_native.join(other, on=left_on, how=how).select(col_order)
         )
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                ids=index,
+                values=on,
+                variableColumnName=variable_name
+                if variable_name is not None
+                else "variable",
+                valueColumnName=value_name if value_name is not None else "value",
+            )
+        )

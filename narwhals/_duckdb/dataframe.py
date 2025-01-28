@@ -338,8 +338,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
-            import duckdb
-
             rel = self._native_frame
             # Sanitise input
             if any(x not in rel.columns for x in subset):
@@ -388,10 +386,57 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(result)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        import duckdb
-
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
+        return self._from_native_frame(duckdb.sql(query))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        on_ = [on] if isinstance(on, str) else on
+        index_ = (
+            [index]
+            if isinstance(index, str)
+            else index
+            if isinstance(index, list)
+            else []
+        )
+
+        if on_ is None:
+            on_ = [c for c in self.columns if c not in index_]
+
+        variable_name = variable_name if variable_name is not None else "variable"
+        value_name = value_name if value_name is not None else "value"
+
+        if variable_name == "":
+            msg = "`variable_name` cannot be empty string for duckdb backend."
+            raise NotImplementedError(msg)
+
+        if value_name == "":
+            msg = "`value_name` cannot be empty string for duckdb backend."
+            raise NotImplementedError(msg)
+
+        cols_to_select = ", ".join(
+            f'"{col}"' for col in [*index_, variable_name, value_name]
+        )
+        unpivot_on = ", ".join(f'"{col}"' for col in on_)
+
+        rel = self._native_frame  # noqa: F841
+        query = f"""
+            with unpivot_cte as (
+                unpivot rel
+                on {unpivot_on}
+                into
+                    name {variable_name}
+                    value {value_name}
+            )
+            select {cols_to_select}
+            from unpivot_cte;
+            """  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))

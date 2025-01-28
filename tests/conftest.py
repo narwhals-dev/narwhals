@@ -264,7 +264,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         if (
-            any(x in str(metafunc.module) for x in ("unpivot", "from_dict", "from_numpy"))
+            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
