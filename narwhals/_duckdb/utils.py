@@ -21,6 +21,15 @@ if TYPE_CHECKING:
 
 
 class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with.
+
+    Composition rule is:
+    - LITERAL vs LITERAL -> LITERAL
+    - TRANSFORM vs anything -> TRANSFORM
+    - anything vs TRANSFORM -> TRANSFORM
+    - all remaining cases -> AGGREGATION
+    """
+
     LITERAL = auto()  # e.g. nw.lit(1)
     AGGREGATION = auto()  # e.g. nw.col('a').mean()
     TRANSFORM = auto()  # e.g. nw.col('a').round()
