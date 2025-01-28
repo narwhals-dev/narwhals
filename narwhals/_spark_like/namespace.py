@@ -24,20 +24,28 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.utils import Implementation
     from narwhals.utils import Version
 
 
 class SparkLikeNamespace(CompliantNamespace["Column"]):
     def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
+        implementation: Implementation,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
+        self._implementation = implementation
 
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
         return SparkLikeSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     def all(self: Self) -> SparkLikeExpr:
@@ -52,16 +60,23 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=ExprKind.TRANSFORM,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
+            *column_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     def nth(self: Self, *column_indices: int) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, version=self._version
+            *column_indices,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     def lit(self: Self, value: object, dtype: DType | None) -> SparkLikeExpr:
@@ -80,6 +95,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=ExprKind.LITERAL,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def len(self: Self) -> SparkLikeExpr:
@@ -94,6 +110,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=ExprKind.AGGREGATION,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def all_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -109,6 +126,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def any_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -124,6 +142,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def sum_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -144,6 +163,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def mean_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -173,6 +193,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -188,6 +209,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
@@ -203,6 +225,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def concat(
@@ -235,6 +258,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 native_dataframe=reduce(lambda x, y: x.union(y), dfs),
                 backend_version=self._backend_version,
                 version=self._version,
+                implementation=self._implementation,
             )
 
         if how == "diagonal":
@@ -244,6 +268,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 ),
                 backend_version=self._backend_version,
                 version=self._version,
+                implementation=self._implementation,
             )
         raise NotImplementedError
 
@@ -300,16 +325,22 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def when(self: Self, *predicates: SparkLikeExpr) -> SparkLikeWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
+        plx = self.__class__(
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
         condition = plx.all_horizontal(*predicates)
         return SparkLikeWhen(
             condition,
             self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
         )
 
 
@@ -323,6 +354,7 @@ class SparkLikeWhen:
         *,
         expr_kind: ExprKind,
         version: Version,
+        implementation: Implementation,
     ) -> None:
         self._backend_version = backend_version
         self._condition = condition
@@ -330,6 +362,7 @@ class SparkLikeWhen:
         self._otherwise_value = otherwise_value
         self._expr_kind = expr_kind
         self._version = version
+        self._implementation = implementation
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
         condition = self._condition(df)[0]
@@ -361,6 +394,7 @@ class SparkLikeWhen:
             expr_kind=self._expr_kind,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
 
@@ -375,6 +409,7 @@ class SparkLikeThen(SparkLikeExpr):
         expr_kind: ExprKind,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -383,6 +418,7 @@ class SparkLikeThen(SparkLikeExpr):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._expr_kind = expr_kind
+        self._implementation = implementation
 
     def otherwise(self: Self, value: SparkLikeExpr | Any) -> SparkLikeExpr:
         # type ignore because we are setting the `_call` attribute to a

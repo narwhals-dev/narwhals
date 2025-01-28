@@ -7,6 +7,7 @@ from typing import Sequence
 
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import ExprKind
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -20,10 +21,15 @@ if TYPE_CHECKING:
 
 class SparkLikeSelectorNamespace:
     def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
+        implementation: Implementation,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
+        self._implementation = implementation
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> SparkLikeSelector:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -40,6 +46,7 @@ class SparkLikeSelectorNamespace:
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def matches(self: Self, pattern: str) -> SparkLikeSelector:
@@ -57,6 +64,7 @@ class SparkLikeSelectorNamespace:
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def numeric(self: Self) -> SparkLikeSelector:
@@ -102,6 +110,7 @@ class SparkLikeSelectorNamespace:
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
         )
 
 
@@ -118,6 +127,7 @@ class SparkLikeSelector(SparkLikeExpr):
             backend_version=self._backend_version,
             expr_kind=self._expr_kind,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def __sub__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
@@ -142,6 +152,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() - other
@@ -172,6 +183,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() | other
@@ -198,6 +210,7 @@ class SparkLikeSelector(SparkLikeExpr):
                 backend_version=self._backend_version,
                 expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() & other
@@ -205,7 +218,9 @@ class SparkLikeSelector(SparkLikeExpr):
     def __invert__(self: Self) -> SparkLikeSelector:
         return (
             SparkLikeSelectorNamespace(
-                backend_version=self._backend_version, version=self._version
+                backend_version=self._backend_version,
+                version=self._version,
+                implementation=self._implementation,
             ).all()
             - self
         )

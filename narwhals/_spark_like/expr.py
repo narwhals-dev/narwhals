@@ -40,7 +40,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         expr_kind: ExprKind,
         backend_version: tuple[int, ...],
         version: Version,
-        implementation: Implementation = Implementation.SQLFRAME,
+        implementation: Implementation,
     ) -> None:
         self._call = call
         self._function_name = function_name
@@ -91,7 +91,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version, version=self._version
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     @classmethod
@@ -100,6 +102,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         *column_names: str,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in column_names]
@@ -112,6 +115,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=ExprKind.TRANSFORM,
             backend_version=backend_version,
             version=version,
+            implementation=implementation,
         )
 
     @classmethod
@@ -120,6 +124,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         *column_indices: int,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
@@ -133,6 +138,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=ExprKind.TRANSFORM,
             backend_version=backend_version,
             version=version,
+            implementation=implementation,
         )
 
     def _from_call(
@@ -162,6 +168,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=expr_kind,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
@@ -312,6 +319,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=self._expr_kind,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def all(self: Self) -> Self:
@@ -528,6 +536,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
+            implementation=self._implementation,
             expr_kind=ExprKind.TRANSFORM,
         )
 

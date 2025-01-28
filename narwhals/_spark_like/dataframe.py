@@ -37,7 +37,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        implementation: Implementation = Implementation.SQLFRAME,
+        implementation: Implementation,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
@@ -86,7 +86,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version, version=self._version
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     def __narwhals_lazyframe__(self: Self) -> Self:
@@ -94,12 +96,18 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame, backend_version=self._backend_version, version=version
+            self._native_frame,
+            backend_version=self._backend_version,
+            version=version,
+            implementation=self._implementation,
         )
 
     def _from_native_frame(self: Self, df: DataFrame) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     @property

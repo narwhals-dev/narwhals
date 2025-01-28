@@ -380,6 +380,7 @@ def _from_native_impl(  # noqa: PLR0915
         raise ValueError(msg)
 
     # SQLFrame
+    # This one needs checking before extensions as just `hasattr` seems to raise.
     if is_sqlframe_dataframe(native_object):  # pragma: no cover
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
@@ -397,6 +398,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=backend_version,
                 version=version,
+                implementation=Implementation.SQLFRAME,
             ),
             level="lazy",
         )
@@ -750,6 +752,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_pyspark().__version__),
                 version=version,
+                implementation=Implementation.PYSPARK,
             ),
             level="lazy",
         )
