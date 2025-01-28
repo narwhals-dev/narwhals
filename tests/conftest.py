@@ -183,7 +183,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
 
 def sqlframe_pyspark_lazy_constructor(
-    obj,
+    obj: dict[str, Any],
 ) -> Callable[[Any], IntoFrame]:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
@@ -207,8 +207,10 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
-    # "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
-    "pyspark": sqlframe_pyspark_lazy_constructor,  # type: ignore[dict-item]
+    "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
+    # We've reported several bugs to sqlframe - once they address
+    # them, we can start testing them as part of our CI.
+    # "sqlframe": pyspark_lazy_constructor,  # noqa: ERA001
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -245,8 +247,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 13):  # pragma: no cover
-                    constructors.append(sqlframe_pyspark_lazy_constructor)
+                if sys.version_info < (3, 12):  # pragma: no cover
+                    constructors.append(pyspark_lazy_constructor())
                 else:  # pragma: no cover
                     continue
             else:
