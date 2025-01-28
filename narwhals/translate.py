@@ -385,10 +385,10 @@ def _from_native_impl(  # noqa: PLR0915
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
         if series_only:
-            msg = "Cannot only use `series_only` with pyspark DataFrame"
+            msg = "Cannot only use `series_only` with SQLFrame DataFrame"
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with SQLFrame DataFrame"
             raise TypeError(msg)
         import sqlframe._version
 
