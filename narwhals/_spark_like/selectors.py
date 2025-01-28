@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from pyspark.sql import functions as F  # noqa: N812
-
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import ExprKind
 from narwhals.utils import import_dtypes_module

@@ -36,6 +36,7 @@ from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.dependencies import is_pyspark_dataframe
+from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -378,8 +379,30 @@ def _from_native_impl(  # noqa: PLR0915
         msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
         raise ValueError(msg)
 
+    # SQLFrame
+    if is_sqlframe_dataframe(native_object):  # pragma: no cover
+        from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+        if series_only:
+            msg = "Cannot only use `series_only` with pyspark DataFrame"
+            raise TypeError(msg)
+        if eager_only or eager_or_interchange_only:
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
+            raise TypeError(msg)
+        import sqlframe._version
+
+        backend_version = parse_version(sqlframe._version.__version__)
+        return LazyFrame(
+            SparkLikeLazyFrame(
+                native_object,
+                backend_version=backend_version,
+                version=version,
+            ),
+            level="lazy",
+        )
+
     # Extensions
-    if hasattr(native_object, "__narwhals_dataframe__"):
+    elif hasattr(native_object, "__narwhals_dataframe__"):
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dataframe"

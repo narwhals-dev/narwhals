@@ -6,9 +6,6 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from pyspark.sql import Window
-from pyspark.sql import functions as F  # noqa: N812
-
 from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
@@ -40,15 +37,40 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation=Implementation.SQLFRAME,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
-        self._implementation = Implementation.PYSPARK
+        self._implementation = implementation
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
+    def _get_functions(self):
+        if self._implementation is Implementation.SQLFRAME:
+            # TODO: top-level F?
+            from sqlframe.duckdb import functions
+
+            return functions
+        raise AssertionError
+
+    def _get_spark_types(self):
+        if self._implementation is Implementation.SQLFRAME:
+            # TODO: top-level F?
+            from sqlframe.duckdb import types
+
+            return types
+        raise AssertionError
+
+    def _get_window(self):
+        if self._implementation is Implementation.SQLFRAME:
+            # TODO: top-level F?
+            from sqlframe.duckdb import Window
+
+            return Window
+        raise AssertionError
+
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
-        if self._implementation is Implementation.PYSPARK:
+        if self._implementation in (Implementation.PYSPARK, Implementation.SQLFrame):
             return self._implementation.to_native_namespace()
 
         msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
@@ -102,6 +124,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
         if not new_columns:
             # return empty dataframe, like Polars does
+            raise AssertionError
             from pyspark.sql.types import StructType
 
             spark_session = self._native_frame.sparkSession
@@ -116,7 +139,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(self._native_frame.agg(*new_columns_list))
         else:
             new_columns_list = [
-                col.over(Window.partitionBy(F.lit(1))).alias(col_name)
+                col.over(
+                    self._get_window().partitionBy(self._get_functions().lit(1))
+                ).alias(col_name)
                 if expr_kind is ExprKind.AGGREGATION
                 else col.alias(col_name)
                 for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
@@ -131,7 +156,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         new_columns_map = {
-            col_name: col.over(Window.partitionBy(F.lit(1)))
+            col_name: col.over(
+                self._get_window().partitionBy(self._get_functions().lit(1))
+            )
             if expr_kind is ExprKind.AGGREGATION
             else col
             for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
@@ -152,7 +179,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def schema(self: Self) -> dict[str, DType]:
         return {
             field.name: native_to_narwhals_dtype(
-                dtype=field.dataType, version=self._version
+                dtype=field.dataType,
+                version=self._version,
+                spark_types=self._get_spark_types(),
             )
             for field in self._native_frame.schema
         }
@@ -186,18 +215,24 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
+        F = self._get_functions()
 
         if isinstance(descending, bool):
             descending = [descending] * len(by)
 
         if nulls_last:
             sort_funcs = (
-                F.desc_nulls_last if d else F.asc_nulls_last for d in descending
+                self._get_functions().desc_nulls_last
+                if d
+                else self._get_functions().asc_nulls_last
+                for d in descending
             )
         else:
             sort_funcs = (
-                F.desc_nulls_first if d else F.asc_nulls_first for d in descending
+                self._get_functions().desc_nulls_first
+                if d
+                else self._get_functions().asc_nulls_first
+                for d in descending
             )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
@@ -207,14 +242,16 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
 
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
         return self._from_native_frame(
             self._native_frame.select(
-                [F.col(old).alias(new) for old, new in rename_mapping.items()]
+                [
+                    self._get_functions().col(old).alias(new)
+                    for old, new in rename_mapping.items()
+                ]
             )
         )
 
@@ -238,7 +275,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
+        F = self._get_functions()
 
         self_native = self._native_frame
         other_native = other._native_frame
@@ -262,7 +299,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             },
         }
         other = other_native.select(
-            [F.col(old).alias(new) for old, new in rename_mapping.items()]
+            [
+                self._get_functions().col(old).alias(new)
+                for old, new in rename_mapping.items()
+            ]
         )
 
         # If how in {"semi", "anti"}, then resulting columns are same as left columns

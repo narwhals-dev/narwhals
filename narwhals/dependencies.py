@@ -107,6 +107,11 @@ def get_pyspark_sql() -> Any:
     return sys.modules.get("pyspark.sql", None)
 
 
+def get_sqlframe() -> Any:
+    """Get sqlframe module (if already imported - else return None)."""
+    return sys.modules.get("sqlframe", None)
+
+
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
@@ -215,6 +220,14 @@ def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_sqlframe_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    return bool(
+        (sqlframe := get_sqlframe()) is not None
+        and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
     )
 
 

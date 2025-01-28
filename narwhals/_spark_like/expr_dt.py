@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyspark.sql import functions as F  # noqa: N812
-
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self

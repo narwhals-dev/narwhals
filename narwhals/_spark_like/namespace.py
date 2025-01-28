@@ -9,9 +9,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
-from pyspark.sql import functions as F  # noqa: N812
-from pyspark.sql.types import IntegerType
-
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -45,7 +42,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def all(self: Self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col_name) for col_name in df.columns]
+            return [df._get_functions().col(col_name) for col_name in df.columns]
 
         return SparkLikeExpr(
             call=_all,
@@ -72,10 +69,8 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             msg = "todo"
             raise NotImplementedError(msg)
 
-        def _lit(_: SparkLikeLazyFrame) -> list[Column]:
-            import pyspark.sql.functions as F  # noqa: N812
-
-            return [F.lit(value)]
+        def _lit(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._get_functions().lit(value)]
 
         return SparkLikeExpr(
             call=_lit,
@@ -88,8 +83,8 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def len(self: Self) -> SparkLikeExpr:
-        def func(_: SparkLikeLazyFrame) -> list[Column]:
-            return [F.count("*")]
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._get_functions().count("*")]
 
         return SparkLikeExpr(
             func,
@@ -137,7 +132,10 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             return [
                 reduce(
                     operator.add,
-                    (F.coalesce(col, F.lit(0)) for col in cols),
+                    (
+                        df._get_functions().coalesce(col, df._get_functions().lit(0))
+                        for col in cols
+                    ),
                 )
             ]
 
@@ -156,10 +154,19 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             cols = [c for _expr in exprs for c in _expr(df)]
             return [
                 (
-                    reduce(operator.add, (F.coalesce(col, F.lit(0)) for col in cols))
+                    reduce(
+                        operator.add,
+                        (
+                            df._get_functions().coalesce(col, df._get_functions().lit(0))
+                            for col in cols
+                        ),
+                    )
                     / reduce(
                         operator.add,
-                        (col.isNotNull().cast(IntegerType()) for col in cols),
+                        (
+                            col.isNotNull().cast(df._get_spark_dtypes().IntegerType())
+                            for col in cols
+                        ),
                     )
                 )
             ]
@@ -177,7 +184,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            return [F.greatest(*cols)]
+            return [df._get_functions().greatest(*cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -192,7 +199,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
     def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
-            return [F.least(*cols)]
+            return [df._get_functions().least(*cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -257,30 +264,45 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [s for _expr in exprs for s in _expr(df)]
             cols_casted = [s.cast(StringType()) for s in cols]
-            null_mask = [F.isnull(s) for _expr in exprs for s in _expr(df)]
+            null_mask = [
+                df._get_functions().isnull(s) for _expr in exprs for s in _expr(df)
+            ]
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
-                result = F.when(
-                    ~null_mask_result,
-                    reduce(
-                        lambda x, y: F.format_string(f"%s{separator}%s", x, y),
-                        cols_casted,
-                    ),
-                ).otherwise(F.lit(None))
+                result = (
+                    df._get_functions()
+                    .when(
+                        ~null_mask_result,
+                        reduce(
+                            lambda x, y: df._get_functions().format_string(
+                                f"%s{separator}%s", x, y
+                            ),
+                            cols_casted,
+                        ),
+                    )
+                    .otherwise(df._get_functions().lit(None))
+                )
             else:
                 init_value, *values = [
-                    F.when(~nm, col).otherwise(F.lit(""))
+                    df._get_functions()
+                    .when(~nm, col)
+                    .otherwise(df._get_functions().lit(""))
                     for col, nm in zip(cols_casted, null_mask)
                 ]
 
                 separators = (
-                    F.when(nm, F.lit("")).otherwise(F.lit(separator))
+                    df._get_functions()
+                    .when(nm, df._get_functions().lit(""))
+                    .otherwise(df._get_functions().lit(separator))
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    lambda x, y: F.format_string("%s%s", x, y),
-                    (F.format_string("%s%s", s, v) for s, v in zip(separators, values)),
+                    lambda x, y: df._get_functions().format_string("%s%s", x, y),
+                    (
+                        df._get_functions().format_string("%s%s", s, v)
+                        for s, v in zip(separators, values)
+                    ),
                     init_value,
                 )
 
@@ -332,15 +354,19 @@ class SparkLikeWhen:
             value_ = self._then_value(df)[0]
         else:
             # `self._then_value` is a scalar
-            value_ = F.lit(self._then_value)
+            value_ = df._get_functions().lit(self._then_value)
 
         if isinstance(self._otherwise_value, SparkLikeExpr):
             other_ = self._otherwise_value(df)[0]
         else:
             # `self._otherwise_value` is a scalar
-            other_ = F.lit(self._otherwise_value)
+            other_ = df._get_functions().lit(self._otherwise_value)
 
-        return [F.when(condition=condition, value=value_).otherwise(value=other_)]
+        return [
+            df._get_functions()
+            .when(condition=condition, value=value_)
+            .otherwise(value=other_)
+        ]
 
     def then(self: Self, value: SparkLikeExpr | Any) -> SparkLikeThen:
         self._then_value = value
