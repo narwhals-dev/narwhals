@@ -62,28 +62,24 @@ def evaluate_into_expr(
 
 def evaluate_into_exprs(
     df: CompliantDataFrame,
-) -> Callable[..., list[CompliantSeriesT_co]]:
+    /,
+    *exprs: IntoCompliantExpr[CompliantSeriesT_co],
+    **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
+) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
-
-    def func(
-        *exprs: IntoCompliantExpr[CompliantSeriesT_co],
-        **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
-    ) -> list[CompliantSeriesT_co]:
-        series = [
-            item
-            for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
-            for item in sublist
-        ]
-        for name, expr in named_exprs.items():
-            evaluated_expr = evaluate_into_expr(df, expr)
-            if len(evaluated_expr) > 1:
-                msg = "Named expressions must return a single column"  # pragma: no cover
-                raise AssertionError(msg)
-            to_append = evaluated_expr[0].alias(name)
-            series.append(to_append)
-        return series
-
-    return func
+    series = [
+        item
+        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
+        for item in sublist
+    ]
+    for name, expr in named_exprs.items():
+        evaluated_expr = evaluate_into_expr(df, expr)
+        if len(evaluated_expr) > 1:
+            msg = "Named expressions must return a single column"  # pragma: no cover
+            raise AssertionError(msg)
+        to_append = evaluated_expr[0].alias(name)
+        series.append(to_append)
+    return series
 
 
 def maybe_evaluate_expr(
