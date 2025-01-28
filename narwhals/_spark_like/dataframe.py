@@ -97,8 +97,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, returns_scalar = parse_exprs_and_named_exprs(self)(
-            *exprs, **named_exprs
+        new_columns, returns_scalar = parse_exprs_and_named_exprs(
+            self, *exprs, **named_exprs
         )
 
         if not new_columns:
@@ -131,8 +131,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
         **named_exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, returns_scalar = parse_exprs_and_named_exprs(self)(
-            *exprs, **named_exprs
+        new_columns, returns_scalar = parse_exprs_and_named_exprs(
+            self, *exprs, **named_exprs
         )
 
         new_columns_map = {

@@ -6,7 +6,6 @@ from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 
 import duckdb
 
@@ -59,30 +58,25 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
 
 
 def parse_exprs_and_named_exprs(
-    df: DuckDBLazyFrame,
-) -> Callable[..., dict[str, duckdb.Expression]]:
-    def func(
-        *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
-    ) -> dict[str, duckdb.Expression]:
-        native_results: dict[str, duckdb.Expression] = {}
-        for expr in exprs:
-            native_series_list = expr._call(df)
-            output_names = expr._evaluate_output_names(df)
-            if expr._alias_output_names is not None:
-                output_names = expr._alias_output_names(output_names)
-            if len(output_names) != len(native_series_list):  # pragma: no cover
-                msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
-                raise AssertionError(msg)
-            native_results.update(zip(output_names, native_series_list))
-        for col_alias, expr in named_exprs.items():
-            native_series_list = expr._call(df)
-            if len(native_series_list) != 1:  # pragma: no cover
-                msg = "Named expressions must return a single column"
-                raise ValueError(msg)
-            native_results[col_alias] = native_series_list[0]
-        return native_results
-
-    return func
+    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
+) -> dict[str, duckdb.Expression]:
+    native_results: dict[str, duckdb.Expression] = {}
+    for expr in exprs:
+        native_series_list = expr._call(df)
+        output_names = expr._evaluate_output_names(df)
+        if expr._alias_output_names is not None:
+            output_names = expr._alias_output_names(output_names)
+        if len(output_names) != len(native_series_list):  # pragma: no cover
+            msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
+            raise AssertionError(msg)
+        native_results.update(zip(output_names, native_series_list))
+    for col_alias, expr in named_exprs.items():
+        native_series_list = expr._call(df)
+        if len(native_series_list) != 1:  # pragma: no cover
+            msg = "Named expressions must return a single column"
+            raise ValueError(msg)
+        native_results[col_alias] = native_series_list[0]
+    return native_results
 
 
 @lru_cache(maxsize=16)

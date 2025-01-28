@@ -75,7 +75,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def with_columns(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_frame
-        new_series = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
@@ -115,7 +115,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
 
     def select(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
-        new_series = parse_exprs_and_named_exprs(self)(*exprs, **named_exprs)
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_series:
             # return empty dataframe, like Polars does
