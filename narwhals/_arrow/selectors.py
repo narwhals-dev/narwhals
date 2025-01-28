@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -7,8 +8,6 @@ from typing import Sequence
 from narwhals._arrow.expr import ArrowExpr
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
-
-import re
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -48,7 +47,7 @@ class ArrowSelectorNamespace:
     def matches(self: Self, pattern: str) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
-        
+
         def evalute_output_names(df: ArrowDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 

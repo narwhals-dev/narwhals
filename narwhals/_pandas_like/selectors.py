@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals.utils import import_dtypes_module
-
-import re
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -49,11 +48,11 @@ class PandasSelectorNamespace:
             version=self._version,
             kwargs={"dtypes": dtypes},
         )
-    
+
     def matches(self: Self, pattern: str) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
-        
+
         def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 

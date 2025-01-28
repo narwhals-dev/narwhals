@@ -216,16 +216,14 @@ class PolarsSelectors:
             version=self._version,
             backend_version=self._backend_version,
         )
-    
+
     def matches(self: Self, pattern: str) -> PolarsExpr:
         import polars as pl
 
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
-            pl.selectors.matches(
-                pattern=pattern
-            ),
+            pl.selectors.matches(pattern=pattern),
             version=self._version,
             backend_version=self._backend_version,
         )

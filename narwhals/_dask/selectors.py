@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
 from narwhals._dask.expr import DaskExpr
 from narwhals.utils import import_dtypes_module
-
-import re
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -49,14 +48,16 @@ class DaskSelectorNamespace:
             version=self._version,
             kwargs={},
         )
-    
+
     def matches(self: Self, pattern: str) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [df._native_frame[col] for col in df.columns if re.search(pattern, col)]
-        
+            return [
+                df._native_frame[col] for col in df.columns if re.search(pattern, col)
+            ]
+
         def evalute_output_names(df: DaskLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
-        
+
         return DaskSelector(
             func,
             depth=0,
