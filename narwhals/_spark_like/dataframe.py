@@ -37,7 +37,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        implementation=Implementation.SQLFRAME,
+        implementation: Implementation = Implementation.SQLFRAME,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
@@ -45,25 +45,25 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def _get_functions(self):
+    @property
+    def _F(self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            # TODO: top-level F?
             from sqlframe.duckdb import functions
 
             return functions
         raise AssertionError
 
-    def _get_spark_types(self):
+    @property
+    def _native_dtypes(self) -> Any:
         if self._implementation is Implementation.SQLFRAME:
-            # TODO: top-level F?
             from sqlframe.duckdb import types
 
             return types
         raise AssertionError
 
-    def _get_window(self):
+    @property
+    def _Window(self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            # TODO: top-level F?
             from sqlframe.duckdb import Window
 
             return Window
@@ -139,9 +139,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(self._native_frame.agg(*new_columns_list))
         else:
             new_columns_list = [
-                col.over(
-                    self._get_window().partitionBy(self._get_functions().lit(1))
-                ).alias(col_name)
+                col.over(self._Window().partitionBy(self._F.lit(1))).alias(col_name)
                 if expr_kind is ExprKind.AGGREGATION
                 else col.alias(col_name)
                 for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
@@ -156,9 +154,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         new_columns_map = {
-            col_name: col.over(
-                self._get_window().partitionBy(self._get_functions().lit(1))
-            )
+            col_name: col.over(self._Window().partitionBy(self._F.lit(1)))
             if expr_kind is ExprKind.AGGREGATION
             else col
             for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
@@ -181,7 +177,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             field.name: native_to_narwhals_dtype(
                 dtype=field.dataType,
                 version=self._version,
-                spark_types=self._get_spark_types(),
+                spark_types=self._native_dtypes(),
             )
             for field in self._native_frame.schema
         }
@@ -215,23 +211,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        F = self._get_functions()
-
         if isinstance(descending, bool):
             descending = [descending] * len(by)
 
         if nulls_last:
             sort_funcs = (
-                self._get_functions().desc_nulls_last
-                if d
-                else self._get_functions().asc_nulls_last
+                self._F.desc_nulls_last if d else self._F.asc_nulls_last
                 for d in descending
             )
         else:
             sort_funcs = (
-                self._get_functions().desc_nulls_first
-                if d
-                else self._get_functions().asc_nulls_first
+                self._F.desc_nulls_first if d else self._F.asc_nulls_first
                 for d in descending
             )
 
@@ -242,16 +232,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
-
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
         return self._from_native_frame(
             self._native_frame.select(
-                [
-                    self._get_functions().col(old).alias(new)
-                    for old, new in rename_mapping.items()
-                ]
+                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
             )
         )
 
@@ -275,8 +261,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
-        F = self._get_functions()
-
         self_native = self._native_frame
         other_native = other._native_frame
 
@@ -299,10 +283,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             },
         }
         other = other_native.select(
-            [
-                self._get_functions().col(old).alias(new)
-                for old, new in rename_mapping.items()
-            ]
+            [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
 
         # If how in {"semi", "anti"}, then resulting columns are same as left columns

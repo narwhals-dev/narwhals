@@ -10,6 +10,7 @@ from narwhals.stable.v1.selectors import all
 from narwhals.stable.v1.selectors import boolean
 from narwhals.stable.v1.selectors import by_dtype
 from narwhals.stable.v1.selectors import categorical
+from narwhals.stable.v1.selectors import matches
 from narwhals.stable.v1.selectors import numeric
 from narwhals.stable.v1.selectors import string
 from tests.utils import POLARS_VERSION
@@ -25,11 +26,28 @@ data = {
     "d": [True, False, True],
 }
 
+data_regex = {
+    "foo": ["x", "y"],
+    "bar": [123, 456],
+    "baz": [2.0, 5.5],
+    "zap": [0, 1],
+}
+
 
 def test_selectors(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
+    assert_equal_data(result, expected)
+
+
+def test_matches(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data_regex))
+    result = df.select(matches("[^z]a") + 1)
+    expected = {
+        "bar": [124, 457],
+        "baz": [3.0, 6.5],
+    }
     assert_equal_data(result, expected)
 
 

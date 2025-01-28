@@ -11,6 +11,9 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    import pyspark.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -38,7 +41,7 @@ class ExprKind(Enum):
 def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
-    spark_types,
+    spark_types: ModuleType,
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
 
@@ -78,7 +81,7 @@ def native_to_narwhals_dtype(
 
 
 def narwhals_to_native_dtype(
-    dtype: DType | type[DType], version: Version, spark_types
+    dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> pyspark_types.DataType:
     dtypes = import_dtypes_module(version)
 
@@ -159,23 +162,22 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> 
         if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
             # Returns scalar, but overall expression doesn't.
             # Let PySpark do its broadcasting
-            return column_result.over(
-                df._get_window().partitionBy(df._get_functions().lit(1))
-            )
+            return column_result.over(df._Window().partitionBy(df._F.lit(1)))
         return column_result
-    return df._get_functions().lit(obj)
+    return df._F.lit(obj)
 
 
 def _std(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions
+    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
 ) -> Column:
-    F = functions
     if np_version > (2, 0):
         if ddof == 1:
             return functions.stddev_samp(_input)
 
         n_rows = functions.count(_input)
-        return functions.stddev_samp(_input) * functions.sqrt((n_rows - 1) / (n_rows - ddof))
+        return functions.stddev_samp(_input) * functions.sqrt(
+            (n_rows - 1) / (n_rows - ddof)
+        )
 
     from pyspark.pandas.spark.functions import stddev
 
@@ -184,9 +186,8 @@ def _std(
 
 
 def _var(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions
+    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
 ) -> Column:
-    F = functions
     if np_version > (2, 0):
         if ddof == 1:
             return functions.var_samp(_input)
