@@ -70,7 +70,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         raise AssertionError
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
-        if self._implementation in (Implementation.PYSPARK, Implementation.SQLFrame):
+        if self._implementation in (Implementation.PYSPARK, Implementation.SQLFRAME):
             return self._implementation.to_native_namespace()
 
         msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
@@ -320,5 +320,5 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
 
         return self._from_native_frame(
-            self_native.join(other=other, on=left_on, how=how).select(col_order)
+            self_native.join(other, on=left_on, how=how).select(col_order)
         )

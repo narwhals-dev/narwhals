@@ -172,14 +172,14 @@ def _std(
     F = functions
     if np_version > (2, 0):
         if ddof == 1:
-            return F.stddev_samp(_input)
+            return functions.stddev_samp(_input)
 
-        n_rows = F.count(_input)
-        return F.stddev_samp(_input) * F.sqrt((n_rows - 1) / (n_rows - ddof))
+        n_rows = functions.count(_input)
+        return functions.stddev_samp(_input) * functions.sqrt((n_rows - 1) / (n_rows - ddof))
 
     from pyspark.pandas.spark.functions import stddev
 
-    input_col = F.col(_input) if isinstance(_input, str) else _input
+    input_col = functions.col(_input) if isinstance(_input, str) else _input
     return stddev(input_col, ddof=ddof)
 
 
@@ -189,14 +189,14 @@ def _var(
     F = functions
     if np_version > (2, 0):
         if ddof == 1:
-            return F.var_samp(_input)
+            return functions.var_samp(_input)
 
-        n_rows = F.count(_input)
-        return F.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
+        n_rows = functions.count(_input)
+        return functions.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
 
     from pyspark.pandas.spark.functions import var
 
-    input_col = F.col(_input) if isinstance(_input, str) else _input
+    input_col = functions.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)
 
 

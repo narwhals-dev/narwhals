@@ -164,7 +164,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                     / reduce(
                         operator.add,
                         (
-                            col.isNotNull().cast(df._get_spark_dtypes().IntegerType())
+                            col.isNotNull().cast(df._get_spark_types().IntegerType())
                             for col in cols
                         ),
                     )
@@ -259,11 +259,9 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         separator: str,
         ignore_nulls: bool,
     ) -> SparkLikeExpr:
-        from pyspark.sql.types import StringType
-
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [s for _expr in exprs for s in _expr(df)]
-            cols_casted = [s.cast(StringType()) for s in cols]
+            cols_casted = [s.cast(df._get_spark_types().StringType()) for s in cols]
             null_mask = [
                 df._get_functions().isnull(s) for _expr in exprs for s in _expr(df)
             ]

@@ -26,7 +26,7 @@ class SparkLikeSelectorNamespace:
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> SparkLikeSelector:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col) for col in df.columns if df.schema[col] in dtypes]
+            return [df._get_functions().col(col) for col in df.columns if df.schema[col] in dtypes]
 
         def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
@@ -74,7 +74,7 @@ class SparkLikeSelectorNamespace:
 
     def all(self: Self) -> SparkLikeSelector:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col) for col in df.columns]
+            return [df._get_functions().col(col) for col in df.columns]
 
         return SparkLikeSelector(
             func,

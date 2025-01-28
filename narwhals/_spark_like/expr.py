@@ -471,13 +471,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
 
     def is_finite(self: Self) -> Self:
+        F = self._get_functions()
         def _is_finite(_input: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
             # preserved
             is_finite_condition = (
                 ~self._get_functions().isnan(_input)
-                & (_input != float("inf"))
-                & (_input != float("-inf"))
+                & (_input != F.lit(float("inf")))
+                & (_input != F.lit(float("-inf")))
             )
             return (
                 self._get_functions()
