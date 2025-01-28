@@ -186,7 +186,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             field.name: native_to_narwhals_dtype(
                 dtype=field.dataType,
                 version=self._version,
-                spark_types=self._native_dtypes(),
+                spark_types=self._native_dtypes,
             )
             for field in self._native_frame.schema
         }
