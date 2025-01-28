@@ -58,7 +58,6 @@ class DuckDBExprNameNamespace:
     ) -> DuckDBExpr:
         return self._compliant_expr.__class__(
             call=self._compliant_expr._call,
-            depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
             evaluate_output_names=self._compliant_expr._evaluate_output_names,
             alias_output_names=alias_output_names,

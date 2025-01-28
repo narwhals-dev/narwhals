@@ -37,7 +37,6 @@ class DuckDBSelectorNamespace:
 
         return DuckDBSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
@@ -83,7 +82,6 @@ class DuckDBSelectorNamespace:
 
         return DuckDBSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
@@ -95,16 +93,11 @@ class DuckDBSelectorNamespace:
 
 class DuckDBSelector(DuckDBExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"DuckDBSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"DuckDBSelector(" f"function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -129,7 +122,6 @@ class DuckDBSelector(DuckDBExpr):
 
             return DuckDBSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
@@ -160,7 +152,6 @@ class DuckDBSelector(DuckDBExpr):
 
             return DuckDBSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
@@ -187,7 +178,6 @@ class DuckDBSelector(DuckDBExpr):
 
             return DuckDBSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
