@@ -34,7 +34,6 @@ class SparkLikeSelectorNamespace:
 
         return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
@@ -80,7 +79,6 @@ class SparkLikeSelectorNamespace:
 
         return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
@@ -92,16 +90,11 @@ class SparkLikeSelectorNamespace:
 
 class SparkLikeSelector(SparkLikeExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"SparkLikeSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"SparkLikeSelector(" f"function_name={self._function_name})"
 
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -126,7 +119,6 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
@@ -157,7 +149,6 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
@@ -184,7 +175,6 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,

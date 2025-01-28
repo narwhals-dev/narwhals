@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 
 class SparkLikeExpr(CompliantExpr["Column"]):
     _implementation = Implementation.PYSPARK
+    _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,
         call: Callable[[SparkLikeLazyFrame], list[Column]],
         *,
-        depth: int,
         function_name: str,
         evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
@@ -47,7 +47,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         version: Version,
     ) -> None:
         self._call = call
-        self._depth = depth
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
@@ -80,7 +79,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return cls(
             func,
-            depth=0,
             function_name="col",
             evaluate_output_names=lambda _df: list(column_names),
             alias_output_names=None,
@@ -102,7 +100,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return cls(
             func,
-            depth=0,
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
@@ -132,7 +129,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -281,11 +277,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
                 raise ValueError(msg)
             return [name]
 
-        # Define this one manually, so that we can
-        # override `output_names` and not increase depth
         return self.__class__(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
@@ -487,7 +480,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
             function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
