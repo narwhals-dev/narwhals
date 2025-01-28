@@ -380,7 +380,7 @@ def _from_native_impl(  # noqa: PLR0915
         raise ValueError(msg)
 
     # SQLFrame
-    # This one needs checking before extensions as just `hasattr` seems to raise.
+    # This one needs checking before extensions as `hasattr` always returns `True`.
     if is_sqlframe_dataframe(native_object):  # pragma: no cover
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 

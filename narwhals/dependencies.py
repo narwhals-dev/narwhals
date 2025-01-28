@@ -9,6 +9,7 @@ from typing import Any
 
 if TYPE_CHECKING:
     import numpy as np
+    import sqlframe
 
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
@@ -223,7 +224,7 @@ def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
     )
 
 
-def is_sqlframe_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
+def is_sqlframe_dataframe(df: Any) -> TypeGuard[sqlframe.base.dataframe.BaseDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
     return bool(
         (sqlframe := get_sqlframe()) is not None

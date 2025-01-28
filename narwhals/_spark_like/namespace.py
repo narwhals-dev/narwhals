@@ -285,25 +285,21 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
             if not ignore_nulls:
                 null_mask_result = reduce(lambda x, y: x | y, null_mask)
-                result = (
-                    df._F()
-                    .when(
-                        ~null_mask_result,
-                        reduce(
-                            lambda x, y: df._F.format_string(f"%s{separator}%s", x, y),
-                            cols_casted,
-                        ),
-                    )
-                    .otherwise(df._F.lit(None))
-                )
+                result = df._F.when(
+                    ~null_mask_result,
+                    reduce(
+                        lambda x, y: df._F.format_string(f"%s{separator}%s", x, y),
+                        cols_casted,
+                    ),
+                ).otherwise(df._F.lit(None))
             else:
                 init_value, *values = [
-                    df._F().when(~nm, col).otherwise(df._F.lit(""))
+                    df._F.when(~nm, col).otherwise(df._F.lit(""))
                     for col, nm in zip(cols_casted, null_mask)
                 ]
 
                 separators = (
-                    df._F().when(nm, df._F.lit("")).otherwise(df._F.lit(separator))
+                    df._F.when(nm, df._F.lit("")).otherwise(df._F.lit(separator))
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
@@ -379,7 +375,7 @@ class SparkLikeWhen:
             # `self._otherwise_value` is a scalar
             other_ = df._F.lit(self._otherwise_value)
 
-        return [df._F().when(condition=condition, value=value_).otherwise(value=other_)]
+        return [df._F.when(condition=condition, value=value_).otherwise(value=other_)]
 
     def then(self: Self, value: SparkLikeExpr | Any) -> SparkLikeThen:
         self._then_value = value
