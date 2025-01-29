@@ -709,47 +709,44 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     # --- lazy-only ---
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(self: Self, *, backend: Implementation | None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
+
         if backend is None:
             return self
-        else:
-            from narwhals.utils import parse_version
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
 
-            if backend is Implementation.DUCKDB:
-                import duckdb  # ignore-banned-import
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-                from narwhals._duckdb.dataframe import DuckDBLazyFrame
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
 
-                df = self._native_frame  # noqa: F841
-                return DuckDBLazyFrame(
-                    df=duckdb.table("df"),
-                    backend_version=parse_version(duckdb.__version__),
-                    version=self._version,
-                )
-            elif backend is Implementation.POLARS:
-                import polars as pl  # ignore-banned-import
+            from narwhals._polars.dataframe import PolarsLazyFrame
 
-                from narwhals._polars.dataframe import PolarsLazyFrame
+            return PolarsLazyFrame(
+                df=pl.from_pandas(self._native_frame).lazy(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
 
-                return PolarsLazyFrame(
-                    df=pl.from_pandas(self._native_frame).lazy(),
-                    backend_version=parse_version(pl.__version__),
-                    version=self._version,
-                )
-            elif backend is Implementation.DASK:
-                import dask  # ignore-banned-import
-                import dask.dataframe as dd  # ignore-banned-import
+            from narwhals._dask.dataframe import DaskLazyFrame
 
-                from narwhals._dask.dataframe import DaskLazyFrame
-
-                return DaskLazyFrame(
-                    native_dataframe=dd.from_pandas(self._native_frame),
-                    backend_version=parse_version(dask.__version__),
-                    version=self._version,
-                )
-            else:
-                msg = "Not supported backend"
-                raise ValueError(msg)
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
 
     @property
     def shape(self: Self) -> tuple[int, int]:

@@ -167,7 +167,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self) -> LazyFrame[Any]:  # type: ignore[override]
+    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
         """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.
@@ -175,7 +175,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         Returns:
             A new LazyFrame.
         """
-        return super().lazy()  # type: ignore[return-value]
+        return super().lazy(backend=backend)  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
