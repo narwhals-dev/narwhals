@@ -23,7 +23,6 @@ from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
-from narwhals.utils import Version
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -548,7 +547,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if backend is not None:
             return self._lazyframe(
-                self._compliant_frame.lazy(backend=backend, version=Version.MAIN),
+                self._compliant_frame.lazy(backend=backend),
                 level="lazy",
             )
         else:

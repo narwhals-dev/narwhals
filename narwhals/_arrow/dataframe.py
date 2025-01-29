@@ -520,9 +520,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(
-        self: Self, *, backend: Implementation | None = None, version: Version
-    ) -> Any:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         if backend is None:
             return self
         else:
@@ -534,34 +532,31 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
                 df = self._native_frame  # noqa: F841
-                backend_version = parse_version(duckdb.__version__)
                 return DuckDBLazyFrame(
                     df=duckdb.table("df"),
-                    backend_version=backend_version,
-                    version=version,
+                    backend_version=parse_version(duckdb.__version__),
+                    version=self._version,
                 )
             elif backend is Implementation.POLARS:
                 import polars as pl  # ignore-banned-import
 
                 from narwhals._polars.dataframe import PolarsLazyFrame
 
-                backend_version = parse_version(pl.__version__)
                 return PolarsLazyFrame(
                     df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
-                    backend_version=backend_version,
-                    version=version,
+                    backend_version=parse_version(pl.__version__),
+                    version=self._version,
                 )
-            elif backend is Implementation.PANDAS:
-                import pandas as pd  # ignore-banned-import
+            elif backend is Implementation.DASK:
+                import dask  # ignore-banned-import
+                import dask.dataframe as dd  # ignore-banned-import
 
-                from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+                from narwhals._dask.dataframe import DaskLazyFrame
 
-                backend_version = parse_version(pd.__version__)
-                return PandasLikeDataFrame(
-                    native_dataframe=self._native_frame.to_pandas(),
-                    implementation=backend,
-                    backend_version=backend_version,
-                    version=version,
+                return DaskLazyFrame(
+                    native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                    backend_version=parse_version(dask.__version__),
+                    version=self._version,
                 )
             else:
                 msg = "Not supported backend"
