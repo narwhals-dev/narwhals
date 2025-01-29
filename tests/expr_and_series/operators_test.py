@@ -91,7 +91,7 @@ def test_logic_operators_expr_scalar(
         "dask" in str(constructor)
         and DASK_VERSION < (2024, 10)
         and operator in ("__rand__", "__ror__")
-    ) or ("pyspark" in str(constructor) and operator in ("__and__", "__or__")):
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
     df = nw.from_native(constructor(data))
