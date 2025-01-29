@@ -30,6 +30,8 @@ def test_lazy(constructor_eager: ConstructorEager) -> None:
 def test_lazy_backend(
     constructor_eager: ConstructorEager, backend: Implementation
 ) -> None:
+    if backend is Implementation.DASK:
+        pytest.importorskip("dask")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy(backend=backend)
     assert isinstance(result, nw.LazyFrame)
