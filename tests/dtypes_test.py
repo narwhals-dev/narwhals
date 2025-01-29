@@ -7,7 +7,6 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -130,6 +129,7 @@ def test_struct_hashes() -> None:
     reason="`shape` is only available after 1.0",
 )
 def test_polars_2d_array() -> None:
+    pl = pytest.importorskip("polars")
     df = pl.DataFrame(
         {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
     )
@@ -200,6 +200,7 @@ def test_pandas_fixed_offset_1302() -> None:
 
 
 def test_huge_int() -> None:
+    pl = pytest.importorskip("polars")
     duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame({"a": [1, 2, 3]})
     if POLARS_VERSION >= (1, 18):  # pragma: no cover
@@ -227,6 +228,7 @@ def test_huge_int() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
+    pl = pytest.importorskip("polars")
     duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema

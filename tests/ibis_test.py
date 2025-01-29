@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals as nw
+
+pl = pytest.importorskip("polars")
 
 if TYPE_CHECKING:
     import ibis

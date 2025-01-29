@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -18,6 +17,7 @@ def test_read_csv(
     tmpdir: pytest.TempdirFactory,
     constructor_eager: ConstructorEager,
 ) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -31,6 +31,7 @@ def test_read_csv(
 def test_read_csv_v1(
     tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
 ) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -43,6 +44,7 @@ def test_read_csv_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -55,6 +57,7 @@ def test_scan_csv(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    pl = pytest.importorskip("polars")
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
@@ -72,6 +75,7 @@ def test_scan_csv_v1(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    pl = pytest.importorskip("polars")
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
@@ -86,6 +90,7 @@ def test_scan_csv_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -98,6 +103,7 @@ def test_read_parquet(
     tmpdir: pytest.TempdirFactory,
     constructor_eager: ConstructorEager,
 ) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -112,6 +118,7 @@ def test_read_parquet(
 def test_read_parquet_v1(
     tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
 ) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -124,6 +131,7 @@ def test_read_parquet_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -137,6 +145,7 @@ def test_scan_parquet(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    pl = pytest.importorskip("polars")
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
@@ -155,6 +164,7 @@ def test_scan_parquet_v1(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
+    pl = pytest.importorskip("polars")
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
@@ -169,6 +179,7 @@ def test_scan_parquet_v1(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)

@@ -4,7 +4,6 @@ from typing import Any
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 from hypothesis import assume
@@ -165,6 +164,7 @@ def test_truediv_same_dims(
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_floordiv(left: int, right: int) -> None:
+    pl = pytest.importorskip("polars")
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -203,6 +203,7 @@ def test_floordiv(left: int, right: int) -> None:
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_mod(left: int, right: int) -> None:
+    pl = pytest.importorskip("polars")
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)

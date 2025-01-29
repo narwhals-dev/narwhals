@@ -9,7 +9,6 @@ from typing import Callable
 from typing import Sequence
 
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -106,15 +105,20 @@ def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no 
 
 
 def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import polars as pl
+
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: dict[str, list[Any]]) -> IntoFrame:
+    import polars as pl
+
     return pl.LazyFrame(obj)
 
 
 def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
     import duckdb
+    import polars as pl
 
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")

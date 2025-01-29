@@ -5,7 +5,6 @@ from datetime import datetime
 from unittest import mock
 
 import pandas as pd
-import polars as pl
 import pyarrow.csv as pa_csv
 import pytest
 
@@ -21,6 +20,7 @@ from tests.utils import assert_equal_data
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: pytest.FixtureRequest) -> None:
+    pl = pytest.importorskip("polars")
     if library == "dask" and DASK_VERSION < (2024, 10):
         request.applymarker(pytest.mark.xfail)
     if library == "pandas" and PANDAS_VERSION < (1, 5):
@@ -107,6 +107,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
     elif library == "pandas":
         df_raw = pd.read_csv("tests/data/lineitem.csv")
     else:
+        pl = pytest.importorskip("polars")
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)

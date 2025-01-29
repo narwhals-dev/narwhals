@@ -3,7 +3,6 @@ from __future__ import annotations
 import sys
 
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -14,6 +13,7 @@ from tests.utils import assert_equal_data
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
 def test_from_arrow_to_arrow() -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"ab": [1, 2, 3], "ba": [4, 5, 6]}), eager_only=True)
     result = nw.from_arrow(df, native_namespace=pa)
     assert isinstance(result.to_native(), pa.Table)
@@ -23,6 +23,7 @@ def test_from_arrow_to_arrow() -> None:
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
 def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
+    pl = pytest.importorskip("polars")
     tbl = pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]})
     monkeypatch.delitem(sys.modules, "pandas")
     df = nw.from_native(tbl, eager_only=True)

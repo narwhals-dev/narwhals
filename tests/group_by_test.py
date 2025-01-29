@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import nullcontext
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -17,10 +16,11 @@ from tests.utils import assert_equal_data
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
-df_lazy = pl.LazyFrame(data)
 
 
 def test_group_by_complex() -> None:
+    pl = pytest.importorskip("polars")
+    df_lazy = pl.LazyFrame(data)
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
     df = nw.from_native(df_pandas)

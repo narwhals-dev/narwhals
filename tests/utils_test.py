@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
 from pandas.testing import assert_frame_equal
@@ -59,6 +58,7 @@ def test_non_unique_index() -> None:
 
 
 def test_maybe_align_index_polars() -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
@@ -90,6 +90,7 @@ def test_maybe_set_index_pandas_column_names(
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     assert result is df
@@ -143,6 +144,7 @@ def test_maybe_set_index_pandas_direct_index(
 def test_maybe_set_index_polars_direct_index(
     index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
 ) -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
     assert result is df
@@ -180,6 +182,7 @@ def test_maybe_get_index_pandas() -> None:
 
 
 def test_maybe_get_index_polars() -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.maybe_get_index(df)
     assert result is None
@@ -214,6 +217,7 @@ def test_maybe_reset_index_pandas() -> None:
 
 
 def test_maybe_reset_index_polars() -> None:
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_reset_index(df)
     assert result is df
@@ -239,6 +243,8 @@ def test_maybe_convert_dtypes_pandas() -> None:
 
 def test_maybe_convert_dtypes_polars() -> None:
     import numpy as np
+
+    pl = pytest.importorskip("polars")
 
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)

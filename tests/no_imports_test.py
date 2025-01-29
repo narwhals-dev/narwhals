@@ -3,7 +3,6 @@ from __future__ import annotations
 import sys
 
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -11,6 +10,7 @@ import narwhals.stable.v1 as nw
 
 
 def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
+    pl = pytest.importorskip("polars")
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
     monkeypatch.delitem(sys.modules, "pyarrow")
