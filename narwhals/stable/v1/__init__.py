@@ -167,7 +167,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self) -> LazyFrame[Any]:
+    def lazy(self: Self) -> LazyFrame[Any]:  # type: ignore[override]
         """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.

@@ -23,6 +23,7 @@ from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
+from narwhals.utils import Version
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -498,7 +499,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def lazy(self: Self) -> LazyFrame[Any]:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
         """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.
@@ -545,7 +546,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             bar: [[6,7,8]]
             ham: [["a","b","c"]]
         """
-        return self._lazyframe(self._compliant_frame.lazy(), level="lazy")
+        if backend is not None:
+            return self._lazyframe(
+                self._compliant_frame.lazy(backend=backend, version=Version.MAIN),
+                level="lazy",
+            )
+        else:
+            return self._lazyframe(self._compliant_frame.lazy(), level="lazy")
 
     def to_native(self: Self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.

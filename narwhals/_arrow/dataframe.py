@@ -19,6 +19,7 @@ from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
@@ -519,8 +520,52 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self: Self) -> Self:
-        return self
+    def lazy(
+        self: Self, *, backend: Implementation | None = None, version: Version
+    ) -> Any:
+        if backend is None:
+            return self
+        else:
+            from narwhals.utils import parse_version
+
+            if backend is Implementation.DUCKDB:
+                import duckdb  # ignore-banned-import
+
+                from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+                df = self._native_frame  # noqa: F841
+                backend_version = parse_version(duckdb.__version__)
+                return DuckDBLazyFrame(
+                    df=duckdb.table("df"),
+                    backend_version=backend_version,
+                    version=version,
+                )
+            elif backend is Implementation.POLARS:
+                import polars as pl  # ignore-banned-import
+
+                from narwhals._polars.dataframe import PolarsLazyFrame
+
+                backend_version = parse_version(pl.__version__)
+                return PolarsLazyFrame(
+                    df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
+                    backend_version=backend_version,
+                    version=version,
+                )
+            elif backend is Implementation.PANDAS:
+                import pandas as pd  # ignore-banned-import
+
+                from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+                backend_version = parse_version(pd.__version__)
+                return PandasLikeDataFrame(
+                    native_dataframe=self._native_frame.to_pandas(),
+                    implementation=backend,
+                    backend_version=backend_version,
+                    version=version,
+                )
+            else:
+                msg = "Not supported backend"
+                raise ValueError(msg)
 
     def collect(self: Self) -> ArrowDataFrame:
         return ArrowDataFrame(
