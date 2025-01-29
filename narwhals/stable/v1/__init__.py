@@ -172,6 +172,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
         If a library does not support lazy execution, then this is a no-op.
 
+        If `backend` is specified some conversions between libraries can occur.
+
         Returns:
             A new LazyFrame.
         """
