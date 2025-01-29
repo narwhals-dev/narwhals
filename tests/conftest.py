@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -247,10 +246,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 12):  # pragma: no cover
-                    constructors.append(pyspark_lazy_constructor())
-                else:  # pragma: no cover
-                    continue
+                constructors.append(pyspark_lazy_constructor())
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)

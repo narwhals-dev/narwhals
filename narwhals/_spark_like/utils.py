@@ -101,9 +101,10 @@ def narwhals_to_native_dtype(
         return spark_types.StringType()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return spark_types.BooleanType()
-    if isinstance_or_issubclass(dtype, (dtypes.Date, dtypes.Datetime)):
-        msg = "Converting to Date or Datetime dtype is not supported yet"
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return spark_types.DateType()
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return spark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
         raise NotImplementedError(msg)

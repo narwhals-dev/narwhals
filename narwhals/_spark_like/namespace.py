@@ -16,6 +16,7 @@ from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import n_ary_operation_expr_kind
+from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -80,12 +81,17 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         )
 
     def lit(self: Self, value: object, dtype: DType | None) -> SparkLikeExpr:
-        if dtype is not None:
-            msg = "todo"
-            raise NotImplementedError(msg)
-
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
-            return [df._F.lit(value)]
+            column = df._F.lit(value)
+            if dtype:
+                import pyspark.sql.types as pyspark_types
+
+                native_dtype = narwhals_to_native_dtype(
+                    dtype, self._version, pyspark_types
+                )
+                column = column.cast(native_dtype)
+
+            return [column.alias("literal")]
 
         return SparkLikeExpr(
             call=_lit,
