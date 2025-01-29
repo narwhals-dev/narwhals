@@ -142,7 +142,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._from_native_frame(self._native_frame.select(*selection))
 
-    def lazy(self: Self) -> Self:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         return self
 
     def with_columns(
