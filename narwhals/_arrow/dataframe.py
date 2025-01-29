@@ -520,7 +520,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self: Self, *, backend: Implementation | None) -> CompliantLazyFrame:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
 
         if backend is None:

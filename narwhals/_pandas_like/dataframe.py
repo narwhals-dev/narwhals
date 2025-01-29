@@ -709,7 +709,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     # --- lazy-only ---
-    def lazy(self: Self, *, backend: Implementation | None) -> CompliantLazyFrame:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
 
         if backend is None:

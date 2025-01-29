@@ -232,7 +232,7 @@ class PolarsDataFrame:
             for name, dtype in schema.items()
         }
 
-    def lazy(self: Self, *, backend: Implementation | None) -> CompliantLazyFrame:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
 
         if backend is None or backend is Implementation.POLARS:
