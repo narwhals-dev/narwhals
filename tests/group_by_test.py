@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import nullcontext
 
 import pandas as pd
@@ -323,6 +324,10 @@ def test_group_by_categorical(
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and os.environ.get(
+        "NARWHALS_POLARS_NEW_STREAMING", False
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
