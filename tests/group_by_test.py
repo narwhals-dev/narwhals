@@ -325,7 +325,7 @@ def test_group_by_categorical(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "polars[lazy]" in str(constructor) and os.environ.get(
+    if "polars_lazy" in str(constructor) and os.environ.get(
         "NARWHALS_POLARS_NEW_STREAMING", False
     ):
         request.applymarker(pytest.mark.xfail)
