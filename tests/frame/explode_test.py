@@ -117,6 +117,7 @@ def test_explode_shape_error(
     expected_exceptions = (ShapeError,)
     if "polars" in str(constructor):
         from polars.exceptions import ShapeError as PlShapeError
+
         expected_exceptions = expected_exceptions + (PlShapeError,)
     with pytest.raises(
         expected_exceptions,
@@ -143,6 +144,7 @@ def test_explode_invalid_operation_error(
     expected_exceptions = (InvalidOperationError,)
     if "polars" in str(constructor):
         from polars.exceptions import InvalidOperationError as PlInvalidOperationError
+
         expected_exceptions = expected_exceptions + (PlInvalidOperationError,)
     with pytest.raises(
         expected_exceptions,

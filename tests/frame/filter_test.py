@@ -46,6 +46,7 @@ def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
     expected_exceptions = (LengthChangingExprError, ShapeError)
     if "polars" in str(constructor):
         from polars.exceptions import ShapeError as PlShapeError
+
         expected_exceptions = expected_exceptions + (PlShapeError,)
     with pytest.raises(expected_exceptions):
         df.filter(nw.col("b").unique() > 2).lazy().collect()

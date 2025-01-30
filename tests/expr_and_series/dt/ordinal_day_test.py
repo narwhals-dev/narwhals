@@ -38,5 +38,7 @@ def test_ordinal_day(dates: datetime) -> None:
     except ImportError:
         pass
     else:
-        result_pl = nw.from_native(pl.Series([dates]), series_only=True).dt.ordinal_day()[0]
+        result_pl = nw.from_native(pl.Series([dates]), series_only=True).dt.ordinal_day()[
+            0
+        ]
         assert result_pl == result_pd
