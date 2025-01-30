@@ -505,9 +505,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         might be triggered.
         If a library does not support lazy execution and `backend` is not specified,
         then this is a no-op.
-        
+
         Arguments:
             backend: specifies which Implementation to convert to.
+
         Returns:
             A new LazyFrame.
 
