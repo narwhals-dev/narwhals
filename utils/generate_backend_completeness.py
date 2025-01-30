@@ -55,6 +55,8 @@ EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
 DIRECTLY_IMPLEMENTED_METHODS = ["pipe", "implementation", "to_native"]
 
+EXPR_STR_METHODS = ["tail", "head"]
+
 
 def get_class_methods(kls: type[Any]) -> list[str]:
     return [m[0] for m in inspect.getmembers(kls) if not m[0].startswith("_")]
@@ -79,6 +81,9 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
             else []
         )
 
+        if module_name == "expr_str" and class_:
+            methods_ += EXPR_STR_METHODS
+
     except ModuleNotFoundError:
         methods_ = []
 
@@ -88,14 +93,19 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
 def render_table_and_write_to_output(
     results: list[pl.DataFrame], title: str, output_filename: str
 ) -> None:
-    results = (
+    results: pl.DataFrame = (
         pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
-        .pivot(on="Backend", values="supported", index=["Class", "Method"])
+        .pivot(on="Backend", values="supported", index=["Method"])
         .filter(pl.col("narwhals").is_not_null())
         .drop("narwhals")
         .fill_null(":x:")
-        .sort("Class", "Method")
+        .sort("Method")
+    )
+
+    backends = [c for c in results.columns if c != "Method"] + ["polars"]
+    results = results.with_columns(polars=pl.lit(":white_check_mark:")).select(
+        "Method", *sorted(backends)
     )
 
     with pl.Config(
@@ -137,14 +147,11 @@ def get_backend_completeness_table() -> None:
 
             nw_methods = get_class_methods(nw_class)
 
-            narwhals = pl.DataFrame(
-                {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
-            )
+            narwhals = pl.DataFrame({"Backend": "narwhals", "Method": nw_methods})
 
             backend_methods = [
                 pl.DataFrame(
                     {
-                        "Class": nw_class_name,
                         "Backend": backend.name,
                         "Method": parse_module(
                             module_name,
@@ -171,7 +178,9 @@ def get_backend_completeness_table() -> None:
             continue
 
         render_table_and_write_to_output(
-            results=results, title=module_name.capitalize(), output_filename=module_name
+            results=results,
+            title=module_name.capitalize().replace("_", "."),
+            output_filename=module_name,
         )
 
 

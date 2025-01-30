@@ -66,7 +66,12 @@ def _sort_dict_by_key(
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(
-        range(len(sort_list)), key=lambda i: (sort_list[i] is None, sort_list[i])
+        range(len(sort_list)),
+        key=lambda i: (
+            (sort_list[i] is None)
+            or (isinstance(sort_list[i], float) and math.isnan(sort_list[i])),
+            sort_list[i],
+        ),
     )
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
@@ -106,7 +111,9 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         result_value = result[key]
         for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
             if isinstance(lhs, float) and not math.isnan(lhs):
-                are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
+                are_equivalent_values = rhs is not None and math.isclose(
+                    lhs, rhs, rel_tol=0, abs_tol=1e-6
+                )
             elif isinstance(lhs, float) and math.isnan(lhs):
                 are_equivalent_values = rhs is None or math.isnan(rhs)
             elif isinstance(rhs, float) and math.isnan(rhs):

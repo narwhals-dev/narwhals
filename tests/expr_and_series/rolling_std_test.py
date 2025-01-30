@@ -23,7 +23,7 @@ kwargs_and_expected = (
     },
     {
         "name": "x2",
-        "kwargs": {"window_size": 3, "min_periods": 1},
+        "kwargs": {"window_size": 3, "min_samples": 1},
         "expected": [
             sqrt(x) if x is not None else x
             for x in [None, 0.5, 1 / 3, 1.0, 4 / 3, 7 / 3, 3]
@@ -31,14 +31,14 @@ kwargs_and_expected = (
     },
     {
         "name": "x3",
-        "kwargs": {"window_size": 2, "min_periods": 1},
+        "kwargs": {"window_size": 2, "min_samples": 1},
         "expected": [
             sqrt(x) if x is not None else x for x in [None, 0.5, 0.5, 2.0, 2.0, 4.5, 4.5]
         ],
     },
     {
         "name": "x4",
-        "kwargs": {"window_size": 5, "min_periods": 1, "center": True},
+        "kwargs": {"window_size": 5, "min_samples": 1, "center": True},
         "expected": [
             sqrt(x) if x is not None else x
             for x in [1 / 3, 11 / 12, 4 / 5, 17 / 10, 2.0, 2.25, 3]
@@ -46,7 +46,7 @@ kwargs_and_expected = (
     },
     {
         "name": "x5",
-        "kwargs": {"window_size": 4, "min_periods": 1, "center": True},
+        "kwargs": {"window_size": 4, "min_samples": 1, "center": True},
         "expected": [
             sqrt(x) if x is not None else x
             for x in [0.5, 1 / 3, 11 / 12, 11 / 12, 2.25, 2.25, 3]

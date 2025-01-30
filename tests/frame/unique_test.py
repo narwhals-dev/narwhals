@@ -12,7 +12,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize("subset", ["b", ["b"]])

@@ -30,6 +30,7 @@ SERIES_ONLY_METHODS = {
     "to_native",
     "to_numpy",
     "to_pandas",
+    "to_polars",
     "value_counts",
     "zip_with",
     "__iter__",
@@ -159,7 +160,11 @@ for namespace in NAMESPACES.difference({"name"}):
 
 # Expr methods
 expr_methods = [
-    i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Expr(
+        lambda: 0, is_order_dependent=False, changes_length=False, aggregates=False
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
     content = fd.read()
@@ -181,7 +186,15 @@ if extra := set(documented).difference(expr_methods):
 for namespace in NAMESPACES:
     expr_methods = [
         i
-        for i in getattr(nw.Expr(lambda: 0), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(
+                lambda: 0,
+                is_order_dependent=False,
+                changes_length=False,
+                aggregates=False,
+            ),
+            namespace,
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
@@ -221,7 +234,13 @@ if extra := set(documented).difference(dtypes):
     ret = 1
 
 # Check Expr vs Series
-expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
+expr = [
+    i
+    for i in nw.Expr(
+        lambda: 0, is_order_dependent=False, changes_length=False, aggregates=False
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
 series = [
     i
     for i in nw.from_native(pl.Series(), series_only=True).__dir__()
@@ -240,7 +259,15 @@ if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
 for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
-        for i in getattr(nw.Expr(lambda: 0), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(
+                lambda: 0,
+                is_order_dependent=False,
+                changes_length=False,
+                aggregates=False,
+            ),
+            namespace,
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     series_internal = [

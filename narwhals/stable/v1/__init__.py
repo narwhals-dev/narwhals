@@ -17,6 +17,8 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dependencies import get_polars
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
@@ -68,6 +70,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -120,51 +123,51 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self) -> type[Series]:
+    def _series(self: Self) -> type[Series]:
         return Series
 
     @property
-    def _lazyframe(self) -> type[LazyFrame[Any]]:
+    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: str) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[str]) -> Self: ...
+    def __getitem__(self: Self, item: Sequence[str]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: slice) -> Self: ...
+    def __getitem__(self: Self, item: slice) -> Self: ...
 
     @overload
-    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
 
-    def __getitem__(self, item: Any) -> Any:
+    def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self) -> LazyFrame[Any]:
+    def lazy(self: Self) -> LazyFrame[Any]:
         """Lazify the DataFrame (if possible).
 
         If a library does not support lazy execution, then this is a no-op.
@@ -177,13 +180,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    def to_dict(self: Self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
     @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
     def to_dict(
-        self, *, as_series: bool = True
+        self: Self, *, as_series: bool
+    ) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self: Self, *, as_series: bool = True
     ) -> dict[str, Series] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
@@ -235,42 +240,71 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     """
 
     @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
+    def _dataframe(self: Self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    def _extract_compliant(self: Self, arg: Any) -> Any:
+        # After v1, we raise when passing order-dependent or length-changing
+        # expressions to LazyFrame
+        from narwhals.dataframe import BaseFrame
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        if isinstance(arg, BaseFrame):
+            return arg._compliant_frame
+        if isinstance(arg, Series):  # pragma: no cover
+            msg = "Mixing Series with LazyFrame is not supported."
+            raise TypeError(msg)
+        if isinstance(arg, Expr):
+            # After stable.v1, we raise if arg._is_order_dependent or arg._changes_length
+            return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
         self: Self,
-        *,
-        polars_kwargs: dict[str, Any] | None = None,
-        dask_kwargs: dict[str, Any] | None = None,
-        duckdb_kwargs: dict[str, str] | None = None,
+        backend: ModuleType | Implementation | str | None = None,
+        **kwargs: Any,
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
         As each underlying lazyframe has different arguments to set when materializing
-        the lazyframe into a dataframe, we allow to pass them separately into its own
-        keyword argument.
+        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
+        below for how to generalize the specification).
 
         Arguments:
-            polars_kwargs: [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
-                arguments. Used only if the `LazyFrame` is backed by a `polars.LazyFrame`.
-                If not provided, it uses the polars default values.
-            dask_kwargs: [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
-                arguments. Used only if the `LazyFrame` is backed by a `dask.dataframe.DataFrame`.
-                If not provided, it uses the dask default values.
-            duckdb_kwargs: Allows to specify in which eager backend to materialize a
-                DuckDBPyRelation backed LazyFrame. It is possible to choose among
-                `pyarrow`, `pandas` or `polars` by declaring
-                `duckdb_kwargs={"eager_backend": "<eager_backend>"}`.
+            backend: specifies which eager backend collect to. This will be the underlying
+                backend for the resulting Narwhals DataFrame. If None, then the following
+                default conversions will be applied:
+
+                - `polars.LazyFrame` -> `polars.DataFrame`
+                - `dask.DataFrame` -> `pandas.DataFrame`
+                - `duckdb.PyRelation` -> `pyarrow.Table`
+                - `pyspark.DataFrame` -> `pandas.DataFrame`
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
+                    or `POLARS`.
+                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
+                - Directly as a module `pandas`, `pyarrow` or `polars`.
+            kwargs: backend specific kwargs to pass along. To know more please check the
+                backend specific documentation:
+
+                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
 
         Returns:
             DataFrame
         """
-        return super().collect(
-            polars_kwargs=polars_kwargs,
-            dask_kwargs=dask_kwargs,
-            duckdb_kwargs=duckdb_kwargs,
-        )  # type: ignore[return-value]
+        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API.
@@ -279,6 +313,17 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             A new lazyframe.
         """
         return self.select(all()._l1_norm())
+
+    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A subset of the LazyFrame of shape (n, n_columns).
+        """
+        return super().tail(n)
 
 
 class Series(NwSeries[Any]):
@@ -310,10 +355,10 @@ class Series(NwSeries[Any]):
     # annotations are correct.
 
     @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
+    def _dataframe(self: Self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def to_frame(self) -> DataFrame[Any]:
+    def to_frame(self: Self) -> DataFrame[Any]:
         """Convert to dataframe.
 
         Returns:
@@ -356,7 +401,7 @@ class Series(NwSeries[Any]):
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -381,7 +426,7 @@ class Series(NwSeries[Any]):
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -414,7 +459,7 @@ class Series(NwSeries[Any]):
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
+            min_samples=min_samples,
             ignore_nulls=ignore_nulls,
         )
 
@@ -422,7 +467,7 @@ class Series(NwSeries[Any]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -440,7 +485,7 @@ class Series(NwSeries[Any]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -459,7 +504,7 @@ class Series(NwSeries[Any]):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -467,7 +512,7 @@ class Series(NwSeries[Any]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -485,7 +530,7 @@ class Series(NwSeries[Any]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -504,7 +549,7 @@ class Series(NwSeries[Any]):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_mean(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -512,7 +557,7 @@ class Series(NwSeries[Any]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -531,7 +576,7 @@ class Series(NwSeries[Any]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -551,7 +596,7 @@ class Series(NwSeries[Any]):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_var(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )
@@ -560,7 +605,7 @@ class Series(NwSeries[Any]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -579,7 +624,7 @@ class Series(NwSeries[Any]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -599,14 +644,14 @@ class Series(NwSeries[Any]):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_std(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )
 
 
 class Expr(NwExpr):
-    def _l1_norm(self) -> Self:
+    def _l1_norm(self: Self) -> Self:
         return super()._taxicab_norm()
 
     def ewm_mean(
@@ -617,7 +662,7 @@ class Expr(NwExpr):
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -642,7 +687,7 @@ class Expr(NwExpr):
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value, (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -675,7 +720,7 @@ class Expr(NwExpr):
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
+            min_samples=min_samples,
             ignore_nulls=ignore_nulls,
         )
 
@@ -683,7 +728,7 @@ class Expr(NwExpr):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -701,7 +746,7 @@ class Expr(NwExpr):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -720,7 +765,7 @@ class Expr(NwExpr):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_sum(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -728,7 +773,7 @@ class Expr(NwExpr):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -746,7 +791,7 @@ class Expr(NwExpr):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -765,7 +810,7 @@ class Expr(NwExpr):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_mean(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -773,7 +818,7 @@ class Expr(NwExpr):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -792,7 +837,7 @@ class Expr(NwExpr):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -811,14 +856,14 @@ class Expr(NwExpr):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_var(
-            window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+            window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
         )
 
     def rolling_std(
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -837,7 +882,7 @@ class Expr(NwExpr):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -857,9 +902,150 @@ class Expr(NwExpr):
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().rolling_std(
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
+        )
+
+    def head(self: Self, n: int = 10) -> Self:
+        r"""Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).head(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def tail(self: Self, n: int = 10) -> Self:
+        r"""Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).tail(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""Take every nth value in the Series and return as new Series.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
+        """Return unique values of this expression.
+
+        Arguments:
+            maintain_order: Keep the same order as the original expression.
+                This is deprecated and will be removed in a future version,
+                but will still be kept around in `narwhals.stable.v1`.
+
+        Returns:
+            A new expression.
+        """
+        if maintain_order is not None:
+            msg = (
+                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
+                "You can safely remove this argument."
+            )
+            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).unique(),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        """Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sort(
+                descending=descending, nulls_last=nulls_last
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
+
+    def arg_true(self: Self) -> Self:
+        """Find elements where boolean expression is True.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        """Sample randomly from this expression.
+
+        !!! warning
+            `Expr.sample` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sample())`, use
+            `df.select(nw.col('a')).sample()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+            fraction: Fraction of items to return. Cannot be used with n.
+            with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
+
+        Returns:
+            A new expression.
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sample(
+                n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            ),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
 
@@ -904,7 +1090,12 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr)
+        return Expr(
+            obj._to_compliant_expr,
+            is_order_dependent=obj._is_order_dependent,
+            changes_length=obj._changes_length,
+            aggregates=obj._aggregates,
+        )
     return obj
 
 
@@ -1852,19 +2043,24 @@ def concat_str(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls, when: NwWhen) -> Self:
-        return cls(*when._predicates)
+    def from_when(cls: type, when: NwWhen) -> When:
+        return cls(*when._predicates)  # type: ignore[no-any-return]
 
-    def then(self, value: Any) -> Then:
+    def then(self: Self, value: Any) -> Then:
         return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Self:
-        return cls(then._to_compliant_expr)
+    def from_then(cls: type, then: NwThen) -> Then:
+        return cls(  # type: ignore[no-any-return]
+            then._to_compliant_expr,
+            is_order_dependent=then._is_order_dependent,
+            changes_length=then._changes_length,
+            aggregates=then._aggregates,
+        )
 
-    def otherwise(self, value: Any) -> Expr:
+    def otherwise(self: Self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
 
 

@@ -59,7 +59,10 @@ class ExprNameNamespace(Generic[ExprT]):
             ['foo']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.keep()
+            lambda plx: self._expr._to_compliant_expr(plx).name.keep(),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ExprT:
@@ -108,7 +111,10 @@ class ExprNameNamespace(Generic[ExprT]):
             ['oof', 'RAB']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
+            lambda plx: self._expr._to_compliant_expr(plx).name.map(function),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def prefix(self: Self, prefix: str) -> ExprT:
@@ -156,7 +162,10 @@ class ExprNameNamespace(Generic[ExprT]):
             ['with_prefix_foo', 'with_prefix_BAR']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
+            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def suffix(self: Self, suffix: str) -> ExprT:
@@ -204,7 +213,10 @@ class ExprNameNamespace(Generic[ExprT]):
             ['foo_with_suffix', 'BAR_with_suffix']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
+            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def to_lowercase(self: Self) -> ExprT:
@@ -249,7 +261,10 @@ class ExprNameNamespace(Generic[ExprT]):
             ['foo', 'bar']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase(),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )
 
     def to_uppercase(self: Self) -> ExprT:
@@ -294,5 +309,8 @@ class ExprNameNamespace(Generic[ExprT]):
             ['FOO', 'BAR']
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase(),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
         )

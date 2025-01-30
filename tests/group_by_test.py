@@ -4,17 +4,17 @@ from contextlib import nullcontext
 
 import pandas as pd
 import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
+data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
 df_lazy = pl.LazyFrame(data)
@@ -37,40 +37,12 @@ def test_group_by_complex() -> None:
 
 def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df_dask = dd.from_pandas(df_pandas)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
-
-    with pytest.raises(ValueError, match="Non-trivial complex aggregation"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
-
-    with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
-    ):
-        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
-
-
-@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_invalid_group_by() -> None:
-    df = nw.from_native(df_pandas)
-    with pytest.raises(ValueError, match="does your"):
-        df.group_by("a").agg(nw.col("b"))
-    with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
-    ):
-        df.group_by("a").agg(nw.all().mean())
-    with pytest.raises(
-        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
-    ):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
-            nw.col("b").mean().min()
-        )
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
@@ -95,6 +67,16 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
+def test_group_by_nw_all(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
+    result = df.group_by("a").agg(nw.all().sum()).sort("a")
+    expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.all().sum().name.suffix("_sum")).sort("a")
+    expected = {"a": [1, 2], "b_sum": [9, 6], "c_sum": [15, 9]}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.parametrize(
     ("attr", "expected"),
     [
@@ -115,8 +97,6 @@ def test_group_by_depth_1_agg(
     expected: dict[str, list[int | float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyspark" in str(constructor) and attr == "n_unique":
-        request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         request.applymarker(pytest.mark.xfail)
@@ -135,11 +115,7 @@ def test_group_by_depth_1_agg(
         ("var", 2),
     ],
 )
-def test_group_by_depth_1_std_var(
-    constructor: Constructor, attr: str, ddof: int, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor) and ddof == 2:
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
@@ -166,11 +142,7 @@ def test_group_by_median(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_n_unique_w_missing(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -276,9 +248,6 @@ def test_key_with_nulls(
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
 
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
@@ -297,15 +266,7 @@ def test_key_with_nulls(
         assert_equal_data(result, expected)
 
 
-def test_key_with_nulls_ignored(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_key_with_nulls_ignored(constructor: Constructor) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -346,9 +307,7 @@ def test_key_with_nulls_iter(
     assert len(result) == 4
 
 
-def test_no_agg(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_no_agg(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
@@ -363,8 +322,6 @@ def test_group_by_categorical(
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
-        0,
-        0,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
@@ -382,25 +339,10 @@ def test_group_by_categorical(
     assert_equal_data(result, data)
 
 
-@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_group_by_shift_raises(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor):
-        # Polars supports all kinds of crazy group-by aggregations, so
-        # we don't check that it errors here.
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        # This operation fails completely in cuDF anyway, we just let raise its own
-        # error.
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
-    with pytest.raises(
-        ValueError, match=".*(failed to aggregate|Non-trivial complex aggregation found)"
-    ):
+    with pytest.raises(InvalidOperationError, match="does not aggregate"):
         df.group_by("b").agg(nw.col("a").shift(1))
 
 
@@ -427,8 +369,6 @@ def test_all_kind_of_aggs(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]

@@ -57,7 +57,7 @@ class ArrowExprStringNamespace:
             self._compliant_expr, "str", "ends_with", suffix=suffix
         )
 
-    def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
+    def contains(self: Self, pattern: str, *, literal: bool) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "str", "contains", pattern=pattern, literal=literal
         )

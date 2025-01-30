@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Callable
+from typing import Sequence
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -14,162 +15,70 @@ class PandasLikeExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.keep`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), root_names)
-            ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=root_names,
-            implementation=self._compliant_expr._implementation,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: name,
+            alias_output_names=None,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.map`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
-        output_names = [function(str(name)) for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: function(str(name)),
+            alias_output_names=lambda output_names: [
+                function(str(name)) for name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            implementation=self._compliant_expr._implementation,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "function": function},
         )
 
     def prefix(self: Self, prefix: str) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.prefix`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
-        output_names = [prefix + str(name) for name in root_names]
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{prefix}{name}",
+            alias_output_names=lambda output_names: [
+                f"{prefix}{output_name}" for output_name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            implementation=self._compliant_expr._implementation,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.suffix`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-
-        output_names = [str(name) + suffix for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{name}{suffix}",
+            alias_output_names=lambda output_names: [
+                f"{output_name}{suffix}" for output_name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            implementation=self._compliant_expr._implementation,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-        output_names = [str(name).lower() for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: str(name).lower(),
+            alias_output_names=lambda output_names: [
+                str(name).lower() for name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            implementation=self._compliant_expr._implementation,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
         )
 
     def to_uppercase(self: Self) -> PandasLikeExpr:
-        root_names = self._compliant_expr._root_names
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: str(name).upper(),
+            alias_output_names=lambda output_names: [
+                str(name).upper() for name in output_names
+            ],
+        )
 
-        if root_names is None:
-            msg = (
-                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
-                "Instead of `nw.all()`, try using a named expression, such as "
-                "`nw.col('a', 'b')`\n"
-            )
-            raise ValueError(msg)
-        output_names = [str(name).upper() for name in root_names]
-
+    def _from_colname_func_and_alias_output_names(
+        self: Self,
+        name_mapping_func: Callable[[str], str],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+    ) -> PandasLikeExpr:
         return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+            call=lambda df: [
+                series.alias(name_mapping_func(name))
+                for series, name in zip(
+                    self._compliant_expr._call(df),
+                    self._compliant_expr._evaluate_output_names(df),
+                )
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            implementation=self._compliant_expr._implementation,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._compliant_expr._backend_version,
+            implementation=self._compliant_expr._implementation,
             version=self._compliant_expr._version,
             kwargs=self._compliant_expr._kwargs,
         )

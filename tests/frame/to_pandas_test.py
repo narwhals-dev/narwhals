@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 def test_convert_pandas(
     constructor_eager: ConstructorEager,
 ) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
 

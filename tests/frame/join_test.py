@@ -8,6 +8,7 @@ from typing import Literal
 import pandas as pd
 import pytest
 
+import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
@@ -20,26 +21,26 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
-    df = nw.from_native(constructor(data))
+    df = nw_main.from_native(constructor(data))
     df_right = df
     result = df.join(
-        df_right,  # type: ignore[arg-type]
+        df_right,
         left_on=["antananarivo", "bob"],
         right_on=["antananarivo", "bob"],
         how="inner",
     )
-    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
+    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")
     result = result.sort("idx").drop("idx_right")
     result_on = result_on.sort("idx").drop("idx_right")
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
-        "zor ro_right": [7.0, 8, 9],
+        "zor ro_right": [7.0, 8.0, 9.0],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -49,7 +50,7 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
     df = nw.from_native(constructor(data))
@@ -66,10 +67,10 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     expected = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
         "bob_right": [4, 4, 6],
-        "zor ro_right": [7.0, 8, 9],
+        "zor ro_right": [7.0, 8.0, 9.0],
     }
     assert_equal_data(result, expected)
     assert_equal_data(result_on, expected)
@@ -99,7 +100,7 @@ def test_suffix(constructor: Constructor, how: str, suffix: str) -> None:
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
-        "zor ro": [7.0, 8, 9],
+        "zor ro": [7.0, 8.0, 9.0],
     }
     df = nw.from_native(constructor(data))
     df_right = df
@@ -167,7 +168,7 @@ def test_anti_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
@@ -205,7 +206,7 @@ def test_semi_join(
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
@@ -216,7 +217,7 @@ def test_semi_join(
 
 @pytest.mark.parametrize("how", ["right", "full"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -230,13 +231,13 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
 
 def test_left_join(constructor: Constructor) -> None:
     data_left = {
-        "antananarivo": [1.0, 2, 3],
-        "bob": [4.0, 5, 6],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
         "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
-        "antananarivo": [1.0, 2, 3],
-        "co": [4.0, 5, 7],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "co": [4.0, 5.0, 7.0],
         "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
@@ -285,15 +286,15 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
 
 def test_left_join_overlapping_column(constructor: Constructor) -> None:
     data_left = {
-        "antananarivo": [1.0, 2, 3],
-        "bob": [4.0, 5, 6],
-        "d": [1.0, 4, 2],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
     data_right = {
-        "antananarivo": [1.0, 2, 3],
-        "c": [4.0, 5, 6],
-        "d": [1.0, 4, 2],
+        "antananarivo": [1.0, 2.0, 3.0],
+        "c": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
     df_left = nw.from_native(constructor(data_left))
@@ -330,7 +331,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
 def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -355,11 +356,44 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 3, 7],
+            },
+        ),
+        (
+            "forward",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 6, None],
+            },
+        ),
+        (
+            "nearest",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 6, 7],
+            },
+        ),
+    ],
+)
 def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
+    strategy: Literal["backward", "forward", "nearest"],
+    expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -371,54 +405,67 @@ def test_joinasof_numeric(
     df_right = nw.from_native(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
-    result_backward = df.join_asof(
+    result = df.join_asof(
         df_right,  # type: ignore[arg-type]
         left_on="antananarivo",
         right_on="antananarivo",
+        strategy=strategy,
     )
-    result_forward = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="antananarivo",
-        right_on="antananarivo",
-        strategy="forward",
-    )
-    result_nearest = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="antananarivo",
-        right_on="antananarivo",
-        strategy="nearest",
-    )
-    result_backward_on = df.join_asof(df_right, on="antananarivo")  # type: ignore[arg-type]
-    result_forward_on = df.join_asof(df_right, on="antananarivo", strategy="forward")  # type: ignore[arg-type]
-    result_nearest_on = df.join_asof(df_right, on="antananarivo", strategy="nearest")  # type: ignore[arg-type]
-    expected_backward = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 3, 7],
-    }
-    expected_forward = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 6, None],
-    }
-    expected_nearest = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 6, 7],
-    }
-    assert_equal_data(result_backward, expected_backward)
-    assert_equal_data(result_forward, expected_forward)
-    assert_equal_data(result_nearest, expected_nearest)
-    assert_equal_data(result_backward_on, expected_backward)
-    assert_equal_data(result_forward_on, expected_forward)
-    assert_equal_data(result_nearest_on, expected_nearest)
+    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)  # type: ignore[arg-type]
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_on.sort(by="antananarivo"), expected)
 
 
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4566, 4696],
+            },
+        ),
+        (
+            "forward",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4411, 4696, 4696],
+            },
+        ),
+        (
+            "nearest",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4696, 4696],
+            },
+        ),
+    ],
+)
 def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
+    strategy: Literal["backward", "forward", "nearest"],
+    expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -448,58 +495,22 @@ def test_joinasof_time(
             }
         )
     ).sort("datetime")
-    result_backward = df.join_asof(df_right, left_on="datetime", right_on="datetime")  # type: ignore[arg-type]
-    result_forward = df.join_asof(
+    result = df.join_asof(
         df_right,  # type: ignore[arg-type]
         left_on="datetime",
         right_on="datetime",
-        strategy="forward",
+        strategy=strategy,
     )
-    result_nearest = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="datetime",
-        right_on="datetime",
-        strategy="nearest",
-    )
-    result_backward_on = df.join_asof(df_right, on="datetime")  # type: ignore[arg-type]
-    result_forward_on = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        on="datetime",
-        strategy="forward",
-    )
-    result_nearest_on = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        on="datetime",
-        strategy="nearest",
-    )
-    expected_backward = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4164, 4566, 4696],
-    }
-    expected_forward = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4411, 4696, 4696],
-    }
-    expected_nearest = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4164, 4696, 4696],
-    }
-    assert_equal_data(result_backward, expected_backward)
-    assert_equal_data(result_forward, expected_forward)
-    assert_equal_data(result_nearest, expected_nearest)
-    assert_equal_data(result_backward_on, expected_backward)
-    assert_equal_data(result_forward_on, expected_forward)
-    assert_equal_data(result_nearest_on, expected_nearest)
+    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)  # type: ignore[arg-type]
+    assert_equal_data(result.sort(by="datetime"), expected)
+    assert_equal_data(result_on.sort(by="datetime"), expected)
 
 
 def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -527,15 +538,45 @@ def test_joinasof_by(
         "c": [9, 2, 1, 1],
         "d": [1, 3, None, 4],
     }
-    assert_equal_data(result, expected)
-    assert_equal_data(result_by, expected)
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_by.sort(by="antananarivo"), expected)
+
+
+def test_joinasof_suffix(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
+    ).sort("antananarivo")
+    df_right = nw.from_native(
+        constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
+    ).sort("antananarivo")
+    result = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        suffix="_y",
+    )
+    expected = {
+        "antananarivo": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_y": [1, 3, 7],
+    }
+    assert_equal_data(result.sort(by="antananarivo"), expected)
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
 def test_joinasof_not_implemented(
     constructor: Constructor, strategy: Literal["backward", "forward"]
 ) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -551,7 +592,7 @@ def test_joinasof_not_implemented(
 
 
 def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(
@@ -592,7 +633,7 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
 
 
 def test_joinasof_by_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8, 9]}
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     with pytest.raises(
         ValueError,

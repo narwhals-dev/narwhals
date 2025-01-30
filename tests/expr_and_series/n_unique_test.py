@@ -7,13 +7,13 @@ from tests.utils import assert_equal_data
 
 data = {
     "a": [1.0, None, None, 3.0],
-    "b": [1.0, None, 4, 5.0],
+    "b": [1.0, None, 4.0, 5.0],
 }
 
 
 def test_n_unique(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a", "b").n_unique())
+    result = df.select(nw.all().n_unique())
     expected = {"a": [3], "b": [4]}
     assert_equal_data(result, expected)
 

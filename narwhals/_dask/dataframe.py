@@ -3,18 +3,22 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
+
+import dask.dataframe as dd
+import pandas as pd
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
+from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -23,21 +27,18 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import dask.dataframe as dd
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._dask.typing import IntoDaskExpr
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
 class DaskLazyFrame(CompliantLazyFrame):
     def __init__(
-        self,
+        self: Self,
         native_dataframe: dd.DataFrame,
         *,
         backend_version: tuple[int, ...],
@@ -56,80 +57,104 @@ class DaskLazyFrame(CompliantLazyFrame):
         msg = f"Expected dask, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_namespace__(self) -> DaskNamespace:
+    def __narwhals_namespace__(self: Self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_version(self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_frame(self: Self, df: Any) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
 
-    def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
+    def with_columns(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_frame
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
-    def collect(self: Self, **kwargs: Any) -> PandasLikeDataFrame:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
         import pandas as pd
 
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
         result = self._native_frame.compute(**kwargs)
-        return PandasLikeDataFrame(
-            result,
-            implementation=Implementation.PANDAS,
-            backend_version=parse_version(pd.__version__),
-            version=self._version,
-        )
+
+        if backend in (None, "pandas", Implementation.PANDAS, pd):
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                result,
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        elif backend in ("polars", Implementation.POLARS, get_polars()):
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                pl.from_pandas(result),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        elif backend in ("pyarrow", Implementation.PYARROW, get_pyarrow()):
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                pa.Table.from_pandas(result),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        else:
+            msg = f"Unsupported `backend` value: {backend}"
+            raise ValueError(msg)
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
-    def filter(self, *predicates: DaskExpr, **constraints: Any) -> Self:
+    def filter(self: Self, *predicates: DaskExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
         )
         # `[0]` is safe as all_horizontal's expression only returns a single column
         mask = expr._call(self)[0]
+
         return self._from_native_frame(self._native_frame.loc[mask])
 
-    def select(
-        self: Self,
-        *exprs: IntoDaskExpr,
-        **named_exprs: IntoDaskExpr,
-    ) -> Self:
-        import dask.dataframe as dd
-
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple slice => fastpath!
-            return self._from_native_frame(
-                select_columns_by_name(
-                    self._native_frame,
-                    list(exprs),  # type: ignore[arg-type]
-                    self._backend_version,
-                    self._implementation,
-                )
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(
+            select_columns_by_name(
+                self._native_frame,
+                list(column_names),
+                self._backend_version,
+                self._implementation,
             )
+        )
 
+    def select(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_series:
             # return empty dataframe, like Polars does
-            import pandas as pd
-
             return self._from_native_frame(
                 dd.from_pandas(pd.DataFrame(), npartitions=self._native_frame.npartitions)
             )
@@ -150,15 +175,14 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna())
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         return {
             col: native_to_narwhals_dtype(
                 self._native_frame[col], self._version, self._implementation
@@ -166,7 +190,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             for col in self._native_frame.columns
         }
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -215,12 +239,10 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -228,14 +250,14 @@ class DaskLazyFrame(CompliantLazyFrame):
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
         return self._from_native_frame(
-            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+            df.sort_values(list(by), ascending=ascending, na_position=na_position)
         )
 
     def join(
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -345,16 +367,15 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
 
     def join_asof(
-        self,
+        self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
         return self._from_native_frame(
@@ -363,25 +384,23 @@ class DaskLazyFrame(CompliantLazyFrame):
                 other._native_frame,
                 left_on=left_on,
                 right_on=right_on,
-                on=on,
                 left_by=by_left,
                 right_by=by_right,
-                by=by,
                 direction=strategy,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             ),
         )
 
-    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
+    def group_by(self: Self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
         return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
-    def tail(self: Self, n: int) -> Self:
+    def tail(self: Self, n: int) -> Self:  # pragma: no cover
         native_frame = self._native_frame
         n_partitions = native_frame.npartitions
 
-        if n_partitions == 1:  # pragma: no cover
+        if n_partitions == 1:
             return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
