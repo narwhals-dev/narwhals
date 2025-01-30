@@ -54,8 +54,11 @@ def test_explode_single_col(
         .select("a", column)
     )
     expected = {"a": ["x", "x", "y", "z", "w"], column: expected_values}
-    for col in result.columns:
-        assert_equal_data(result.select(col), {col: expected[col]})
+    if "duckdb" in str(constructor):
+        for col in result.columns:
+            assert_equal_data(result.select(col), {col: expected[col]})
+    else:
+        assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -90,7 +93,7 @@ def test_explode_multiple_cols(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "pyspark")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -103,8 +106,7 @@ def test_explode_multiple_cols(
         .explode(columns, *more_columns)
         .select("a", columns, *more_columns)
     )
-    for col in result.columns:
-        assert_equal_data(result.select(col), {col: expected[col]})
+    assert_equal_data(result, expected)
 
 
 def test_explode_shape_error(

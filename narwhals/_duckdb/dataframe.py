@@ -418,6 +418,13 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 )
                 raise InvalidOperationError(msg)
 
+        if len(to_explode) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with DuckDB backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
+            )
+            raise NotImplementedError(msg)
+
         rel = self._native_frame  # noqa: F841
         columns = self.columns
         select_unnest_statement = ", ".join(
@@ -425,7 +432,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             for col in columns
         )
         select_null_statement = ", ".join(
-            f'NULL as "{col}"' if col in to_explode else f'"{col}"' for col in columns
+            f'null as "{col}"' if col in to_explode else f'"{col}"' for col in columns
         )
         where_condition = " and ".join(
             f'"{col}" is not null and len("{col}") > 0' for col in to_explode
