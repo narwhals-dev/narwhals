@@ -9,6 +9,7 @@ from typing import Sequence
 from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -20,7 +21,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from pyspark.sql import Column
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
@@ -316,8 +316,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         )
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        from narwhals.exceptions import InvalidOperationError
-
         dtypes = import_dtypes_module(self._version)
 
         to_explode = (
@@ -339,32 +337,20 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         native_frame = self._native_frame
         column_names = self.columns
 
-        def null_condition(col_name: str) -> Column:
-            return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
-
-        if len(to_explode) == 1:
-            return self._from_native_frame(
-                native_frame.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != to_explode[0]
-                        else self._F.explode(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                ).union(
-                    native_frame.filter(null_condition(to_explode[0])).select(
-                        *[
-                            self._F.col(col_name).alias(col_name)
-                            if col_name != to_explode[0]
-                            else self._F.lit(None).alias(col_name)
-                            for col_name in column_names
-                        ]
-                    )
-                )
+        if len(to_explode) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with SparkLike backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
             )
+            raise NotImplementedError(msg)
 
-        msg = (
-            "Exploding on multiple columns is not supported with SparkLike backend since "
-            "we cannot guarantee that the exploded columns have matching element counts."
+        return self._from_native_frame(
+            native_frame.select(
+                *[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != to_explode[0]
+                    else self._F.explode_outer(col_name).alias(col_name)
+                    for col_name in column_names
+                ]
+            )
         )
-        raise NotImplementedError(msg)
