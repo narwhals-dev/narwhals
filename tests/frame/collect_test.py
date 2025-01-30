@@ -12,6 +12,7 @@ import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -42,6 +43,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
     assert isinstance(result, expected_cls)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.parametrize(
     ("backend", "expected_cls"),
     [

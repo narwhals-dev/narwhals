@@ -533,13 +533,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            if self._implementation is Implementation.CUDF:
-                pa_native = self._native_frame.to_arrow(preserve_index=False)
-            else:
-                pa_native = pa.Table.from_pandas(self._native_frame)
-
             return ArrowDataFrame(
-                native_dataframe=pa_native,
+                native_dataframe=self.to_arrow(),
                 backend_version=parse_version(pa.__version__),
                 version=self._version,
             )
@@ -549,15 +544,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            if self._implementation is Implementation.PANDAS:
-                pl_native = pl.from_pandas(self._native_frame)
-            elif self._implementation is Implementation.CUDF:  # pragma: no cover
-                pl_native = pl.from_pandas(self._native_frame.to_pandas())
-            elif self._implementation is Implementation.MODIN:
-                pl_native = pl.from_pandas(self._native_frame._to_pandas())
-
             return PolarsDataFrame(
-                df=pl_native,
+                df=self.to_polars(),
                 backend_version=parse_version(pl.__version__),
                 version=self._version,
             )
