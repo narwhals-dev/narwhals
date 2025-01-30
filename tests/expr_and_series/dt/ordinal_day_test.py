@@ -4,7 +4,6 @@ from datetime import datetime
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
 
@@ -30,8 +29,14 @@ def test_ordinal_day(dates: datetime) -> None:
         pd.Series([dates]).convert_dtypes(dtype_backend="numpy_nullable"),
         series_only=True,
     ).dt.ordinal_day()[0]
-    result_pl = nw.from_native(pl.Series([dates]), series_only=True).dt.ordinal_day()[0]
-    assert result_pd == result_pl
-    assert result_pda == result_pl
-    assert result_pdn == result_pl
-    assert result_pdms == result_pl
+    assert result_pda == result_pd
+    assert result_pdn == result_pd
+    assert result_pdms == result_pd
+
+    try:
+        import polars as pl
+    except ImportError:
+        pass
+    else:
+        result_pl = nw.from_native(pl.Series([dates]), series_only=True).dt.ordinal_day()[0]
+        assert result_pl == result_pd

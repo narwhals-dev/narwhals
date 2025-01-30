@@ -5,7 +5,6 @@ from typing import Any
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 from hypothesis import given
@@ -130,10 +129,15 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
 
-    result = nw.from_native(pl.from_pandas(df)).select(
-        nw.col("a").rolling_var(
-            window_size, center=center, min_samples=min_samples, ddof=ddof
+    try:
+        import polars as pl
+    except ImportError:
+        pass
+    else:
+        result = nw.from_native(pl.from_pandas(df)).select(
+            nw.col("a").rolling_var(
+                window_size, center=center, min_samples=min_samples, ddof=ddof
+            )
         )
-    )
-    expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
-    assert_equal_data(result, expected_dict)
+        expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
+        assert_equal_data(result, expected_dict)

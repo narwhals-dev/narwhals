@@ -5,7 +5,6 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
-from polars.exceptions import ComputeError
 
 import narwhals.stable.v1 as nw
 from tests.conftest import dask_lazy_p1_constructor
@@ -51,14 +50,15 @@ def test_nan(constructor: Constructor) -> None:
             "float_na": [True, False, None],
         }
 
-    context = (
-        pytest.raises(
-            ComputeError, match="NAN is not supported in a Non-floating point type column"
+    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU", False):
+        from polars.exceptions import ComputeError
+        context = (
+            pytest.raises(
+                ComputeError, match="NAN is not supported in a Non-floating point type column"
+            )
         )
-        if "polars_lazy" in str(constructor)
-        and os.environ.get("NARWHALS_POLARS_GPU", False)
-        else does_not_raise()
-    )
+    else:
+        context = does_not_raise()
     with context:
         assert_equal_data(result, expected)
 
@@ -96,8 +96,6 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
 def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-    from pyarrow.lib import ArrowNotImplementedError
 
     from narwhals.exceptions import InvalidOperationError as NwInvalidOperationError
 
@@ -106,8 +104,10 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
 
     exc = NwInvalidOperationError
     if "polars" in str(constructor):
+        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
         exc = PlInvalidOperationError
     elif "pyarrow_table" in str(constructor):
+        from pyarrow.lib import ArrowNotImplementedError
         exc = ArrowNotImplementedError
 
     with pytest.raises(exc):
@@ -115,9 +115,6 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
-    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-    from pyarrow.lib import ArrowNotImplementedError
-
     from narwhals.exceptions import InvalidOperationError as NwInvalidOperationError
 
     data = {"a": ["x", "y"]}
@@ -125,8 +122,10 @@ def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
 
     exc = NwInvalidOperationError
     if "polars" in str(constructor_eager):
+        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
         exc = PlInvalidOperationError
     elif "pyarrow_table" in str(constructor_eager):
+        from pyarrow.lib import ArrowNotImplementedError
         exc = ArrowNotImplementedError
 
     with pytest.raises(exc):

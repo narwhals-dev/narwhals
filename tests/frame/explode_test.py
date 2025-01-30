@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import Sequence
 
 import pytest
-from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
@@ -116,9 +114,12 @@ def test_explode_shape_error(
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
-
+    expected_exceptions = (ShapeError,)
+    if "polars" in str(constructor):
+        from polars.exceptions import ShapeError as PlShapeError
+        expected_exceptions = expected_exceptions + (PlShapeError,)
     with pytest.raises(
-        (ShapeError, PlShapeError),
+        expected_exceptions,
         match="exploded columns must have matching element counts",
     ):
         _ = (
@@ -139,8 +140,12 @@ def test_explode_invalid_operation_error(
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
         request.applymarker(pytest.mark.xfail)
 
+    expected_exceptions = (InvalidOperationError,)
+    if "polars" in str(constructor):
+        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
+        expected_exceptions = expected_exceptions + (PlInvalidOperationError,)
     with pytest.raises(
-        (InvalidOperationError, PlInvalidOperationError),
+        expected_exceptions,
         match="`explode` operation not supported for dtype",
     ):
         _ = nw.from_native(constructor(data)).lazy().explode("a").collect()
