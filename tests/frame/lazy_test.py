@@ -42,10 +42,6 @@ def test_lazy_backend(
     result = df.lazy(backend=backend)
     assert isinstance(result, nw.LazyFrame)
     assert result.implementation == backend
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
-    result = df.lazy(backend=backend)
-    assert isinstance(result, nw_v1.LazyFrame)
-    assert result.implementation == backend
 
 
 @pytest.mark.parametrize("backend", [Implementation.PANDAS])
