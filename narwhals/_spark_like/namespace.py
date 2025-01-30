@@ -91,7 +91,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
                 )
                 column = column.cast(native_dtype)
 
-            return [column.alias("literal")]
+            return [column]
 
         return SparkLikeExpr(
             call=_lit,
