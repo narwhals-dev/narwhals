@@ -144,11 +144,11 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
-        # the backwards compatibility because in `narwhals.stable.v1`
+        # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
 
-        if backend is not None:
-            msg = "`backend` argument is not support for DuckDB"
+        if backend is not None:  # pragma: no cover
+            msg = "`backend` argument is not supported for DuckDB"
             raise ValueError(msg)
         return self
 
