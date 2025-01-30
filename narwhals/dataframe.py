@@ -501,10 +501,13 @@ class DataFrame(BaseFrame[DataFrameT]):
     def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
         """Lazify the DataFrame (if possible).
 
-        If a library does not support lazy execution, then this is a no-op.
-
-        If `backend` is specified some conversions between libraries can occur.
-
+        If `backend` is specified, then a conversion between different backends
+        might be triggered.
+        If a library does not support lazy execution and `backend` is not specified,
+        then this is a no-op.
+        
+        Arguments:
+            backend: specifies which Implementation to convert to.
         Returns:
             A new LazyFrame.
 
