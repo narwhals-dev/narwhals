@@ -84,10 +84,8 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
             if dtype:
-                import pyspark.sql.types as pyspark_types
-
                 native_dtype = narwhals_to_native_dtype(
-                    dtype, self._version, pyspark_types
+                    dtype, version=self._version, spark_types=df._native_dtypes
                 )
                 column = column.cast(native_dtype)
 

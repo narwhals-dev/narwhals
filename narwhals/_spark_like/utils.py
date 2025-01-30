@@ -104,6 +104,9 @@ def narwhals_to_native_dtype(
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return spark_types.DateType()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        if dt_time_zone is None:
+            return spark_types.TimestampNTZType()
         return spark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
