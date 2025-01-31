@@ -19,7 +19,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from types import ModuleType
 
-if PANDAS_VERSION < (1,):
+if PANDAS_VERSION < (1,):  # pragma: no cover
     pytest.skip(allow_module_level=True)
 
 
