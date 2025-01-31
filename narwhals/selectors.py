@@ -39,7 +39,7 @@ class Selector(Expr):
         raise NotImplementedError
 
 
-def by_dtype(*dtypes: DType | Iterable[DType]) -> Selector:
+def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Selector:
     """Select columns based on their dtype.
 
     Arguments:
