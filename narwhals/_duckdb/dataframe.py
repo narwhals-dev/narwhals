@@ -3,19 +3,19 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+import duckdb
 from duckdb import ColumnExpression
 
+from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -24,7 +24,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import duckdb
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -33,11 +32,12 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
-    from narwhals._duckdb.typing import IntoDuckDBExpr
     from narwhals.dtypes import DType
 
+from narwhals.typing import CompliantLazyFrame
 
-class DuckDBLazyFrame:
+
+class DuckDBLazyFrame(CompliantLazyFrame):
     _implementation = Implementation.DUCKDB
 
     def __init__(
@@ -97,24 +97,37 @@ class DuckDBLazyFrame:
     def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
 
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(*column_names))
+
     def select(
         self: Self,
-        *exprs: IntoDuckDBExpr,
-        **named_exprs: IntoDuckDBExpr,
+        *exprs: DuckDBExpr,
+        **named_exprs: DuckDBExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(self._native_frame.limit(0))
 
-        if all(getattr(x, "_returns_scalar", False) for x in exprs) and all(
-            getattr(x, "_returns_scalar", False) for x in named_exprs.values()
+        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs) and not any(
+            expr._expr_kind is ExprKind.TRANSFORM for expr in named_exprs.values()
         ):
             return self._from_native_frame(
                 self._native_frame.aggregate(
                     [val.alias(col) for col, val in new_columns_map.items()]
                 )
             )
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
+            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
+        ):
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
+            raise NotImplementedError(msg)
 
         return self._from_native_frame(
             self._native_frame.select(
@@ -134,10 +147,22 @@ class DuckDBLazyFrame:
 
     def with_columns(
         self: Self,
-        *exprs: IntoDuckDBExpr,
-        **named_exprs: IntoDuckDBExpr,
+        *exprs: DuckDBExpr,
+        **named_exprs: DuckDBExpr,
     ) -> Self:
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
+            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
+        ):
+            msg = (
+                "Mixing expressions which aggregate and expressions which don't\n"
+                "is not yet supported by the DuckDB backend. Once they introduce\n"
+                "duckdb.WindowExpression to their Python API, we'll be able to\n"
+                "support this."
+            )
+            raise NotImplementedError(msg)
+
         result = []
         for col in self._native_frame.columns:
             if col in new_columns_map:
@@ -258,6 +283,51 @@ class DuckDBLazyFrame:
         res = rel.select(", ".join(select)).set_alias(original_alias)
         return self._from_native_frame(res)
 
+    def join_asof(
+        self: Self,
+        other: Self,
+        *,
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
+    ) -> Self:
+        lhs = self._native_frame
+        rhs = other._native_frame
+        conditions = []
+        if by_left is not None and by_right is not None:
+            conditions += [
+                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
+            ]
+        else:
+            by_left = by_right = []
+        if strategy == "backward":
+            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
+        elif strategy == "forward":
+            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
+        else:
+            msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
+            raise NotImplementedError(msg)
+        condition = " and ".join(conditions)
+        select = ["lhs.*"]
+        for col in rhs.columns:
+            if col in lhs.columns and (
+                right_on is None or col not in [right_on, *by_right]
+            ):
+                select.append(f'rhs."{col}" as "{col}{suffix}"')
+            elif right_on is None or col not in [right_on, *by_right]:
+                select.append(col)
+        query = f"""
+            SELECT {",".join(select)}
+            FROM lhs
+            ASOF LEFT JOIN rhs
+            ON {condition}
+            """  # noqa: S608
+        res = duckdb.sql(query)
+        return self._from_native_frame(res)
+
     def collect_schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
@@ -297,14 +367,12 @@ class DuckDBLazyFrame:
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):
-            descending = [descending] * len(flat_by)
+            descending = [descending] * len(by)
         descending_str = ["desc" if x else "" for x in descending]
 
         result = self._native_frame.order(
@@ -313,7 +381,7 @@ class DuckDBLazyFrame:
                     f'"{col}" {desc} nulls last'
                     if nulls_last
                     else f'"{col}" {desc} nulls first'
-                    for col, desc in zip(flat_by, descending_str)
+                    for col, desc in zip(by, descending_str)
                 )
             )
         )

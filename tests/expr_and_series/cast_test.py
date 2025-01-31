@@ -55,6 +55,7 @@ SCHEMA = {
 }
 
 SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -62,8 +63,6 @@ def test_cast(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -74,6 +73,8 @@ def test_cast(
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "duckdb" in str(constructor):
+        incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 

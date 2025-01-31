@@ -5,70 +5,69 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals._spark_like.expr import SparkLikeExpr
+from narwhals._spark_like.utils import ExprKind
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
     from narwhals.utils import Version
 
 
-class PandasSelectorNamespace:
+class SparkLikeSelectorNamespace:
     def __init__(
         self: Self,
         *,
-        implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> None:
-        self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
+        self._implementation = implementation
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> PandasSelector:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [df[col] for col in df.columns if df.schema[col] in dtypes]
+    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> SparkLikeSelector:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(col) for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
-        return PandasSelector(
+        return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
-            implementation=self._implementation,
             backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
-            kwargs={"dtypes": dtypes},
+            implementation=self._implementation,
         )
 
-    def matches(self: Self, pattern: str) -> PandasSelector:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [df[col] for col in df.columns if re.search(pattern, col)]
+    def matches(self: Self, pattern: str) -> SparkLikeSelector:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(col) for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
-        return PandasSelector(
+        return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
-            implementation=self._implementation,
             backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
-            kwargs={"pattern": pattern},
+            implementation=self._implementation,
         )
 
-    def numeric(self: Self) -> PandasSelector:
+    def numeric(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             [
@@ -87,88 +86,81 @@ class PandasSelectorNamespace:
             ],
         )
 
-    def categorical(self: Self) -> PandasSelector:
+    def categorical(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Categorical])
 
-    def string(self: Self) -> PandasSelector:
+    def string(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.String])
 
-    def boolean(self: Self) -> PandasSelector:
+    def boolean(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype([dtypes.Boolean])
 
-    def all(self: Self) -> PandasSelector:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [df[col] for col in df.columns]
+    def all(self: Self) -> SparkLikeSelector:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(col) for col in df.columns]
 
-        return PandasSelector(
+        return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
-            implementation=self._implementation,
             backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
-            kwargs={},
+            implementation=self._implementation,
         )
 
 
-class PandasSelector(PandasLikeExpr):
-    def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"PandasSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-        )
+class SparkLikeSelector(SparkLikeExpr):
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        return f"SparkLikeSelector(" f"function_name={self._function_name})"
 
-    def _to_expr(self: Self) -> PandasLikeExpr:
-        return PandasLikeExpr(
+    def _to_expr(self: Self) -> SparkLikeExpr:
+        return SparkLikeExpr(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            implementation=self._implementation,
             backend_version=self._backend_version,
+            expr_kind=self._expr_kind,
             version=self._version,
-            kwargs=self._kwargs,
+            implementation=self._implementation,
         )
 
-    def __sub__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
-        if isinstance(other, PandasSelector):
+    def __sub__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
+        if isinstance(other, SparkLikeSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: SparkLikeLazyFrame) -> list[Column]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name not in rhs_names]
 
-            def evaluate_output_names(df: PandasLikeDataFrame) -> list[str]:
+            def evaluate_output_names(df: SparkLikeLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x not in rhs_names]
 
-            return PandasSelector(
+            return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
-                implementation=self._implementation,
                 backend_version=self._backend_version,
+                expr_kind=self._expr_kind,
                 version=self._version,
-                kwargs={**self._kwargs, "other": other},
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() - other
 
-    def __or__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
-        if isinstance(other, PandasSelector):
+    def __or__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
+        if isinstance(other, SparkLikeSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: SparkLikeLazyFrame) -> list[Column]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -178,59 +170,57 @@ class PandasSelector(PandasLikeExpr):
                     *rhs,
                 ]
 
-            def evaluate_output_names(df: PandasLikeDataFrame) -> list[str]:
+            def evaluate_output_names(df: SparkLikeLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
-            return PandasSelector(
+            return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
-                implementation=self._implementation,
                 backend_version=self._backend_version,
+                expr_kind=self._expr_kind,
                 version=self._version,
-                kwargs={**self._kwargs, "other": other},
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() | other
 
-    def __and__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:
-        if isinstance(other, PandasSelector):
+    def __and__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
+        if isinstance(other, SparkLikeSelector):
 
-            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def call(df: SparkLikeLazyFrame) -> list[Column]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
                 return [x for x, name in zip(lhs, lhs_names) if name in rhs_names]
 
-            def evaluate_output_names(df: PandasLikeDataFrame) -> list[str]:
+            def evaluate_output_names(df: SparkLikeLazyFrame) -> list[str]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x in rhs_names]
 
-            return PandasSelector(
+            return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
-                implementation=self._implementation,
                 backend_version=self._backend_version,
+                expr_kind=self._expr_kind,
                 version=self._version,
-                kwargs={**self._kwargs, "other": other},
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() & other
 
-    def __invert__(self: Self) -> PandasSelector:
+    def __invert__(self: Self) -> SparkLikeSelector:
         return (
-            PandasSelectorNamespace(
-                implementation=self._implementation,
+            SparkLikeSelectorNamespace(
                 backend_version=self._backend_version,
                 version=self._version,
+                implementation=self._implementation,
             ).all()
             - self
         )

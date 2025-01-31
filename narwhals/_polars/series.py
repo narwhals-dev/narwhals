@@ -273,10 +273,16 @@ class PolarsSeries:
         half_life: float | None,
         alpha: float | None,
         adjust: bool,
-        min_periods: int,
+        min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
         native_series = self._native_series
+
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
 
         native_result = native_series.ewm_mean(
             com=com,
@@ -284,8 +290,8 @@ class PolarsSeries:
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
             ignore_nulls=ignore_nulls,
+            **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
             import polars as pl
@@ -302,7 +308,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -310,12 +316,18 @@ class PolarsSeries:
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
         return self._from_native_series(
             self._native_series.rolling_var(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 
@@ -323,7 +335,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -331,12 +343,60 @@ class PolarsSeries:
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
         return self._from_native_series(
             self._native_series.rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int | None,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_series(
+            self._native_series.rolling_sum(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int | None,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_series(
+            self._native_series.rolling_mean(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 

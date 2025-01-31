@@ -13,9 +13,8 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import binary_operation_returns_scalar
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import infer_new_root_output_names
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
@@ -45,8 +44,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         # Whether the expression is a length-1 Series resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
@@ -57,8 +56,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
         self._version = version
@@ -96,8 +95,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -120,8 +119,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
             version=version,
@@ -135,48 +134,51 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         expr_name: str,
         *,
         returns_scalar: bool,
-        **kwargs: Any,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            results = []
-            inputs = self._call(df)
-            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
-            for _input in inputs:
-                name = _input.name
+            native_results: list[dx.Series] = []
+            native_series_list = self._call(df)
+            other_native_series = {
+                key: maybe_evaluate(df, value)
+                for key, value in expressifiable_args.items()
+            }
+            for native_series in native_series_list:
                 if self._returns_scalar:
-                    _input = _input[0]
-                result = call(_input, **_kwargs)
+                    result_native = call(native_series[0], **other_native_series)
+                else:
+                    result_native = call(native_series, **other_native_series)
                 if returns_scalar:
-                    result = result.to_series()
-                result = result.rename(name)
-                results.append(result)
-            return results
-
-        root_names, output_names = infer_new_root_output_names(self, **kwargs)
+                    native_results.append(result_native.to_series())
+                else:
+                    native_results.append(result_native)
+            return native_results
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            root_names=root_names,
-            output_names=output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             returns_scalar=returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, **kwargs},
+            kwargs={**self._kwargs, **expressifiable_args},
         )
 
     def alias(self: Self, name: str) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            inputs = self._call(df)
-            return [_input.rename(name) for _input in inputs]
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
 
         return self.__class__(
-            func,
+            self._call,
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=[name],
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
@@ -659,18 +661,24 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            if self._output_names is None:
-                msg = "over"
-                raise AnonymousExprError.from_expr_name(msg)
-
+            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+            if overlap := set(output_names).intersection(keys):
+                # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                # we just don't support it yet.
+                msg = (
+                    f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                    "This is not yet supported."
+                )
+                raise NotImplementedError(msg)
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp_native = (
-                    df.select(*keys)
+                    df.simple_select(*keys)
                     .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
                     ._native_frame
                 )
-                return [tmp_native[name] for name in self._output_names]
+                return [tmp_native[name] for name in aliases]
+            # https://github.com/dask/dask/issues/6659
             msg = (
                 "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
@@ -680,8 +688,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,

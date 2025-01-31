@@ -14,4 +14,4 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 
-    IntoPolarsExpr: TypeAlias = Union[PolarsExpr, str, PolarsSeries]
+    IntoPolarsExpr: TypeAlias = Union[PolarsExpr, PolarsSeries]

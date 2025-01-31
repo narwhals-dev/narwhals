@@ -75,7 +75,7 @@ class InvalidIntoExprError(TypeError):
         return InvalidIntoExprError(message)
 
 
-class AnonymousExprError(ValueError):
+class AnonymousExprError(ValueError):  # pragma: no cover
     """Exception raised when trying to perform operations on anonymous expressions."""
 
     def __init__(self: Self, message: str) -> None:

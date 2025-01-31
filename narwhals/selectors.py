@@ -87,6 +87,62 @@ def by_dtype(*dtypes: Any) -> Expr:
     )
 
 
+def matches(pattern: str) -> Expr:
+    """Select all columns that match the given regex pattern.
+
+    Arguments:
+        pattern: A valid regular expression pattern.
+
+    Returns:
+        A new expression.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {
+        ...     "foo": ["x", "y"],
+        ...     "bar": [123, 456],
+        ...     "baz": [2.0, 5.5],
+        ...     "zap": [0, 1],
+        ... }
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.DataFrame(data)
+
+        Let's define a dataframe-agnostic function to select column names
+        containing an 'a', preceded by a character that is not 'z':
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(ncs.matches("[^z]a"))
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           bar  baz
+        0  123  2.0
+        1  456  5.5
+        >>> func(df_pl)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ bar ┆ baz │
+        │ --- ┆ --- │
+        │ i64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 123 ┆ 2.0 │
+        │ 456 ┆ 5.5 │
+        └─────┴─────┘
+    """
+    return Selector(
+        lambda plx: plx.selectors.matches(pattern),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
+
+
 def numeric() -> Expr:
     """Select numeric columns.
 

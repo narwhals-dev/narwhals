@@ -598,7 +598,7 @@ class Series(Generic[IntoSeriesT]):
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -623,7 +623,7 @@ class Series(Generic[IntoSeriesT]):
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -683,7 +683,7 @@ class Series(Generic[IntoSeriesT]):
                 half_life=half_life,
                 alpha=alpha,
                 adjust=adjust,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
             )
         )
@@ -4424,7 +4424,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -4442,7 +4442,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -4500,8 +4500,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         if len(self) == 0:  # pragma: no cover
@@ -4510,7 +4510,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             )
         )
@@ -4519,7 +4519,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -4537,7 +4537,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -4595,8 +4595,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         if len(self) == 0:  # pragma: no cover
@@ -4605,7 +4605,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(
             self._compliant_series.rolling_mean(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
             )
         )
@@ -4614,7 +4614,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4633,7 +4633,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4659,7 +4659,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def agnostic_rolling_var(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.rolling_var(window_size=2, min_periods=1).to_native()
+            ...     return s.rolling_var(window_size=2, min_samples=1).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_rolling_var`:
@@ -4692,8 +4692,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         if len(self) == 0:  # pragma: no cover
@@ -4701,7 +4701,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
         )
 
@@ -4709,7 +4709,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4728,7 +4728,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4754,7 +4754,7 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def agnostic_rolling_std(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
-            ...     return s.rolling_std(window_size=2, min_periods=1).to_native()
+            ...     return s.rolling_std(window_size=2, min_samples=1).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_rolling_std`:
@@ -4787,8 +4787,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         if len(self) == 0:  # pragma: no cover
@@ -4796,7 +4796,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rolling_std(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
         )
 

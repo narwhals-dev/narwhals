@@ -23,7 +23,7 @@ class DuckDBExprStringNamespace:
                 "starts_with", _input, ConstantExpression(prefix)
             ),
             "starts_with",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def ends_with(self: Self, suffix: str) -> DuckDBExpr:
@@ -32,7 +32,7 @@ class DuckDBExprStringNamespace:
                 "ends_with", _input, ConstantExpression(suffix)
             ),
             "ends_with",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def contains(self: Self, pattern: str, *, literal: bool) -> DuckDBExpr:
@@ -44,7 +44,7 @@ class DuckDBExprStringNamespace:
             )
 
         return self._compliant_expr._from_call(
-            func, "contains", returns_scalar=self._compliant_expr._returns_scalar
+            func, "contains", expr_kind=self._compliant_expr._expr_kind
         )
 
     def slice(self: Self, offset: int, length: int) -> DuckDBExpr:
@@ -61,28 +61,28 @@ class DuckDBExprStringNamespace:
             )
 
         return self._compliant_expr._from_call(
-            func, "slice", returns_scalar=self._compliant_expr._returns_scalar
+            func, "slice", expr_kind=self._compliant_expr._expr_kind
         )
 
     def len_chars(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("length", _input),
             "len_chars",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def to_lowercase(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("lower", _input),
             "to_lowercase",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def to_uppercase(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("upper", _input),
             "to_uppercase",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def strip_chars(self: Self, characters: str | None) -> DuckDBExpr:
@@ -97,7 +97,7 @@ class DuckDBExprStringNamespace:
                 ),
             ),
             "strip_chars",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
@@ -111,14 +111,14 @@ class DuckDBExprStringNamespace:
                     ConstantExpression("g"),
                 ),
                 "replace_all",
-                returns_scalar=self._compliant_expr._returns_scalar,
+                expr_kind=self._compliant_expr._expr_kind,
             )
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
                 "replace", _input, ConstantExpression(pattern), ConstantExpression(value)
             ),
             "replace_all",
-            returns_scalar=self._compliant_expr._returns_scalar,
+            expr_kind=self._compliant_expr._expr_kind,
         )
 
     def replace(
