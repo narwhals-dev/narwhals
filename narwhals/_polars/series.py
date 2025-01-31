@@ -425,22 +425,16 @@ class PolarsSeries:
         include_breakpoint: bool = True,
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
-        from narwhals.exceptions import InvalidOperationError
 
-        # check for monotonicity, polars<1.0 does not do this.
-        if bins is not None:
-            for i in range(1, len(bins)):
-                if bins[i - 1] >= bins[i]:
-                    msg = "bins must increase monotonically"
-                    raise InvalidOperationError(msg)
-
-        # polars<1.0 returned bins -inf to inf in these conditions
-        if (self._backend_version < (1, 0)) and ((len(bins) == 0) or (bin_count == 0)):  # type:ignore[arg-type]
+        # polars<1.15 returned bins -inf to inf OR fails in these conditions
+        if (self._backend_version < (1, 15)) and (
+            (bins is not None and len(bins) == 0) or (bin_count == 0)
+        ):
             data: list[pl.Series] = []
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
             if include_category:
-                data.append(pl.Series("category", [], dtype=pl.Category))
+                data.append(pl.Series("category", [], dtype=pl.Categorical))
             data.append(pl.Series("count", [], dtype=pl.UInt32))
             return PolarsDataFrame(
                 pl.DataFrame(data),
@@ -457,14 +451,13 @@ class PolarsSeries:
         if not include_category and not include_breakpoint:
             df.columns = ["count"]
 
-        if self._backend_version < (1, 0):  # pragma: no cover
-            if (
-                bins is not None
-            ):  #  polars<1.0 implicitly adds -inf and inf to either end of bins
-                r = pl.int_range(0, len(df))
-                df = df.filter((r > 0) & (r < len(df) - 1))
-            if include_breakpoint:
-                df = df.rename({"break_point": "breakpoint"})
+        if self._backend_version < (1, 15) and bins is not None:  # pragma: no cover
+            #  polars<1.15 implicitly adds -inf and inf to either end of bins
+            r = pl.int_range(0, len(df))
+            df = df.filter((r > 0) & (r < len(df) - 1))
+
+        if self._backend_version < (1, 0) and include_breakpoint:
+            df = df.rename({"break_point": "breakpoint"})
 
         return PolarsDataFrame(
             df, backend_version=self._backend_version, version=self._version

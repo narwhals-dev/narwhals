@@ -40,6 +40,10 @@ class ColumnNotFoundError(FormattedKeyError):
         return ColumnNotFoundError(message)
 
 
+class ComputeError(Exception):
+    """Exception raised when the underlying computation could not be evaluated."""
+
+
 class ShapeError(Exception):
     """Exception raised when trying to perform operations on data structures with incompatible shapes."""
 

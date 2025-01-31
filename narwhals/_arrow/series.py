@@ -1007,11 +1007,11 @@ class ArrowSeries(CompliantSeries):
 
     def hist(
         self: Self,
-        bins: list[float | int] | None = None,
+        bins: list[float | int] | None,
         *,
-        bin_count: int | None = None,
-        include_category: bool = True,
-        include_breakpoint: bool = True,
+        bin_count: int | None,
+        include_category: bool,
+        include_breakpoint: bool,
     ) -> ArrowDataFrame:
         import numpy as np  # ignore-banned-import
 

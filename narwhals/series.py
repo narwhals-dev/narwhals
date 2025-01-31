@@ -12,7 +12,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -4924,12 +4924,17 @@ class Series(Generic[IntoSeriesT]):
         Returns:
             A new DataFrame containing the counts of values that occur within each passed bin.
         """
-        if bins is None and bin_count is None:
-            msg = "must provide one of `bin_count` or `bins`"
-            raise InvalidOperationError(msg)
         if bins is not None and bin_count is not None:
             msg = "can only provide one of `bin_count` or `bins`"
-            raise InvalidOperationError(msg)
+            raise ComputeError(msg)
+        if bins is None and bin_count is None:
+            bin_count = 10  # polars (v1.20) sets bin=10 if neither are provided.
+
+        if bins is not None:
+            for i in range(1, len(bins)):
+                if bins[i - 1] >= bins[i]:
+                    msg = "bins must increase monotonically"
+                    raise ComputeError(msg)
 
         return self._dataframe(
             self._compliant_series.hist(

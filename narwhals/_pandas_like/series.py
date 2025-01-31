@@ -1033,18 +1033,18 @@ class PandasLikeSeries(CompliantSeries):
 
     def hist(
         self: Self,
-        bins: list[float | int] | None = None,
+        bins: list[float | int] | None,
         *,
-        bin_count: int | None = None,
-        include_category: bool = True,
-        include_breakpoint: bool = True,
+        bin_count: int | None,
+        include_category: bool,
+        include_breakpoint: bool,
     ) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
         data: dict[str, Sequence[int | float | str]]
 
-        if bin_count is not None and bin_count == 0:
+        if bin_count == 0:
             data = {}
             if include_breakpoint:
                 data["breakpoint"] = []
@@ -1059,16 +1059,22 @@ class PandasLikeSeries(CompliantSeries):
                 version=self._version,
             )
 
-        result = (
-            ns.cut(self._native_series, bins=bins if bin_count is None else bin_count)
-            .value_counts()
-            .sort_index()
+        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin is resulting in improper counts.
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
+        #   the bins were explicitly passed in.
+        categories = ns.cut(
+            self._native_series, bins=bins if bin_count is None else bin_count
+        )
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
+        #   is necessary to restore these bins.
+        result = categories.value_counts(dropna=True, sort=False).reindex(
+            categories.cat.categories, fill_value=0
         )
         data = {}
         if include_breakpoint:
-            data["breakpoint"] = result.index.categories.right
+            data["breakpoint"] = result.index.right
         if include_category:
-            data["category"] = ns.Categorical(result.index.categories.astype(str))
+            data["category"] = ns.Categorical(result.index.astype(str))
         data["count"] = result.reset_index(drop=True)
 
         return PandasLikeDataFrame(

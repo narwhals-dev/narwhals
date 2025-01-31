@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -111,8 +111,8 @@ def test_hist_bin(
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 0),
-    reason="hist(bin_count=...) behavior significantly changed after 1.0",
+    POLARS_VERSION < (1, 15),
+    reason="hist(bin_count=...) behavior significantly changed after this version",
 )
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
@@ -162,10 +162,10 @@ def test_hist_bin_and_bin_count() -> None:
     import polars as pl
 
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    with pytest.raises(InvalidOperationError, match="must provide one of"):
-        s.hist(bins=None, bin_count=None)
+    result = s.hist(bins=None, bin_count=None)
+    assert len(result) == 10
 
-    with pytest.raises(InvalidOperationError, match="can only provide one of"):
+    with pytest.raises(ComputeError, match="can only provide one of"):
         s.hist(bins=[1, 3], bin_count=4)
 
 
@@ -175,10 +175,10 @@ def test_hist_bin_and_bin_count() -> None:
 def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"int": [0, 1, 2, 3, 4, 5, 6]}))
 
-    with pytest.raises(Exception, match="monotonic"):
+    with pytest.raises(ComputeError, match="monotonic"):
         df["int"].hist(bins=[5, 0, 2])
 
-    with pytest.raises(Exception, match="monotonic"):
+    with pytest.raises(ComputeError, match="monotonic"):
         df["int"].hist(bins=[5, 2, 0])
 
 
@@ -192,8 +192,8 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 0),
-    reason="hist(bins=...) cannot be used for compatibility checks since narwhals aims to mimi polars>=1.0 behavior",
+    POLARS_VERSION < (1, 15),
+    reason="hist(bins=...) cannot be used for compatibility checks since narwhals aims to mimic polars>=1.2.0 behavior",
 )
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
@@ -239,8 +239,8 @@ def test_hist_bin_hypotheis(
     bin_count=st.integers(min_value=0, max_value=1_000),
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 0),
-    reason="hist(bin_count=...) behavior significantly changed after 1.0",
+    POLARS_VERSION < (1, 15),
+    reason="hist(bin_count=...) behavior significantly changed after this version",
 )
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
@@ -258,11 +258,18 @@ def test_hist_count_hypothesis(
         nw.col("values").cast(nw.Float64)
     )
 
-    result = df["values"].hist(
-        bin_count=bin_count,
-        include_breakpoint=False,
-        include_category=False,
-    )
+    try:
+        result = df["values"].hist(
+            bin_count=bin_count,
+            include_breakpoint=False,
+            include_category=False,
+        )
+    except pl.exceptions.PanicException:  # pragma: no cover
+        # panic occurs from specific float inputs on Polars 1.15
+        if (1, 14) < POLARS_VERSION < (1, 16):
+            request.applymarker(pytest.mark.xfail)
+        raise
+
     expected = (
         pl.Series(data, dtype=pl.Float64)
         .hist(
@@ -273,7 +280,7 @@ def test_hist_count_hypothesis(
         .rename({"": "count"})
     )
 
-    # Bug in Polars <= 1.2.0; hist becomes unreliable when passing bin_counts
+    # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts
     #   for data with a wide range and a large number of passed bins
     #   https://github.com/pola-rs/polars/issues/20879
     if expected["count"].sum() != len(data) and "polars" not in str(constructor_eager):
