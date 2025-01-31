@@ -19,6 +19,9 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from types import ModuleType
 
+if PANDAS_VERSION < (1,):
+    pytest.skip(allow_module_level=True)
+
 
 data = {"a": [1, 2], "b": [3, 4]}
 
@@ -64,11 +67,7 @@ def test_collect_to_valid_backend(
     constructor: Constructor,
     backend: ModuleType | Implementation | str | None,
     expected_cls: type,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
     assert isinstance(result, expected_cls)
