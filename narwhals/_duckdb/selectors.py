@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
 from duckdb import ColumnExpression
@@ -27,7 +28,7 @@ class DuckDBSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DuckDBSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> DuckDBSelector:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [
                 ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
@@ -68,7 +69,7 @@ class DuckDBSelectorNamespace:
     def numeric(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
-            [
+            {
                 dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
@@ -81,20 +82,20 @@ class DuckDBSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            },
         )
 
     def categorical(self: Self) -> DuckDBSelector:  # pragma: no cover
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype({dtypes.Categorical})
 
     def string(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype({dtypes.String})
 
     def boolean(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype({dtypes.Boolean})
 
     def all(self: Self) -> DuckDBSelector:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
