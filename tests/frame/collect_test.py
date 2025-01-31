@@ -43,7 +43,9 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
     assert isinstance(result, expected_cls)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
 @pytest.mark.parametrize(
     ("backend", "expected_cls"),
     [
@@ -62,7 +64,11 @@ def test_collect_to_valid_backend(
     constructor: Constructor,
     backend: ModuleType | Implementation | str | None,
     expected_cls: type,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
     assert isinstance(result, expected_cls)
