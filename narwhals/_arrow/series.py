@@ -1071,11 +1071,6 @@ class ArrowSeries(CompliantSeries):
         def _hist_from_bins(
             bins: Sequence[int | float],
         ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
-            bins = np.asarray(bins)
-            if (np.diff(bins) < 0).any():
-                msg = "bins must increase monotonically"
-                raise InvalidOperationError(msg)
-
             bin_indices = np.searchsorted(bins, self._native_series, side="left")
             obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
             obj_cats = np.arange(1, len(bins))
