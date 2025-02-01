@@ -19,6 +19,7 @@ from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
@@ -519,8 +520,44 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self: Self) -> Self:
-        return self
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
+
+        if backend is None:
+            return self
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(
+                df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
+
+            from narwhals._dask.dataframe import DaskLazyFrame
+
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
 
     def collect(self: Self) -> ArrowDataFrame:
         return ArrowDataFrame(

@@ -406,3 +406,17 @@ def test_group_by_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
         df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
+
+
+def test_pandas_group_by_index_and_column_overlap() -> None:
+    df = pd.DataFrame(
+        {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
+    )
+    result = nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean())
+    expected = {"a": [1, 2], "b": [4.5, 6.0]}
+    assert_equal_data(result, expected)
+
+    key, result = next(iter(nw.from_native(df, eager_only=True).group_by("a")))
+    assert key == (1,)
+    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
+    pd.testing.assert_frame_equal(result.to_native(), expected_native)
