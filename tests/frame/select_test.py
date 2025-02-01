@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 import pyarrow as pa
 import pytest
+from polars.exceptions import DuplicateError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
@@ -133,3 +134,9 @@ def test_left_to_right_broadcasting(
     result = df.select(nw.col("b").sum() + nw.col("a").sum())
     expected = {"b": [19]}
     assert_equal_data(result, expected)
+
+
+def test_alias_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises((DuplicateError, ValueError)):
+        df.lazy().select(nw.all().alias("c")).collect()
