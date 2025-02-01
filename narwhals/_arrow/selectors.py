@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
 from narwhals._arrow.expr import ArrowExpr
@@ -10,8 +11,6 @@ from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
-    from collections.abc import Container
     from datetime import timezone
 
     from typing_extensions import Self
@@ -31,7 +30,7 @@ class ArrowSelectorNamespace:
         self._implementation = Implementation.PYARROW
         self._version = version
 
-    def by_dtype(self: Self, dtypes: Container[DType | type[DType]]) -> ArrowSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
@@ -115,8 +114,8 @@ class ArrowSelectorNamespace:
 
     def datetime(
         self: Self,
-        time_unit: TimeUnit | Collection[TimeUnit] | None,
-        time_zone: str | timezone | Collection[str | timezone | None] | None,
+        time_unit: TimeUnit | Iterable[TimeUnit] | None,
+        time_zone: str | timezone | Iterable[str | timezone | None] | None,
     ) -> ArrowSelector:
         from narwhals.utils import _parse_datetime_selector_to_datetimes
 
