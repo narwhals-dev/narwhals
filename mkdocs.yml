@@ -99,7 +99,7 @@ theme:
 
 plugins:
 - search:
-    enabeled: true
+    enabled: true
     separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
 - mkdocstrings:
     handlers:
