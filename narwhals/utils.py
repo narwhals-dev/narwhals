@@ -307,6 +307,70 @@ class Implementation(Enum):
         return self is Implementation.IBIS  # pragma: no cover
 
 
+T = TypeVar("T")
+Namespace = TypeVar("Namespace")
+
+
+class MetaProperty(Generic[T, Namespace]):
+    def __init__(
+        self, func: Callable[[T], Namespace], class_value: type[Namespace]
+    ) -> None:
+        self._class_value = class_value
+        self._inst_method = func
+
+    @overload
+    def __get__(self, instance: None, owner: type[T]) -> type[Namespace]: ...
+    @overload
+    def __get__(self, instance: T, owner: type[T]) -> Namespace: ...
+    def __get__(self, instance: T | None, owner: type[T]) -> Namespace | type[Namespace]:
+        if instance is None:
+            return self._class_value
+        return self._inst_method(instance)
+
+
+def metaproperty(
+    returns: type[Namespace],
+) -> Callable[[Callable[[T], Namespace]], Namespace]:  # TODO(Unassigned): Fix typing
+    """Property decorator that changes the returned value when accessing from the class.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        metaproperty descriptor.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        A decorator that applies the custom metaproperty behavior.
+
+    Examples:
+        >>> from narwhals.utils import metaproperty
+        >>> class T:
+        ...     @property
+        ...     def f(self):
+        ...         return 5
+        ...
+        ...     @metaproperty(str)
+        ...     def g(self):
+        ...         return 5
+
+        >>> t = T()
+        >>> assert t.f == t.g  # 5
+        >>> assert isinstance(T.f, property)
+        >>> assert T.g is str
+
+    """
+
+    def wrapper(
+        func: Callable[[T], Namespace],
+    ) -> Namespace:  # TODO(Unassigned): Fix typing
+        return MetaProperty(func, returns)  # type: ignore[return-value]
+
+    return wrapper
+
+
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
     Implementation.MODIN: (0, 25, 3),
@@ -1087,17 +1151,27 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
         raise ColumnNotFoundError(msg)
 
 
-def get_class_that_defines_method(method: Callable[..., Any]) -> Any:
+def get_class_that_defines_method(method: Callable[..., Any]) -> type:
+    """Returns the class from a given unbound function or method.
+
+    https://stackoverflow.com/questions/3589311/get-defining-class-of-unbound-method-object-in-python-3/25959545#25959545
+
+    Returns:
+        type
+    """
     if ismethod(method):
         for cls in getmro(method.__self__.__class__):
             if method.__name__ in cls.__dict__:
                 return cls
 
     elif isfunction(method):
-        return getattr(
+        maybe_cls = getattr(
             getmodule(method),
             method.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
         )
+        if isclass(maybe_cls):
+            return maybe_cls
+
     msg = f"Unable to parse the owners type of {method}"
     raise TypeError(msg)
 
@@ -1176,7 +1250,7 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
     _, _, module_name = nw_cls.__module__.partition(".")
     try:
         module_ = import_module(f"narwhals.{backend}.{module_name}")
-    except ModuleNotFoundError:
+    except ModuleNotFoundError:  # pragma: no cover
         return False
 
     classes_ = getmembers(
@@ -1190,69 +1264,37 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
     )
     if not classes_:
         return False
-    _, cls = classes_[0]
-    return hasattr(cls, operation.__name__)
+    cls = classes_[0][-1]
+    if hasattr(cls, operation.__name__):
+        return is_implemented(getattr(cls, operation.__name__))
+    return False
 
 
-T = TypeVar("T")  # Expression/Series/DataFrame/LazyFrame instance
-Namespace = TypeVar("Namespace")  # {String,Datetime,Cat,...}Namespace instance
+def is_implemented(func: Callable[..., Any]) -> bool:
+    from ast import NodeVisitor
+    from ast import Raise
+    from ast import Return
+    from ast import parse
+    from inspect import getsource
+    from textwrap import dedent
 
+    class NotImplementedVisitor(NodeVisitor):
+        def __init__(self) -> None:
+            self.has_notimplemented = False
+            self.has_return = False
+            super().__init__()
 
-class MetaProperty(Generic[T, Namespace]):
-    def __init__(
-        self, func: Callable[[T], Namespace], class_value: type[Namespace]
-    ) -> None:
-        self._class_value = class_value
-        self._inst_method = func
+        def visit_Return(self, node: Return) -> None:  # noqa: N802
+            self.has_return = True
 
-    @overload
-    def __get__(self, instance: None, owner: type[T]) -> type[Namespace]: ...
-    @overload
-    def __get__(self, instance: T, owner: type[T]) -> Namespace: ...
-    def __get__(self, instance: T | None, owner: type[T]) -> Namespace | type[Namespace]:
-        if instance is None:
-            return self._class_value
-        return self._inst_method(instance)
+        def visit_Raise(self, node: Raise) -> None:  # noqa: N802
+            if node.exc.func.id == "NotImplementedError":  # type: ignore[union-attr]
+                self.has_notimplemented = True
 
+    source = dedent(getsource(func))
+    tree = parse(source)
 
-def metaproperty(
-    returns: type[Namespace],
-) -> Callable[[Callable[[T], Namespace]], Namespace]:  # TODO(Unassigned): Fix typing
-    """Property decorator that changes the returned value when accessing from the class.
+    v = NotImplementedVisitor()
+    v.visit(tree)
 
-    Arguments:
-        returns: The object to return upon class attribute accession.
-
-    Returns:
-        metaproperty descriptor.
-
-    Arguments:
-        returns: The object to return upon class attribute accession.
-
-    Returns:
-        A decorator that applies the custom metaproperty behavior.
-
-    Examples:
-        >>> from narwhals.utils import metaproperty
-        >>> class T:
-        ...     @property
-        ...     def f(self):
-        ...         return 5
-        ...
-        ...     @metaproperty(str)
-        ...     def g(self):
-        ...         return 5
-
-        >>> t = T()
-        >>> assert t.f == t.g  # 5
-        >>> assert isinstance(T.f, property)
-        >>> assert T.g is str
-
-    """
-
-    def wrapper(
-        func: Callable[[T], Namespace],
-    ) -> Namespace:  # TODO(Unassigned): Fix typing
-        return MetaProperty(func, returns)  # type: ignore[return-value]
-
-    return wrapper
+    return v.has_return or not v.has_notimplemented

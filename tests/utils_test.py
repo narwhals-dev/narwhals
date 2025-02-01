@@ -19,7 +19,6 @@ from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.stable.v1 import has_operation
 from narwhals.utils import check_column_exists
 from narwhals.utils import get_class_that_defines_method
 from narwhals.utils import parse_version
@@ -307,6 +306,8 @@ def test_check_column_exists() -> None:
 
 def test_has_operation() -> None:
     # smoke tests
+    has_operation = nw.has_operation
+    assert has_operation(pl, nw.Expr.mean)
     assert has_operation(pd, nw.Expr.mean)
     assert has_operation(pd, nw.Expr.str.to_uppercase)
     assert has_operation(pd, nw.Expr.dt.date)
@@ -356,7 +357,12 @@ def test_has_operation_raises() -> None:
     import math
 
     with pytest.raises(ValueError, match="Unknown namespace"):
-        has_operation(math, nw.Expr.mean)
+        nw.has_operation(math, nw.Expr.mean)
+
+    import math
+
+    with pytest.raises(ValueError, match="Unknown namespace"):
+        nw.has_operation(math, nw.Expr.mean)
 
 
 def test_has_operation_raises_friendly_message() -> None:
@@ -365,7 +371,7 @@ def test_has_operation_raises_friendly_message() -> None:
     import dask.dataframe
 
     with pytest.raises(ValueError, match="Unknown namespace .* did you mean"):
-        has_operation(dask, nw.Expr.mean)
+        nw.has_operation(dask, nw.Expr.mean)
 
 
 def test_implementation_roundtrip() -> None:
@@ -379,3 +385,47 @@ def test_implementation_roundtrip() -> None:
         if ns is not None:
             impl_ = Implementation.from_native_namespace(ns)
             assert impl is impl_
+
+
+def test_get_class_that_defines_method() -> None:
+    import narwhals as nw
+    from narwhals.utils import get_class_that_defines_method
+
+    assert get_class_that_defines_method(nw.Series.mean) is nw.Series
+    assert get_class_that_defines_method(nw.Expr.mean) is nw.Expr
+    assert get_class_that_defines_method(nw.col("a").mean) is nw.Expr
+
+    def g() -> None:  # pragma: no cover
+        pass
+
+    with pytest.raises(TypeError, match="Unable to parse the owners"):
+        get_class_that_defines_method(g)
+
+    with pytest.raises(TypeError, match="Unable to parse the owners"):
+        get_class_that_defines_method(abs)
+
+
+def test_is_implemented() -> None:
+    from narwhals.utils import is_implemented
+
+    def f() -> None:  # pragma: no cover
+        pass
+
+    assert is_implemented(f)
+
+    def g() -> int:  # pragma: no cover
+        return 5
+
+    assert is_implemented(g)
+
+    # known limitation
+    def h() -> None:  # pragma: no cover
+        raise NotImplementedError
+        return 5
+
+    assert is_implemented(h)
+
+    def i() -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    assert not is_implemented(f)
