@@ -533,7 +533,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |<LazyFrame at 0x7F52B9937230>|
             └─────────────────────────────┘
 
-            We can also pass DuckDB as out backend, and then we'll get a
+            We can also pass DuckDB as the backend, and then we'll get a
             `narwhals.LazyFrame` backed by a `duckdb.DuckDBPyRelation`.
 
             >>> df.lazy(backend=nw.Implementation.DUCKDB)
