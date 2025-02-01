@@ -44,10 +44,7 @@ def test_lazy_backend(
     assert result.implementation == backend
 
 
-@pytest.mark.parametrize("backend", [Implementation.PANDAS])
-def test_lazy_backend_invalid(
-    constructor_eager: ConstructorEager, backend: Implementation
-) -> None:
+def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    with pytest.raises(ValueError, match="Not supported backend"):
-        df.lazy(backend=backend)
+    with pytest.raises(ValueError, match="Not-supported backend"):
+        df.lazy(backend=Implementation.PANDAS)
