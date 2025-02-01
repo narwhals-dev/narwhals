@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
-from pyspark.sql import functions as F  # noqa: N812
-
 from narwhals._spark_like.expr import SparkLikeExpr
+from narwhals._spark_like.utils import ExprKind
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -20,33 +22,56 @@ if TYPE_CHECKING:
 
 class SparkLikeSelectorNamespace:
     def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
+        self: Self,
+        *,
+        backend_version: tuple[int, ...],
+        version: Version,
+        implementation: Implementation,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
+        self._implementation = implementation
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> SparkLikeSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> SparkLikeSelector:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col) for col in df.columns if df.schema[col] in dtypes]
+            return [df._F.col(col) for col in df.columns if df.schema[col] in dtypes]
 
         def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
+        )
+
+    def matches(self: Self, pattern: str) -> SparkLikeSelector:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(col) for col in df.columns if re.search(pattern, col)]
+
+        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+            return [col for col in df.columns if re.search(pattern, col)]
+
+        return SparkLikeSelector(
+            func,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     def numeric(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
-            [
+            {
                 dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
@@ -59,55 +84,51 @@ class SparkLikeSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            },
         )
 
     def categorical(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype({dtypes.Categorical})
 
     def string(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype({dtypes.String})
 
     def boolean(self: Self) -> SparkLikeSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype({dtypes.Boolean})
 
     def all(self: Self) -> SparkLikeSelector:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [F.col(col) for col in df.columns]
+            return [df._F.col(col) for col in df.columns]
 
         return SparkLikeSelector(
             func,
-            depth=0,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
+            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
+            implementation=self._implementation,
         )
 
 
 class SparkLikeSelector(SparkLikeExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"SparkLikeSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"SparkLikeSelector(" f"function_name={self._function_name})"
 
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,
-            depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
-            returns_scalar=self._returns_scalar,
+            expr_kind=self._expr_kind,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def __sub__(self: Self, other: SparkLikeSelector | Any) -> SparkLikeSelector | Any:
@@ -126,13 +147,13 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() - other
@@ -157,13 +178,13 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() | other
@@ -184,13 +205,13 @@ class SparkLikeSelector(SparkLikeExpr):
 
             return SparkLikeSelector(
                 call,
-                depth=0,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
+                expr_kind=self._expr_kind,
                 version=self._version,
+                implementation=self._implementation,
             )
         else:
             return self._to_expr() & other
@@ -198,7 +219,9 @@ class SparkLikeSelector(SparkLikeExpr):
     def __invert__(self: Self) -> SparkLikeSelector:
         return (
             SparkLikeSelectorNamespace(
-                backend_version=self._backend_version, version=self._version
+                backend_version=self._backend_version,
+                version=self._version,
+                implementation=self._implementation,
             ).all()
             - self
         )

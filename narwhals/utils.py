@@ -79,6 +79,8 @@ class Implementation(Enum):
     """DuckDB implementation."""
     IBIS = auto()
     """Ibis implementation."""
+    SQLFRAME = auto()
+    """SQLFrame implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -300,6 +302,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
+    Implementation.SQLFRAME: (3, 14, 2),
 }
 
 
@@ -1035,11 +1038,11 @@ def generate_repr(header: str, native_repr: str) -> str:
     try:
         terminal_width = os.get_terminal_size().columns
     except OSError:
-        terminal_width = 80
+        terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
     native_lines = native_repr.splitlines()
     max_native_width = max(len(line) for line in native_lines)
 
-    if max_native_width + 2 < terminal_width:
+    if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
         output = f"┌{'─'*length}┐\n"
         header_extra = length - len(header)

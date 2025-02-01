@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
 from narwhals._pandas_like.expr import PandasLikeExpr
@@ -29,7 +31,7 @@ class PandasSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> PandasSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
@@ -48,10 +50,29 @@ class PandasSelectorNamespace:
             kwargs={"dtypes": dtypes},
         )
 
+    def matches(self: Self, pattern: str) -> PandasSelector:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            return [df[col] for col in df.columns if re.search(pattern, col)]
+
+        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+            return [col for col in df.columns if re.search(pattern, col)]
+
+        return PandasSelector(
+            func,
+            depth=0,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={"pattern": pattern},
+        )
+
     def numeric(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
-            [
+            {
                 dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
@@ -64,20 +85,20 @@ class PandasSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            }
         )
 
     def categorical(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype({dtypes.Categorical})
 
     def string(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype({dtypes.String})
 
     def boolean(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype({dtypes.Boolean})
 
     def all(self: Self) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
