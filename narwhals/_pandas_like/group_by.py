@@ -43,32 +43,27 @@ class PandasLikeGroupBy:
     ) -> None:
         self._df = df
         self._keys = keys
+        # Drop index to avoid potential collisions:
+        # https://github.com/narwhals-dev/narwhals/issues/1907.
+        native_frame = df._native_frame.reset_index(drop=True)
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
             if (
                 not drop_null_keys
-                and select_columns_by_name(
-                    self._df._native_frame,
-                    self._keys,
-                    self._df._backend_version,
-                    self._df._implementation,
-                )
-                .isna()
-                .any()
-                .any()
+                and self._df.simple_select(*self._keys)._native_frame.isna().any().any()
             ):
-                msg = "Grouping by null values is not supported in pandas < 1.0.0"
+                msg = "Grouping by null values is not supported in pandas < 1.1.0"
                 raise NotImplementedError(msg)
-            self._grouped = self._df._native_frame.groupby(
+            self._grouped = native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
                 observed=True,
             )
         else:
-            self._grouped = self._df._native_frame.groupby(
+            self._grouped = native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,

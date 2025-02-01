@@ -23,6 +23,7 @@ from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
+from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import SizeUnit
-    from narwhals.utils import Implementation
 
     PS = ParamSpec("PS")
 
@@ -498,54 +498,72 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def lazy(self: Self) -> LazyFrame[Any]:
-        """Lazify the DataFrame (if possible).
+    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+        """Restrict available API methods to lazy-only ones.
 
-        If a library does not support lazy execution, then this is a no-op.
+        If `backend` is specified, then a conversion between different backends
+        might be triggered.
+        If a library does not support lazy execution and `backend` is not specified,
+        then this is will only restrict the API to lazy-only operations. This is useful
+        if you want to ensure that you write dataframe-agnostic code which all has
+        the possibility of running entirely lazily.
+
+        Arguments:
+            backend: The (lazy) implementation to convert to. If not specified, and the
+                given library does not support lazy execution, then this will restrict
+                the API to lazy-only operations.
 
         Returns:
             A new LazyFrame.
 
         Examples:
-            Construct pandas, Polars and PyArrow DataFrames:
-
-            >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
+            >>> df = nw.from_native(df_native)
 
-            We define a library agnostic function:
+            If we call `df.lazy`, we get a `narwhals.LazyFrame` backed by a Polars
+            LazyFrame.
 
-            >>> def agnostic_lazy(df_native: IntoFrame) -> IntoFrame:
-            ...     df = nw.from_native(df_native)
-            ...     return df.lazy().to_native()
+            >>> df.lazy()  # doctest: +SKIP
+            ┌─────────────────────────────┐
+            |     Narwhals LazyFrame      |
+            |-----------------------------|
+            |<LazyFrame at 0x7F52B9937230>|
+            └─────────────────────────────┘
 
-            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame
-            becomes a Polars LazyFrame:
+            We can also pass DuckDB as the backend, and then we'll get a
+            `narwhals.LazyFrame` backed by a `duckdb.DuckDBPyRelation`.
 
-            >>> agnostic_lazy(df_pd)
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-            >>> agnostic_lazy(df_pl)
-            <LazyFrame ...>
-            >>> agnostic_lazy(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: double
-            ham: string
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
-            ham: [["a","b","c"]]
+            >>> df.lazy(backend=nw.Implementation.DUCKDB)
+            ┌──────────────────┐
+            |Narwhals LazyFrame|
+            |------------------|
+            |┌───────┬───────┐ |
+            |│   a   │   b   │ |
+            |│ int64 │ int64 │ |
+            |├───────┼───────┤ |
+            |│     1 │     4 │ |
+            |│     2 │     6 │ |
+            |└───────┴───────┘ |
+            └──────────────────┘
         """
-        return self._lazyframe(self._compliant_frame.lazy(), level="lazy")
+        supported_lazy_backends = (
+            Implementation.DASK,
+            Implementation.DUCKDB,
+            Implementation.POLARS,
+        )
+        if backend is not None and backend not in supported_lazy_backends:
+            msg = (
+                "Not-supported backend."
+                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {backend}"
+            )
+            raise ValueError(msg)
+        return self._lazyframe(
+            self._compliant_frame.lazy(backend=backend),
+            level="lazy",
+        )
 
     def to_native(self: Self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
