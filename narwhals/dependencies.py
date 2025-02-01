@@ -9,6 +9,7 @@ from typing import Any
 
 if TYPE_CHECKING:
     import numpy as np
+    import snowflake.snowpark
     import sqlframe
 
     if sys.version_info >= (3, 10):
@@ -111,6 +112,11 @@ def get_pyspark_sql() -> Any:
 def get_sqlframe() -> Any:
     """Get sqlframe module (if already imported - else return None)."""
     return sys.modules.get("sqlframe", None)
+
+
+def get_snowpark() -> Any:
+    """Get sqlframe module (if already imported - else return None)."""
+    return sys.modules.get("snowflake.snowpark", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -229,6 +235,13 @@ def is_sqlframe_dataframe(df: Any) -> TypeGuard[sqlframe.base.dataframe.BaseData
     return bool(
         (sqlframe := get_sqlframe()) is not None
         and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
+    )
+
+
+def is_snowpark_dataframe(df: Any) -> TypeGuard[snowflake.snowpark.DataFrame]:
+    """Check whether `df` is a Snowpark DataFrame without importing Snowflake."""
+    return bool(
+        (snowpark := get_snowpark()) is not None and isinstance(df, snowpark.DataFrame)
     )
 
 

@@ -56,34 +56,64 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._call(df)
 
     @property
-    def _F(self) -> Any:  # noqa: N802
+    def _F(self: Self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.PYSPARK:
+            from pyspark.sql import functions
+
+            return functions
+
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import functions
 
             return functions
-        from pyspark.sql import functions
 
-        return functions
+        if self._implementation is Implementation.SNOWPARK:
+            from snowflake.snowpark import functions
+
+            return functions
+
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     @property
-    def _native_types(self) -> Any:
+    def _native_types(self: Self) -> Any:
+        if self._implementation is Implementation.PYSPARK:
+            from pyspark.sql import types
+
+            return types
+
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import types
 
             return types
-        from pyspark.sql import types
 
-        return types
+        if self._implementation is Implementation.SNOWPARK:
+            from snowflake.snowpark import types
+
+            return types
+
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     @property
-    def _Window(self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.PYSPARK:
+            from pyspark.sql import Window
+
+            return Window
+
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.duckdb import Window
 
             return Window
-        from pyspark.sql import Window
 
-        return Window
+        if self._implementation is Implementation.SNOWPARK:
+            from snowflake.snowpark import Window
+
+            return Window
+
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def __narwhals_expr__(self: Self) -> None: ...
 

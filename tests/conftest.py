@@ -193,6 +193,17 @@ def sqlframe_pyspark_lazy_constructor(
     )
 
 
+def snowpark_lazy_constructor(
+    obj: dict[str, Any],
+) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+    from snowflake.snowpark import Session
+
+    session = Session.builder.config("local_testing", True).create()  # noqa: FBT003
+    return (  # type: ignore[no-any-return]
+        session.create_dataframe([*zip(*obj.values())], schema=[*obj.keys()])
+    )
+
+
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
@@ -211,6 +222,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     # We've reported several bugs to sqlframe - once they address
     # them, we can start testing them as part of our CI.
     # "sqlframe": sqlframe_pyspark_lazy_constructor,  # noqa: ERA001
+    # "snowpark": snowpark_lazy_constructor,  # noqa: ERA001
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 

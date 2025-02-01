@@ -23,6 +23,8 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_snowpark
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -81,6 +83,8 @@ class Implementation(Enum):
     """Ibis implementation."""
     SQLFRAME = auto()
     """SQLFrame implementation."""
+    SNOWPARK = auto()
+    """Snowpark implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -107,6 +111,8 @@ class Implementation(Enum):
             get_dask_dataframe(): Implementation.DASK,
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
+            get_snowpark(): Implementation.SNOWPARK,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -124,6 +130,8 @@ class Implementation(Enum):
             Implementation.PYSPARK: get_pyspark_sql(),
             Implementation.POLARS: get_polars(),
             Implementation.DASK: get_dask_dataframe(),
+            Implementation.SQLFRAME: get_sqlframe(),
+            Implementation.SNOWPARK: get_snowpark(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 
@@ -291,6 +299,38 @@ class Implementation(Enum):
         """
         return self is Implementation.IBIS  # pragma: no cover
 
+    def is_sqlframe(self: Self) -> bool:
+        """Return whether implementation is SQLFrame.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_sqlframe()
+            False
+        """
+        return self is Implementation.SQLFRAME  # pragma: no cover
+
+    def is_snowpark(self: Self) -> bool:
+        """Return whether implementation is Snowpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_snowpark()
+            False
+        """
+        return self is Implementation.SNOWPARK  # pragma: no cover
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
@@ -303,6 +343,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 14, 2),
+    Implementation.SNOWPARK: (1, 26),
 }
 
 

@@ -21,6 +21,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark
+from narwhals.dependencies import get_snowpark
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
@@ -36,6 +37,7 @@ from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.dependencies import is_pyspark_dataframe
+from narwhals.dependencies import is_snowpark_dataframe
 from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.utils import Version
 
@@ -742,10 +744,10 @@ def _from_native_impl(  # noqa: PLR0915
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
         if series_only:
-            msg = "Cannot only use `series_only` with pyspark DataFrame"
+            msg = "Cannot use `series_only` with pyspark DataFrame"
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
+            msg = "Cannot use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
             raise TypeError(msg)
         return LazyFrame(
             SparkLikeLazyFrame(
@@ -753,6 +755,25 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(get_pyspark().__version__),
                 version=version,
                 implementation=Implementation.PYSPARK,
+            ),
+            level="lazy",
+        )
+
+    elif is_snowpark_dataframe(native_object):  # pragma: no cover
+        from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+        if series_only:
+            msg = "Cannot only `series_only` with snowpark DataFrame"
+            raise TypeError(msg)
+        if eager_only or eager_or_interchange_only:
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with snowpark DataFrame"
+            raise TypeError(msg)
+        return LazyFrame(
+            SparkLikeLazyFrame(
+                native_object,
+                backend_version=parse_version(get_snowpark().__version__),
+                version=version,
+                implementation=Implementation.SNOWPARK,
             ),
             level="lazy",
         )
