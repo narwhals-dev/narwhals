@@ -1271,6 +1271,8 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
 
 
 def is_implemented(func: Callable[..., Any]) -> bool:
+    from ast import Call
+    from ast import Name
     from ast import NodeVisitor
     from ast import Raise
     from ast import Return
@@ -1288,7 +1290,12 @@ def is_implemented(func: Callable[..., Any]) -> bool:
             self.has_return = True
 
         def visit_Raise(self, node: Raise) -> None:  # noqa: N802
-            if node.exc.func.id == "NotImplementedError":  # type: ignore[union-attr]
+            if isinstance(node.exc, Call):
+                name_node = node.exc.func
+            elif isinstance(node.exc, Name):
+                name_node = node.exc
+
+            if name_node.id == "NotImplementedError":  # type: ignore[attr-defined]
                 self.has_notimplemented = True
 
     source = dedent(getsource(func))
