@@ -36,7 +36,6 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Set as AbstractSet
     from types import ModuleType
 
     import pandas as pd
@@ -45,7 +44,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
-    from narwhals.dtypes import Datetime
+    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
@@ -1076,42 +1075,38 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
         raise ColumnNotFoundError(msg)
 
 
-def _parse_datetime_selector_to_datetimes(
+def _parse_time_unit_and_time_zone(
     time_unit: TimeUnit | Iterable[TimeUnit] | None,
     time_zone: str | timezone | Iterable[str | timezone | None] | None,
-    version: Version,
-) -> AbstractSet[Datetime]:
-    # Adapted from polars: https://github.com/pola-rs/polars/blob/725c96009e4c6cb6b05db7f7e33daf3330a4fa35/py-polars/polars/selectors.py#L1340-L1493
-    time_units: list[TimeUnit]
-    if time_unit is None:
-        time_units = ["ms", "us", "ns"]
-    else:
-        time_units = [time_unit] if isinstance(time_unit, str) else list(time_unit)
+) -> tuple[set[str], set[str | None]]:
+    time_units = (
+        {"ms", "us", "ns"}
+        if time_unit is None
+        else {time_unit}
+        if isinstance(time_unit, str)
+        else set(time_unit)
+    )
+    time_zones: set[str | None] = (
+        {None}
+        if time_zone is None
+        else {str(time_zone)}
+        if isinstance(time_zone, (str, timezone))
+        else {str(tz) if tz is not None else None for tz in time_zone}
+    )
+    return time_units, time_zones
 
-    time_zones: list[str | timezone | None]
-    if time_zone is None:
-        time_zones = [None]
-    else:
-        time_zones = (
-            [time_zone] if isinstance(time_zone, (str, timezone)) else list(time_zone)
+
+def dtype_matches_time_unit_and_time_zone(
+    dtype: DType,
+    dtypes: DTypes,
+    time_units: set[str],
+    time_zones: set[str | None],
+) -> bool:
+    return (
+        (dtype == dtypes.Datetime)
+        and (dtype.time_unit in time_units)  # type: ignore[attr-defined]
+        and (
+            dtype.time_zone in time_zones  # type: ignore[attr-defined]
+            or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
         )
-
-    if "*" in time_zones:
-        import sys
-
-        if sys.version_info >= (3, 9):
-            import zoneinfo
-        else:  # pragma: no cover
-            # This code block is due to a typing issue with backports.zoneinfo package:
-            # https://github.com/pganssle/zoneinfo/issues/125
-            from backports import zoneinfo
-
-        time_zones.extend(list(zoneinfo.available_timezones()))
-        time_zones.remove("*")
-
-    dtypes = import_dtypes_module(version=version)
-    return {
-        dtypes.Datetime(time_unit=tu, time_zone=tz)
-        for tu in time_units
-        for tz in time_zones
-    }
+    )

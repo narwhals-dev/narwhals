@@ -10,6 +10,7 @@
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 [![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
+[![PYPI - Types](https://img.shields.io/pypi/types/narwhals)](https://pypi.org/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
