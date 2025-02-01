@@ -428,4 +428,4 @@ def test_is_implemented() -> None:
     def i() -> None:  # pragma: no cover
         raise NotImplementedError
 
-    assert not is_implemented(f)
+    assert not is_implemented(i)
