@@ -18,6 +18,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
+    import pandas as pd
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -37,46 +38,54 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 }
 
 
+def _group_dataframe(
+    df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool, reset_index: bool
+) -> pd.DataFrameGroupBy:
+    min_version = (1, 1)
+    if (
+        df._implementation is Implementation.PANDAS and df._backend_version < min_version
+    ):  # pragma: no cover
+        if (
+            not drop_null_keys
+            and df.simple_select(*keys)._native_frame.isna().any().any()
+        ):
+            msg = "Grouping by null values is not supported in pandas < 1.0.0"
+            raise NotImplementedError(msg)
+        native_frame = (
+            df._native_frame.reset_index(drop=True) if reset_index else df._native_frame
+        )
+        return native_frame.groupby(
+            keys,
+            sort=False,
+            as_index=True,
+            observed=True,
+        )
+    native_frame = (
+        df._native_frame.reset_index(drop=True) if reset_index else df._native_frame
+    )
+    return native_frame.groupby(
+        keys,
+        sort=False,
+        as_index=True,
+        dropna=drop_null_keys,
+        observed=True,
+    )
+
+
 class PandasLikeGroupBy:
     def __init__(
         self: Self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
         self._df = df
         self._keys = keys
-        if (
-            self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (1, 1)
-        ):  # pragma: no cover
-            if (
-                not drop_null_keys
-                and select_columns_by_name(
-                    self._df._native_frame,
-                    self._keys,
-                    self._df._backend_version,
-                    self._df._implementation,
-                )
-                .isna()
-                .any()
-                .any()
-            ):
-                msg = "Grouping by null values is not supported in pandas < 1.0.0"
-                raise NotImplementedError(msg)
-            self._grouped = self._df._native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                observed=True,
-            )
-        else:
-            self._grouped = self._df._native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                dropna=drop_null_keys,
-                observed=True,
-            )
+        self._drop_null_keys = drop_null_keys
 
     def agg(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+        # Reset index, as we don't group by it not aggregate it and it may conflict with
+        # other variable names: https://github.com/narwhals-dev/narwhals/issues/1907.
+        grouped = _group_dataframe(
+            self._df, self._keys, drop_null_keys=self._drop_null_keys, reset_index=True
+        )
         implementation = self._df._implementation
         backend_version = self._df._backend_version
 
@@ -153,7 +162,7 @@ class PandasLikeGroupBy:
             result_aggs = []
 
             if simple_aggs:
-                result_simple_aggs = self._grouped.agg(simple_aggs)
+                result_simple_aggs = grouped.agg(simple_aggs)
                 result_simple_aggs.columns = [
                     f"{a}_{b}" for a, b in result_simple_aggs.columns
                 ]
@@ -182,7 +191,7 @@ class PandasLikeGroupBy:
                 result_aggs.append(result_simple_aggs)
 
             if nunique_aggs:
-                result_nunique_aggs = self._grouped[list(nunique_aggs.values())].nunique(
+                result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                     dropna=False
                 )
                 result_nunique_aggs.columns = list(nunique_aggs.keys())
@@ -193,7 +202,7 @@ class PandasLikeGroupBy:
                 result_aggs.extend(
                     [
                         set_columns(
-                            self._grouped[std_output_names].std(ddof=ddof),
+                            grouped[std_output_names].std(ddof=ddof),
                             columns=std_aliases,
                             implementation=implementation,
                             backend_version=backend_version,
@@ -205,7 +214,7 @@ class PandasLikeGroupBy:
                 result_aggs.extend(
                     [
                         set_columns(
-                            self._grouped[var_output_names].var(ddof=ddof),
+                            grouped[var_output_names].var(ddof=ddof),
                             columns=var_aliases,
                             implementation=implementation,
                             backend_version=backend_version,
@@ -235,7 +244,7 @@ class PandasLikeGroupBy:
             else:
                 # No aggregation provided
                 result = self._df.__native_namespace__().DataFrame(
-                    list(self._grouped.groups.keys()), columns=self._keys
+                    list(grouped.groups.keys()), columns=self._keys
                 )
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
@@ -284,9 +293,9 @@ class PandasLikeGroupBy:
             )
 
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
-            result_complex = self._grouped.apply(func, include_groups=False)
+            result_complex = grouped.apply(func, include_groups=False)
         else:  # pragma: no cover
-            result_complex = self._grouped.apply(func)
+            result_complex = grouped.apply(func)
 
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
@@ -299,11 +308,15 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+        # Don't reset index here, it can be safely preserved.
+        grouped = _group_dataframe(
+            self._df, self._keys, drop_null_keys=self._drop_null_keys, reset_index=True
+        )
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-            for key, group in self._grouped:
+            for key, group in grouped:
                 yield (key, self._df._from_native_frame(group))
