@@ -98,7 +98,8 @@ theme:
 
 
 plugins:
-- search:
+- search: 
+    # See https://squidfunk.github.io/mkdocs-material/plugins/search/#configuration
     enabled: true
     separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
 - mkdocstrings:
