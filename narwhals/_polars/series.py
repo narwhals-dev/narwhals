@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import Union
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -489,7 +491,7 @@ class PolarsSeries:
         # polars<1.15 returned bins -inf to inf OR fails in these conditions
         if (self._backend_version < (1, 15)) and (
             (bins is not None and len(bins) == 0) or (bin_count == 0)
-        ):
+        ):  # pragma: no cover
             data: list[pl.Series] = []
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
@@ -502,6 +504,23 @@ class PolarsSeries:
                 version=self._version,
             )
 
+        # polars <1.5 with bin_count=...
+        # returns bins that range from -inf to +inf and has bin_count + 1 bins.
+        #   for compat: convert `bin_count=` call to `bins=`
+        if (self._backend_version < (1, 5)) and (
+            bin_count is not None
+        ):  # pragma: no cover
+            lower = cast(Union[int, float], self._native_series.min())
+            upper = cast(Union[int, float], self._native_series.max())
+            if lower == upper:
+                lower -= 0.001 * abs(lower) if lower != 0 else 0.001
+                upper += 0.001 * abs(upper) if upper != 0 else 0.001
+            width = (upper - lower) / bin_count
+
+            bins = (pl.int_range(0, bin_count + 1, eager=True) * width).to_list()
+            bins[0] -= (upper - lower) * 0.001
+            bin_count = None
+
         df = self._native_series.hist(
             bins=bins,
             bin_count=bin_count,
@@ -511,8 +530,8 @@ class PolarsSeries:
         if not include_category and not include_breakpoint:
             df.columns = ["count"]
 
+        #  polars<1.15 implicitly adds -inf and inf to either end of bins
         if self._backend_version < (1, 15) and bins is not None:  # pragma: no cover
-            #  polars<1.15 implicitly adds -inf and inf to either end of bins
             r = pl.int_range(0, len(df))
             df = df.filter((r > 0) & (r < len(df) - 1))
 

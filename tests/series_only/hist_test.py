@@ -110,10 +110,6 @@ def test_hist_bin(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION < (1, 15),
-    reason="hist(bin_count=...) behavior significantly changed after this version",
-)
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.parametrize("include_category", [True, False])
