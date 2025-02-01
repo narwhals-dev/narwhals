@@ -14,14 +14,18 @@ from narwhals.dtypes import Enum
 from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
+from narwhals.dtypes import FloatType
 from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
 from narwhals.dtypes import Int128
+from narwhals.dtypes import IntegerType
 from narwhals.dtypes import List
+from narwhals.dtypes import NestedType
 from narwhals.dtypes import NumericType
 from narwhals.dtypes import Object
+from narwhals.dtypes import SignedIntegerType
 from narwhals.dtypes import String
 from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
@@ -30,6 +34,7 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
+from narwhals.dtypes import UnsignedIntegerType
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -78,14 +83,18 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "FloatType",
     "Int8",
     "Int16",
     "Int32",
     "Int64",
     "Int128",
+    "IntegerType",
     "List",
+    "NestedType",
     "NumericType",
     "Object",
+    "SignedIntegerType",
     "String",
     "Struct",
     "UInt8",
@@ -94,4 +103,5 @@ __all__ = [
     "UInt64",
     "UInt128",
     "Unknown",
+    "UnsignedIntegerType",
 ]

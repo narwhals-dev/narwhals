@@ -2,21 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from duckdb import FunctionExpression
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._spark_like.expr import SparkLikeExpr
 
 
-class DuckDBExprListNamespace:
-    def __init__(self: Self, expr: DuckDBExpr) -> None:
+class SparkLikeExprListNamespace:
+    def __init__(self: Self, expr: SparkLikeExpr) -> None:
         self._compliant_expr = expr
 
-    def len(self: Self) -> DuckDBExpr:
+    def len(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("len", _input),
+            self._compliant_expr._F.array_size,
             "len",
             expr_kind=self._compliant_expr._expr_kind,
         )
