@@ -49,7 +49,5 @@ class DuckDBGroupBy:
             )
 
         return self._compliant_frame._from_native_frame(
-            self._compliant_frame._native_frame.aggregate(
-                agg_columns, group_expr=",".join(f'"{key}"' for key in self._keys)
-            )
+            self._compliant_frame._native_frame.aggregate(agg_columns)
         )
