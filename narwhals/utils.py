@@ -33,6 +33,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -117,6 +118,7 @@ class Implementation(Enum):
             get_dask_dataframe(): Implementation.DASK,
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -136,6 +138,7 @@ class Implementation(Enum):
             Implementation.DASK: get_dask_dataframe(),
             Implementation.DUCKDB: get_duckdb(),
             Implementation.IBIS: get_ibis(),
+            Implementation.SQLFRAME: get_sqlframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 

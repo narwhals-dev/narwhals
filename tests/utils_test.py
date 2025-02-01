@@ -366,3 +366,16 @@ def test_has_operation_raises_friendly_message() -> None:
 
     with pytest.raises(ValueError, match="Unknown namespace .* did you mean"):
         has_operation(dask, nw.Expr.mean)
+
+
+def test_implementation_roundtrip() -> None:
+    from narwhals.utils import Implementation
+
+    for impl in Implementation:
+        if impl is Implementation.UNKNOWN:
+            continue
+
+        ns = impl.to_native_namespace()
+        if ns is not None:
+            impl_ = Implementation.from_native_namespace(ns)
+            assert impl is impl_
