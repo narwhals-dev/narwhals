@@ -54,7 +54,7 @@ class PandasLikeGroupBy:
                 not drop_null_keys
                 and self._df.simple_select(*self._keys)._native_frame.isna().any().any()
             ):
-                msg = "Grouping by null values is not supported in pandas < 1.0.0"
+                msg = "Grouping by null values is not supported in pandas < 1.1.0"
                 raise NotImplementedError(msg)
             self._grouped = native_frame.groupby(
                 list(self._keys),
