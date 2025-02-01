@@ -16,7 +16,7 @@ Narwhals aims to accommodate both!
 
 Let's learn about what Narwhals promises.
 
-## 1. Narwhals will preserve your index for dataframe operations
+## 1. Narwhals will preserve your index for `select` and `with_columns` dataframe operations
 
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
