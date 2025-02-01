@@ -1063,8 +1063,8 @@ class ArrowSeries(CompliantSeries):
             bin_right = pc.add(bin_left, width)
             bin_left = pa.chunked_array(
                 [  # pad lowest bin by 1% of range
-                    [pc.subtract(bin_left[0], (upper - lower) * 0.001)],
-                    bin_left[1:],
+                    [pc.subtract(bin_left[0], (upper - lower) * 0.001).as_py()],
+                    bin_left.to_numpy()[1:],  # pyarrow==0.11.0 needs to infer
                 ]
             )
             counts = counts.column("counts")
