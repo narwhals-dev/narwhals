@@ -1046,7 +1046,9 @@ class ArrowSeries(CompliantSeries):
                     names=["values", "counts"],
                 )
                 .join(  # align bin ids to all possible bin ids (populate in missing bins)
-                    pa.Table.from_arrays([np.arange(bin_count)], ["values"]),
+                    pa.Table.from_arrays(
+                        [np.arange(bin_count, dtype="int64")], ["values"]
+                    ),
                     keys="values",
                     join_type="right outer",
                 )
