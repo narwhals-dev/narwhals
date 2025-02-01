@@ -114,7 +114,7 @@ def test_explode_shape_error(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table")
     ):
         request.applymarker(pytest.mark.xfail)
 
