@@ -36,7 +36,6 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
     from collections.abc import Set as AbstractSet
     from types import ModuleType
 
@@ -84,6 +83,8 @@ class Implementation(Enum):
     """DuckDB implementation."""
     IBIS = auto()
     """Ibis implementation."""
+    SQLFRAME = auto()
+    """SQLFrame implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -130,7 +131,7 @@ class Implementation(Enum):
         }
         return mapping[self]  # type: ignore[no-any-return]
 
-    def is_pandas(self) -> bool:
+    def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
 
         Returns:
@@ -146,7 +147,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PANDAS
 
-    def is_pandas_like(self) -> bool:
+    def is_pandas_like(self: Self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
         Returns:
@@ -166,7 +167,7 @@ class Implementation(Enum):
             Implementation.CUDF,
         }
 
-    def is_polars(self) -> bool:
+    def is_polars(self: Self) -> bool:
         """Return whether implementation is Polars.
 
         Returns:
@@ -182,7 +183,7 @@ class Implementation(Enum):
         """
         return self is Implementation.POLARS
 
-    def is_cudf(self) -> bool:
+    def is_cudf(self: Self) -> bool:
         """Return whether implementation is cuDF.
 
         Returns:
@@ -198,7 +199,7 @@ class Implementation(Enum):
         """
         return self is Implementation.CUDF  # pragma: no cover
 
-    def is_modin(self) -> bool:
+    def is_modin(self: Self) -> bool:
         """Return whether implementation is Modin.
 
         Returns:
@@ -214,7 +215,7 @@ class Implementation(Enum):
         """
         return self is Implementation.MODIN  # pragma: no cover
 
-    def is_pyspark(self) -> bool:
+    def is_pyspark(self: Self) -> bool:
         """Return whether implementation is PySpark.
 
         Returns:
@@ -230,7 +231,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYSPARK  # pragma: no cover
 
-    def is_pyarrow(self) -> bool:
+    def is_pyarrow(self: Self) -> bool:
         """Return whether implementation is PyArrow.
 
         Returns:
@@ -246,7 +247,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYARROW  # pragma: no cover
 
-    def is_dask(self) -> bool:
+    def is_dask(self: Self) -> bool:
         """Return whether implementation is Dask.
 
         Returns:
@@ -262,7 +263,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DASK  # pragma: no cover
 
-    def is_duckdb(self) -> bool:
+    def is_duckdb(self: Self) -> bool:
         """Return whether implementation is DuckDB.
 
         Returns:
@@ -278,7 +279,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DUCKDB  # pragma: no cover
 
-    def is_ibis(self) -> bool:
+    def is_ibis(self: Self) -> bool:
         """Return whether implementation is Ibis.
 
         Returns:
@@ -305,6 +306,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
+    Implementation.SQLFRAME: (3, 14, 2),
 }
 
 
@@ -331,10 +333,10 @@ def import_dtypes_module(version: Version) -> DTypes:
     return dtypes  # type: ignore[return-value]
 
 
-def remove_prefix(text: str, prefix: str) -> str:
+def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
     if text.startswith(prefix):
         return text[len(prefix) :]
-    return text  # pragma: no cover
+    return text
 
 
 def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
@@ -1001,7 +1003,7 @@ def validate_strict_and_pass_though(
 
 
 def _validate_rolling_arguments(
-    window_size: int, min_periods: int | None
+    window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
     if window_size < 1:
         msg = "window_size must be greater or equal than 1"
@@ -1015,36 +1017,36 @@ def _validate_rolling_arguments(
         )
         raise TypeError(msg)
 
-    if min_periods is not None:
-        if min_periods < 1:
-            msg = "min_periods must be greater or equal than 1"
+    if min_samples is not None:
+        if min_samples < 1:
+            msg = "min_samples must be greater or equal than 1"
             raise ValueError(msg)
 
-        if not isinstance(min_periods, int):
-            _type = min_periods.__class__.__name__
+        if not isinstance(min_samples, int):
+            _type = min_samples.__class__.__name__
             msg = (
-                f"argument 'min_periods': '{_type}' object cannot be "
+                f"argument 'min_samples': '{_type}' object cannot be "
                 "interpreted as an integer"
             )
             raise TypeError(msg)
-        if min_periods > window_size:
-            msg = "`min_periods` must be less or equal than `window_size`"
+        if min_samples > window_size:
+            msg = "`min_samples` must be less or equal than `window_size`"
             raise InvalidOperationError(msg)
     else:
-        min_periods = window_size
+        min_samples = window_size
 
-    return window_size, min_periods
+    return window_size, min_samples
 
 
 def generate_repr(header: str, native_repr: str) -> str:
     try:
         terminal_width = os.get_terminal_size().columns
     except OSError:
-        terminal_width = 80
+        terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
     native_lines = native_repr.splitlines()
     max_native_width = max(len(line) for line in native_lines)
 
-    if max_native_width + 2 < terminal_width:
+    if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
         output = f"┌{'─'*length}┐\n"
         header_extra = length - len(header)
@@ -1075,8 +1077,8 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
 
 
 def _parse_datetime_selector_to_datetimes(
-    time_unit: TimeUnit | Collection[TimeUnit] | None,
-    time_zone: str | timezone | Collection[str | timezone | None] | None,
+    time_unit: TimeUnit | Iterable[TimeUnit] | None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None,
     version: Version,
 ) -> AbstractSet[Datetime]:
     # Adapted from polars: https://github.com/pola-rs/polars/blob/725c96009e4c6cb6b05db7f7e33daf3330a4fa35/py-polars/polars/selectors.py#L1340-L1493

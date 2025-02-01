@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import re
+from contextlib import nullcontext as does_not_raise
+
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import LengthChangingExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -56,17 +60,6 @@ def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor)
 
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("a", "b")
     assert_equal_data(result, expected)
-
-
-def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
-    with pytest.raises(ValueError, match="Anonymous expressions"):
-        df.with_columns(c_min=nw.all().min().over("a", "b"))
 
 
 def test_over_cumsum(
@@ -174,10 +167,59 @@ def test_over_cumprod(
     assert_equal_data(result, expected)
 
 
-def test_over_anonymous() -> None:
-    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="Anonymous expressions"):
-        nw.from_native(df).select(nw.all().cum_max().over("a"))
+def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    context = (
+        pytest.raises(NotImplementedError)
+        if df.implementation.is_pyarrow()
+        else pytest.raises(KeyError)  # type: ignore[arg-type]
+        if df.implementation.is_modin()
+        or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
+        # TODO(unassigned): bug in old pandas + modin.
+        # df.groupby('a')[['a', 'b']].cum_sum() excludes `'a'` from result
+        else does_not_raise()
+    )
+    with context:
+        result = df.with_columns(
+            nw.all().cum_sum().over("a").name.suffix("_cum_sum")
+        ).sort("a", "b")
+        expected = {
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "a_cum_sum": [1, 2, 2],
+            "b_cum_sum": [4, 9, 6],
+        }
+        assert_equal_data(result, expected)
+
+
+def test_over_anonymous_reduction(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        # TODO(unassigned): we should be able to support these
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    context = (
+        pytest.raises(NotImplementedError)
+        if df.implementation.is_pyarrow()
+        or df.implementation.is_pandas_like()
+        or df.implementation.is_dask()
+        else does_not_raise()
+    )
+    with context:
+        result = (
+            nw.from_native(df)
+            .with_columns(nw.all().sum().over("a").name.suffix("_sum"))
+            .sort("a", "b")
+        )
+        expected = {
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "a_sum": [2, 2, 2],
+            "b_sum": [9, 9, 6],
+        }
+        assert_equal_data(result, expected)
 
 
 def test_over_shift(
@@ -207,3 +249,13 @@ def test_over_cum_reverse() -> None:
         match=r"Cumulative operation with `reverse=True` is not supported",
     ):
         nw.from_native(df).select(nw.col("b").cum_max(reverse=True).over("a"))
+
+
+def test_over_raise_len_change(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        LengthChangingExprError,
+        match=re.escape("`.over()` can not be used for expressions which change length."),
+    ):
+        nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))

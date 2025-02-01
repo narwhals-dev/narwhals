@@ -3,13 +3,13 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
@@ -18,11 +18,9 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
@@ -31,6 +29,8 @@ from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import numpy as np
@@ -46,11 +46,14 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.utils import Version
 
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 
-class PandasLikeDataFrame:
+
+class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
-        self,
+        self: Self,
         native_dataframe: Any,
         *,
         implementation: Implementation,
@@ -64,13 +67,13 @@ class PandasLikeDataFrame:
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __narwhals_dataframe__(self) -> Self:
+    def __narwhals_dataframe__(self: Self) -> Self:
         return self
 
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
@@ -88,10 +91,10 @@ class PandasLikeDataFrame:
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __len__(self) -> int:
+    def __len__(self: Self) -> int:
         return len(self._native_frame)
 
-    def _validate_columns(self, columns: pd.Index) -> None:
+    def _validate_columns(self: Self, columns: pd.Index) -> None:
         try:
             len_unique_columns = len(columns.drop_duplicates())
         except Exception:  # noqa: BLE001  # pragma: no cover
@@ -109,7 +112,7 @@ class PandasLikeDataFrame:
             msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
-    def _change_version(self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame,
             implementation=self._implementation,
@@ -117,7 +120,7 @@ class PandasLikeDataFrame:
             version=version,
         )
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_frame(self: Self, df: Any) -> Self:
         return self.__class__(
             df,
             implementation=self._implementation,
@@ -125,7 +128,7 @@ class PandasLikeDataFrame:
             version=self._version,
         )
 
-    def get_column(self, name: str) -> PandasLikeSeries:
+    def get_column(self: Self, name: str) -> PandasLikeSeries:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         return PandasLikeSeries(
@@ -135,37 +138,41 @@ class PandasLikeDataFrame:
             version=self._version,
         )
 
-    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+    def __getitem__(  # type: ignore[overload-overlap]
+        self: Self, item: tuple[Sequence[int], str | int]
+    ) -> PandasLikeSeries: ...
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
+    def __getitem__(self: Self, item: Sequence[int]) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+    def __getitem__(self: Self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
 
     @overload
-    def __getitem__(self, item: Sequence[str]) -> PandasLikeDataFrame: ...
+    def __getitem__(self: Self, item: Sequence[str]) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
+    def __getitem__(self: Self, item: slice) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
 
     @overload
     def __getitem__(
-        self, item: tuple[Sequence[int], Sequence[int] | slice]
+        self: Self, item: tuple[Sequence[int], Sequence[int] | slice]
     ) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> PandasLikeDataFrame: ...
+    def __getitem__(
+        self: Self, item: tuple[slice, Sequence[int]]
+    ) -> PandasLikeDataFrame: ...
 
     def __getitem__(
-        self,
+        self: Self,
         item: (
             str
             | int
@@ -276,33 +283,31 @@ class PandasLikeDataFrame:
 
     # --- properties ---
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     @overload
     def rows(
-        self,
+        self: Self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
 
     @overload
     def rows(
-        self,
+        self: Self,
         *,
-        named: Literal[False] = False,
+        named: Literal[False],
     ) -> list[tuple[Any, ...]]: ...
 
     @overload
     def rows(
-        self,
+        self: Self,
         *,
         named: bool,
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
-    def rows(
-        self, *, named: bool = False
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
             if self._implementation is Implementation.CUDF:
@@ -314,10 +319,10 @@ class PandasLikeDataFrame:
         return self._native_frame.to_dict(orient="records")  # type: ignore[no-any-return]
 
     def iter_rows(
-        self,
+        self: Self,
         *,
-        named: bool = False,
-        buffer_size: int = 512,
+        named: bool,
+        buffer_size: int,
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -331,7 +336,7 @@ class PandasLikeDataFrame:
             )  # type: ignore[misc]
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         return {
             col: native_to_narwhals_dtype(
                 self._native_frame[col], self._version, self._implementation
@@ -339,27 +344,28 @@ class PandasLikeDataFrame:
             for col in self._native_frame.columns
         }
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
     # --- reshape ---
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(
+            select_columns_by_name(
+                self._native_frame,
+                list(column_names),
+                self._backend_version,
+                self._implementation,
+            )
+        )
+
     def select(
-        self,
+        self: Self,
         *exprs: IntoPandasLikeExpr,
         **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple slice => fastpath!
-            column_names = list(exprs)
-            return self._from_native_frame(
-                select_columns_by_name(
-                    self._native_frame,
-                    column_names,  # type: ignore[arg-type]
-                    self._backend_version,
-                    self._implementation,
-                )
-            )
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_series: list[PandasLikeSeries] = evaluate_into_exprs(
+            self, *exprs, **named_exprs
+        )
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__())
@@ -371,17 +377,17 @@ class PandasLikeDataFrame:
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna(axis=0))
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
-    def estimated_size(self, unit: SizeUnit) -> int | float:
+    def estimated_size(self: Self, unit: SizeUnit) -> int | float:
         sz = self._native_frame.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self: Self, name: str) -> Self:
         row_index = create_compliant_series(
             range(len(self._native_frame)),
             index=self._native_frame.index,
@@ -397,7 +403,7 @@ class PandasLikeDataFrame:
             )
         )
 
-    def row(self, row: int) -> tuple[Any, ...]:
+    def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
     def filter(self: Self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
@@ -417,22 +423,21 @@ class PandasLikeDataFrame:
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
             mask = expr._call(self)[0]
-            mask_native = validate_dataframe_comparand(
-                self._native_frame.index,
-                mask,
-                allow_broadcast=False,
-                method_name="filter",
+            mask_native = broadcast_and_extract_dataframe_comparand(
+                self._native_frame.index, mask
             )
 
         return self._from_native_frame(self._native_frame.loc[mask_native])
 
     def with_columns(
-        self,
+        self: Self,
         *exprs: IntoPandasLikeExpr,
         **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
         index = self._native_frame.index
-        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(
+            self, *exprs, **named_exprs
+        )
         if not new_columns and len(self) == 0:
             return self
 
@@ -442,21 +447,15 @@ class PandasLikeDataFrame:
         for name in self._native_frame.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    validate_dataframe_comparand(
-                        index,
-                        new_column_name_to_new_column_map.pop(name),
-                        allow_broadcast=True,
-                        method_name="with_columns",
+                    broadcast_and_extract_dataframe_comparand(
+                        index, new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            validate_dataframe_comparand(
-                index,
-                new_column_name_to_new_column_map[s],
-                allow_broadcast=True,
-                method_name="with_columns",
+            broadcast_and_extract_dataframe_comparand(
+                index, new_column_name_to_new_column_map[s]
             )
             for s in new_column_name_to_new_column_map
         )
@@ -468,7 +467,7 @@ class PandasLikeDataFrame:
         )
         return self._from_native_frame(df)
 
-    def rename(self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(
             rename(
                 self._native_frame,
@@ -486,13 +485,11 @@ class PandasLikeDataFrame:
 
     # --- transform ---
     def sort(
-        self,
-        by: str | Iterable[str],
-        *more_by: str,
+        self: Self,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -500,11 +497,11 @@ class PandasLikeDataFrame:
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
         return self._from_native_frame(
-            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+            df.sort_values(list(by), ascending=ascending, na_position=na_position)
         )
 
     # --- convert ---
-    def collect(self) -> PandasLikeDataFrame:
+    def collect(self: Self) -> PandasLikeDataFrame:
         return PandasLikeDataFrame(
             self._native_frame,
             implementation=self._implementation,
@@ -513,7 +510,7 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
@@ -523,10 +520,10 @@ class PandasLikeDataFrame:
         )
 
     def join(
-        self,
+        self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"] = "inner",
+        how: Literal["left", "inner", "cross", "anti", "semi"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
@@ -664,16 +661,15 @@ class PandasLikeDataFrame:
         )
 
     def join_asof(
-        self,
+        self: Self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        left_on: str | None,
+        right_on: str | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
         return self._from_native_frame(
@@ -682,29 +678,27 @@ class PandasLikeDataFrame:
                 other._native_frame,
                 left_on=left_on,
                 right_on=right_on,
-                on=on,
                 left_by=by_left,
                 right_by=by_right,
-                by=by,
                 direction=strategy,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             ),
         )
 
     # --- partial reduction ---
 
-    def head(self, n: int) -> Self:
+    def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.head(n))
 
-    def tail(self, n: int) -> Self:
+    def tail(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.tail(n))
 
     def unique(
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        keep: Literal["any", "first", "last", "none"],
+        maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -715,14 +709,14 @@ class PandasLikeDataFrame:
         )
 
     # --- lazy-only ---
-    def lazy(self) -> Self:
+    def lazy(self: Self) -> Self:
         return self
 
     @property
-    def shape(self) -> tuple[int, int]:
+    def shape(self: Self) -> tuple[int, int]:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
-    def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
+    def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
@@ -737,7 +731,7 @@ class PandasLikeDataFrame:
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
+    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
         if copy is None:
@@ -773,7 +767,10 @@ class PandasLikeDataFrame:
                 import numpy as np
 
                 return np.hstack(
-                    [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]
+                    [
+                        self[col].to_numpy(copy=copy, dtype=None)[:, None]
+                        for col in self.columns
+                    ]
                 )
         return df.to_numpy(copy=copy)
 
@@ -799,11 +796,17 @@ class PandasLikeDataFrame:
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def write_parquet(self, file: Any) -> Any:
+    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         self._native_frame.to_parquet(file)
 
-    def write_csv(self, file: Any = None) -> Any:
-        return self._native_frame.to_csv(file, index=False)
+    @overload
+    def write_csv(self: Self, file: None) -> str: ...
+
+    @overload
+    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+
+    def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
+        return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:
@@ -837,7 +840,7 @@ class PandasLikeDataFrame:
             version=self._version,
         )
 
-    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+    def item(self: Self, row: int | None, column: int | str | None) -> Any:
         if row is None and column is None:
             if self.shape != (1, 1):
                 msg = (
@@ -858,7 +861,7 @@ class PandasLikeDataFrame:
     def clone(self: Self) -> Self:
         return self._from_native_frame(self._native_frame.copy())
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(self._native_frame.iloc[offset::n])
 
     def pivot(
@@ -869,7 +872,7 @@ class PandasLikeDataFrame:
         values: str | list[str] | None,
         aggregate_function: Any | None,
         sort_columns: bool,
-        separator: str = "_",
+        separator: str,
     ) -> Self:
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
@@ -963,11 +966,11 @@ class PandasLikeDataFrame:
 
     def sample(
         self: Self,
-        n: int | None = None,
+        n: int | None,
         *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
     ) -> Self:
         return self._from_native_frame(
             self._native_frame.sample(

@@ -14,12 +14,15 @@ import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
+
+MIN_PANDAS_NULLABLE_VERSION = (1, 5)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -179,6 +182,17 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         return _constructor
 
 
+def sqlframe_pyspark_lazy_constructor(
+    obj: dict[str, Any],
+) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+    from sqlframe.duckdb import DuckDBSession
+
+    session = DuckDBSession()
+    return (  # type: ignore[no-any-return]
+        session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
+    )
+
+
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
@@ -194,6 +208,9 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
+    # We've reported several bugs to sqlframe - once they address
+    # them, we can start testing them as part of our CI.
+    # "sqlframe": pyspark_lazy_constructor,  # noqa: ERA001
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -218,6 +235,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
+        if (
+            constructor in ("pandas[nullable]", "pandas[pyarrow]")
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+        ):  # pragma: no cover
+            continue
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
@@ -242,13 +264,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         if (
-            any(
-                x in str(metafunc.module)
-                for x in ("list", "unpivot", "from_dict", "from_numpy")
-            )
+            any(x in str(metafunc.module) for x in ("unpivot", "from_dict", "from_numpy"))
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
-            # TODO(unassigned): list and name namespaces still need implementing for duckdb
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
             constructors_ids.remove("duckdb")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

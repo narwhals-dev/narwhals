@@ -55,6 +55,7 @@ SCHEMA = {
 }
 
 SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -62,8 +63,6 @@ def test_cast(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -74,6 +73,8 @@ def test_cast(
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "duckdb" in str(constructor):
+        incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -236,8 +237,7 @@ def test_cast_datetime_tz_aware(
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "duckdb", "pyspark")
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -246,12 +246,12 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     data = {
         "a": [
-            {"movie": "Cars", "rating": 4.5},
-            {"movie": "Toy Story", "rating": 4.9},
+            {"movie ": "Cars", "rating": 4.5},
+            {"movie ": "Toy Story", "rating": 4.9},
         ]
     }
 
-    dtype = nw.Struct([nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())])
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
     result = (
         nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
     )

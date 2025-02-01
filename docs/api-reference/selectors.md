@@ -16,6 +16,7 @@ set operations are supported:
         - by_dtype
         - categorical
         - datetime
+        - matches
         - numeric
         - string
       show_root_heading: false

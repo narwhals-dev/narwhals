@@ -38,7 +38,7 @@ def test_concat_str(
             nw.concat_str(
                 [
                     nw.col("a") * 2,
-                    nw.col("b"),
+                    "b",
                     nw.col("c"),
                 ],
                 separator=" ",

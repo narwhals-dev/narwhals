@@ -237,11 +237,11 @@ class ArrowSeries(CompliantSeries):
             pc.approximate_median(self._native_series), _return_py_scalar
         )
 
-    def min(self: Self, *, _return_py_scalar: bool = True) -> int:
-        return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+    def min(self: Self, *, _return_py_scalar: bool = True) -> Any:
+        return maybe_extract_py_scalar(pc.min(self._native_series), _return_py_scalar)
 
-    def max(self: Self, *, _return_py_scalar: bool = True) -> int:
-        return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)  # type: ignore[no-any-return]
+    def max(self: Self, *, _return_py_scalar: bool = True) -> Any:
+        return maybe_extract_py_scalar(pc.max(self._native_series), _return_py_scalar)
 
     def arg_min(self: Self, *, _return_py_scalar: bool = True) -> int:
         index_min = pc.index(self._native_series, pc.min(self._native_series))
@@ -408,7 +408,7 @@ class ArrowSeries(CompliantSeries):
         )
 
     def is_between(
-        self,
+        self: Self,
         lower_bound: Any,
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
@@ -505,10 +505,10 @@ class ArrowSeries(CompliantSeries):
     def value_counts(
         self: Self,
         *,
-        sort: bool = False,
-        parallel: bool = False,
-        name: str | None = None,
-        normalize: bool = False,
+        sort: bool,
+        parallel: bool,
+        name: str | None,
+        normalize: bool,
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -687,7 +687,7 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.unique(self._native_series))
 
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> ArrowSeries:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self._native_series, pa.array(old))
@@ -745,7 +745,7 @@ class ArrowSeries(CompliantSeries):
             pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             version=self._version,
-        ).select(*output_order)
+        ).simple_select(*output_order)
 
     def quantile(
         self: Self,
@@ -753,8 +753,8 @@ class ArrowSeries(CompliantSeries):
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
         *,
         _return_py_scalar: bool = True,
-    ) -> Any:
-        return maybe_extract_py_scalar(
+    ) -> float:
+        return maybe_extract_py_scalar(  # type: ignore[no-any-return]
             pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[0],
             _return_py_scalar,
         )
@@ -783,9 +783,12 @@ class ArrowSeries(CompliantSeries):
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(name=col_token, normalize=False).filter(
-            plx.col(col_token) == plx.col(col_token).max()
-        )[self.name]
+        return self.value_counts(
+            name=col_token,
+            normalize=False,
+            sort=False,
+            parallel=False,  # parallel is unused
+        ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
 
     def is_finite(self: Self) -> Self:
         return self._from_native_series(pc.is_finite(self._native_series))
@@ -840,10 +843,10 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -863,7 +866,7 @@ class ArrowSeries(CompliantSeries):
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_periods)._native_series,
+                (count_in_window >= min_samples)._native_series,
                 rolling_sum._native_series,
                 None,
             )
@@ -874,10 +877,10 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -898,7 +901,7 @@ class ArrowSeries(CompliantSeries):
         result = (
             self._from_native_series(
                 pc.if_else(
-                    (count_in_window >= min_periods)._native_series,
+                    (count_in_window >= min_samples)._native_series,
                     rolling_sum._native_series,
                     None,
                 )
@@ -911,11 +914,11 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
-        min_periods = min_periods if min_periods is not None else window_size
+        min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
         cum_sum = padded_series.cum_sum(reverse=False).fill_null(
@@ -947,7 +950,7 @@ class ArrowSeries(CompliantSeries):
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_periods)._native_series,
+                (count_in_window >= min_samples)._native_series,
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
                 None,
             )
@@ -961,13 +964,13 @@ class ArrowSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
         return (
             self.rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
             ** 0.5
         )

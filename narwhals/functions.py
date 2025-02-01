@@ -20,6 +20,7 @@ from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -1944,7 +1946,12 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.sum_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.sum_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2016,7 +2023,12 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.min_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.min_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2088,7 +2100,12 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.max_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.max_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2096,19 +2113,28 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 class When:
-    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
         if not self._predicates:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
+        if any(
+            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            for x in self._predicates
+        ):
+            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
+            raise ShapeError(msg)
 
-    def _extract_predicates(self, plx: Any) -> Any:
-        return [extract_compliant(plx, v) for v in self._predicates]
+    def _extract_predicates(self: Self, plx: Any) -> Any:
+        return [
+            extract_compliant(plx, v, parse_column_name_as_expr=True)
+            for v in self._predicates
+        ]
 
-    def then(self, value: IntoExpr | Any) -> Then:
+    def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
-                extract_compliant(plx, value)
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
             ),
             is_order_dependent=operation_is_order_dependent(*self._predicates, value),
             changes_length=operation_changes_length(*self._predicates, value),
@@ -2117,10 +2143,10 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self, value: IntoExpr | Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         return Expr(
             lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value)
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
             ),
             is_order_dependent=operation_is_order_dependent(self, value),
             changes_length=operation_changes_length(self, value),
@@ -2276,7 +2302,12 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.all_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.all_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2431,7 +2462,12 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.any_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.any_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2503,7 +2539,12 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.mean_horizontal(*[extract_compliant(plx, v) for v in flat_exprs]),
+        lambda plx: plx.mean_horizontal(
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
         is_order_dependent=operation_is_order_dependent(*flat_exprs),
         changes_length=operation_changes_length(*flat_exprs),
         aggregates=operation_aggregates(*flat_exprs),
@@ -2588,15 +2629,14 @@ def concat_str(
         ----
         full_sentence: [["2 dogs play","4 cats swim",null]]
     """
-    flat_exprs = flatten([exprs])
+    exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            [extract_compliant(plx, v) for v in flat_exprs],
-            *[extract_compliant(plx, v) for v in more_exprs],
+            *(extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs),
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
-        is_order_dependent=operation_is_order_dependent(*flat_exprs, *more_exprs),
-        changes_length=operation_changes_length(*flat_exprs, *more_exprs),
-        aggregates=operation_aggregates(*flat_exprs, *more_exprs),
+        is_order_dependent=operation_is_order_dependent(*exprs),
+        changes_length=operation_changes_length(*exprs),
+        aggregates=operation_aggregates(*exprs),
     )

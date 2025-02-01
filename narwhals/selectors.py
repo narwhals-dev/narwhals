@@ -2,21 +2,47 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import NoReturn
 
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
     from datetime import timezone
 
+    from typing_extensions import Self
+
+    from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
 
-class Selector(Expr): ...
+class Selector(Expr):
+    def _to_expr(self: Self) -> Expr:
+        return Expr(
+            to_compliant_expr=self._to_compliant_expr,
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
+
+    def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
+            raise TypeError(msg)
+        return self._to_expr() + other  # type: ignore[no-any-return]
+
+    def __rsub__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rand__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __ror__(self: Self, other: Any) -> NoReturn:
+        raise NotImplementedError
 
 
-def by_dtype(*dtypes: Any) -> Expr:
+def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Selector:
     """Select columns based on their dtype.
 
     Arguments:
@@ -80,7 +106,76 @@ def by_dtype(*dtypes: Any) -> Expr:
     )
 
 
-def numeric() -> Expr:
+def matches(pattern: str) -> Selector:
+    """Select all columns that match the given regex pattern.
+
+    Arguments:
+        pattern: A valid regular expression pattern.
+
+    Returns:
+        A new expression.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> from narwhals.typing import IntoFrameT
+        >>>
+        >>> data = {
+        ...     "foo": ["x", "y"],
+        ...     "bar": [123, 456],
+        ...     "baz": [2.0, 5.5],
+        ...     "zap": [0, 1],
+        ... }
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pa = pa.table(data)
+
+        Let's define a dataframe-agnostic function to select column names
+        containing an 'a', preceded by a character that is not 'z':
+
+        >>> def agnostic_select_match(df_native: IntoFrameT) -> IntoFrameT:
+        ...     df_nw = nw.from_native(df_native)
+        ...     return df_nw.select(ncs.matches("[^z]a")).to_native()
+
+        We can then pass any supported library such as pandas, Polars, or
+        PyArrow to `agnostic_select_match`:
+
+        >>> agnostic_select_match(df_pd)
+           bar  baz
+        0  123  2.0
+        1  456  5.5
+
+        >>> agnostic_select_match(df_pl)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ bar ┆ baz │
+        │ --- ┆ --- │
+        │ i64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 123 ┆ 2.0 │
+        │ 456 ┆ 5.5 │
+        └─────┴─────┘
+
+        >>> agnostic_select_match(df_pa)
+        pyarrow.Table
+        bar: int64
+        baz: double
+        ----
+        bar: [[123,456]]
+        baz: [[2,5.5]]
+    """
+    return Selector(
+        lambda plx: plx.selectors.matches(pattern),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
+
+
+def numeric() -> Selector:
     """Select numeric columns.
 
     Returns:
@@ -141,7 +236,7 @@ def numeric() -> Expr:
     )
 
 
-def boolean() -> Expr:
+def boolean() -> Selector:
     """Select boolean columns.
 
     Returns:
@@ -199,7 +294,7 @@ def boolean() -> Expr:
     )
 
 
-def string() -> Expr:
+def string() -> Selector:
     """Select string columns.
 
     Returns:
@@ -257,7 +352,7 @@ def string() -> Expr:
     )
 
 
-def categorical() -> Expr:
+def categorical() -> Selector:
     """Select categorical columns.
 
     Returns:
@@ -320,7 +415,7 @@ def categorical() -> Expr:
     )
 
 
-def all() -> Expr:
+def all() -> Selector:
     """Select all columns.
 
     Returns:
@@ -383,9 +478,9 @@ def all() -> Expr:
 
 
 def datetime(
-    time_unit: TimeUnit | Collection[TimeUnit] | None = None,
-    time_zone: str | timezone | Collection[str | timezone | None] | None = ("*", None),
-) -> Expr:
+    time_unit: TimeUnit | Iterable[TimeUnit] | None = None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None = ("*", None),
+) -> Selector:
     """Select all datetime columns, optionally filtering by time unit/zone.
 
     Arguments:
@@ -527,6 +622,8 @@ __all__ = [
     "boolean",
     "by_dtype",
     "categorical",
+    "datetime",
+    "matches",
     "numeric",
     "string",
 ]

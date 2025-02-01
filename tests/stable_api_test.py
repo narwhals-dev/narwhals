@@ -22,7 +22,7 @@ def remove_docstring_examples(doc: str) -> str:
 def test_renamed_taxicab_norm(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
@@ -52,15 +52,10 @@ def test_renamed_taxicab_norm(
     assert_equal_data(result_v1, expected)
 
 
-def test_renamed_taxicab_norm_dataframe(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     def func(df_any: Any) -> Any:
         df = nw_v1.from_native(df_any)
         df = df._l1_norm()
@@ -71,16 +66,10 @@ def test_renamed_taxicab_norm_dataframe(
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe_narwhalify(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.
-
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     @nw_v1.narwhalify
     def func(df: Any) -> Any:
         return df._l1_norm()

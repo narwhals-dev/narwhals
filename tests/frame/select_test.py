@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 import pyarrow as pa
 import pytest
+from polars.exceptions import DuplicateError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
@@ -48,12 +49,7 @@ def test_int_select_pandas() -> None:
 
 
 @pytest.mark.parametrize("invalid_select", [None, 0, Foo()])
-def test_invalid_select(
-    constructor: Constructor, invalid_select: Any, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor) and not isinstance(invalid_select, Foo):
-        # https://github.com/narwhals-dev/narwhals/issues/1390
-        request.applymarker(pytest.mark.xfail)
+def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
     with pytest.raises(InvalidIntoExprError):
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
@@ -138,3 +134,9 @@ def test_left_to_right_broadcasting(
     result = df.select(nw.col("b").sum() + nw.col("a").sum())
     expected = {"b": [19]}
     assert_equal_data(result, expected)
+
+
+def test_alias_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises((DuplicateError, ValueError)):
+        df.lazy().select(nw.all().alias("c")).collect()
