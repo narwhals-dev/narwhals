@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 
 class FormattedKeyError(KeyError):
     """KeyError with formatted error message.
@@ -10,23 +15,23 @@ class FormattedKeyError(KeyError):
     Needed by https://github.com/tensorflow/tensorflow/issues/36857.
     """
 
-    def __init__(self, message: str) -> None:
+    def __init__(self: Self, message: str) -> None:
         self.message = message
 
-    def __str__(self) -> str:
+    def __str__(self: Self) -> str:
         return self.message
 
 
 class ColumnNotFoundError(FormattedKeyError):
     """Exception raised when column name isn't present."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self: Self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
     @classmethod
     def from_missing_and_available_column_names(
-        cls, missing_columns: list[str], available_columns: list[str]
+        cls: type, missing_columns: list[str], available_columns: list[str]
     ) -> ColumnNotFoundError:
         message = (
             f"The following columns were not found: {missing_columns}"
@@ -46,12 +51,12 @@ class InvalidOperationError(Exception):
 class InvalidIntoExprError(TypeError):
     """Exception raised when object can't be converted to expression."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self: Self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
     @classmethod
-    def from_invalid_type(cls, invalid_type: type) -> InvalidIntoExprError:
+    def from_invalid_type(cls: type, invalid_type: type) -> InvalidIntoExprError:
         message = (
             f"Expected an object which can be converted into an expression, got {invalid_type}\n\n"
             "Hint:\n"
@@ -64,6 +69,43 @@ class InvalidIntoExprError(TypeError):
             "  column with literal value `0`."
         )
         return InvalidIntoExprError(message)
+
+
+class AnonymousExprError(ValueError):  # pragma: no cover
+    """Exception raised when trying to perform operations on anonymous expressions."""
+
+    def __init__(self: Self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+    @classmethod
+    def from_expr_name(cls: type, expr_name: str) -> AnonymousExprError:
+        message = (
+            f"Anonymous expressions are not supported in `{expr_name}`.\n"
+            "Instead of `nw.all()`, try using a named expression, such as "
+            "`nw.col('a', 'b')`"
+        )
+        return AnonymousExprError(message)
+
+
+class OrderDependentExprError(ValueError):
+    """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
+
+    def __init__(self: Self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
+class LengthChangingExprError(ValueError):
+    """Exception raised when trying to use an expression which changes length with LazyFrames."""
+
+    def __init__(self: Self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
+class UnsupportedDTypeError(ValueError):
+    """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
 
 class NarwhalsUnstableWarning(UserWarning):

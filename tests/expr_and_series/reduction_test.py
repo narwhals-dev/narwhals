@@ -33,13 +33,6 @@ def test_scalar_reduction_select(
     expected: dict[str, list[Any]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyspark" in str(constructor) and request.node.callspec.id in {
-        "pyspark-2",
-        "pyspark-3",
-        "pyspark-4",
-    }:
-        request.applymarker(pytest.mark.xfail)
-
     if "duckdb" in str(constructor) and request.node.callspec.id not in {"duckdb-0"}:
         request.applymarker(pytest.mark.xfail)
 
@@ -72,9 +65,7 @@ def test_scalar_reduction_with_columns(
     expected: dict[str, list[Any]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) or (
-        "pyspark" in str(constructor) and request.node.callspec.id != "pyspark-1"
-    ):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
@@ -85,6 +76,7 @@ def test_scalar_reduction_with_columns(
 def test_empty_scalar_reduction_select(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    # pyspark doesn't necessarely fails, but returns all None's
     if "pyspark" in str(constructor) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -118,7 +110,7 @@ def test_empty_scalar_reduction_select(
 def test_empty_scalar_reduction_with_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     from itertools import chain
 

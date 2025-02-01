@@ -3,77 +3,116 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._spark_like.typing import IntoSparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class SparkLikeLazyFrame:
+class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
-        self,
+        self: Self,
         native_dataframe: DataFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
+        implementation: Implementation,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
-        self._implementation = Implementation.PYSPARK
+        self._implementation = implementation
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        if self._implementation is Implementation.PYSPARK:
-            return self._implementation.to_native_namespace()
+    @property
+    def _F(self: Self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import functions
 
-        msg = f"Expected pyspark, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+            return functions
+        from pyspark.sql import functions
 
-    def __narwhals_namespace__(self) -> SparkLikeNamespace:
+        return functions
+
+    @property
+    def _native_dtypes(self: Self) -> Any:
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import types
+
+            return types
+        from pyspark.sql import types
+
+        return types
+
+    @property
+    def _Window(self: Self) -> Any:  # noqa: N802
+        if self._implementation is Implementation.SQLFRAME:
+            from sqlframe.duckdb import Window
+
+            return Window
+        from pyspark.sql import Window
+
+        return Window
+
+    def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
+        return self._implementation.to_native_namespace()
+
+    def __narwhals_namespace__(self: Self) -> SparkLikeNamespace:
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version, version=self._version
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_version(self, version: Version) -> Self:
+    def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame, backend_version=self._backend_version, version=version
+            self._native_frame,
+            backend_version=self._backend_version,
+            version=version,
+            implementation=self._implementation,
         )
 
-    def _from_native_frame(self, df: DataFrame) -> Self:
+    def _from_native_frame(self: Self, df: DataFrame) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
         )
 
     @property
-    def columns(self) -> list[str]:
+    def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
-    def collect(self) -> Any:
+    def collect(self: Self) -> PandasLikeDataFrame:
         import pandas as pd  # ignore-banned-import()
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -85,30 +124,55 @@ class SparkLikeLazyFrame:
             version=self._version,
         )
 
+    def simple_select(self: Self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(*column_names))
+
     def select(
         self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
+        *exprs: SparkLikeExpr,
+        **named_exprs: SparkLikeExpr,
     ) -> Self:
-        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
-            # This is a simple select
-            return self._from_native_frame(self._native_frame.select(*exprs))
-
-        new_columns = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
-            from pyspark.sql.types import StructType
-
             spark_session = self._native_frame.sparkSession
-            spark_df = spark_session.createDataFrame([], StructType([]))
+            spark_df = spark_session.createDataFrame(
+                [], self._native_dtypes.StructType([])
+            )
 
             return self._from_native_frame(spark_df)
 
-        new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
-        return self._from_native_frame(self._native_frame.select(*new_columns_list))
+        if not any(expr_kind is ExprKind.TRANSFORM for expr_kind in expr_kinds):
+            new_columns_list = [
+                col.alias(col_name) for col_name, col in new_columns.items()
+            ]
+            return self._from_native_frame(self._native_frame.agg(*new_columns_list))
+        else:
+            new_columns_list = [
+                col.over(self._Window().partitionBy(self._F.lit(1))).alias(col_name)
+                if expr_kind is ExprKind.AGGREGATION
+                else col.alias(col_name)
+                for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
+            ]
+            return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
-    def filter(self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
+    def with_columns(
+        self: Self,
+        *exprs: SparkLikeExpr,
+        **named_exprs: SparkLikeExpr,
+    ) -> Self:
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+
+        new_columns_map = {
+            col_name: col.over(self._Window().partitionBy(self._F.lit(1)))
+            if expr_kind is ExprKind.AGGREGATION
+            else col
+            for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
+        }
+        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
+
+    def filter(self: Self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(
             *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
@@ -119,24 +183,18 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(spark_df)
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self: Self) -> dict[str, DType]:
         return {
             field.name: native_to_narwhals_dtype(
-                dtype=field.dataType, version=self._version
+                dtype=field.dataType,
+                version=self._version,
+                spark_types=self._native_dtypes,
             )
             for field in self._native_frame.schema
         }
 
-    def collect_schema(self) -> dict[str, DType]:
+    def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
-
-    def with_columns(
-        self: Self,
-        *exprs: IntoSparkLikeExpr,
-        **named_exprs: IntoSparkLikeExpr,
-    ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
-        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         columns_to_drop = parse_columns_to_drop(
@@ -155,52 +213,48 @@ class SparkLikeLazyFrame:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
         return SparkLikeLazyGroupBy(
-            df=self, keys=list(keys), drop_null_keys=drop_null_keys
+            compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool = False,
+        *by: str,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
-
-        flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):
-            descending = [descending] * len(flat_by)
+            descending = [descending] * len(by)
 
         if nulls_last:
             sort_funcs = (
-                F.desc_nulls_last if d else F.asc_nulls_last for d in descending
+                self._F.desc_nulls_last if d else self._F.asc_nulls_last
+                for d in descending
             )
         else:
             sort_funcs = (
-                F.desc_nulls_first if d else F.asc_nulls_first for d in descending
+                self._F.desc_nulls_first if d else self._F.asc_nulls_first
+                for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
-
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
         return self._from_native_frame(
             self._native_frame.select(
-                [F.col(old).alias(new) for old, new in rename_mapping.items()]
+                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
             )
         )
 
     def unique(
         self: Self,
-        subset: list[str] | None = None,
+        subset: list[str] | None,
         *,
         keep: Literal["any", "none"],
     ) -> Self:
@@ -211,15 +265,13 @@ class SparkLikeLazyFrame:
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
-        self,
+        self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
-        import pyspark.sql.functions as F  # noqa: N812
-
         self_native = self._native_frame
         other_native = other._native_frame
 
@@ -242,7 +294,7 @@ class SparkLikeLazyFrame:
             },
         }
         other = other_native.select(
-            [F.col(old).alias(new) for old, new in rename_mapping.items()]
+            [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
 
         # If how in {"semi", "anti"}, then resulting columns are same as left columns
@@ -260,5 +312,45 @@ class SparkLikeLazyFrame:
             )
 
         return self._from_native_frame(
-            self_native.join(other=other, on=left_on, how=how).select(col_order)
+            self_native.join(other, on=left_on, how=how).select(col_order)
+        )
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        dtypes = import_dtypes_module(self._version)
+
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        native_frame = self._native_frame
+        column_names = self.columns
+
+        if len(to_explode) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with SparkLike backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
+            )
+            raise NotImplementedError(msg)
+
+        return self._from_native_frame(
+            native_frame.select(
+                *[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != to_explode[0]
+                    else self._F.explode_outer(col_name).alias(col_name)
+                    for col_name in column_names
+                ]
+            )
         )

@@ -15,6 +15,7 @@ set operations are supported:
         - boolean
         - by_dtype
         - categorical
+        - matches
         - numeric
         - string
       show_root_heading: false

@@ -9,6 +9,7 @@ from typing import Any
 
 if TYPE_CHECKING:
     import numpy as np
+    import sqlframe
 
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
@@ -92,7 +93,7 @@ def get_ibis() -> Any:
     return sys.modules.get("ibis", None)
 
 
-def get_dask_expr() -> Any:
+def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
     return sys.modules.get("dask_expr", None)
 
@@ -105,6 +106,11 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
+
+
+def get_sqlframe() -> Any:
+    """Get sqlframe module (if already imported - else return None)."""
+    return sys.modules.get("sqlframe", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -215,6 +221,14 @@ def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_sqlframe_dataframe(df: Any) -> TypeGuard[sqlframe.base.dataframe.BaseDataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    return bool(
+        (sqlframe := get_sqlframe()) is not None
+        and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
     )
 
 

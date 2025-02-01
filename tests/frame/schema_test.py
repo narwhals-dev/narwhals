@@ -27,7 +27,9 @@ data = {
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    df = nw.from_native(
+        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+    )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
@@ -38,7 +40,9 @@ def test_schema(constructor: Constructor) -> None:
 
 
 def test_collect_schema(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    df = nw.from_native(
+        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+    )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.collect_schema()
@@ -274,7 +278,6 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
 )
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df = dd.from_pandas(

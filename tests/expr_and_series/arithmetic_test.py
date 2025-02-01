@@ -45,7 +45,7 @@ def test_arithmetic_expr(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1.0, 2, 3]}
+    data = {"a": [1.0, 2.0, 3.0]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"a": expected})
@@ -57,7 +57,7 @@ def test_arithmetic_expr(
         ("__radd__", 1, [2, 3, 4]),
         ("__rsub__", 1, [0, -1, -2]),
         ("__rmul__", 2, [2, 4, 6]),
-        ("__rtruediv__", 2.0, [2, 1, 2 / 3]),
+        ("__rtruediv__", 2.0, [2.0, 1.0, 2 / 3]),
         ("__rfloordiv__", 2, [2, 1, 0]),
         ("__rmod__", 2, [0, 0, 2]),
         ("__rpow__", 2, [2, 4, 8]),
@@ -119,7 +119,7 @@ def test_arithmetic_series(
         ("__radd__", 1, [2, 3, 4]),
         ("__rsub__", 1, [0, -1, -2]),
         ("__rmul__", 2, [2, 4, 6]),
-        ("__rtruediv__", 2.0, [2, 1, 2 / 3]),
+        ("__rtruediv__", 2.0, [2.0, 1.0, 2 / 3]),
         ("__rfloordiv__", 2, [2, 1, 0]),
         ("__rmod__", 2, [0, 0, 2]),
         ("__rpow__", 2, [2, 4, 8]),
@@ -231,7 +231,7 @@ def test_mod(left: int, right: int) -> None:
         ("__add__", nw.lit(1), [2, 3, 5]),
         ("__sub__", nw.lit(1), [0, -1, -3]),
         ("__mul__", nw.lit(2), [2, 4, 8]),
-        ("__truediv__", nw.lit(2.0), [2, 1, 0.5]),
+        ("__truediv__", nw.lit(2.0), [2.0, 1.0, 0.5]),
         ("__truediv__", nw.lit(1), [1, 0.5, 0.25]),
         ("__floordiv__", nw.lit(2), [2, 1, 0]),
         ("__mod__", nw.lit(3), [0, 1, 3]),
@@ -254,7 +254,7 @@ def test_arithmetic_expr_left_literal(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1.0, 2, 4]}
+    data = {"a": [1.0, 2.0, 4.0]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
@@ -266,8 +266,8 @@ def test_arithmetic_expr_left_literal(
         ("__add__", nw.lit(1), [2, 3, 5]),
         ("__sub__", nw.lit(1), [0, -1, -3]),
         ("__mul__", nw.lit(2), [2, 4, 8]),
-        ("__truediv__", nw.lit(2.0), [2, 1, 0.5]),
-        ("__truediv__", nw.lit(1), [1, 0.5, 0.25]),
+        ("__truediv__", nw.lit(2.0), [2.0, 1.0, 0.5]),
+        ("__truediv__", nw.lit(1), [1.0, 0.5, 0.25]),
         ("__floordiv__", nw.lit(2), [2, 1, 0]),
         ("__mod__", nw.lit(3), [0, 1, 3]),
         ("__pow__", nw.lit(2), [2, 4, 16]),
@@ -285,7 +285,7 @@ def test_arithmetic_series_left_literal(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1.0, 2, 4]}
+    data = {"a": [1.0, 2.0, 4.0]}
     df = nw.from_native(constructor_eager(data))
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})

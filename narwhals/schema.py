@@ -12,6 +12,8 @@ from typing import Iterable
 from typing import Mapping
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.dtypes import DType
 
     BaseSchema = OrderedDict[str, DType]
@@ -54,12 +56,13 @@ class Schema(BaseSchema):
     """
 
     def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
+        self: Self,
+        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
     ) -> None:
         schema = schema or {}
         super().__init__(schema)
 
-    def names(self) -> list[str]:
+    def names(self: Self) -> list[str]:
         """Get the column names of the schema.
 
         Returns:
@@ -67,7 +70,7 @@ class Schema(BaseSchema):
         """
         return list(self.keys())
 
-    def dtypes(self) -> list[DType]:
+    def dtypes(self: Self) -> list[DType]:
         """Get the data types of the schema.
 
         Returns:
@@ -75,7 +78,7 @@ class Schema(BaseSchema):
         """
         return list(self.values())
 
-    def len(self) -> int:
+    def len(self: Self) -> int:
         """Get the number of columns in the schema.
 
         Returns:

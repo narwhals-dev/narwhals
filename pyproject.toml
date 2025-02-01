@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.22.0"
+version = "1.24.2"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -18,6 +18,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Operating System :: OS Independent",
+  "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -168,13 +169,16 @@ filterwarnings = [
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
-
+  # Warning raised by PyArrow nightly just by importing pandas
+  'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning'
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
-  "PYARROW_IGNORE_TIMEZONE=1"
+  "PYARROW_IGNORE_TIMEZONE=1",
+  "TZ=UTC",
 ]
 
 [tool.coverage.run]
@@ -191,7 +195,7 @@ omit = [
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
   'narwhals/_spark_like/*',
   # we don't run these in every environment
-  'tests/spark_like_test.py',
+  'tests/ibis_test.py',
 ]
 exclude_also = [
   "if sys.version_info() <",

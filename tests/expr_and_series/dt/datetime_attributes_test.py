@@ -49,8 +49,6 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
@@ -120,7 +118,6 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
             "pandas_nullable_constructor",
             "cudf",
             "modin_constructor",
-            "pyspark",
         )
     ):
         request.applymarker(pytest.mark.xfail)

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -22,6 +23,11 @@ def test_when(constructor: Constructor) -> None:
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {
         "a_when": [3, None, None],
+    }
+    assert_equal_data(result, expected)
+    result = df.select(nw.when(nw.col("a") == 1).then(value=3))
+    expected = {
+        "literal": [3, None, None],
     }
     assert_equal_data(result, expected)
 
@@ -121,23 +127,31 @@ def test_otherwise_expression(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_into_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_lit_str(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_when_then_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    with pytest.raises(ShapeError):
+        df.select(nw.when(nw.col("a").sum() > 1).then("c"))
+
+
+def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
+    assert_equal_data(result, expected)
+
+
+def test_when_then_otherwise_both_lit(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        x1=nw.when(nw.col("a") > 1).then(nw.lit(42)).otherwise(nw.lit(-1)),
+        x2=nw.when(nw.col("a") > 2).then(nw.lit(42)).otherwise(nw.lit(-1)),
+    )
+    expected = {"x1": [-1, 42, 42], "x2": [-1, -1, 42]}
     assert_equal_data(result, expected)

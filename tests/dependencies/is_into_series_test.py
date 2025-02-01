@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class ListBackedSeries:
-    def __init__(self, name: str, data: list[Any]) -> None:
+    def __init__(self: Self, name: str, data: list[Any]) -> None:
         self._data = data
         self._name = name
 

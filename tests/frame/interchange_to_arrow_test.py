@@ -18,9 +18,13 @@ def test_interchange_to_arrow() -> None:
 
 
 def test_interchange_ibis_to_arrow(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
