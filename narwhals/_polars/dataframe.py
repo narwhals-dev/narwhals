@@ -115,7 +115,7 @@ class PolarsDataFrame:
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
-            except pl.exceptions.PolarsError as e:
+            except Exception as e:  # noqa: BLE001
                 raise catch_polars_exception(e) from None
 
         return func
@@ -141,7 +141,7 @@ class PolarsDataFrame:
         else:
             try:
                 collected_schema = self._native_frame.collect_schema()
-            except pl.exceptions.PolarsError as e:
+            except Exception as e:  # noqa: BLE001
                 raise catch_polars_exception(e) from None
             return {
                 name: native_to_narwhals_dtype(
@@ -362,7 +362,7 @@ class PolarsDataFrame:
                 sort_columns=sort_columns,
                 separator=separator,
             )
-        except pl.exceptions.PolarsError as e:
+        except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
         return self._from_native_object(result)
 
@@ -447,7 +447,7 @@ class PolarsLazyFrame:
         else:
             try:
                 collected_schema = self._native_frame.collect_schema()
-            except pl.exceptions.PolarsError as e:
+            except Exception as e:  # noqa: BLE001
                 raise catch_polars_exception(e) from None
             return {
                 name: native_to_narwhals_dtype(
@@ -461,11 +461,9 @@ class PolarsLazyFrame:
         backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
-        import polars as pl
-
         try:
             result = self._native_frame.collect(**kwargs)
-        except pl.exceptions.PolarsError as e:
+        except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
         if backend is None or backend is Implementation.POLARS:

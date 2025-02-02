@@ -228,7 +228,7 @@ class PolarsSeries:
         native = self._native_series
         try:
             native_is_nan = native.is_nan()
-        except pl.exceptions.PolarsError as e:
+        except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
         if self._backend_version < (1, 18):  # pragma: no cover
             return self._from_native_series(
@@ -470,7 +470,7 @@ class PolarsSeries:
     def __contains__(self: Self, other: Any) -> bool:
         try:
             return self._native_series.__contains__(other)
-        except pl.exceptions.PolarsError as e:
+        except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
     def to_polars(self: Self) -> pl.Series:
