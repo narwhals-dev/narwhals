@@ -14,6 +14,7 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -428,18 +429,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         query = f"select * from rel where {keep_condition}"  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        from narwhals.exceptions import InvalidOperationError
-
+    def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
-
-        to_explode = (
-            [columns, *more_columns]
-            if isinstance(columns, str)
-            else [*columns, *more_columns]
-        )
         schema = self.collect_schema()
-        for col_to_explode in to_explode:
+        for col_to_explode in columns:
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
@@ -449,7 +442,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 )
                 raise InvalidOperationError(msg)
 
-        if len(to_explode) != 1:
+        if len(columns) != 1:
             msg = (
                 "Exploding on multiple columns is not supported with DuckDB backend since "
                 "we cannot guarantee that the exploded columns have matching element counts."
@@ -457,16 +450,17 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise NotImplementedError(msg)
 
         rel = self._native_frame  # noqa: F841
-        columns = self.columns
+        original_columns = self.columns
         select_unnest_statement = ", ".join(
-            f'unnest("{col}") as "{col}"' if col in to_explode else f'"{col}"'
-            for col in columns
+            f'unnest("{col}") as "{col}"' if col in columns else f'"{col}"'
+            for col in original_columns
         )
         select_null_statement = ", ".join(
-            f'null as "{col}"' if col in to_explode else f'"{col}"' for col in columns
+            f'null as "{col}"' if col in columns else f'"{col}"'
+            for col in original_columns
         )
         where_condition = " and ".join(
-            f'"{col}" is not null and len("{col}") > 0' for col in to_explode
+            f'"{col}" is not null and len("{col}") > 0' for col in columns
         )
 
         query = f"""

@@ -370,16 +370,11 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             self_native.join(other, on=left_on, how=how).select(col_order)
         )
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
-        to_explode = (
-            [columns, *more_columns]
-            if isinstance(columns, str)
-            else [*columns, *more_columns]
-        )
         schema = self.collect_schema()
-        for col_to_explode in to_explode:
+        for col_to_explode in columns:
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
@@ -392,7 +387,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         native_frame = self._native_frame
         column_names = self.columns
 
-        if len(to_explode) != 1:
+        if len(columns) != 1:
             msg = (
                 "Exploding on multiple columns is not supported with SparkLike backend since "
                 "we cannot guarantee that the exploded columns have matching element counts."
@@ -403,7 +398,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             native_frame.select(
                 *[
                     self._F.col(col_name).alias(col_name)
-                    if col_name != to_explode[0]
+                    if col_name != columns[0]
                     else self._F.explode_outer(col_name).alias(col_name)
                     for col_name in column_names
                 ]
