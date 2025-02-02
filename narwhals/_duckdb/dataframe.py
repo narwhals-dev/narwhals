@@ -122,7 +122,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
-    def head(self, n: int) -> Self:
+    def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
 
     def simple_select(self, *column_names: str) -> Self:
