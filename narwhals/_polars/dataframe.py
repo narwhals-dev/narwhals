@@ -16,6 +16,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantLazyFrame
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -231,12 +234,40 @@ class PolarsDataFrame:
             for name, dtype in schema.items()
         }
 
-    def lazy(self: Self) -> PolarsLazyFrame:
-        return PolarsLazyFrame(
-            self._native_frame.lazy(),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
+
+        if backend is None or backend is Implementation.POLARS:
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(
+                self._native_frame.lazy(),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
+
+            from narwhals._dask.dataframe import DaskLazyFrame
+
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
 
     @overload
     def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, PolarsSeries]: ...
@@ -279,10 +310,10 @@ class PolarsDataFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        on: list[str],
+        index: list[str],
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
@@ -411,19 +442,52 @@ class PolarsLazyFrame:
                 for name, dtype in self._native_frame.collect_schema().items()
             }
 
-    def collect(self: Self) -> PolarsDataFrame:
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
         import polars as pl
 
         try:
-            result = self._native_frame.collect()
+            result = self._native_frame.collect(**kwargs)
         except pl.exceptions.ColumnNotFoundError as e:
             raise ColumnNotFoundError(str(e)) from e
 
-        return PolarsDataFrame(
-            result,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        if backend is None or backend is Implementation.POLARS:
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                result,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                result.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                result.to_arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def group_by(self: Self, *by: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy
@@ -442,10 +506,10 @@ class PolarsLazyFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        on: list[str],
+        index: list[str],
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._from_native_frame(

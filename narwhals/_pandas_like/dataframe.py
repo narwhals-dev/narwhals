@@ -25,6 +25,7 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
@@ -501,13 +502,53 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     # --- convert ---
-    def collect(self: Self) -> PandasLikeDataFrame:
-        return PandasLikeDataFrame(
-            self._native_frame,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is None:
+            return PandasLikeDataFrame(
+                self._native_frame,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            return PandasLikeDataFrame(
+                self.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self.to_arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=self.to_polars(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     # --- actions ---
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
@@ -709,8 +750,44 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     # --- lazy-only ---
-    def lazy(self: Self) -> Self:
-        return self
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
+
+        if backend is None:
+            return self
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(
+                df=pl.from_pandas(self._native_frame).lazy(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
+
+            from narwhals._dask.dataframe import DaskLazyFrame
+
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
 
     @property
     def shape(self: Self) -> tuple[int, int]:
@@ -980,10 +1057,10 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        on: list[str],
+        index: list[str],
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         return self._from_native_frame(
             self._native_frame.melt(

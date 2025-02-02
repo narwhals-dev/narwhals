@@ -14,6 +14,7 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
@@ -79,20 +80,47 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(item), version=self._version
         )
 
-    def collect(self: Self) -> pa.Table:
-        try:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDcollect `LazyFrame` backed by DuckDB"
-            raise ModuleNotFoundError(msg) from exc
 
-        from narwhals._arrow.dataframe import ArrowDataFrame
+            from narwhals._arrow.dataframe import ArrowDataFrame
 
-        return ArrowDataFrame(
-            native_dataframe=self._native_frame.arrow(),
-            backend_version=parse_version(pa.__version__),
-            version=self._version,
-        )
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame.arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.df(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=self._native_frame.pl(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
@@ -142,7 +170,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._from_native_frame(self._native_frame.select(*selection))
 
-    def lazy(self: Self) -> Self:
+    def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
+        # The `backend`` argument has no effect but we keep it here for
+        # backwards compatibility because in `narwhals.stable.v1`
+        # function `.from_native()` will return a DataFrame for DuckDB.
+
+        if backend is not None:  # pragma: no cover
+            msg = "`backend` argument is not supported for DuckDB"
+            raise ValueError(msg)
         return self
 
     def with_columns(
@@ -394,26 +429,11 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        on: list[str],
+        index: list[str],
+        variable_name: str,
+        value_name: str,
     ) -> Self:
-        on_ = [on] if isinstance(on, str) else on
-        index_ = (
-            [index]
-            if isinstance(index, str)
-            else index
-            if isinstance(index, list)
-            else []
-        )
-
-        if on_ is None:
-            on_ = [c for c in self.columns if c not in index_]
-
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
-
         if variable_name == "":
             msg = "`variable_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
@@ -423,9 +443,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise NotImplementedError(msg)
 
         cols_to_select = ", ".join(
-            f'"{col}"' for col in [*index_, variable_name, value_name]
+            f'"{col}"' for col in [*index, variable_name, value_name]
         )
-        unpivot_on = ", ".join(f'"{col}"' for col in on_)
+        unpivot_on = ", ".join(f'"{col}"' for col in on)
 
         rel = self._native_frame  # noqa: F841
         query = f"""

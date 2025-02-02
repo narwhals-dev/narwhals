@@ -12,14 +12,18 @@ from narwhals.stable.v1._dtypes import Enum
 from narwhals.stable.v1._dtypes import Field
 from narwhals.stable.v1._dtypes import Float32
 from narwhals.stable.v1._dtypes import Float64
+from narwhals.stable.v1._dtypes import FloatType
 from narwhals.stable.v1._dtypes import Int8
 from narwhals.stable.v1._dtypes import Int16
 from narwhals.stable.v1._dtypes import Int32
 from narwhals.stable.v1._dtypes import Int64
 from narwhals.stable.v1._dtypes import Int128
+from narwhals.stable.v1._dtypes import IntegerType
 from narwhals.stable.v1._dtypes import List
+from narwhals.stable.v1._dtypes import NestedType
 from narwhals.stable.v1._dtypes import NumericType
 from narwhals.stable.v1._dtypes import Object
+from narwhals.stable.v1._dtypes import SignedIntegerType
 from narwhals.stable.v1._dtypes import String
 from narwhals.stable.v1._dtypes import Struct
 from narwhals.stable.v1._dtypes import UInt8
@@ -28,6 +32,7 @@ from narwhals.stable.v1._dtypes import UInt32
 from narwhals.stable.v1._dtypes import UInt64
 from narwhals.stable.v1._dtypes import UInt128
 from narwhals.stable.v1._dtypes import Unknown
+from narwhals.stable.v1._dtypes import UnsignedIntegerType
 
 __all__ = [
     "Array",
@@ -42,14 +47,18 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "FloatType",
     "Int8",
     "Int16",
     "Int32",
     "Int64",
     "Int128",
+    "IntegerType",
     "List",
+    "NestedType",
     "NumericType",
     "Object",
+    "SignedIntegerType",
     "String",
     "Struct",
     "UInt8",
@@ -58,4 +67,5 @@ __all__ = [
     "UInt64",
     "UInt128",
     "Unknown",
+    "UnsignedIntegerType",
 ]

@@ -66,7 +66,12 @@ def _sort_dict_by_key(
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(
-        range(len(sort_list)), key=lambda i: (sort_list[i] is None, sort_list[i])
+        range(len(sort_list)),
+        key=lambda i: (
+            (sort_list[i] is None)
+            or (isinstance(sort_list[i], float) and math.isnan(sort_list[i])),
+            sort_list[i],
+        ),
     )
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
@@ -83,12 +88,12 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
-        if result.implementation is Implementation.POLARS and os.environ.get(
-            "NARWHALS_POLARS_GPU", False
-        ):  # pragma: no cover
-            result = result.to_native().collect(engine="gpu")
-        else:
-            result = result.collect()
+        kwargs = {
+            Implementation.POLARS: (
+                {"engine": "gpu"} if os.environ.get("NARWHALS_POLARS_GPU", False) else {}
+            )  # pragma: no cover
+        }
+        result = result.collect(**kwargs.get(result.implementation, {}))
 
     if hasattr(result, "columns"):
         for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):

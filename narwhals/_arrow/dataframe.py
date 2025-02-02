@@ -19,10 +19,12 @@ from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
@@ -519,15 +521,84 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self: Self) -> Self:
-        return self
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
 
-    def collect(self: Self) -> ArrowDataFrame:
-        return ArrowDataFrame(
-            self._native_frame,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        if backend is None:
+            return self
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(
+                df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
+
+            from narwhals._dask.dataframe import DaskLazyFrame
+
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
+
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is Implementation.PYARROW or backend is None:
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=pl.from_arrow(self._native_frame),  # type: ignore[arg-type]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -693,26 +764,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        on: list[str],
+        index: list[str],
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         native_frame = self._native_frame
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
-
-        index_: list[str] = (
-            [] if index is None else [index] if isinstance(index, str) else index
-        )
-        on_: list[str] = (
-            [c for c in self.columns if c not in index_]
-            if on is None
-            else [on]
-            if isinstance(on, str)
-            else on
-        )
-
         n_rows = len(self)
 
         promote_kwargs = (
@@ -725,13 +782,13 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 [
                     pa.Table.from_arrays(
                         [
-                            *[native_frame.column(idx_col) for idx_col in index_],
+                            *[native_frame.column(idx_col) for idx_col in index],
                             pa.array([on_col] * n_rows, pa.string()),
                             native_frame.column(on_col),
                         ],
-                        names=[*index_, variable_name, value_name],
+                        names=[*index, variable_name, value_name],
                     )
-                    for on_col in on_
+                    for on_col in on
                 ],
                 **promote_kwargs,
             )

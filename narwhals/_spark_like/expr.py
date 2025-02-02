@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
+from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import ExprKind
@@ -556,3 +557,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     @property
     def dt(self: Self) -> SparkLikeExprDateTimeNamespace:
         return SparkLikeExprDateTimeNamespace(self)
+
+    @property
+    def list(self: Self) -> SparkLikeExprListNamespace:
+        return SparkLikeExprListNamespace(self)

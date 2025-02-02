@@ -12,6 +12,7 @@
         - Int32
         - Int16
         - Int8
+        - IntegerType
         - UInt128
         - UInt64
         - UInt32
@@ -20,9 +21,12 @@
         - Field
         - Float64
         - Float32
+        - FloatType
         - Boolean
         - Categorical
         - Enum
+        - NestedType
+        - SignedIntegerType
         - String
         - Struct
         - Date
@@ -30,6 +34,7 @@
         - Duration
         - Object
         - Unknown
+        - UnsignedIntegerType
       show_root_heading: false
       show_source: false
       show_bases: false
