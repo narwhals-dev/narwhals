@@ -57,12 +57,9 @@ def native_to_narwhals_dtype(
         return dtypes.Int16()
     if isinstance(dtype, spark_types.ByteType):
         return dtypes.Int8()
-    string_types = [
-        spark_types.StringType,
-        spark_types.VarcharType,
-        spark_types.CharType,
-    ]
-    if any(isinstance(dtype, t) for t in string_types):
+    if isinstance(
+        dtype, (spark_types.StringType, spark_types.VarcharType, spark_types.CharType)
+    ):
         return dtypes.String()
     if isinstance(dtype, spark_types.BooleanType):
         return dtypes.Boolean()
@@ -75,6 +72,12 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.DecimalType):  # pragma: no cover
         # TODO(unassigned): cover this in dtypes_test.py
         return dtypes.Decimal()
+    if isinstance(dtype, spark_types.ArrayType):  # pragma: no cover
+        return dtypes.List(
+            inner=native_to_narwhals_dtype(
+                dtype.elementType, version=version, spark_types=spark_types
+            )
+        )
     return dtypes.Unknown()
 
 
@@ -110,8 +113,12 @@ def narwhals_to_native_dtype(
             raise ValueError(msg)
         return spark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
-        raise NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(
+            dtype.inner,  # type: ignore[union-attr]
+            version=version,
+            spark_types=spark_types,
+        )
+        return spark_types.ArrayType(elementType=inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
         raise NotImplementedError(msg)
