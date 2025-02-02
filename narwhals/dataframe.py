@@ -3957,15 +3957,7 @@ class LazyFrame(BaseFrame[FrameT]):
             b: [[4,11,6]]
             c: [[10,10,1]]
         """
-        eager_backend = (
-            None
-            if backend is None
-            else Implementation.from_string(backend)
-            if isinstance(backend, str)
-            else backend
-            if isinstance(backend, Implementation)
-            else Implementation.from_native_namespace(backend)
-        )
+        eager_backend = None if backend is None else Implementation.from_backend(backend)
         supported_eager_backends = (
             Implementation.POLARS,
             Implementation.PANDAS,
