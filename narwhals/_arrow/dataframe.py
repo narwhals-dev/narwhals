@@ -764,13 +764,15 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str],
+        on: list[str] | None,
         index: list[str],
         variable_name: str,
         value_name: str,
     ) -> Self:
         native_frame = self._native_frame
         n_rows = len(self)
+
+        on_ = [c for c in self.columns if c not in index] if on is None else on
 
         promote_kwargs = (
             {"promote_options": "permissive"}
@@ -788,7 +790,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         ],
                         names=[*index, variable_name, value_name],
                     )
-                    for on_col in on
+                    for on_col in on_
                 ],
                 **promote_kwargs,
             )

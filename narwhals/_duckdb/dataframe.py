@@ -429,7 +429,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str],
+        on: list[str] | None,
         index: list[str],
         variable_name: str,
         value_name: str,
@@ -442,10 +442,12 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
+        on_ = [c for c in self.columns if c not in index] if on is None else on
+
         cols_to_select = ", ".join(
             f'"{col}"' for col in [*index, variable_name, value_name]
         )
-        unpivot_on = ", ".join(f'"{col}"' for col in on)
+        unpivot_on = ", ".join(f'"{col}"' for col in on_)
 
         rel = self._native_frame  # noqa: F841
         query = f"""

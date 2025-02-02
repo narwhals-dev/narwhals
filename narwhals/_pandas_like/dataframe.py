@@ -1057,7 +1057,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str],
+        on: list[str] | None,
         index: list[str],
         variable_name: str,
         value_name: str,
