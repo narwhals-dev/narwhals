@@ -167,15 +167,25 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self) -> LazyFrame[Any]:
-        """Lazify the DataFrame (if possible).
+    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+        """Restrict available API methods to lazy-only ones.
 
-        If a library does not support lazy execution, then this is a no-op.
+        If `backend` is specified, then a conversion between different backends
+        might be triggered.
+        If a library does not support lazy execution and `backend` is not specified,
+        then this is will only restrict the API to lazy-only operations. This is useful
+        if you want to ensure that you write dataframe-agnostic code which all has
+        the possibility of running entirely lazily.
+
+        Arguments:
+            backend: The (lazy) implementation to convert to. If not specified, and the
+                given library does not support lazy execution, then this will restrict
+                the API to lazy-only operations.
 
         Returns:
             A new LazyFrame.
         """
-        return super().lazy()  # type: ignore[return-value]
+        return super().lazy(backend=backend)  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for

@@ -10,6 +10,7 @@ for their dataframe interoperability needs:
 * [marimo](https://github.com/marimo-team/marimo)
 * [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 * [plotly](https://github.com/plotly/plotly.py)
+* [pointblank](https://github.com/posit-dev/pointblank)
 * [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 * [py-shiny](https://github.com/posit-dev/py-shiny)
 * [rio](https://github.com/rio-labs/rio)

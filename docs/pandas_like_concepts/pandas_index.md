@@ -16,7 +16,7 @@ Narwhals aims to accommodate both!
 
 Let's learn about what Narwhals promises.
 
-## 1. Narwhals will preserve your index for dataframe operations
+## 1. Narwhals will preserve your index for common dataframe operations
 
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
@@ -39,7 +39,10 @@ print(my_func(df))
 ```
 
 Note how the result still has the original index - Narwhals did not modify
-it.
+it. Narwhals will preserve your original index for most common dataframe
+operations. However, Narwhals will _not_ preserve the original index for
+`DataFrame.group_by`, because there, overlapping index and column names
+raise errors.
 
 ## 2. Index alignment follows the left-hand-rule
 
