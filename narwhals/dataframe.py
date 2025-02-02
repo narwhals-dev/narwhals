@@ -3827,7 +3827,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 - `polars.LazyFrame` -> `polars.DataFrame`
                 - `dask.DataFrame` -> `pandas.DataFrame`
                 - `duckdb.PyRelation` -> `pyarrow.Table`
-                - `pyspark.DataFrame` -> `pandas.DataFrame`
+                - `pyspark.DataFrame` -> `pyarrow.Table`
 
                 `backend` can be specified in various ways:
 
@@ -3957,6 +3957,23 @@ class LazyFrame(BaseFrame[FrameT]):
             b: [[4,11,6]]
             c: [[10,10,1]]
         """
+        eager_backend = (
+            None
+            if backend is None
+            else Implementation.from_string(backend)
+            if isinstance(backend, str)
+            else backend
+            if isinstance(backend, Implementation)
+            else Implementation.from_native_namespace(backend)
+        )
+        supported_eager_backends = (
+            Implementation.POLARS,
+            Implementation.PANDAS,
+            Implementation.PYARROW,
+        )
+        if eager_backend is not None and eager_backend not in supported_eager_backends:
+            msg = f"Expected one of {supported_eager_backends} or None, got: {eager_backend}."
+            raise ValueError(msg)
         return self._dataframe(
             self._compliant_frame.collect(backend=backend, **kwargs),
             level="full",
@@ -5375,9 +5392,9 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().clone()
 
     def lazy(self: Self) -> Self:
-        """Lazify the DataFrame (if possible).
+        """Restrict available API methods to lazy-only ones.
 
-        If a library does not support lazy execution, then this is a no-op.
+        This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
 
         Returns:
             A LazyFrame.

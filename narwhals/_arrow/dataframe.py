@@ -17,8 +17,6 @@ from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -564,10 +562,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
-        if backend in (None, "pyarrow", Implementation.PYARROW, pa):
+        if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
@@ -576,7 +574,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pandas", Implementation.PANDAS, get_pandas()):
+        if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -588,7 +586,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("polars", Implementation.POLARS, get_polars()):
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -599,9 +597,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"

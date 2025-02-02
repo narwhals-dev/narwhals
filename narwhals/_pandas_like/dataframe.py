@@ -18,9 +18,6 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -507,7 +504,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- convert ---
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
         if backend is None:
@@ -518,7 +515,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pandas", Implementation.PANDAS, get_pandas()):
+        if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             return PandasLikeDataFrame(
@@ -528,7 +525,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pyarrow", Implementation.PYARROW, get_pyarrow()):
+        if backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -539,7 +536,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("polars", Implementation.POLARS, get_polars()):
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -550,9 +547,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     # --- actions ---
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:

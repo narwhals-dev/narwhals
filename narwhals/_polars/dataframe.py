@@ -12,8 +12,6 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
@@ -446,7 +444,7 @@ class PolarsLazyFrame:
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
         import polars as pl
@@ -456,7 +454,7 @@ class PolarsLazyFrame:
         except pl.exceptions.ColumnNotFoundError as e:
             raise ColumnNotFoundError(str(e)) from e
 
-        if backend in (None, "polars", Implementation.POLARS, pl):
+        if backend is None or backend is Implementation.POLARS:
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
@@ -465,7 +463,7 @@ class PolarsLazyFrame:
                 version=self._version,
             )
 
-        elif backend in ("pandas", Implementation.PANDAS, get_pandas()):
+        if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -477,7 +475,7 @@ class PolarsLazyFrame:
                 version=self._version,
             )
 
-        elif backend in ("pyarrow", Implementation.PYARROW, get_pyarrow()):
+        if backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -488,9 +486,8 @@ class PolarsLazyFrame:
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def group_by(self: Self, *by: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy

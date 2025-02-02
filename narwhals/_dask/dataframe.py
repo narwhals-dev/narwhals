@@ -13,8 +13,6 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
@@ -83,14 +81,14 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
         import pandas as pd
 
         result = self._native_frame.compute(**kwargs)
 
-        if backend in (None, "pandas", Implementation.PANDAS, pd):
+        if backend is None or backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
@@ -100,7 +98,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("polars", Implementation.POLARS, get_polars()):
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -111,7 +109,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pyarrow", Implementation.PYARROW, get_pyarrow()):
+        if backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -122,9 +120,8 @@ class DaskLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     @property
     def columns(self: Self) -> list[str]:

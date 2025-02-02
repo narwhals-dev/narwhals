@@ -13,9 +13,6 @@ from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
@@ -88,7 +85,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
-        if backend in (None, "pyarrow", Implementation.PYARROW, get_pyarrow()):
+        if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -99,7 +96,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pandas", Implementation.PANDAS, get_pandas()):
+        if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -111,7 +108,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("polars", Implementation.POLARS, get_polars()):
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -122,9 +119,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def head(self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
