@@ -8,6 +8,8 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
@@ -432,8 +434,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
     def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
-        for col_to_explode in columns:
-            dtype = schema[col_to_explode]
+        for col in columns:
+            dtype = schema[col]
 
             if dtype != dtypes.List:
                 msg = (
@@ -449,34 +451,30 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             )
             raise NotImplementedError(msg)
 
-        rel = self._native_frame  # noqa: F841
+        col_to_explode = ColumnExpression(columns[0])
+        rel = self._native_frame
         original_columns = self.columns
-        select_unnest_statement = ", ".join(
-            f'unnest("{col}") as "{col}"' if col in columns else f'"{col}"'
-            for col in original_columns
+
+        not_null_condition = (
+            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
         )
-        select_null_statement = ", ".join(
-            f'null as "{col}"' if col in columns else f'"{col}"'
-            for col in original_columns
-        )
-        where_condition = " and ".join(
-            f'"{col}" is not null and len("{col}") > 0' for col in columns
+        non_null_rel = rel.filter(not_null_condition).select(
+            *[
+                FunctionExpression("unnest", col_to_explode).alias(col)
+                if col in columns
+                else col
+                for col in original_columns
+            ]
         )
 
-        query = f"""
-            (
-                select {select_unnest_statement}
-                from rel
-                where {where_condition}
-            )
-            union
-            (
-                select {select_null_statement}
-                from rel
-                where not ({where_condition})
-            );
-        """  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        null_rel = rel.filter(~not_null_condition).select(
+            *[
+                ConstantExpression(None).alias(col) if col in columns else col
+                for col in original_columns
+            ]
+        )
+
+        return self._from_native_frame(non_null_rel.union(null_rel))
 
     def unpivot(
         self: Self,
