@@ -127,14 +127,24 @@ class SparkLikeExprStringNamespace:
         )
 
     def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:  # noqa: A002
+        is_naive = format is not None and "%s" not in format and "%z" not in format
+        function = (
+            self._compliant_expr._F.to_timestamp_ntz
+            if is_naive
+            else self._compliant_expr._F.to_timestamp
+        )
+        pyspark_format = strptime_to_pyspark_format(format)
+        format = (
+            self._compliant_expr._F.lit(pyspark_format) if is_naive else pyspark_format
+        )
         return self._compliant_expr._from_call(
-            lambda _input: self._compliant_expr._F.to_timestamp(
+            lambda _input: function(
                 self._compliant_expr._F.replace(
                     _input,
                     self._compliant_expr._F.lit("T"),
                     self._compliant_expr._F.lit(" "),
                 ),
-                format=strptime_to_pyspark_format(format),
+                format=format,
             ),
             "to_datetime",
             expr_kind=self._compliant_expr._expr_kind,

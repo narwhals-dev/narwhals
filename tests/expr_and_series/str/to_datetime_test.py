@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import timezone
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -22,8 +23,6 @@ def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
-    elif "pyspark" in str(constructor):
-        expected = "2020-01-01 12:34:56+00:00"
     else:
         expected = "2020-01-01 12:34:56"
 
@@ -58,19 +57,19 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
             {"a": ["2020-01-01T12:34:56"]},
             "2020-01-01 12:34:56",
             "2020-01-01T12:34:56.000000000",
-            "2020-01-01T12:34:56+00:00",
+            "2020-01-01 12:34:56+00:00",
         ),
         (
             {"a": ["2020-01-01T12:34"]},
             "2020-01-01 12:34:00",
             "2020-01-01T12:34:00.000000000",
-            "2020-01-01T12:34:00+00:00",
+            "2020-01-01 12:34:00+00:00",
         ),
         (
             {"a": ["20240101123456"]},
             "2024-01-01 12:34:56",
             "2024-01-01T12:34:56.000000000",
-            "2024-01-01T12:34:56+00:00",
+            "2024-01-01 12:34:56+00:00",
         ),
     ],
 )
@@ -148,7 +147,14 @@ def test_to_datetime_infer_fmt_from_date(
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
-    expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
+    if "pyspark" in str(constructor):
+        expected = [
+            datetime(2020, 1, 1, tzinfo=timezone.utc),
+            datetime(2020, 1, 2, tzinfo=timezone.utc),
+            None,
+        ]
+    else:
+        expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (
         nw.from_native(constructor(data)).lazy().select(nw.col("z").str.to_datetime())
     )
