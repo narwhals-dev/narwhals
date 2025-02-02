@@ -1021,12 +1021,13 @@ class ArrowSeries(CompliantSeries):
             bin_count: int,
         ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
             d = pc.min_max(self._native_series)
-            lower, upper = d["min"].as_py(), d["max"].as_py()
+            lower, upper = d["min"], d["max"]
             if lower == upper:
                 lower -= 0.001 * abs(lower) if lower != 0 else 0.001
                 upper += 0.001 * abs(upper) if upper != 0 else 0.001
 
-            width = (upper - lower) / bin_count
+            range_ = pc.subtract(upper, lower)
+            width = pc.divide(range_.cast("float"), float(bin_count))
             bin_proportions = pc.divide(pc.subtract(self._native_series, lower), width)
             bin_indices = pc.floor(bin_proportions)
 
@@ -1063,8 +1064,8 @@ class ArrowSeries(CompliantSeries):
             bin_right = pc.add(bin_left, width)
             bin_left = pa.chunked_array(
                 [  # pad lowest bin by 1% of range
-                    [pc.subtract(bin_left[0], (upper - lower) * 0.001).as_py()],
-                    bin_left.to_numpy()[1:],  # pyarrow==0.11.0 needs to infer
+                    [pc.subtract(bin_left[0], pc.multiply(range_.cast("float"), 0.001))],
+                    bin_left[1:],  # pyarrow==0.11.0 needs to infer
                 ]
             )
             counts = counts.column("counts")
