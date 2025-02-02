@@ -126,3 +126,16 @@ class DuckDBExprStringNamespace:
     ) -> NoReturn:
         msg = "`replace` is currently not supported for DuckDB"
         raise NotImplementedError(msg)
+
+    def to_datetime(self: Self, format: str | None) -> DuckDBExpr:  # noqa: A002
+        if format is None:
+            msg = "Cannot infer format with DuckDB backend"
+            raise NotImplementedError(msg)
+
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression(
+                "strptime", _input, ConstantExpression(format)
+            ),
+            "to_datetime",
+            expr_kind=self._compliant_expr._expr_kind,
+        )
