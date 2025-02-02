@@ -766,12 +766,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         native_frame = self._native_frame
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
+        n_rows = len(self)
 
         index_: list[str] = (
             [] if index is None else [index] if isinstance(index, str) else index
@@ -783,8 +782,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if isinstance(on, str)
             else on
         )
-
-        n_rows = len(self)
 
         promote_kwargs = (
             {"promote_options": "permissive"}

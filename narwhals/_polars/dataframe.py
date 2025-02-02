@@ -312,8 +312,8 @@ class PolarsDataFrame:
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._from_native_frame(
@@ -508,8 +508,8 @@ class PolarsLazyFrame:
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._from_native_frame(

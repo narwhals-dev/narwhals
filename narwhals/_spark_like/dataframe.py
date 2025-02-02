@@ -409,3 +409,19 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 ]
             )
         )
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str,
+        value_name: str,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                ids=index,
+                values=on,
+                variableColumnName=variable_name,
+                valueColumnName=value_name,
+            )
+        )
