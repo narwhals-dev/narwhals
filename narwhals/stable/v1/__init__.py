@@ -167,17 +167,31 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self: Self,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
         might be triggered.
+
         If a library does not support lazy execution and `backend` is not specified,
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
 
         Arguments:
+            backend: specifies which lazy backend collect to. This will be the underlying
+                backend for the resulting Narwhals LazyFrame.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
+                    or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
             backend: The (lazy) implementation to convert to. If not specified, and the
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
