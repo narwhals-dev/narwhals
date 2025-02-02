@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import NarwhalsError
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -56,20 +57,18 @@ def test_replace_strict_series(
 def test_replace_non_full(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    from polars.exceptions import PolarsError
-
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises((ValueError, PolarsError)):
+        with pytest.raises((ValueError, NarwhalsError)):
             df.select(
                 nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
             ).collect()
     else:
-        with pytest.raises((ValueError, PolarsError)):
+        with pytest.raises((ValueError, NarwhalsError)):
             df.select(nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64))
 
 

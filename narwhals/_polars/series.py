@@ -7,6 +7,7 @@ from typing import overload
 
 import polars as pl
 
+from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -232,7 +233,10 @@ class PolarsSeries:
                     native.name
                 ]
             )
-        return self._from_native_series(native.is_nan())
+        try:
+            return self._from_native_series(native.is_nan())
+        except pl.exceptions.PolarsError as e:
+            raise catch_polars_exception(e) from None
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -466,15 +470,10 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     def __contains__(self: Self, other: Any) -> bool:
-        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-
         try:
             return self._native_series.__contains__(other)
-        except PlInvalidOperationError as exc:
-            from narwhals.exceptions import InvalidOperationError
-
-            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
-            raise InvalidOperationError(msg) from exc
+        except pl.exceptions.PolarsError as e:
+            raise catch_polars_exception(e) from None
 
     def to_polars(self: Self) -> pl.Series:
         return self._native_series

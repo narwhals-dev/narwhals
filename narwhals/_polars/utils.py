@@ -9,6 +9,10 @@ from typing import overload
 
 import polars as pl
 
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -217,3 +221,13 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def catch_polars_exception(exception: pl.exceptions.PolarsError) -> NarwhalsError:
+    if isinstance(exception, pl.exceptions.ColumnNotFoundError):
+        return ColumnNotFoundError(str(exception))
+    elif isinstance(exception, pl.exceptions.ShapeError):
+        return ShapeError(str(exception))
+    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+        return InvalidOperationError(str(exception))
+    return NarwhalsError(str(exception))
