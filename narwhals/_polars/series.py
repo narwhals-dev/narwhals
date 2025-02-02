@@ -517,7 +517,7 @@ class PolarsSeries:
                 upper += 0.001 * abs(upper) if upper != 0 else 0.001
             width = (upper - lower) / bin_count
 
-            bins = (pl.int_range(0, bin_count + 1, eager=True) * width).to_list()
+            bins = (pl.int_range(0, bin_count + 1, eager=True) * width + lower).to_list()
             bins[0] -= (upper - lower) * 0.001
             bin_count = None
 

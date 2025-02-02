@@ -114,6 +114,32 @@ def test_hist_bin(
     )
     assert_equal_data(result, expected)
 
+    shift_by = 10
+    bins = [b + shift_by for b in bins]
+    expected = {
+        "breakpoint": bins[1:],
+        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
+        "count": params["expected"],
+    }
+    if not include_breakpoint:
+        del expected["breakpoint"]
+    if not include_category:
+        del expected["category"]
+
+    result = (df["int"] + shift_by).hist(
+        bins=bins,
+        include_breakpoint=include_breakpoint,
+        include_category=include_category,
+    )
+    assert_equal_data(result, expected)
+
+    result = (df["float"] + shift_by).hist(
+        bins=bins,
+        include_breakpoint=include_breakpoint,
+        include_category=include_category,
+    )
+    assert_equal_data(result, expected)
+
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
@@ -155,6 +181,27 @@ def test_hist_count(
         bin_count=params["bin_count"],
         include_breakpoint=include_breakpoint,
         include_category=include_category,
+    )
+    assert_equal_data(result, expected)
+
+    shift_by = 10
+    bins = [b + shift_by for b in bins]
+    expected = {
+        "breakpoint": bins[1:],
+        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
+        "count": params["expected_count"],
+    }
+    result = (df["int"] + 10).hist(
+        bin_count=params["bin_count"],
+        include_breakpoint=True,
+        include_category=True,
+    )
+    assert_equal_data(result, expected)
+
+    result = (df["float"] + 10).hist(
+        bin_count=params["bin_count"],
+        include_breakpoint=True,
+        include_category=True,
     )
     assert_equal_data(result, expected)
 

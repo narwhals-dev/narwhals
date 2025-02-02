@@ -1063,7 +1063,7 @@ class ArrowSeries(CompliantSeries):
             )
 
             # extract left/right side of the intervals
-            bin_left = pc.multiply(counts.column("values"), width)
+            bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
             bin_right = pc.add(bin_left, width)
             bin_left = pa.chunked_array(
                 [  # pad lowest bin by 1% of range
