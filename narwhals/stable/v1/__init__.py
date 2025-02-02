@@ -297,7 +297,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
                 - `polars.LazyFrame` -> `polars.DataFrame`
                 - `dask.DataFrame` -> `pandas.DataFrame`
                 - `duckdb.PyRelation` -> `pyarrow.Table`
-                - `pyspark.DataFrame` -> `pandas.DataFrame`
+                - `pyspark.DataFrame` -> `pyarrow.Table`
 
                 `backend` can be specified in various ways:
 

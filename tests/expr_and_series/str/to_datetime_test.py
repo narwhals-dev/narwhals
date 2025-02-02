@@ -22,6 +22,8 @@ def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
+    elif "pyspark" in str(constructor):
+        expected = "2020-01-01 12:34:56+00:00"
     else:
         expected = "2020-01-01 12:34:56"
 
@@ -50,22 +52,25 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize(
-    ("data", "expected", "expected_cudf"),
+    ("data", "expected", "expected_cudf", "expected_pyspark"),
     [
         (
             {"a": ["2020-01-01T12:34:56"]},
             "2020-01-01 12:34:56",
             "2020-01-01T12:34:56.000000000",
+            "2020-01-01T12:34:56+00:00",
         ),
         (
             {"a": ["2020-01-01T12:34"]},
             "2020-01-01 12:34:00",
             "2020-01-01T12:34:00.000000000",
+            "2020-01-01T12:34:00+00:00",
         ),
         (
             {"a": ["20240101123456"]},
             "2024-01-01 12:34:56",
             "2024-01-01T12:34:56.000000000",
+            "2024-01-01T12:34:56+00:00",
         ),
     ],
 )
@@ -75,15 +80,20 @@ def test_to_datetime_infer_fmt(
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
+    expected_pyspark: str,
 ) -> None:
-    if "polars" in str(constructor) and str(data["a"][0]).isdigit():
+    if (
+        ("polars" in str(constructor) and str(data["a"][0]).isdigit())
+        or "duckdb" in str(constructor)
+        or ("pyspark" in str(constructor) and data["a"][0] == "20240101123456")
+    ):
         request.applymarker(pytest.mark.xfail)
+
     if "cudf" in str(constructor):
         expected = expected_cudf
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and data["a"][0] == "20240101123456":
-        request.applymarker(pytest.mark.xfail)
+    elif "pyspark" in str(constructor):
+        expected = expected_pyspark
+
     result = (
         nw.from_native(constructor(data))
         .lazy()

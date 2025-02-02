@@ -9,9 +9,6 @@ from typing import Sequence
 from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -120,7 +117,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
-        if backend in (None, "pandas", Implementation.PANDAS, get_pandas()):
+        if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -132,20 +129,40 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif backend in ("pyarrow", Implementation.PYARROW, get_pyarrow()):
+        elif backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            return ArrowDataFrame(
-                native_dataframe=pa.Table.from_batches(
+            try:
+                native_pyarrow_frame = pa.Table.from_batches(
                     self._native_frame._collect_as_arrow()
-                ),
+                )
+            except ValueError as exc:
+                if "at least one RecordBatch" in str(exc):
+                    # Empty dataframe
+                    from narwhals._arrow.utils import narwhals_to_native_dtype
+
+                    data: dict[str, list[Any]] = {}
+                    schema = []
+                    current_schema = self.collect_schema()
+                    for key, value in current_schema.items():
+                        data[key] = []
+                        schema.append(
+                            (key, narwhals_to_native_dtype(value, self._version))
+                        )
+                    native_pyarrow_frame = pa.Table.from_pydict(
+                        data, schema=pa.schema(schema)
+                    )
+                else:  # pragma: no cover
+                    raise
+            return ArrowDataFrame(
+                native_pyarrow_frame,
                 backend_version=parse_version(pa.__version__),
                 version=self._version,
             )
 
-        elif backend in ("polars", Implementation.POLARS, get_polars()):
+        elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
             import pyarrow as pa  # ignore-banned-import
 
@@ -159,9 +176,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 version=self._version,
             )
 
-        else:
-            msg = f"Unsupported `backend` value: {backend}"
-            raise ValueError(msg)
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))

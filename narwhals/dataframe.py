@@ -3964,10 +3964,10 @@ class LazyFrame(BaseFrame[FrameT]):
             Implementation.PYARROW,
         )
         if eager_backend is not None and eager_backend not in supported_eager_backends:
-            msg = f"Expected one of {supported_eager_backends} or None, got: {eager_backend}."
+            msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
             raise ValueError(msg)
         return self._dataframe(
-            self._compliant_frame.collect(backend=backend, **kwargs),
+            self._compliant_frame.collect(backend=eager_backend, **kwargs),
             level="full",
         )
 

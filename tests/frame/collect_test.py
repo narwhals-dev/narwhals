@@ -32,7 +32,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 
     if "polars" in str(constructor):
         expected_cls = pl.DataFrame
-    elif any(x in str(constructor) for x in ("pandas", "dask", "pyspark")):
+    elif any(x in str(constructor) for x in ("pandas", "dask")):
         expected_cls = pd.DataFrame
     elif "modin" in str(constructor):
         mpd = get_modin()
@@ -40,7 +40,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
     elif "cudf" in str(constructor):
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
-    else:  # pyarrow and duckdb
+    else:  # pyarrow, duckdb, and PySpark
         expected_cls = pa.Table
 
     assert isinstance(result, expected_cls)
