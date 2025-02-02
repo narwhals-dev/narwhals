@@ -127,7 +127,12 @@ class SparkLikeExprStringNamespace:
         )
 
     def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:  # noqa: A002
-        is_naive = format is not None and "%s" not in format and "%z" not in format
+        is_naive = (
+            format is not None
+            and "%s" not in format
+            and "%z" not in format
+            and "Z" not in format
+        )
         function = (
             self._compliant_expr._F.to_timestamp_ntz
             if is_naive
