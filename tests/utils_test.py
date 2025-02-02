@@ -429,3 +429,16 @@ def test_is_implemented() -> None:
         raise NotImplementedError
 
     assert not is_implemented(i)
+
+    def j() -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    assert not is_implemented(j)
+
+    def k() -> None:  # pragma: no cover
+        try:
+            raise NotImplementedError  # noqa: TRY301
+        except NotImplementedError:  # noqa: TRY203
+            raise
+
+    assert not is_implemented(k)

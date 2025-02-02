@@ -1160,9 +1160,11 @@ def get_class_that_defines_method(method: Callable[..., Any]) -> type:
         type
     """
     if ismethod(method):
-        for cls in getmro(method.__self__.__class__):
-            if method.__name__ in cls.__dict__:
-                return cls
+        return next(
+            cls
+            for cls in getmro(method.__self__.__class__)
+            if method.__name__ in cls.__dict__
+        )
 
     elif isfunction(method):
         maybe_cls = getattr(
@@ -1290,12 +1292,9 @@ def is_implemented(func: Callable[..., Any]) -> bool:
             self.has_return = True
 
         def visit_Raise(self, node: Raise) -> None:  # noqa: N802
-            if isinstance(node.exc, Call):
-                name_node = node.exc.func
-            elif isinstance(node.exc, Name):
-                name_node = node.exc
-
-            if name_node.id == "NotImplementedError":  # type: ignore[attr-defined]
+            if (
+                isinstance(node.exc, Call) and node.exc.func.id == "NotImplementedError"  # type: ignore[attr-defined]
+            ) or (isinstance(node.exc, Name) and node.exc.id == "NotImplementedError"):
                 self.has_notimplemented = True
 
     source = dedent(getsource(func))
