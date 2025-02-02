@@ -238,4 +238,8 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     ):
         # Old versions of Polars didn't have PolarsError.
         return NarwhalsError(str(exception))
+    if "polars.exceptions" in str(type(exception)):
+        # Last attempt...
+        return NarwhalsError(str(exception))
+    # Just return exception as-is.
     return exception
