@@ -68,12 +68,10 @@ def native_to_narwhals_dtype(
         return dtypes.Boolean()
     if isinstance(dtype, spark_types.DateType):
         return dtypes.Date()
-    datetime_types = [
-        spark_types.TimestampType,
-        spark_types.TimestampNTZType,
-    ]
-    if any(isinstance(dtype, t) for t in datetime_types):
+    if isinstance(dtype, spark_types.TimestampNTZType):
         return dtypes.Datetime()
+    if isinstance(dtype, spark_types.TimestampType):
+        return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, spark_types.DecimalType):  # pragma: no cover
         # TODO(unassigned): cover this in dtypes_test.py
         return dtypes.Decimal()
@@ -107,6 +105,9 @@ def narwhals_to_native_dtype(
         dt_time_zone = getattr(dtype, "time_zone", None)
         if dt_time_zone is None:
             return spark_types.TimestampNTZType()
+        if dt_time_zone != "UTC":  # pragma: no cover
+            msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
+            raise ValueError(msg)
         return spark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
