@@ -114,7 +114,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
         if backend is Implementation.PANDAS:

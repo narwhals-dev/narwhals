@@ -89,6 +89,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoImplementation
     from narwhals.typing import IntoSeries
 
 T = TypeVar("T")
@@ -170,7 +171,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def lazy(
         self: Self,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoImplementation | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -294,7 +295,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoImplementation | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.

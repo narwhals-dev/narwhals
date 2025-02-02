@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import ModuleType
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -243,6 +244,9 @@ Examples:
     ...     s = nw.from_native(s_native, series_only=True)
     ...     return s.abs().to_native()
 """
+
+IntoImplementation: TypeAlias = Union["Implementation", ModuleType, str]
+"""Anything which can be converted to a Narwhals Implementation via Implementation.from_backend."""
 
 SizeUnit: TypeAlias = Literal[
     "b",

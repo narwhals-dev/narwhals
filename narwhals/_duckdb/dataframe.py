@@ -82,7 +82,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None,
+        backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
         if backend is None or backend is Implementation.PYARROW:
