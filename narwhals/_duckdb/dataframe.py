@@ -14,6 +14,7 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
@@ -79,20 +80,47 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(item), version=self._version
         )
 
-    def collect(self: Self) -> pa.Table:
-        try:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDcollect `LazyFrame` backed by DuckDB"
-            raise ModuleNotFoundError(msg) from exc
 
-        from narwhals._arrow.dataframe import ArrowDataFrame
+            from narwhals._arrow.dataframe import ArrowDataFrame
 
-        return ArrowDataFrame(
-            native_dataframe=self._native_frame.arrow(),
-            backend_version=parse_version(pa.__version__),
-            version=self._version,
-        )
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame.arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.df(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=self._native_frame.pl(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))

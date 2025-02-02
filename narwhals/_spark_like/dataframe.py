@@ -10,6 +10,7 @@ from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs_and_named_exprs
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -112,17 +112,72 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
-    def collect(self: Self) -> PandasLikeDataFrame:
-        import pandas as pd  # ignore-banned-import()
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
 
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        return PandasLikeDataFrame(
-            native_dataframe=self._native_frame.toPandas(),
-            implementation=Implementation.PANDAS,
-            backend_version=parse_version(pd.__version__),
-            version=self._version,
-        )
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.toPandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        elif backend is None or backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            try:
+                native_pyarrow_frame = pa.Table.from_batches(
+                    self._native_frame._collect_as_arrow()
+                )
+            except ValueError as exc:
+                if "at least one RecordBatch" in str(exc):
+                    # Empty dataframe
+                    from narwhals._arrow.utils import narwhals_to_native_dtype
+
+                    data: dict[str, list[Any]] = {}
+                    schema = []
+                    current_schema = self.collect_schema()
+                    for key, value in current_schema.items():
+                        data[key] = []
+                        schema.append(
+                            (key, narwhals_to_native_dtype(value, self._version))
+                        )
+                    native_pyarrow_frame = pa.Table.from_pydict(
+                        data, schema=pa.schema(schema)
+                    )
+                else:  # pragma: no cover
+                    raise
+            return ArrowDataFrame(
+                native_pyarrow_frame,
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=pl.from_arrow(  # type: ignore[arg-type]
+                    pa.Table.from_batches(self._native_frame._collect_as_arrow())
+                ),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))

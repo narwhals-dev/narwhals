@@ -13,6 +13,7 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -29,7 +30,6 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -79,16 +79,49 @@ class DaskLazyFrame(CompliantLazyFrame):
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
-    def collect(self: Self) -> PandasLikeDataFrame:
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        import pandas as pd
 
-        result = self._native_frame.compute()
-        return PandasLikeDataFrame(
-            result,
-            implementation=Implementation.PANDAS,
-            backend_version=parse_version(pd.__version__),
-            version=self._version,
-        )
+        result = self._native_frame.compute(**kwargs)
+
+        if backend is None or backend is Implementation.PANDAS:
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                result,
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                pl.from_pandas(result),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                pa.Table.from_pandas(result),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     @property
     def columns(self: Self) -> list[str]:
