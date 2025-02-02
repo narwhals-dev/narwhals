@@ -799,17 +799,21 @@ class Expr:
             A new expression.
 
         Examples:
-            >>> import pandas as pd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [5, 10], "b": [50, 100]})
+            >>> df_native = duckdb.sql("SELECT * FROM VALUES (5, 50), (10, 100) df(a, b)")
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a", "b").sum())
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |        a    b    |
-            |    0  15  150    |
-            └──────────────────┘
+            ┌───────────────────┐
+            |Narwhals LazyFrame |
+            |-------------------|
+            |┌────────┬────────┐|
+            |│   a    │   b    │|
+            |│ int128 │ int128 │|
+            |├────────┼────────┤|
+            |│     15 │    150 │|
+            |└────────┴────────┘|
+            └───────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
@@ -1076,20 +1080,26 @@ class Expr:
                 nw.col("a").diff().fill_null(0).cast(nw.Int64)
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_native = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_diff=nw.col("a").diff())
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |      a  a_diff   |
-            |   0  1     NaN   |
-            |   1  1     0.0   |
-            |   2  3     2.0   |
-            |   3  5     2.0   |
-            |   4  5     0.0   |
+            | shape: (5, 2)    |
+            | ┌─────┬────────┐ |
+            | │ a   ┆ a_diff │ |
+            | │ --- ┆ ---    │ |
+            | │ i64 ┆ i64    │ |
+            | ╞═════╪════════╡ |
+            | │ 1   ┆ null   │ |
+            | │ 1   ┆ 0      │ |
+            | │ 3   ┆ 2      │ |
+            | │ 5   ┆ 2      │ |
+            | │ 5   ┆ 0      │ |
+            | └─────┴────────┘ |
             └──────────────────┘
         """
         return self.__class__(
@@ -1118,20 +1128,26 @@ class Expr:
                 nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_native = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_shift=nw.col("a").shift(n=1))
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |     a  a_shift   |
-            |  0  1      NaN   |
-            |  1  1      1.0   |
-            |  2  3      1.0   |
-            |  3  5      3.0   |
-            |  4  5      5.0   |
+            |shape: (5, 2)     |
+            |┌─────┬─────────┐ |
+            |│ a   ┆ a_shift │ |
+            |│ --- ┆ ---     │ |
+            |│ i64 ┆ i64     │ |
+            |╞═════╪═════════╡ |
+            |│ 1   ┆ null    │ |
+            |│ 1   ┆ 1       │ |
+            |│ 3   ┆ 1       │ |
+            |│ 5   ┆ 3       │ |
+            |│ 5   ┆ 5       │ |
+            |└─────┴─────────┘ |
             └──────────────────┘
         """
         return self.__class__(
@@ -1375,28 +1391,26 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": [2, 4, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), 3.0, 5.0],
-            ...     }
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * from values (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
             ... )
-            ┌─────────────────────────────────┐
-            |       Narwhals DataFrame        |
-            |---------------------------------|
-            |     a    b  a_is_null  b_is_null|
-            |0  2.0  2.0      False      False|
-            |1  4.0  4.0      False      False|
-            |2  NaN  NaN       True       True|
-            |3  3.0  3.0      False      False|
-            |4  5.0  5.0      False      False|
-            └─────────────────────────────────┘
+            ┌──────────────────────────────────────────┐
+            |            Narwhals LazyFrame            |
+            |------------------------------------------|
+            |┌───────┬────────┬───────────┬───────────┐|
+            |│   a   │   b    │ a_is_null │ b_is_null │|
+            |│ int32 │ double │  boolean  │  boolean  │|
+            |├───────┼────────┼───────────┼───────────┤|
+            |│  NULL │    nan │ true      │ false     │|
+            |│     2 │    2.0 │ false     │ false     │|
+            |└───────┴────────┴───────────┴───────────┘|
+            └──────────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_null(),
@@ -1417,24 +1431,24 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"orig": [0.0, None, 2.0]}).astype(
-            ...     {"orig": "Float64"}
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * from values (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(
-            ...     divided=nw.col("orig") / nw.col("orig"),
-            ...     divided_is_nan=(nw.col("orig") / nw.col("orig")).is_nan(),
-            ... )
-            ┌────────────────────────────────┐
-            |       Narwhals DataFrame       |
-            |--------------------------------|
-            |   orig  divided  divided_is_nan|
-            |0   0.0      NaN            True|
-            |1  <NA>     <NA>            <NA>|
-            |2   2.0      1.0           False|
-            └────────────────────────────────┘
+            >>> df.with_columns(a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan())
+            ┌────────────────────────────────────────┐
+            |           Narwhals LazyFrame           |
+            |----------------------------------------|
+            |┌───────┬────────┬──────────┬──────────┐|
+            |│   a   │   b    │ a_is_nan │ b_is_nan │|
+            |│ int32 │ double │ boolean  │ boolean  │|
+            |├───────┼────────┼──────────┼──────────┤|
+            |│  NULL │    nan │ NULL     │ true     │|
+            |│     2 │    2.0 │ false    │ false    │|
+            |└───────┴────────┴──────────┴──────────┘|
+            └────────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_nan(),
@@ -1484,27 +1498,31 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
+            >>> df_native = pl.DataFrame(
             ...     {
-            ...         "a": [2, 4, None, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...         "a": [2, None, None, 3],
+            ...         "b": [2.0, float("nan"), float("nan"), 3.0],
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled"))
-            ┌───────────────────────────────────────────┐
-            |            Narwhals DataFrame             |
-            |-------------------------------------------|
-            |     a    b  a_nulls_filled  b_nulls_filled|
-            |0  2.0  2.0             2.0             2.0|
-            |1  4.0  4.0             4.0             4.0|
-            |2  NaN  NaN             0.0             0.0|
-            |3  NaN  NaN             0.0             0.0|
-            |4  3.0  3.0             3.0             3.0|
-            |5  5.0  5.0             5.0             5.0|
-            └───────────────────────────────────────────┘
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |shape: (4, 4)                                   |
+            |┌──────┬─────┬────────────────┬────────────────┐|
+            |│ a    ┆ b   ┆ a_nulls_filled ┆ b_nulls_filled │|
+            |│ ---  ┆ --- ┆ ---            ┆ ---            │|
+            |│ i64  ┆ f64 ┆ i64            ┆ f64            │|
+            |╞══════╪═════╪════════════════╪════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 2              ┆ 2.0            │|
+            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
+            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
+            |│ 3    ┆ 3.0 ┆ 3              ┆ 3.0            │|
+            |└──────┴─────┴────────────────┴────────────────┘|
+            └────────────────────────────────────────────────┘
 
             Using a strategy:
 
@@ -1513,17 +1531,21 @@ class Expr:
             ...     .fill_null(strategy="forward", limit=1)
             ...     .name.suffix("_nulls_forward_filled")
             ... )
-            ┌───────────────────────────────────────────────────────────┐
-            |                    Narwhals DataFrame                     |
-            |-----------------------------------------------------------|
-            |     a    b  a_nulls_forward_filled  b_nulls_forward_filled|
-            |0  2.0  2.0                     2.0                     2.0|
-            |1  4.0  4.0                     4.0                     4.0|
-            |2  NaN  NaN                     4.0                     4.0|
-            |3  NaN  NaN                     NaN                     NaN|
-            |4  3.0  3.0                     3.0                     3.0|
-            |5  5.0  5.0                     5.0                     5.0|
-            └───────────────────────────────────────────────────────────┘
+            ┌────────────────────────────────────────────────────────────────┐
+            |                       Narwhals DataFrame                       |
+            |----------------------------------------------------------------|
+            |shape: (4, 4)                                                   |
+            |┌──────┬─────┬────────────────────────┬────────────────────────┐|
+            |│ a    ┆ b   ┆ a_nulls_forward_filled ┆ b_nulls_forward_filled │|
+            |│ ---  ┆ --- ┆ ---                    ┆ ---                    │|
+            |│ i64  ┆ f64 ┆ i64                    ┆ f64                    │|
+            |╞══════╪═════╪════════════════════════╪════════════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 2                      ┆ 2.0                    │|
+            |│ null ┆ NaN ┆ 2                      ┆ NaN                    │|
+            |│ null ┆ NaN ┆ null                   ┆ NaN                    │|
+            |│ 3    ┆ 3.0 ┆ 3                      ┆ 3.0                    │|
+            |└──────┴─────┴────────────────────────┴────────────────────────┘|
+            └────────────────────────────────────────────────────────────────┘
         """
         if value is not None and strategy is not None:
             msg = "cannot specify both `value` and `strategy`"
@@ -1556,19 +1578,26 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df_native = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").drop_nulls())
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |           a      |
-            |      0  2.0      |
-            |      1  4.0      |
-            |      3  3.0      |
-            |      5  5.0      |
+            |  shape: (5, 1)   |
+            |  ┌─────┐         |
+            |  │ a   │         |
+            |  │ --- │         |
+            |  │ f64 │         |
+            |  ╞═════╡         |
+            |  │ 2.0 │         |
+            |  │ 4.0 │         |
+            |  │ NaN │         |
+            |  │ 3.0 │         |
+            |  │ 5.0 │         |
+            |  └─────┘         |
             └──────────────────┘
         """
         return self.__class__(
@@ -1635,30 +1664,30 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3], "b": [1, 1, 2]})
+            >>> df_native = pd.DataFrame({"a": [1, 2, 4], "b": ["x", "x", "y"]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_min_per_group=nw.col("a").min().over("b"))
             ┌────────────────────────┐
             |   Narwhals DataFrame   |
             |------------------------|
             |   a  b  a_min_per_group|
-            |0  1  1                1|
-            |1  2  1                1|
-            |2  3  2                3|
+            |0  1  x                1|
+            |1  2  x                1|
+            |2  4  y                4|
             └────────────────────────┘
 
             Cumulative operations are also supported, but (currently) only for
             pandas and Polars:
 
-            >>> df.with_columns(c=nw.col("a").cum_sum().over("b"))
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |       a  b  c    |
-            |    0  1  1  1    |
-            |    1  2  1  3    |
-            |    2  3  2  3    |
-            └──────────────────┘
+            >>> df.with_columns(a_cum_sum_per_group=nw.col("a").cum_sum().over("b"))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |   a  b  a_cum_sum_per_group|
+            |0  1  x                    1|
+            |1  2  x                    3|
+            |2  4  y                    4|
+            └────────────────────────────┘
         """
         if self._changes_length:
             msg = "`.over()` can not be used for expressions which change length."
@@ -2097,28 +2126,37 @@ class Expr:
         """Returns boolean values indicating which original values are finite.
 
         Warning:
-            Different backend handle null values differently. `is_finite` will return
-            False for NaN and Null's in the Dask and pandas non-nullable backend, while
-            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+            `is_finite` will return False for NaN and Null's in the Dask and
+            pandas non-nullable backend, while for Polars, PyArrow and pandas
+            nullable backends null values are kept as such.
 
         Returns:
             Expression of `Boolean` data type.
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [float("nan"), float("inf"), 2.0, None]})
+            >>> df_native = pl.DataFrame({"a": [float("nan"), float("inf"), 2.0, None]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_is_finite=nw.col("a").is_finite())
-            ┌───────────────────┐
-            |Narwhals DataFrame |
-            |-------------------|
-            |     a  a_is_finite|
-            |0  NaN        False|
-            |1  inf        False|
-            |2  2.0         True|
-            |3  NaN        False|
-            └───────────────────┘
+            ┌──────────────────────┐
+            |  Narwhals DataFrame  |
+            |----------------------|
+            |shape: (4, 2)         |
+            |┌──────┬─────────────┐|
+            |│ a    ┆ a_is_finite │|
+            |│ ---  ┆ ---         │|
+            |│ f64  ┆ bool        │|
+            |╞══════╪═════════════╡|
+            |│ NaN  ┆ false       │|
+            |│ inf  ┆ false       │|
+            |│ 2.0  ┆ true        │|
+            |│ null ┆ null        │|
+            |└──────┴─────────────┘|
+            └──────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_finite(),
@@ -2142,18 +2180,18 @@ class Expr:
             >>> df_native = pd.DataFrame({"a": ["x", "k", None, "d"]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a").cum_count().alias("cum_count"),
-            ...     nw.col("a").cum_count(reverse=True).alias("cum_count_reverse"),
+            ...     nw.col("a").cum_count().alias("a_cum_count"),
+            ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
             ... )
-            ┌─────────────────────────────────────┐
-            |         Narwhals DataFrame          |
-            |-------------------------------------|
-            |      a  cum_count  cum_count_reverse|
-            |0     x          1                  3|
-            |1     k          2                  2|
-            |2  None          2                  1|
-            |3     d          3                  1|
-            └─────────────────────────────────────┘
+            ┌─────────────────────────────────────────┐
+            |           Narwhals DataFrame            |
+            |-----------------------------------------|
+            |      a  a_cum_count  a_cum_count_reverse|
+            |0     x            1                    3|
+            |1     k            2                    2|
+            |2  None            2                    1|
+            |3     d            3                    1|
+            └─────────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
@@ -2177,18 +2215,18 @@ class Expr:
             >>> df_native = pd.DataFrame({"a": [3, 1, None, 2]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a").cum_min().alias("cum_min"),
-            ...     nw.col("a").cum_min(reverse=True).alias("cum_min_reverse"),
+            ...     nw.col("a").cum_min().alias("a_cum_min"),
+            ...     nw.col("a").cum_min(reverse=True).alias("a_cum_min_reverse"),
             ... )
-            ┌────────────────────────────────┐
-            |       Narwhals DataFrame       |
-            |--------------------------------|
-            |     a  cum_min  cum_min_reverse|
-            |0  3.0      3.0              1.0|
-            |1  1.0      1.0              1.0|
-            |2  NaN      NaN              NaN|
-            |3  2.0      1.0              2.0|
-            └────────────────────────────────┘
+            ┌────────────────────────────────────┐
+            |         Narwhals DataFrame         |
+            |------------------------------------|
+            |     a  a_cum_min  a_cum_min_reverse|
+            |0  3.0        3.0                1.0|
+            |1  1.0        1.0                1.0|
+            |2  NaN        NaN                NaN|
+            |3  2.0        1.0                2.0|
+            └────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
@@ -2212,18 +2250,18 @@ class Expr:
             >>> df_native = pd.DataFrame({"a": [1, 3, None, 2]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a").cum_max().alias("cum_max"),
-            ...     nw.col("a").cum_max(reverse=True).alias("cum_max_reverse"),
+            ...     nw.col("a").cum_max().alias("a_cum_max"),
+            ...     nw.col("a").cum_max(reverse=True).alias("a_cum_max_reverse"),
             ... )
-            ┌────────────────────────────────┐
-            |       Narwhals DataFrame       |
-            |--------------------------------|
-            |     a  cum_max  cum_max_reverse|
-            |0  1.0      1.0              3.0|
-            |1  3.0      3.0              3.0|
-            |2  NaN      NaN              NaN|
-            |3  2.0      3.0              2.0|
-            └────────────────────────────────┘
+            ┌────────────────────────────────────┐
+            |         Narwhals DataFrame         |
+            |------------------------------------|
+            |     a  a_cum_max  a_cum_max_reverse|
+            |0  1.0        1.0                3.0|
+            |1  3.0        3.0                3.0|
+            |2  NaN        NaN                NaN|
+            |3  2.0        3.0                2.0|
+            └────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
@@ -2247,18 +2285,18 @@ class Expr:
             >>> df_native = pd.DataFrame({"a": [1, 3, None, 2]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a").cum_prod().alias("cum_prod"),
-            ...     nw.col("a").cum_prod(reverse=True).alias("cum_prod_reverse"),
+            ...     nw.col("a").cum_prod().alias("a_cum_prod"),
+            ...     nw.col("a").cum_prod(reverse=True).alias("a_cum_prod_reverse"),
             ... )
-            ┌──────────────────────────────────┐
-            |        Narwhals DataFrame        |
-            |----------------------------------|
-            |     a  cum_prod  cum_prod_reverse|
-            |0  1.0       1.0               6.0|
-            |1  3.0       3.0               6.0|
-            |2  NaN       NaN               NaN|
-            |3  2.0       6.0               2.0|
-            └──────────────────────────────────┘
+            ┌──────────────────────────────────────┐
+            |          Narwhals DataFrame          |
+            |--------------------------------------|
+            |     a  a_cum_prod  a_cum_prod_reverse|
+            |0  1.0         1.0                 6.0|
+            |1  3.0         3.0                 6.0|
+            |2  NaN         NaN                 NaN|
+            |3  2.0         6.0                 2.0|
+            └──────────────────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
@@ -2303,16 +2341,18 @@ class Expr:
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1.0, 2.0, None, 4.0]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(b=nw.col("a").rolling_sum(window_size=3, min_samples=1))
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |        a    b    |
-            |   0  1.0  1.0    |
-            |   1  2.0  3.0    |
-            |   2  NaN  3.0    |
-            |   3  4.0  6.0    |
-            └──────────────────┘
+            >>> df.with_columns(
+            ...     a_rolling_sum=nw.col("a").rolling_sum(window_size=3, min_samples=1)
+            ... )
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |     a  a_rolling_sum|
+            |0  1.0            1.0|
+            |1  2.0            3.0|
+            |2  NaN            3.0|
+            |3  4.0            6.0|
+            └─────────────────────┘
         """
         window_size, min_samples = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
@@ -2562,17 +2602,17 @@ class Expr:
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [3, 6, 1, 1, 6]})
             >>> df = nw.from_native(df_native)
-            >>> result = df.with_columns(rnk=nw.col("a").rank(method="dense"))
+            >>> result = df.with_columns(rank=nw.col("a").rank(method="dense"))
             >>> result
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |       a  rnk     |
-            |    0  3  2.0     |
-            |    1  6  3.0     |
-            |    2  1  1.0     |
-            |    3  1  1.0     |
-            |    4  6  3.0     |
+            |       a  rank    |
+            |    0  3   2.0    |
+            |    1  6   3.0    |
+            |    2  1   1.0    |
+            |    3  1   1.0    |
+            |    4  6   3.0    |
             └──────────────────┘
         """
         supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
