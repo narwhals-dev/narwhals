@@ -1394,7 +1394,7 @@ class Expr:
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "SELECT * from values (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
@@ -1434,7 +1434,7 @@ class Expr:
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "SELECT * from values (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan())
