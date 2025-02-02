@@ -203,7 +203,8 @@ exclude_also = [
   "if .*implementation.is_cudf",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
-  'if "cudf" in str\(constructor'
+  'if "cudf" in str\(constructor',
+  'if "pyspark" in str\(constructor'
 ]
 
 [tool.mypy]
