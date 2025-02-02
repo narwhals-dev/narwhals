@@ -28,8 +28,8 @@ data = {
 @pytest.mark.parametrize(
     ("column", "expected_values"),
     [
-        ("l2", [3, None, None, 42, None]),
-        ("l3", [1, 2, 3, None, 1]),  # fast path for arrow
+        ("l2", [None, 3, None, None, 42]),
+        ("l3", [1, 1, 2, 3, None]),  # fast path for arrow
     ],
 )
 def test_explode_single_col(
@@ -52,13 +52,10 @@ def test_explode_single_col(
         .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
         .explode(column)
         .select("a", column)
+        .sort("a")
     )
-    expected = {"a": ["x", "x", "y", "z", "w"], column: expected_values}
-    if "duckdb" in str(constructor):
-        for col in result.columns:
-            assert_equal_data(result.select(col), {col: expected[col]})
-    else:
-        assert_equal_data(result, expected)
+    expected = {"a": ["w", "x", "x", "y", "z"], column: expected_values}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
