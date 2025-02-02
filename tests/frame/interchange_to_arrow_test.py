@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import polars as pl
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+
+pl = pytest.importorskip("polars")
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 

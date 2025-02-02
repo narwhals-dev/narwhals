@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -54,6 +53,7 @@ def test_interchange_ibis(
         ibis.set_backend("duckdb")
     except ImportError:
         request.applymarker(pytest.mark.xfail)
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
@@ -69,6 +69,7 @@ def test_interchange_ibis(
 
 def test_interchange_duckdb() -> None:
     duckdb = pytest.importorskip("duckdb")
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)
