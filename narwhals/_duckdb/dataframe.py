@@ -429,11 +429,22 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str],
+        on: str | list[str] | None,
+        index: str | list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
+        index_: list[str] = (
+            [] if index is None else [index] if isinstance(index, str) else index
+        )
+        on_: list[str] = (
+            [c for c in self.columns if c not in index_]
+            if on is None
+            else [on]
+            if isinstance(on, str)
+            else on
+        )
+
         if variable_name == "":
             msg = "`variable_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
@@ -442,10 +453,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        on_ = [c for c in self.columns if c not in index] if on is None else on
-
         cols_to_select = ", ".join(
-            f'"{col}"' for col in [*index, variable_name, value_name]
+            f'"{col}"' for col in [*index_, variable_name, value_name]
         )
         unpivot_on = ", ".join(f'"{col}"' for col in on_)
 

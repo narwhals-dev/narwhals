@@ -330,22 +330,13 @@ class BaseFrame(Generic[FrameT]):
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
-        on_ = [on] if isinstance(on, str) else on
-        index_ = (
-            [index]
-            if isinstance(index, str)
-            else index
-            if isinstance(index, list)
-            else []
-        )
-
         variable_name = variable_name if variable_name is not None else "variable"
         value_name = value_name if value_name is not None else "value"
 
         return self._from_compliant_dataframe(
             self._compliant_frame.unpivot(
-                on=on_,
-                index=index_,
+                on=on,
+                index=index,
                 variable_name=variable_name,
                 value_name=value_name,
             )

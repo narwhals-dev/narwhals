@@ -412,8 +412,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str],
+        on: str | list[str] | None,
+        index: str | list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
