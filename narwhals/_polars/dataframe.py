@@ -139,10 +139,7 @@ class PolarsDataFrame:
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
-            try:
-                collected_schema = self._native_frame.collect_schema()
-            except Exception as e:  # noqa: BLE001
-                raise catch_polars_exception(e) from None
+            collected_schema = self._native_frame.collect_schema()
             return {
                 name: native_to_narwhals_dtype(
                     dtype, self._version, self._backend_version
