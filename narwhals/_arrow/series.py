@@ -1013,6 +1013,9 @@ class ArrowSeries(CompliantSeries):
         include_category: bool,
         include_breakpoint: bool,
     ) -> ArrowDataFrame:
+        if self._backend_version < (13,):
+            msg = f"`Series.hist` requires PyArrow>=13.0.0, found PyArrow version: {self._backend_version}"
+            raise NotImplementedError(msg)
         import numpy as np  # ignore-banned-import
 
         from narwhals._arrow.dataframe import ArrowDataFrame

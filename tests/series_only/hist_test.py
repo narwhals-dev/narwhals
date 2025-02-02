@@ -9,6 +9,7 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import nwise
@@ -81,7 +82,11 @@ def test_hist_bin(
     params: dict[str, Any],
     include_breakpoint: bool,
     include_category: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor_eager(data))
     bins = params["bins"]
 
@@ -122,7 +127,10 @@ def test_hist_count(
     params: dict[str, Any],
     include_breakpoint: bool,
     include_category: bool,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data))
 
     bins = params["expected_bins"]
