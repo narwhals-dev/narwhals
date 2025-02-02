@@ -226,17 +226,15 @@ class PolarsSeries:
 
     def is_nan(self: Self) -> Self:
         native = self._native_series
-
-        if self._backend_version < (1, 18):  # pragma: no cover
-            return self._from_native_series(
-                pl.select(pl.when(native.is_not_null()).then(native.is_nan()))[
-                    native.name
-                ]
-            )
         try:
-            return self._from_native_series(native.is_nan())
+            native_is_nan = native.is_nan()
         except pl.exceptions.PolarsError as e:
             raise catch_polars_exception(e) from None
+        if self._backend_version < (1, 18):  # pragma: no cover
+            return self._from_native_series(
+                pl.select(pl.when(native.is_not_null()).then(native_is_nan))[native.name]
+            )
+        return self._from_native_series(native_is_nan)
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError

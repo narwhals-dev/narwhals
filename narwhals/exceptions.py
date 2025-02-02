@@ -52,7 +52,7 @@ class InvalidOperationError(NarwhalsError):
     """Exception raised during invalid operations."""
 
 
-class InvalidIntoExprError(NarwhalsError):
+class InvalidIntoExprError(TypeError, NarwhalsError):
     """Exception raised when object can't be converted to expression."""
 
     def __init__(self: Self, message: str) -> None:
