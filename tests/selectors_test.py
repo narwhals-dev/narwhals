@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from datetime import timezone
 from typing import Literal
 
 import pytest
@@ -179,9 +180,28 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     assert df.select(
         ncs.datetime(time_unit="ns", time_zone=[None, "Europe/Berlin"])
     ).collect_schema().names() == ["ts_ns", "ts_berlin_ns"]
-    assert df.select(
-        ncs.datetime(time_unit=["ms", "us"], time_zone=[None, "Europe/Berlin"])
-    ).collect_schema().names() == ["ts_ms", "ts_us", "ts_berlin_ms", "ts_berlin_us"]
+
+    assert df.with_columns(
+        nw.col("ts_ms").dt.replace_time_zone("UTC").alias("ts_utc")
+    ).select(
+        ncs.datetime(time_unit=["ms", "us"], time_zone=[None, timezone.utc])
+    ).collect_schema().names() == ["ts_ms", "ts_us", "ts_utc"]
+
+
+def test_datetime_spark_and_duckdb(constructor: Constructor) -> None:
+    if not ("pyspark" in str(constructor) or "duckdb" in str(constructor)):
+        pytest.skip()
+
+    ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
+    ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
+
+    data = {
+        "numeric": [3.14, 6.28],
+        "ts": [ts1, ts2],
+    }
+
+    df = nw.from_native(constructor(data))
+    assert df.select(ncs.datetime()).collect_schema().names() == ["ts"]
 
 
 @pytest.mark.parametrize(
