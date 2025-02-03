@@ -36,13 +36,13 @@ class SparkLikeSelectorNamespace:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col) for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return SparkLikeSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -54,13 +54,13 @@ class SparkLikeSelectorNamespace:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col) for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return SparkLikeSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
