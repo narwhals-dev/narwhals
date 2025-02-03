@@ -702,12 +702,13 @@ def _from_native_impl(  # noqa: PLR0915
                 ),
                 level="interchange",
             )
-        result = LazyFrame(
-            DuckDBLazyFrame(
-                native_object, backend_version=backend_version, version=version
-            ),
-            level="lazy",
-        )
+        else:
+            result = LazyFrame(
+                DuckDBLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="lazy",
+            )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
@@ -731,12 +732,13 @@ def _from_native_impl(  # noqa: PLR0915
                 ),
                 level="interchange",
             )
-        result = LazyFrame(
-            IbisLazyFrame(
-                native_object, backend_version=backend_version, version=version
-            ),
-            level="lazy",
-        )
+        else:
+            result = LazyFrame(
+                IbisLazyFrame(
+                    native_object, backend_version=backend_version, version=version
+                ),
+                level="lazy",
+            )
 
     # PySpark
     elif is_pyspark_dataframe(native_object):  # pragma: no cover
