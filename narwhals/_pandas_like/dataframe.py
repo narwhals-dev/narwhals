@@ -22,6 +22,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
@@ -62,7 +63,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
-        self._validate_columns(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._implementation = implementation
         self._backend_version = backend_version
@@ -122,13 +122,18 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=version,
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(
+    def _from_native_frame(
+        self: Self, df: Any, *, validate_column_names: bool = False
+    ) -> Self:
+        result = self.__class__(
             df,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
+        if validate_column_names:
+            check_column_names_are_unique(result.columns)
+        return result
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
         from narwhals._pandas_like.series import PandasLikeSeries
@@ -402,7 +407,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 [row_index._native_series, self._native_frame],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-            )
+            ),
+            validate_column_names=True,
         )
 
     def row(self: Self, row: int) -> tuple[Any, ...]:
@@ -476,7 +482,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 columns=mapping,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-            )
+            ),
+            validate_column_names=True,
         )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -596,6 +603,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         suffixes=("", suffix),
                     )
                     .drop(columns=key_token),
+                    validate_column_names=True,
                 )
             else:
                 return self._from_native_frame(
@@ -604,6 +612,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         how="cross",
                         suffixes=("", suffix),
                     ),
+                    validate_column_names=True,
                 )
 
         if how == "anti":
@@ -614,7 +623,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         how="leftanti",
                         left_on=left_on,
                         right_on=right_on,
-                    )
+                    ),
+                    validate_column_names=True,
                 )
             else:
                 indicator_token = generate_temporary_column_name(
@@ -645,7 +655,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         right_on=left_on,
                     )
                     .loc[lambda t: t[indicator_token] == "left_only"]
-                    .drop(columns=indicator_token)
+                    .drop(columns=indicator_token),
+                    validate_column_names=True,
                 )
 
         if how == "semi":
@@ -672,7 +683,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     how="inner",
                     left_on=left_on,
                     right_on=left_on,
-                )
+                ),
+                validate_column_names=True,
             )
 
         if how == "left":
@@ -690,7 +702,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     extra.append(right_key)
                 elif right_key != left_key:
                     extra.append(f"{right_key}{suffix}")
-            return self._from_native_frame(result_native.drop(columns=extra))
+            return self._from_native_frame(
+                result_native.drop(columns=extra), validate_column_names=True
+            )
 
         return self._from_native_frame(
             self._native_frame.merge(
@@ -700,6 +714,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 how=how,
                 suffixes=("", suffix),
             ),
+            validate_column_names=True,
         )
 
     def join_asof(
@@ -725,6 +740,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 direction=strategy,
                 suffixes=("", suffix),
             ),
+            validate_column_names=True,
         )
 
     # --- partial reduction ---
@@ -1031,7 +1047,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             ]
         result.columns = new_columns
         result.columns.names = [""]  # type: ignore[attr-defined]
-        return self._from_native_frame(result.reset_index())
+        return self._from_native_frame(result.reset_index(), validate_column_names=True)
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:
@@ -1068,7 +1084,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 value_vars=on,
                 var_name=variable_name,
                 value_name=value_name,
-            )
+            ),
+            validate_column_names=True,
         )
 
     def explode(self: Self, columns: list[str]) -> Self:

@@ -38,6 +38,7 @@ from narwhals.dependencies import is_pyarrow_table
 from narwhals.dependencies import is_pyspark_dataframe
 from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.utils import Version
+from narwhals.utils import check_column_names_are_unique
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -393,7 +394,7 @@ def _from_native_impl(  # noqa: PLR0915
         import sqlframe._version
 
         backend_version = parse_version(sqlframe._version.__version__)
-        return LazyFrame(
+        result: DataFrame[Any] | LazyFrame[Any] = LazyFrame(
             SparkLikeLazyFrame(
                 native_object,
                 backend_version=backend_version,
@@ -410,7 +411,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with dataframe"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        result = DataFrame(
             native_object.__narwhals_dataframe__(),
             level="full",
         )
@@ -425,7 +426,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
                 raise TypeError(msg)
             return native_object
-        return LazyFrame(
+        result = LazyFrame(
             native_object.__narwhals_lazyframe__(),
             level="full",
         )
@@ -450,7 +451,7 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         pl = get_polars()
-        return DataFrame(
+        result = DataFrame(
             PolarsDataFrame(
                 native_object,
                 backend_version=parse_version(pl.__version__),
@@ -508,7 +509,7 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         pd = get_pandas()
-        return DataFrame(
+        result = DataFrame(
             PandasLikeDataFrame(
                 native_object,
                 backend_version=parse_version(pd.__version__),
@@ -546,7 +547,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with modin.DataFrame"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        result = DataFrame(
             PandasLikeDataFrame(
                 native_object,
                 implementation=Implementation.MODIN,
@@ -584,7 +585,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with cudf.DataFrame"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        result = DataFrame(
             PandasLikeDataFrame(
                 native_object,
                 implementation=Implementation.CUDF,
@@ -622,7 +623,7 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with arrow table"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        result = DataFrame(
             ArrowDataFrame(
                 native_object,
                 backend_version=parse_version(pa.__version__),
@@ -669,7 +670,7 @@ def _from_native_impl(  # noqa: PLR0915
         ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
-        return LazyFrame(
+        result = LazyFrame(
             DaskLazyFrame(
                 native_object,
                 backend_version=parse_version(get_dask().__version__),
@@ -695,13 +696,13 @@ def _from_native_impl(  # noqa: PLR0915
 
         backend_version = parse_version(duckdb.__version__)
         if version is Version.V1:
-            return DataFrame(
+            result = DataFrame(
                 DuckDBLazyFrame(
                     native_object, backend_version=backend_version, version=version
                 ),
                 level="interchange",
             )
-        return LazyFrame(
+        result = LazyFrame(
             DuckDBLazyFrame(
                 native_object, backend_version=backend_version, version=version
             ),
@@ -724,13 +725,13 @@ def _from_native_impl(  # noqa: PLR0915
 
         backend_version = parse_version(ibis.__version__)
         if version is Version.V1:
-            return DataFrame(
+            result = DataFrame(
                 IbisLazyFrame(
                     native_object, backend_version=backend_version, version=version
                 ),
                 level="interchange",
             )
-        return LazyFrame(
+        result = LazyFrame(
             IbisLazyFrame(
                 native_object, backend_version=backend_version, version=version
             ),
@@ -747,7 +748,7 @@ def _from_native_impl(  # noqa: PLR0915
         if eager_only or eager_or_interchange_only:
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
             raise TypeError(msg)
-        return LazyFrame(
+        result = LazyFrame(
             SparkLikeLazyFrame(
                 native_object,
                 backend_version=parse_version(get_pyspark().__version__),
@@ -769,7 +770,7 @@ def _from_native_impl(  # noqa: PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        result = DataFrame(
             InterchangeFrame(native_object, version=version),
             level="interchange",
         )
@@ -777,7 +778,14 @@ def _from_native_impl(  # noqa: PLR0915
     elif not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
         raise TypeError(msg)
-    return native_object
+    else:
+        return native_object
+
+    # We don't allow duplicate column names, and we check that explicitly here.
+    # For Polars, we skip this check for LazyFrame, as `.columns` incurs some
+    # work, and it does its own checks for unique column names anyway.
+    check_column_names_are_unique(result.columns)
+    return result
 
 
 def get_native_namespace(

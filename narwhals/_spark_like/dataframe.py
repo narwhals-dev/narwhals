@@ -14,6 +14,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -100,13 +101,18 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             implementation=self._implementation,
         )
 
-    def _from_native_frame(self: Self, df: DataFrame) -> Self:
-        return self.__class__(
+    def _from_native_frame(
+        self: Self, df: DataFrame, *, validate_column_names: bool = False
+    ) -> Self:
+        result = self.__class__(
             df,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
+        if validate_column_names:
+            check_column_names_are_unique(result.columns)
+        return result
 
     @property
     def columns(self: Self) -> list[str]:
@@ -304,7 +310,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(
             self._native_frame.select(
                 [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
-            )
+            ),
+            validate_column_names=True,
         )
 
     def unique(
@@ -367,7 +374,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
 
         return self._from_native_frame(
-            self_native.join(other, on=left_on, how=how).select(col_order)
+            self_native.join(other, on=left_on, how=how).select(col_order),
+            validate_column_names=True,
         )
 
     def explode(self: Self, columns: list[str]) -> Self:
@@ -402,7 +410,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     else self._F.explode_outer(col_name).alias(col_name)
                     for col_name in column_names
                 ]
-            )
+            ),
+            validate_column_names=True,
         )
 
     def unpivot(
@@ -418,5 +427,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 values=on,
                 variableColumnName=variable_name,
                 valueColumnName=value_name,
-            )
+            ),
+            validate_column_names=True,
         )

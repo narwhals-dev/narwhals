@@ -290,7 +290,8 @@ class PandasLikeGroupBy:
         return self._df._from_native_frame(
             select_columns_by_name(
                 result_complex, new_names, backend_version, implementation
-            )
+            ),
+            validate_column_names=True,
         )
 
     def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:

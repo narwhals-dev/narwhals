@@ -21,6 +21,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -90,10 +91,15 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self: Self, df: pa.Table) -> Self:
-        return self.__class__(
+    def _from_native_frame(
+        self: Self, df: pa.Table, *, validate_column_names: bool = False
+    ) -> Self:
+        result = self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
+        if validate_column_names:
+            check_column_names_are_unique(result.columns)
+        return result
 
     @property
     def shape(self: Self) -> tuple[int, int]:
@@ -367,6 +373,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     right_suffix=suffix,
                 )
                 .drop([key_token]),
+                validate_column_names=True,
             )
 
         return self._from_native_frame(
@@ -377,6 +384,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
             ),
+            validate_column_names=True,
         )
 
     def join_asof(
@@ -472,7 +480,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_frame(
-            df.append_column(name, row_indices).select([name, *cols])
+            df.append_column(name, row_indices).select([name, *cols]),
+            validate_column_names=True,
         )
 
     def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
@@ -634,7 +643,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         df = self._native_frame
         new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._from_native_frame(df.rename_columns(new_cols))
+        return self._from_native_frame(
+            df.rename_columns(new_cols), validate_column_names=True
+        )
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
@@ -802,7 +813,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     for on_col in on_
                 ],
                 **promote_kwargs,
-            )
+            ),
+            validate_column_names=True,
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes

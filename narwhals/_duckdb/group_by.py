@@ -49,5 +49,6 @@ class DuckDBGroupBy:
             )
 
         return self._compliant_frame._from_native_frame(
-            self._compliant_frame._native_frame.aggregate(agg_columns)
+            self._compliant_frame._native_frame.aggregate(agg_columns),
+            validate_column_names=True,
         )

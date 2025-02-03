@@ -20,6 +20,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
@@ -252,10 +253,15 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame, version=version, backend_version=self._backend_version
         )
 
-    def _from_native_frame(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
-        return self.__class__(
+    def _from_native_frame(
+        self: Self, df: duckdb.DuckDBPyRelation, *, validate_column_names: bool = False
+    ) -> Self:
+        result = self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
+        if validate_column_names:
+            check_column_names_are_unique(result.columns)
+        return result
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
@@ -269,7 +275,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         selection = [
             f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
         ]
-        return self._from_native_frame(df.select(", ".join(selection)))
+        return self._from_native_frame(
+            df.select(", ".join(selection)), validate_column_names=True
+        )
 
     def join(
         self: Self,
@@ -319,7 +327,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             select = ["lhs.*"]
 
         res = rel.select(", ".join(select)).set_alias(original_alias)
-        return self._from_native_frame(res)
+        return self._from_native_frame(res, validate_column_names=True)
 
     def join_asof(
         self: Self,
@@ -518,4 +526,4 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             select {cols_to_select}
             from unpivot_cte;
             """  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._from_native_frame(duckdb.sql(query), validate_column_names=True)

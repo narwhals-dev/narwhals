@@ -17,6 +17,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -68,10 +69,15 @@ class DaskLazyFrame(CompliantLazyFrame):
             self._native_frame, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
-        return self.__class__(
+    def _from_native_frame(
+        self: Self, df: Any, *, validate_column_names: bool = False
+    ) -> Self:
+        result = self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
+        if validate_column_names:
+            check_column_names_are_unique(result.columns)
+        return result
 
     def with_columns(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_frame
@@ -278,6 +284,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                     suffixes=("", suffix),
                 )
                 .drop(columns=key_token),
+                validate_column_names=True,
             )
 
         if how == "anti":
@@ -308,7 +315,8 @@ class DaskLazyFrame(CompliantLazyFrame):
                 right_on=left_on,
             )
             return self._from_native_frame(
-                df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
+                df[df[indicator_token] == "left_only"].drop(columns=[indicator_token]),
+                validate_column_names=True,
             )
 
         if how == "semi":
@@ -333,7 +341,8 @@ class DaskLazyFrame(CompliantLazyFrame):
                     how="inner",
                     left_on=left_on,
                     right_on=left_on,
-                )
+                ),
+                validate_column_names=True,
             )
 
         if how == "left":
@@ -351,7 +360,9 @@ class DaskLazyFrame(CompliantLazyFrame):
                     extra.append(right_key)
                 elif right_key != left_key:
                     extra.append(f"{right_key}_right")
-            return self._from_native_frame(result_native.drop(columns=extra))
+            return self._from_native_frame(
+                result_native.drop(columns=extra), validate_column_names=True
+            )
 
         return self._from_native_frame(
             self._native_frame.merge(
@@ -361,6 +372,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 how=how,
                 suffixes=("", suffix),
             ),
+            validate_column_names=True,
         )
 
     def join_asof(
@@ -386,6 +398,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 direction=strategy,
                 suffixes=("", suffix),
             ),
+            validate_column_names=True,
         )
 
     def group_by(self: Self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
@@ -428,5 +441,6 @@ class DaskLazyFrame(CompliantLazyFrame):
                 value_vars=on,
                 var_name=variable_name,
                 value_name=value_name,
-            )
+            ),
+            validate_column_names=True,
         )

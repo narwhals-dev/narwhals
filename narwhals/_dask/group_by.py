@@ -94,14 +94,6 @@ class DaskLazyGroupBy:
             self._grouped,
             exprs,
             self._keys,
-            self._from_native_frame,
-        )
-
-    def _from_native_frame(self: Self, df: DaskLazyFrame) -> DaskLazyFrame:
-        from narwhals._dask.dataframe import DaskLazyFrame
-
-        return DaskLazyFrame(
-            df, backend_version=self._df._backend_version, version=self._df._version
         )
 
 
@@ -110,7 +102,6 @@ def agg_dask(
     grouped: Any,
     exprs: Sequence[CompliantExpr[dx.Series]],
     keys: list[str],
-    from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
     """This should be the fastpath, but cuDF is too far behind to use it.
 
@@ -163,7 +154,9 @@ def agg_dask(
                 }
             )
         result_simple = grouped.agg(**simple_aggregations)
-        return from_dataframe(result_simple.reset_index())
+        return df._from_native_frame(
+            result_simple.reset_index(), validate_column_names=True
+        )
 
     msg = (
         "Non-trivial complex aggregation found.\n\n"
