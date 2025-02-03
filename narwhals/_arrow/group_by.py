@@ -42,7 +42,7 @@ class ArrowGroupBy:
         else:
             self._df = df
         self._keys = keys.copy()
-        self._grouped = pa.TableGroupBy(self._df._native_frame, self._keys.copy())
+        self._grouped = pa.TableGroupBy(self._df._native_frame, self._keys)
 
     def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
         all_simple_aggs = True
