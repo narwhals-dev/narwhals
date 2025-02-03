@@ -99,7 +99,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):
             assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
-    if is_pyspark and expected:  # pragma: no cover
+    if (is_pyspark or is_duckdb) and expected:  # pragma: no cover
         sort_key = next(iter(expected.keys()))
         expected = _sort_dict_by_key(expected, sort_key)
         result = _sort_dict_by_key(result, sort_key)

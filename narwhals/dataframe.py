@@ -365,11 +365,14 @@ class BaseFrame(Generic[FrameT]):
         raise NotImplementedError(msg)
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+
         return self._from_compliant_dataframe(
-            self._compliant_frame.explode(
-                columns,
-                *more_columns,
-            )
+            self._compliant_frame.explode(columns=to_explode)
         )
 
 

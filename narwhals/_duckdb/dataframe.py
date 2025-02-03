@@ -8,16 +8,20 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -426,6 +430,51 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
+
+    def explode(self: Self, columns: list[str]) -> Self:
+        dtypes = import_dtypes_module(self._version)
+        schema = self.collect_schema()
+        for col in columns:
+            dtype = schema[col]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        if len(columns) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with DuckDB backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
+            )
+            raise NotImplementedError(msg)
+
+        col_to_explode = ColumnExpression(columns[0])
+        rel = self._native_frame
+        original_columns = self.columns
+
+        not_null_condition = (
+            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
+        )
+        non_null_rel = rel.filter(not_null_condition).select(
+            *(
+                FunctionExpression("unnest", col_to_explode).alias(col)
+                if col in columns
+                else col
+                for col in original_columns
+            )
+        )
+
+        null_rel = rel.filter(~not_null_condition).select(
+            *(
+                ConstantExpression(None).alias(col) if col in columns else col
+                for col in original_columns
+            )
+        )
+
+        return self._from_native_frame(non_null_rel.union(null_rel))
 
     def unpivot(
         self: Self,
