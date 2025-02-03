@@ -517,8 +517,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         the possibility of running entirely lazily.
 
         Arguments:
-            backend: specifies which lazy backend collect to. This will be the underlying
-                backend for the resulting Narwhals LazyFrame.
+            backend: Which lazy backend collect to. This will be the underlying
+                backend for the resulting Narwhals LazyFrame. If not specified, and the
+                given library does not support lazy execution, then this will restrict
+                the API to lazy-only operations.
 
                 `backend` can be specified in various ways:
 
@@ -526,9 +528,6 @@ class DataFrame(BaseFrame[DataFrameT]):
                     or `POLARS`.
                 - As a string: `"dask"`, `"duckdb"` or `"polars"`
                 - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
-            backend: The (lazy) implementation to convert to. If not specified, and the
-                given library does not support lazy execution, then this will restrict
-                the API to lazy-only operations.
 
         Returns:
             A new LazyFrame.
