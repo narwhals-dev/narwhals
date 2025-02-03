@@ -101,7 +101,7 @@ class DuckDBExprStringNamespace:
         )
 
     def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
-        if literal is False:
+        if not literal:
             return self._compliant_expr._from_call(
                 lambda _input: FunctionExpression(
                     "regexp_replace",

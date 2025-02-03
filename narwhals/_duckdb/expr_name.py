@@ -20,7 +20,7 @@ class DuckDBExprNameNamespace:
     def map(self: Self, function: Callable[[str], str]) -> DuckDBExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
-                function(str(name)) for name in output_names
+                function(name) for name in output_names
             ],
         )
 
@@ -41,14 +41,14 @@ class DuckDBExprNameNamespace:
     def to_lowercase(self: Self) -> DuckDBExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
-                str(name).lower() for name in output_names
+                name.lower() for name in output_names
             ],
         )
 
     def to_uppercase(self: Self) -> DuckDBExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
-                str(name).upper() for name in output_names
+                name.upper() for name in output_names
             ]
         )
 

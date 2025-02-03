@@ -211,7 +211,7 @@ class PandasLikeGroupBy:
 
             if result_aggs:
                 output_names_counter = collections.Counter(
-                    [c for frame in result_aggs for c in frame]
+                    c for frame in result_aggs for c in frame
                 )
                 if any(v > 1 for v in output_names_counter.values()):
                     msg = ""
