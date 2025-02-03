@@ -35,14 +35,14 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return PandasSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -54,14 +54,14 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return PandasSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,

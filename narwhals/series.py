@@ -2073,7 +2073,7 @@ class Series(Generic[IntoSeriesT]):
 
                 - if you need to alias an object and don't need the original
                   one around any more, just use `alias` without worrying about it.
-                - if you were expecting `alias` to copy data, then explicily call
+                - if you were expecting `alias` to copy data, then explicitly call
                   `.clone` before calling `alias`.
 
         Arguments:
@@ -2151,7 +2151,7 @@ class Series(Generic[IntoSeriesT]):
 
                 - if you need to rename an object and don't need the original
                   one around any more, just use `rename` without worrying about it.
-                - if you were expecting `rename` to copy data, then explicily call
+                - if you were expecting `rename` to copy data, then explicitly call
                   `.clone` before calling `rename`.
 
         Arguments:

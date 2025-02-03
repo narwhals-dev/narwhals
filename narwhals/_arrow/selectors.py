@@ -30,14 +30,14 @@ class ArrowSelectorNamespace:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: ArrowDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return ArrowSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
@@ -48,14 +48,14 @@ class ArrowSelectorNamespace:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: ArrowDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return ArrowSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
