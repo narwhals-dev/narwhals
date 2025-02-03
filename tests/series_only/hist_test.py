@@ -265,17 +265,15 @@ def test_hist_bin_hypotheis(
 
     result = df["values"].hist(
         bins=bins.to_list(),
-        include_breakpoint=False,
+        include_breakpoint=True,
         include_category=False,
     )
     expected = (
-        pl.Series(data, dtype=pl.Float64)
-        .hist(
+        pl.Series(data, dtype=pl.Float64).hist(
             bins=pl.Series(bin_deltas, dtype=pl.Float64).cum_sum().to_list(),
-            include_breakpoint=False,
+            include_breakpoint=True,
             include_category=False,
         )
-        .rename({"": "count"})
     ).to_dict(as_series=False)
 
     assert_equal_data(result, expected)
@@ -312,7 +310,7 @@ def test_hist_count_hypothesis(
     try:
         result = df["values"].hist(
             bin_count=bin_count,
-            include_breakpoint=False,
+            include_breakpoint=True,
             include_category=False,
         )
     except pl.exceptions.PanicException:  # pragma: no cover
@@ -321,14 +319,10 @@ def test_hist_count_hypothesis(
             request.applymarker(pytest.mark.xfail)
         raise
 
-    expected = (
-        pl.Series(data, dtype=pl.Float64)
-        .hist(
-            bin_count=bin_count,
-            include_breakpoint=False,
-            include_category=False,
-        )
-        .rename({"": "count"})
+    expected = pl.Series(data, dtype=pl.Float64).hist(
+        bin_count=bin_count,
+        include_breakpoint=True,
+        include_category=False,
     )
 
     # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts
