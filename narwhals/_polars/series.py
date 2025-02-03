@@ -483,7 +483,6 @@ class PolarsSeries:
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
-        include_category: bool,
         include_breakpoint: bool,
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
@@ -495,8 +494,6 @@ class PolarsSeries:
             data: list[pl.Series] = []
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
-            if include_category:
-                data.append(pl.Series("category", [], dtype=pl.Categorical))
             data.append(pl.Series("count", [], dtype=pl.UInt32))
             return PolarsDataFrame(
                 pl.DataFrame(data),
@@ -524,10 +521,10 @@ class PolarsSeries:
         df = self._native_series.hist(
             bins=bins,
             bin_count=bin_count,
-            include_category=include_category,
+            include_category=False,
             include_breakpoint=include_breakpoint,
         )
-        if not include_category and not include_breakpoint:
+        if not include_breakpoint:
             df.columns = ["count"]
 
         #  polars<1.15 implicitly adds -inf and inf to either end of bins

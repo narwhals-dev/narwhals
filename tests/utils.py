@@ -4,12 +4,8 @@ import math
 import os
 import sys
 import warnings
-from itertools import islice
-from itertools import tee
 from typing import Any
 from typing import Callable
-from typing import Generator
-from typing import Iterable
 from typing import Iterator
 from typing import Sequence
 from typing import TypeVar
@@ -55,14 +51,6 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
         msg = f"left {len(left)=} != right {len(right)=}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
     return zip(left, right)
-
-
-def nwise(iterable: Iterable[T], n: int = 2) -> Generator[tuple[T, ...], None, None]:
-    """Produces a sliding window across values.
-
-    Behaves like a generic version of `itertools.pairwise`.
-    """
-    yield from zip(*(islice(it, i, None) for i, it in enumerate(tee(iterable, n))))
 
 
 def _to_comparable_list(column_values: Any) -> Any:

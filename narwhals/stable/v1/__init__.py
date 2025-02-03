@@ -634,7 +634,6 @@ class Series(NwSeries[Any]):
         bins: list[float | int] | None = None,
         *,
         bin_count: int | None = None,
-        include_category: bool = True,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
         """Bin values into buckets and count their occurrences.
@@ -646,7 +645,6 @@ class Series(NwSeries[Any]):
         Arguments:
             bins: A monotonically increasing sequence of values.
             bin_count: If no bins provided, this will be used to determine the distance of the bins.
-            include_category: Include a column that indicates the upper value of each bin.
             include_breakpoint: Include a column that shows the intervals as categories.
 
         Returns:
@@ -663,7 +661,6 @@ class Series(NwSeries[Any]):
         return super().hist(  # type: ignore[return-value]
             bins=bins,
             bin_count=bin_count,
-            include_category=include_category,
             include_breakpoint=include_breakpoint,
         )
 

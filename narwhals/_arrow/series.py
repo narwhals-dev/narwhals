@@ -1010,7 +1010,6 @@ class ArrowSeries(CompliantSeries):
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
-        include_category: bool,
         include_breakpoint: bool,
     ) -> ArrowDataFrame:
         if self._backend_version < (13,):
@@ -1104,10 +1103,6 @@ class ArrowSeries(CompliantSeries):
         data: dict[str, Sequence[int | float | str]] = {}
         if include_breakpoint:
             data["breakpoint"] = bin_right
-        if include_category:
-            data["category"] = [
-                f"({left}, {right}]" for left, right in zip(bin_left, bin_right)
-            ]
         data["count"] = counts
 
         return ArrowDataFrame(

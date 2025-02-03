@@ -12,7 +12,6 @@ from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
-from tests.utils import nwise
 
 data = {
     "int": [0, 1, 2, 3, 4, 5, 6],
@@ -35,6 +34,10 @@ bins_and_expected = [
     {
         "bins": [-10.0, -1.0, 2.5, 5.5],
         "expected": [0, 3, 3],
+    },
+    {
+        "bins": [1.0, 2.0625],
+        "expected": [1],
     },
 ]
 counts_and_expected = [
@@ -72,7 +75,6 @@ counts_and_expected = [
 
 @pytest.mark.parametrize("params", bins_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.parametrize("include_category", [True, False])
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -81,7 +83,6 @@ def test_hist_bin(
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    include_category: bool,
     request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
@@ -92,25 +93,20 @@ def test_hist_bin(
 
     expected = {
         "breakpoint": bins[1:],
-        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
         "count": params["expected"],
     }
     if not include_breakpoint:
         del expected["breakpoint"]
-    if not include_category:
-        del expected["category"]
 
     result = df["int"].hist(
         bins=bins,
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
     result = df["float"].hist(
         bins=bins,
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
@@ -118,32 +114,26 @@ def test_hist_bin(
     bins = [b + shift_by for b in bins]
     expected = {
         "breakpoint": bins[1:],
-        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
         "count": params["expected"],
     }
     if not include_breakpoint:
         del expected["breakpoint"]
-    if not include_category:
-        del expected["category"]
 
     result = (df["int"] + shift_by).hist(
         bins=bins,
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
     result = (df["float"] + shift_by).hist(
         bins=bins,
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.parametrize("include_category", [True, False])
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -152,7 +142,6 @@ def test_hist_count(
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    include_category: bool,
     request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
@@ -162,25 +151,20 @@ def test_hist_count(
     bins = params["expected_bins"]
     expected = {
         "breakpoint": bins[1:],
-        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
         "count": params["expected_count"],
     }
     if not include_breakpoint:
         del expected["breakpoint"]
-    if not include_category:
-        del expected["category"]
 
     result = df["int"].hist(
         bin_count=params["bin_count"],
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
     result = df["float"].hist(
         bin_count=params["bin_count"],
         include_breakpoint=include_breakpoint,
-        include_category=include_category,
     )
     assert_equal_data(result, expected)
 
@@ -188,20 +172,17 @@ def test_hist_count(
     bins = [b + shift_by for b in bins]
     expected = {
         "breakpoint": bins[1:],
-        "category": [f"({left}, {right}]" for left, right in nwise(bins, n=2)],
         "count": params["expected_count"],
     }
     result = (df["int"] + 10).hist(
         bin_count=params["bin_count"],
         include_breakpoint=True,
-        include_category=True,
     )
     assert_equal_data(result, expected)
 
     result = (df["float"] + 10).hist(
         bin_count=params["bin_count"],
         include_breakpoint=True,
-        include_category=True,
     )
     assert_equal_data(result, expected)
 
@@ -266,7 +247,6 @@ def test_hist_bin_hypotheis(
     result = df["values"].hist(
         bins=bins.to_list(),
         include_breakpoint=True,
-        include_category=False,
     )
     expected = (
         pl.Series(data, dtype=pl.Float64).hist(
@@ -311,7 +291,6 @@ def test_hist_count_hypothesis(
         result = df["values"].hist(
             bin_count=bin_count,
             include_breakpoint=True,
-            include_category=False,
         )
     except pl.exceptions.PanicException:  # pragma: no cover
         # panic occurs from specific float inputs on Polars 1.15

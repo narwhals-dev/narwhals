@@ -1043,7 +1043,6 @@ class PandasLikeSeries(CompliantSeries):
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
-        include_category: bool,
         include_breakpoint: bool,
     ) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -1055,8 +1054,6 @@ class PandasLikeSeries(CompliantSeries):
             data = {}
             if include_breakpoint:
                 data["breakpoint"] = []
-            if include_category:
-                data["category"] = []
             data["count"] = []
 
             return PandasLikeDataFrame(
@@ -1066,7 +1063,7 @@ class PandasLikeSeries(CompliantSeries):
                 version=self._version,
             )
 
-        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin is resulting in improper counts.
+        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
         #   the bins were explicitly passed in.
         categories = ns.cut(
@@ -1079,9 +1076,7 @@ class PandasLikeSeries(CompliantSeries):
         )
         data = {}
         if include_breakpoint:
-            data["breakpoint"] = result.index.right
-        if include_category:
-            data["category"] = ns.Categorical(result.index.astype(str))
+            data["breakpoint"] = bins[1:] if bins is not None else result.index.right
         data["count"] = result.reset_index(drop=True)
 
         return PandasLikeDataFrame(
