@@ -19,12 +19,14 @@ from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
@@ -501,13 +503,53 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     # --- convert ---
-    def collect(self: Self) -> PandasLikeDataFrame:
-        return PandasLikeDataFrame(
-            self._native_frame,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is None:
+            return PandasLikeDataFrame(
+                self._native_frame,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            return PandasLikeDataFrame(
+                self.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self.to_arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=self.to_polars(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     # --- actions ---
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
@@ -1018,30 +1060,23 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         return self._from_native_frame(
             self._native_frame.melt(
                 id_vars=index,
                 value_vars=on,
-                var_name=variable_name if variable_name is not None else "variable",
-                value_name=value_name if value_name is not None else "value",
+                var_name=variable_name,
+                value_name=value_name,
             )
         )
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        from narwhals.exceptions import InvalidOperationError
-
+    def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
-        to_explode = (
-            [columns, *more_columns]
-            if isinstance(columns, str)
-            else [*columns, *more_columns]
-        )
         schema = self.collect_schema()
-        for col_to_explode in to_explode:
+        for col_to_explode in columns:
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
@@ -1051,15 +1086,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
                 raise InvalidOperationError(msg)
 
-        if len(to_explode) == 1:
-            return self._from_native_frame(self._native_frame.explode(to_explode[0]))
+        if len(columns) == 1:
+            return self._from_native_frame(self._native_frame.explode(columns[0]))
         else:
             native_frame = self._native_frame
-            anchor_series = native_frame[to_explode[0]].list.len()
+            anchor_series = native_frame[columns[0]].list.len()
 
             if not all(
                 (native_frame[col_name].list.len() == anchor_series).all()
-                for col_name in to_explode[1:]
+                for col_name in columns[1:]
             ):
                 from narwhals.exceptions import ShapeError
 
@@ -1067,13 +1102,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 raise ShapeError(msg)
 
             original_columns = self.columns
-            other_columns = [c for c in original_columns if c not in to_explode]
+            other_columns = [c for c in original_columns if c not in columns]
 
-            exploded_frame = native_frame[[*other_columns, to_explode[0]]].explode(
-                to_explode[0]
+            exploded_frame = native_frame[[*other_columns, columns[0]]].explode(
+                columns[0]
             )
             exploded_series = [
-                native_frame[col_name].explode().to_frame() for col_name in to_explode[1:]
+                native_frame[col_name].explode().to_frame() for col_name in columns[1:]
             ]
 
             plx = self.__native_namespace__()

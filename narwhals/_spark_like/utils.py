@@ -65,8 +65,10 @@ def native_to_narwhals_dtype(
         return dtypes.Boolean()
     if isinstance(dtype, spark_types.DateType):
         return dtypes.Date()
-    if isinstance(dtype, (spark_types.TimestampType, spark_types.TimestampNTZType)):
+    if isinstance(dtype, spark_types.TimestampNTZType):
         return dtypes.Datetime()
+    if isinstance(dtype, spark_types.TimestampType):
+        return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, spark_types.DecimalType):  # pragma: no cover
         # TODO(unassigned): cover this in dtypes_test.py
         return dtypes.Decimal()
@@ -100,9 +102,16 @@ def narwhals_to_native_dtype(
         return spark_types.StringType()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return spark_types.BooleanType()
-    if isinstance_or_issubclass(dtype, (dtypes.Date, dtypes.Datetime)):
-        msg = "Converting to Date or Datetime dtype is not supported yet"
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return spark_types.DateType()
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        if dt_time_zone is None:
+            return spark_types.TimestampNTZType()
+        if dt_time_zone != "UTC":  # pragma: no cover
+            msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
+            raise ValueError(msg)
+        return spark_types.TimestampType()
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         inner = narwhals_to_native_dtype(
             dtype.inner,  # type: ignore[union-attr]

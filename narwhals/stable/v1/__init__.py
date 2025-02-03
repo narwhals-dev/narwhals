@@ -167,17 +167,31 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self: Self,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
         might be triggered.
+
         If a library does not support lazy execution and `backend` is not specified,
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
 
         Arguments:
+            backend: specifies which lazy backend collect to. This will be the underlying
+                backend for the resulting Narwhals LazyFrame.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
+                    or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
             backend: The (lazy) implementation to convert to. If not specified, and the
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
@@ -278,13 +292,43 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             raise TypeError(msg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
-    def collect(self: Self) -> DataFrame[Any]:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None = None,
+        **kwargs: Any,
+    ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
+
+        As each underlying lazyframe has different arguments to set when materializing
+        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
+        below for how to generalize the specification).
+
+        Arguments:
+            backend: specifies which eager backend collect to. This will be the underlying
+                backend for the resulting Narwhals DataFrame. If None, then the following
+                default conversions will be applied:
+
+                - `polars.LazyFrame` -> `polars.DataFrame`
+                - `dask.DataFrame` -> `pandas.DataFrame`
+                - `duckdb.PyRelation` -> `pyarrow.Table`
+                - `pyspark.DataFrame` -> `pyarrow.Table`
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
+                    or `POLARS`.
+                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
+                - Directly as a module `pandas`, `pyarrow` or `polars`.
+            kwargs: backend specific kwargs to pass along. To know more please check the
+                backend specific documentation:
+
+                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
 
         Returns:
             DataFrame
         """
-        return super().collect()  # type: ignore[return-value]
+        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API.

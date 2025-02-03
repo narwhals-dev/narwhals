@@ -330,6 +330,9 @@ class BaseFrame(Generic[FrameT]):
         variable_name: str | None,
         value_name: str | None,
     ) -> Self:
+        variable_name = variable_name if variable_name is not None else "variable"
+        value_name = value_name if value_name is not None else "value"
+
         return self._from_compliant_dataframe(
             self._compliant_frame.unpivot(
                 on=on,
@@ -362,11 +365,14 @@ class BaseFrame(Generic[FrameT]):
         raise NotImplementedError(msg)
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+
         return self._from_compliant_dataframe(
-            self._compliant_frame.explode(
-                columns,
-                *more_columns,
-            )
+            self._compliant_frame.explode(columns=to_explode)
         )
 
 
@@ -498,17 +504,31 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self: Self,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
         might be triggered.
+
         If a library does not support lazy execution and `backend` is not specified,
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
 
         Arguments:
+            backend: specifies which lazy backend collect to. This will be the underlying
+                backend for the resulting Narwhals LazyFrame.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
+                    or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
             backend: The (lazy) implementation to convert to. If not specified, and the
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
@@ -549,19 +569,20 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴───────┘ |
             └──────────────────┘
         """
+        lazy_backend = None if backend is None else Implementation.from_backend(backend)
         supported_lazy_backends = (
             Implementation.DASK,
             Implementation.DUCKDB,
             Implementation.POLARS,
         )
-        if backend is not None and backend not in supported_lazy_backends:
+        if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
             msg = (
                 "Not-supported backend."
-                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {backend}"
+                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {lazy_backend}"
             )
             raise ValueError(msg)
         return self._lazyframe(
-            self._compliant_frame.lazy(backend=backend),
+            self._compliant_frame.lazy(backend=lazy_backend),
             level="lazy",
         )
 
@@ -3808,16 +3829,48 @@ class LazyFrame(BaseFrame[FrameT]):
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
-    def collect(self: Self) -> DataFrame[Any]:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None = None,
+        **kwargs: Any,
+    ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
+
+        As each underlying lazyframe has different arguments to set when materializing
+        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
+        below for how to generalize the specification).
+
+        Arguments:
+            backend: specifies which eager backend collect to. This will be the underlying
+                backend for the resulting Narwhals DataFrame. If None, then the following
+                default conversions will be applied:
+
+                - `polars.LazyFrame` -> `polars.DataFrame`
+                - `dask.DataFrame` -> `pandas.DataFrame`
+                - `duckdb.PyRelation` -> `pyarrow.Table`
+                - `pyspark.DataFrame` -> `pyarrow.Table`
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
+                    or `POLARS`.
+                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
+                - Directly as a module `pandas`, `pyarrow` or `polars`.
+            kwargs: backend specific kwargs to pass along. To know more please check the
+                backend specific documentation:
+
+                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
 
         Returns:
             DataFrame
 
         Examples:
-            >>> import narwhals as nw
             >>> import polars as pl
             >>> import dask.dataframe as dd
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoDataFrame, IntoFrame
+            >>>
             >>> data = {
             ...     "a": ["a", "b", "a", "b", "b", "c"],
             ...     "b": [1, 2, 3, 4, 5, 6],
@@ -3826,28 +3879,14 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> lf_pl = pl.LazyFrame(data)
             >>> lf_dask = dd.from_dict(data, npartitions=2)
 
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf  # doctest:+ELLIPSIS
+            >>> nw.from_native(lf_pl)  # doctest:+ELLIPSIS
             ┌─────────────────────────────┐
             |     Narwhals LazyFrame      |
             |-----------------------------|
             |<LazyFrame at ...
             └─────────────────────────────┘
-            >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> df.to_native().sort("a")
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
-            │ --- ┆ --- ┆ --- │
-            │ str ┆ i64 ┆ i64 │
-            ╞═════╪═════╪═════╡
-            │ a   ┆ 4   ┆ 10  │
-            │ b   ┆ 11  ┆ 10  │
-            │ c   ┆ 6   ┆ 1   │
-            └─────┴─────┴─────┘
 
-            >>> lf = nw.from_native(lf_dask)
-            >>> lf
+            >>> nw.from_native(lf_dask)
             ┌───────────────────────────────────┐
             |        Narwhals LazyFrame         |
             |-----------------------------------|
@@ -3860,15 +3899,96 @@ class LazyFrame(BaseFrame[FrameT]):
             |Dask Name: frompandas, 1 expression|
             |Expr=df                            |
             └───────────────────────────────────┘
-            >>> df = lf.group_by("a").agg(nw.col("b", "c").sum()).collect()
-            >>> df.to_native()
+
+            Let's define a dataframe-agnostic that does some grouping computation and
+            finally collects to a DataFrame:
+
+            >>> def agnostic_group_by_and_collect(lf_native: IntoFrame) -> IntoDataFrame:
+            ...     lf = nw.from_native(lf_native)
+            ...     return (
+            ...         lf.group_by("a")
+            ...         .agg(nw.col("b", "c").sum())
+            ...         .sort("a")
+            ...         .collect()
+            ...         .to_native()
+            ...     )
+
+            We can then pass any supported library such as Polars or Dask
+            to `agnostic_group_by_and_collect`:
+
+            >>> agnostic_group_by_and_collect(lf_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 4   ┆ 10  │
+            │ b   ┆ 11  ┆ 10  │
+            │ c   ┆ 6   ┆ 1   │
+            └─────┴─────┴─────┘
+
+            >>> agnostic_group_by_and_collect(lf_dask)
                a   b   c
             0  a   4  10
             1  b  11  10
             2  c   6   1
+
+            Now, let's suppose that we want to run lazily, yet without
+            query optimization (e.g. for debugging purpose) _and_ collect to pyarrow.
+            As this is achieved differently in polars and dask, to keep a unified workflow
+            we can specify the native kwargs for each lazy backend, and specify
+            backend="pyarrow" in order to collect to pyarrow instead of their default.
+
+            >>> collect_kwargs = {
+            ...     nw.Implementation.POLARS: {"no_optimization": True},
+            ...     nw.Implementation.DASK: {"optimize_graph": False},
+            ...     nw.Implementation.PYARROW: {},
+            ... }
+
+            >>> def agnostic_collect_no_opt(lf_native: IntoFrame) -> IntoDataFrame:
+            ...     lf = nw.from_native(lf_native)
+            ...     return (
+            ...         lf.group_by("a")
+            ...         .agg(nw.col("b", "c").sum())
+            ...         .sort("a")
+            ...         .collect(
+            ...             backend="pyarrow", **collect_kwargs.get(lf.implementation, {})
+            ...         )
+            ...         .to_native()
+            ...     )
+
+            >>> agnostic_collect_no_opt(lf_pl)
+            pyarrow.Table
+            a: large_string
+            b: int64
+            c: int64
+            ----
+            a: [["a","b","c"]]
+            b: [[4,11,6]]
+            c: [[10,10,1]]
+
+            >>> agnostic_collect_no_opt(lf_dask)
+            pyarrow.Table
+            a: large_string
+            b: int64
+            c: int64
+            ----
+            a: [["a","b","c"]]
+            b: [[4,11,6]]
+            c: [[10,10,1]]
         """
+        eager_backend = None if backend is None else Implementation.from_backend(backend)
+        supported_eager_backends = (
+            Implementation.POLARS,
+            Implementation.PANDAS,
+            Implementation.PYARROW,
+        )
+        if eager_backend is not None and eager_backend not in supported_eager_backends:
+            msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
+            raise ValueError(msg)
         return self._dataframe(
-            self._compliant_frame.collect(),
+            self._compliant_frame.collect(backend=eager_backend, **kwargs),
             level="full",
         )
 
@@ -5285,9 +5405,9 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().clone()
 
     def lazy(self: Self) -> Self:
-        """Lazify the DataFrame (if possible).
+        """Restrict available API methods to lazy-only ones.
 
-        If a library does not support lazy execution, then this is a no-op.
+        This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
 
         Returns:
             A LazyFrame.

@@ -113,6 +113,51 @@ class Implementation(Enum):
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
+    @classmethod
+    def from_string(
+        cls: type[Self], backend_name: str
+    ) -> Implementation:  # pragma: no cover
+        """Instantiate Implementation object from a native namespace module.
+
+        Arguments:
+            backend_name: Name of backend, expressed as string.
+
+        Returns:
+            Implementation.
+        """
+        mapping = {
+            "pandas": Implementation.PANDAS,
+            "modin": Implementation.MODIN,
+            "cudf": Implementation.CUDF,
+            "pyarrow": Implementation.PYARROW,
+            "pyspark": Implementation.PYSPARK,
+            "polars": Implementation.POLARS,
+            "dask": Implementation.DASK,
+            "duckdb": Implementation.DUCKDB,
+            "ibis": Implementation.IBIS,
+        }
+        return mapping.get(backend_name, Implementation.UNKNOWN)
+
+    @classmethod
+    def from_backend(
+        cls: type[Self], backend: str | Implementation | ModuleType
+    ) -> Implementation:
+        """Instantiate from native namespace module, string, or Implementation.
+
+        Arguments:
+            backend: Backend to instantiate Implementation from.
+
+        Returns:
+            Implementation.
+        """
+        return (
+            cls.from_string(backend)
+            if isinstance(backend, str)
+            else backend
+            if isinstance(backend, Implementation)
+            else cls.from_native_namespace(backend)
+        )
+
     def to_native_namespace(self: Self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 

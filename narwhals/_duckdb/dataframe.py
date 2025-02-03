@@ -8,15 +8,20 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -79,20 +84,47 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(item), version=self._version
         )
 
-    def collect(self: Self) -> pa.Table:
-        try:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required to collect `LazyFrame` backed by DuckDcollect `LazyFrame` backed by DuckDB"
-            raise ModuleNotFoundError(msg) from exc
 
-        from narwhals._arrow.dataframe import ArrowDataFrame
+            from narwhals._arrow.dataframe import ArrowDataFrame
 
-        return ArrowDataFrame(
-            native_dataframe=self._native_frame.arrow(),
-            backend_version=parse_version(pa.__version__),
-            version=self._version,
-        )
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame.arrow(),
+                backend_version=parse_version(pa.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.df(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=self._native_frame.pl(),
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
         return self._from_native_frame(self._native_frame.limit(n))
@@ -345,8 +377,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
-            import duckdb
-
             rel = self._native_frame
             # Sanitise input
             if any(x not in rel.columns for x in subset):
@@ -395,10 +425,98 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(result)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        import duckdb
-
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
+        return self._from_native_frame(duckdb.sql(query))
+
+    def explode(self: Self, columns: list[str]) -> Self:
+        dtypes = import_dtypes_module(self._version)
+        schema = self.collect_schema()
+        for col in columns:
+            dtype = schema[col]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        if len(columns) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with DuckDB backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
+            )
+            raise NotImplementedError(msg)
+
+        col_to_explode = ColumnExpression(columns[0])
+        rel = self._native_frame
+        original_columns = self.columns
+
+        not_null_condition = (
+            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
+        )
+        non_null_rel = rel.filter(not_null_condition).select(
+            *(
+                FunctionExpression("unnest", col_to_explode).alias(col)
+                if col in columns
+                else col
+                for col in original_columns
+            )
+        )
+
+        null_rel = rel.filter(~not_null_condition).select(
+            *(
+                ConstantExpression(None).alias(col) if col in columns else col
+                for col in original_columns
+            )
+        )
+
+        return self._from_native_frame(non_null_rel.union(null_rel))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str,
+        value_name: str,
+    ) -> Self:
+        index_: list[str] = (
+            [] if index is None else [index] if isinstance(index, str) else index
+        )
+        on_: list[str] = (
+            [c for c in self.columns if c not in index_]
+            if on is None
+            else [on]
+            if isinstance(on, str)
+            else on
+        )
+
+        if variable_name == "":
+            msg = "`variable_name` cannot be empty string for duckdb backend."
+            raise NotImplementedError(msg)
+
+        if value_name == "":
+            msg = "`value_name` cannot be empty string for duckdb backend."
+            raise NotImplementedError(msg)
+
+        cols_to_select = ", ".join(
+            f'"{col}"' for col in [*index_, variable_name, value_name]
+        )
+        unpivot_on = ", ".join(f'"{col}"' for col in on_)
+
+        rel = self._native_frame  # noqa: F841
+        query = f"""
+            with unpivot_cte as (
+                unpivot rel
+                on {unpivot_on}
+                into
+                    name {variable_name}
+                    value {value_name}
+            )
+            select {cols_to_select}
+            from unpivot_cte;
+            """  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))

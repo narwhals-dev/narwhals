@@ -24,6 +24,7 @@ from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
@@ -559,12 +560,45 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
         raise AssertionError  # pragma: no cover
 
-    def collect(self: Self) -> ArrowDataFrame:
-        return ArrowDataFrame(
-            self._native_frame,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is Implementation.PYARROW or backend is None:
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=pl.from_arrow(self._native_frame),  # type: ignore[arg-type]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -732,12 +766,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
         native_frame = self._native_frame
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
+        n_rows = len(self)
 
         index_: list[str] = (
             [] if index is None else [index] if isinstance(index, str) else index
@@ -749,8 +782,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if isinstance(on, str)
             else on
         )
-
-        n_rows = len(self)
 
         promote_kwargs = (
             {"promote_options": "permissive"}
