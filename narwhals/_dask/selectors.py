@@ -121,11 +121,7 @@ class DaskSelectorNamespace:
 
 class DaskSelector(DaskExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"DaskSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"DaskSelector(depth={self._depth}, function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DaskExpr:
         return DaskExpr(

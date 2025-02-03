@@ -111,11 +111,7 @@ class ArrowSelectorNamespace:
 
 class ArrowSelector(ArrowExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"ArrowSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"ArrowSelector(depth={self._depth}, function_name={self._function_name})"
 
     def _to_expr(self: Self) -> ArrowExpr:
         return ArrowExpr(

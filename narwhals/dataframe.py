@@ -1699,7 +1699,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             We define a library agnostic function:
 
             >>> def agnostic_iter_rows(df_native: IntoDataFrame, *, named: bool):
-            ...     return nw.from_native(df_native, eager_only=True).iter_rows(named=named)
+            ...     return nw.from_native(df_native, eager_only=True).iter_rows(
+            ...         named=named
+            ...     )
 
             We can then pass any supported library such as Pandas, Polars, or PyArrow
             to `agnostic_iter_rows`:
@@ -2376,7 +2378,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).to_native()
+            ...     return df.filter(
+            ...         (nw.col("foo") < 3) & (nw.col("ham") == "a")
+            ...     ).to_native()
             >>> agnostic_filter(df_pd)
                foo  bar ham
             0    1    6   a
@@ -2555,7 +2559,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             >>> def agnostic_group_by_agg(df_native: IntoDataFrameT) -> IntoDataFrameT:
             ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b").to_native()
+            ...     return (
+            ...         df.group_by(["a", "b"])
+            ...         .agg(nw.max("c"))
+            ...         .sort("a", "b")
+            ...         .to_native()
+            ...     )
 
             >>> agnostic_group_by_agg(df_pd)
                a  b  c
@@ -2850,7 +2859,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             ... ) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     other = nw.from_native(other_native)
-            ...     return df.join_asof(other, on="datetime", strategy=strategy).to_native()
+            ...     return df.join_asof(
+            ...         other, on="datetime", strategy=strategy
+            ...     ).to_native()
 
             We can then pass any supported library such as Pandas or Polars
             to `agnostic_join_asof_datetime`:
@@ -3055,14 +3066,22 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
-            >>> agnostic_is_empty(df_pd), agnostic_is_empty(df_pl), agnostic_is_empty(df_pa)
+            >>> (
+            ...     agnostic_is_empty(df_pd),
+            ...     agnostic_is_empty(df_pl),
+            ...     agnostic_is_empty(df_pa),
+            ... )
             (True, True, True)
 
             >>> data = {"foo": [100, 2, 3], "bar": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
-            >>> agnostic_is_empty(df_pd), agnostic_is_empty(df_pl), agnostic_is_empty(df_pa)
+            >>> (
+            ...     agnostic_is_empty(df_pd),
+            ...     agnostic_is_empty(df_pl),
+            ...     agnostic_is_empty(df_pa),
+            ... )
             (False, False, False)
         """
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
@@ -3395,7 +3414,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             >>> def agnostic_pivot(df_native: IntoDataFrameT) -> IntoDataFrameT:
             ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.pivot("col", index="ix", aggregate_function="sum").to_native()
+            ...     return df.pivot(
+            ...         "col", index="ix", aggregate_function="sum"
+            ...     ).to_native()
 
             We can then pass any supported library such as Pandas or Polars
             to `agnostic_pivot`:
@@ -4306,7 +4327,9 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> def agnostic_with_columns(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
             ...     return (
-            ...         df.with_columns((nw.col("a") * 2).alias("2a")).collect().to_native()
+            ...         df.with_columns((nw.col("a") * 2).alias("2a"))
+            ...         .collect()
+            ...         .to_native()
             ...     )
 
             We can then pass any supported library such as Polars or Dask to `agnostic_with_columns`:
@@ -4422,7 +4445,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
             >>> def agnostic_select(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("foo"), nw.col("bar") + 1).collect().to_native()
+            ...     return (
+            ...         df.select(nw.col("foo"), nw.col("bar") + 1).collect().to_native()
+            ...     )
 
             >>> agnostic_select(lf_pl)
             shape: (3, 2)
@@ -5047,7 +5072,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
             >>> def agnostic_sort(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.sort("c", "a", descending=[False, True]).collect().to_native()
+            ...     return (
+            ...         df.sort("c", "a", descending=[False, True]).collect().to_native()
+            ...     )
 
             We can then pass any supported library such as Polars or Dask to `agnostic_sort`:
 
@@ -5262,7 +5289,9 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
             │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
             └─────────────────────┴────────────┴──────┘
-            >>> agnostic_join_asof_datetime(population_dask, gdp_dask, strategy="backward")
+            >>> agnostic_join_asof_datetime(
+            ...     population_dask, gdp_dask, strategy="backward"
+            ... )
                 datetime  population   gdp
             0 2016-03-01       82.19  4164
             1 2018-08-01       82.66  4566

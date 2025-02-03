@@ -75,10 +75,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"PandasLikeExpr("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            ")"
+            f"PandasLikeExpr(depth={self._depth}, function_name={self._function_name}, )"
         )
 
     def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
