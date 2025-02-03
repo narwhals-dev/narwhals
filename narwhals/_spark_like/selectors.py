@@ -117,7 +117,7 @@ class SparkLikeSelectorNamespace:
 
 class SparkLikeSelector(SparkLikeExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"SparkLikeSelector(" f"function_name={self._function_name})"
+        return f"SparkLikeSelector(function_name={self._function_name})"
 
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(

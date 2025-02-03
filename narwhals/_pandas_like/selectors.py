@@ -120,9 +120,7 @@ class PandasSelectorNamespace:
 class PandasSelector(PandasLikeExpr):
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"PandasSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
+            f"PandasSelector(depth={self._depth}, function_name={self._function_name}, "
         )
 
     def _to_expr(self: Self) -> PandasLikeExpr:

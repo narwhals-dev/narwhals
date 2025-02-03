@@ -56,11 +56,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._kwargs = kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"ArrowExpr("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-        )
+        return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)

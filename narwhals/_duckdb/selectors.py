@@ -114,7 +114,7 @@ class DuckDBSelectorNamespace:
 
 class DuckDBSelector(DuckDBExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"DuckDBSelector(" f"function_name={self._function_name})"
+        return f"DuckDBSelector(function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(
