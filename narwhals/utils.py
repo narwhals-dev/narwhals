@@ -433,7 +433,7 @@ def parse_version(version: str) -> tuple[int, ...]:
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
     # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
     version = re.sub(r"(\D?dev.*$)", "", version)
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version.split("."))
+    return tuple(int(re.sub(r"\D", "", v)) for v in version.split("."))
 
 
 def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:

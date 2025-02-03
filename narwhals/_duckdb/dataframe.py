@@ -202,14 +202,13 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             )
             raise NotImplementedError(msg)
 
-        result = []
-        for col in self._native_frame.columns:
-            if col in new_columns_map:
-                result.append(new_columns_map.pop(col).alias(col))
-            else:
-                result.append(ColumnExpression(col))
-        for col, value in new_columns_map.items():
-            result.append(value.alias(col))
+        result = [
+            new_columns_map.pop(col).alias(col)
+            if col in new_columns_map
+            else ColumnExpression(col)
+            for col in self._native_frame.columns
+        ]
+        result.extend(value.alias(col) for col, value in new_columns_map.items())
         return self._from_native_frame(self._native_frame.select(*result))
 
     def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
@@ -353,10 +352,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         select = ["lhs.*"]
         for col in rhs.columns:
             if col in lhs.columns and (
-                right_on is None or col not in [right_on, *by_right]
+                right_on is None or col not in (right_on, *by_right)
             ):
                 select.append(f'rhs."{col}" as "{col}{suffix}"')
-            elif right_on is None or col not in [right_on, *by_right]:
+            elif right_on is None or col not in (right_on, *by_right):
                 select.append(col)
         query = f"""
             SELECT {",".join(select)}
@@ -503,7 +502,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise NotImplementedError(msg)
 
         cols_to_select = ", ".join(
-            f'"{col}"' for col in [*index_, variable_name, value_name]
+            f'"{col}"' for col in (*index_, variable_name, value_name)
         )
         unpivot_on = ", ".join(f'"{col}"' for col in on_)
 

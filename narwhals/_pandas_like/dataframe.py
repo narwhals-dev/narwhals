@@ -1012,8 +1012,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             }
         else:
             uniques = {col: self._native_frame[col].unique().tolist() for col in on}
-        all_lists = [values, *list(uniques.values())]
-        ordered_cols = list(product(*all_lists))
+        ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
 

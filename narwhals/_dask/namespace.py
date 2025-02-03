@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -128,7 +129,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x & y, series)]
+            return [reduce(operator.and_, series)]
 
         return DaskExpr(
             call=func,
@@ -145,7 +146,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x | y, series)]
+            return [reduce(operator.or_, series)]
 
         return DaskExpr(
             call=func,
@@ -162,7 +163,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x + y, series)]
+            return [reduce(operator.add, series)]
 
         return DaskExpr(
             call=func,
@@ -182,7 +183,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
-        if len(list(items)) == 0:
+        if not items:
             msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
         dfs = [i._native_frame for i in items]
@@ -311,7 +312,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 result = reduce(lambda x, y: x + separator + y, series).where(
                     ~null_mask_result, None
                 )
@@ -325,7 +326,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    lambda x, y: x + y,
+                    operator.add,
                     (s + v for s, v in zip(separators, values)),
                     init_value,
                 )
