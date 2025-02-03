@@ -11,7 +11,16 @@ from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Mapping
 
+from narwhals.utils import Implementation
+from narwhals.utils import Version
+from narwhals.utils import parse_version
+
 if TYPE_CHECKING:
+    from types import ModuleType
+    from typing import Any
+
+    import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -85,3 +94,65 @@ class Schema(BaseSchema):
             Number of columns.
         """
         return len(self)
+
+    def to_native(
+        self: Self, *, native_namespace: ModuleType, dtype_backend: str | None = None
+    ) -> dict[str, Any] | pl.Schema | pa.Schema:
+        implementation = Implementation.from_native_namespace(native_namespace)
+        version = Version.MAIN
+        if implementation is Implementation.POLARS:
+            return self.to_polars(backend=implementation, version=version)
+        elif implementation.is_pandas_like():
+            return self.to_pandas(
+                backend=implementation, version=version, dtype_backend=dtype_backend
+            )
+        elif implementation is Implementation.PYARROW:
+            return self.to_arrow(backend=implementation, version=version)
+
+        raise NotImplementedError
+
+    def to_arrow(
+        self: Self, *, backend: ModuleType | Implementation | str, version: Version
+    ) -> pa.Schema:
+        from narwhals._arrow.utils import narwhals_to_native_dtype
+
+        implementation = Implementation.from_backend(backend)
+        schema: pa.Schema = implementation.to_native_namespace().schema(
+            (name, narwhals_to_native_dtype(dtype, version))
+            for name, dtype in self.items()
+        )
+        return schema
+
+    def to_pandas(
+        self: Self,
+        *,
+        backend: ModuleType | Implementation | str,
+        version: Version,
+        dtype_backend: str | None = None,
+    ) -> dict[str, Any]:
+        from narwhals._pandas_like.utils import narwhals_to_native_dtype
+
+        implementation = Implementation.from_backend(backend)
+        backend_version = parse_version(implementation.to_native_namespace().__version__)
+        return {
+            name: narwhals_to_native_dtype(
+                dtype=dtype,
+                dtype_backend=dtype_backend,
+                implementation=implementation,
+                backend_version=backend_version,
+                version=version,
+            )
+            for name, dtype in self.items()
+        }
+
+    def to_polars(
+        self: Self, *, backend: ModuleType | Implementation | str, version: Version
+    ) -> pl.Schema:
+        from narwhals._polars.utils import narwhals_to_native_dtype
+
+        implementation = Implementation.from_backend(backend)
+        schema: pl.Schema = implementation.to_native_namespace().Schema(
+            (name, narwhals_to_native_dtype(dtype, version))
+            for name, dtype in self.items()
+        )
+        return schema
