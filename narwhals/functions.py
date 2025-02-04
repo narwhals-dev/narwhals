@@ -26,6 +26,7 @@ from narwhals.translate import from_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
+from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
@@ -375,6 +376,7 @@ def from_dict(
     schema: dict[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -397,6 +399,12 @@ def from_dict(
                     or `POLARS`.
                 - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
                 - Directly as a module `pandas`, `pyarrow` or `polars`.
+        native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.26.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -438,6 +446,17 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
+    if native_namespace is not None and backend is None:
+        msg = (
+            "Please use `backend` instead. Note that `native_namespace` is still available"
+            "(and won't emit a deprecation warning) if you use `narwhals.stable.v1`, "
+            "see [perfect backwards compatibility policy](../backcompat.md/)."
+        )
+        issue_deprecation_warning(msg, _version="1.26.0")
+        backend = native_namespace
+    elif backend is not None:
+        msg = "Can't pass both `native_namespace` and `backend`"
+        raise ValueError(msg)
     return _from_dict_impl(
         data,
         schema,

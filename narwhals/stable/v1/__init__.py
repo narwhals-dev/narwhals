@@ -2163,6 +2163,7 @@ def from_dict(
     schema: dict[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -2185,10 +2186,21 @@ def from_dict(
                     or `POLARS`.
                 - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
                 - Directly as a module `pandas`, `pyarrow` or `polars`.
+        native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.26.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
     """
+    if native_namespace is not None and backend is None:
+        backend = native_namespace
+    elif backend is not None:
+        msg = "Can't pass both `native_namespace` and `backend`"
+        raise ValueError(msg)
     return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
             data,
