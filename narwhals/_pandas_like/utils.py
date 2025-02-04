@@ -448,43 +448,49 @@ def non_object_native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def native_to_narwhals_dtype(
-    native_column: Any, version: Version, implementation: Implementation
+def object_native_to_narwhals_dtype(
+    series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
-    dtype = str(native_column.dtype)
-
     dtypes = import_dtypes_module(version)
 
-    if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+    if implementation in (Implementation.DASK, Implementation.CUDF):
+        # These libraries don't support arbitrary objects, so if they report the dtype
+        # as being object, it's definitely string.
+        return dtypes.String()
+
+    import pandas as pd
+
+    # Arbitrary limit of 100 elements to use to sniff dtype.
+    inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)
+    if inferred_dtype == "string":
+        return dtypes.String()
+    if inferred_dtype == "empty" and version is not Version.V1:
+        # Default to String for empty Series.
+        return dtypes.String()
+    elif inferred_dtype == "empty":
+        # But preserve returning Object in V1.
+        return dtypes.Object()
+    return dtypes.Object()
+
+
+def native_to_narwhals_dtype(
+    native_dtype: Any, version: Version, implementation: Implementation
+) -> DType:
+    str_dtype = str(native_dtype)
+
+    if str_dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         from narwhals._arrow.utils import (
             native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
         )
 
-        native_dtype = native_column.dtype
         if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
-    if dtype != "object":
-        return non_object_native_to_narwhals_dtype(dtype, version, implementation)
-    if implementation is not Implementation.PANDAS:
-        # These libraries don't support arbitrary objects, so if they report the dtype
-        # as being object, it's definitely string.
-        return dtypes.String()
-    # This is the most efficient implementation for pandas,
-    # and doesn't require the interchange protocol
-    import pandas as pd
-
-    dtype = pd.api.types.infer_dtype(native_column.head(10), skipna=True)
-    if dtype == "string":
-        return dtypes.String()
-    if dtype == "empty" and version is not Version.V1:
-        # Default to String for empty Series.
-        return dtypes.String()
-    elif dtype == "empty":
-        # But preserve returning Object in V1.
-        return dtypes.Object()
-    return dtypes.Object()
+    if str_dtype != "object":
+        return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
+    msg = "Unreachable code, object dtype should be handled separately"
+    raise AssertionError(msg)
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
@@ -822,6 +828,8 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
+    if len(column_names) == df.shape[1] and all(column_names == df.columns):  # type: ignore[attr-defined]
+        return df
     if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
@@ -835,7 +843,7 @@ def select_columns_by_name(
             )
         return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
     try:
-        return df[column_names]  # type: ignore[no-any-return, index]
+        return df[list(column_names)]  # type: ignore[no-any-return, index]
     except KeyError as e:
         available_columns = df.columns.tolist()  # type: ignore[attr-defined]
         missing_columns = [x for x in column_names if x not in available_columns]

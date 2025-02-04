@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
@@ -179,8 +180,13 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(
-            self._native_series, self._version, self._implementation
+        native_dtype = self._native_series.dtype
+        return (
+            native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
+            if native_dtype != "object"
+            else object_native_to_narwhals_dtype(
+                self._native_series, self._version, self._implementation
+            )
         )
 
     def ewm_mean(

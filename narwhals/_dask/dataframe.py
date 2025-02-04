@@ -12,6 +12,7 @@ import pandas as pd
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -180,8 +181,13 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
+        native_dtypes = self._native_frame.dtypes
         return {
             col: native_to_narwhals_dtype(
+                native_dtypes[col], self._version, self._implementation
+            )
+            if native_dtypes[col] != "object"
+            else object_native_to_narwhals_dtype(
                 self._native_frame[col], self._version, self._implementation
             )
             for col in self._native_frame.columns

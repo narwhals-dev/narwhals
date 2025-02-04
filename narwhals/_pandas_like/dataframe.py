@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -339,8 +340,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
+        native_dtypes = self._native_frame.dtypes
         return {
             col: native_to_narwhals_dtype(
+                native_dtypes[col], self._version, self._implementation
+            )
+            if native_dtypes[col] != "object"
+            else object_native_to_narwhals_dtype(
                 self._native_frame[col], self._version, self._implementation
             )
             for col in self._native_frame.columns
