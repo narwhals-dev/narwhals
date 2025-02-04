@@ -148,7 +148,7 @@ class DaskExprDateTimeNamespace:
     def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> DaskExpr:
         def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"]) -> dx.Series:
             dtype = native_to_narwhals_dtype(
-                s, self._compliant_expr._version, Implementation.DASK
+                s.dtype, self._compliant_expr._version, Implementation.DASK
             )
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()

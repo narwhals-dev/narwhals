@@ -319,7 +319,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         from narwhals.exceptions import InvalidOperationError
 
         def func(s: dx.Series) -> dx.Series:
-            dtype = native_to_narwhals_dtype(s, self._version, Implementation.DASK)
+            dtype = native_to_narwhals_dtype(s.dtype, self._version, Implementation.DASK)
             if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
@@ -553,7 +553,9 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def is_nan(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
-            dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
+            dtype = native_to_narwhals_dtype(
+                _input.dtype, self._version, self._implementation
+            )
             if dtype.is_numeric():
                 return _input != _input  # noqa: PLR0124
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"

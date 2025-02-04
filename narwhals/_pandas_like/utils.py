@@ -487,11 +487,12 @@ def native_to_narwhals_dtype(
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
-    if str_dtype == 'object' and implementation in (Implementation.DASK, Implementation.CUDF):
-        # Per conversations 
-        return dtype.String()
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
+    elif implementation in (Implementation.DASK, Implementation.CUDF):
+        # Per conversations
+        dtypes = import_dtypes_module(version)
+        return dtypes.String()
     msg = "Unreachable code, object dtype should be handled separately"
     raise AssertionError(msg)
 
