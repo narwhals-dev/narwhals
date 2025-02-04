@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import IntoImplementation
     from narwhals.typing import SizeUnit
 
     PS = ParamSpec("PS")
@@ -508,7 +509,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def lazy(
         self: Self,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoImplementation | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -3852,7 +3853,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def collect(
         self: Self,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoImplementation | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.

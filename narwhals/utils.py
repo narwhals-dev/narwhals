@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import DTypes
+    from narwhals.typing import IntoImplementation
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
 
@@ -137,9 +138,7 @@ class Implementation(Enum):
         return mapping.get(backend_name, Implementation.UNKNOWN)
 
     @classmethod
-    def from_backend(
-        cls: type[Self], backend: str | Implementation | ModuleType
-    ) -> Implementation:
+    def from_backend(cls: type[Self], backend: IntoImplementation) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:
