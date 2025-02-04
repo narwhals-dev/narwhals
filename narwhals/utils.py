@@ -162,16 +162,41 @@ class Implementation(Enum):
         Returns:
             Native module.
         """
-        mapping = {
-            Implementation.PANDAS: get_pandas(),
-            Implementation.MODIN: get_modin(),
-            Implementation.CUDF: get_cudf(),
-            Implementation.PYARROW: get_pyarrow(),
-            Implementation.PYSPARK: get_pyspark_sql(),
-            Implementation.POLARS: get_polars(),
-            Implementation.DASK: get_dask_dataframe(),
-        }
-        return mapping[self]  # type: ignore[no-any-return]
+        if self is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            return pd  # type: ignore[no-any-return]
+        if self is Implementation.MODIN:
+            import modin.pandas
+
+            return modin.pandas  # type: ignore[no-any-return]
+        if self is Implementation.CUDF:  # pragma: no cover
+            import cudf  # ignore-banned-import
+
+            return cudf  # type: ignore[no-any-return]
+        if self is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            return pa  # type: ignore[no-any-return]
+        if self is Implementation.PYSPARK:  # pragma: no cover
+            import pyspark.sql
+
+            return pyspark.sql  # type: ignore[no-any-return]
+        if self is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            return pl
+        if self is Implementation.DASK:
+            import dask.dataframe  # ignore-banned-import
+
+            return dask.dataframe  # type: ignore[no-any-return]
+
+        if self is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            return duckdb  # type: ignore[no-any-return]
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
 
     def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
@@ -1040,6 +1065,27 @@ def validate_strict_and_pass_though(
         msg = "Cannot pass both `strict` and `pass_through`"
         raise ValueError(msg)
     return pass_through
+
+
+def validate_native_namespace_and_backend(
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
+    *,
+    emit_deprecation_warning: bool,
+) -> ModuleType | Implementation | str | None:
+    if native_namespace is not None and backend is None:  # pragma: no cover
+        if emit_deprecation_warning:
+            msg = (
+                "`native_namespace` is deprecated, please use `pass_through` instead.\n\n"
+                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+            )
+            issue_deprecation_warning(msg, _version="1.25.1")
+        backend = native_namespace
+    elif native_namespace is not None and backend is not None:
+        msg = "Can't pass both `native_namespace` and `backend`"
+        raise ValueError(msg)
+    return backend
 
 
 def _validate_rolling_arguments(
