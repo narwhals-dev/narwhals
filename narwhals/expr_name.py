@@ -44,7 +44,9 @@ class ExprNameNamespace(Generic[ExprT]):
 
             >>> def agnostic_name_keep(df_native: IntoFrame) -> list[str]:
             ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
+            ...     return df.select(
+            ...         nw.col("foo").alias("alias_for_foo").name.keep()
+            ...     ).columns
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_name_keep`:

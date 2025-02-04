@@ -56,11 +56,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._kwargs = kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"ArrowExpr("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-        )
+        return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
@@ -195,8 +191,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def filter(self: Self, *predicates: IntoArrowExpr) -> Self:
         plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=expr)
+        other = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", other=other)
 
     def mean(self: Self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)

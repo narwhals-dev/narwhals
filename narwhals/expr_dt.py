@@ -34,7 +34,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
+            >>> data = {
+            ...     "a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            ... }
             >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -913,7 +915,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {"a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]}
+            >>> data = {
+            ...     "a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]
+            ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)

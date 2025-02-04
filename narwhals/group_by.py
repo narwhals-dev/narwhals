@@ -185,7 +185,9 @@ class LazyGroupBy(Generic[LazyFrameT]):
 
             >>> def agnostic_func_mult_col(lf_native: IntoFrameT) -> IntoFrameT:
             ...     lf = nw.from_native(lf_native)
-            ...     return nw.to_native(lf.group_by("a", "b").agg(nw.sum("c")).sort("a", "b"))
+            ...     return nw.to_native(
+            ...         lf.group_by("a", "b").agg(nw.sum("c")).sort("a", "b")
+            ...     )
 
             We can then pass a lazy frame and materialise it with `collect`:
 

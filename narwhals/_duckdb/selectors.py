@@ -34,13 +34,13 @@ class DuckDBSelectorNamespace:
                 ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
             ]
 
-        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return DuckDBSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -53,13 +53,13 @@ class DuckDBSelectorNamespace:
                 ColumnExpression(col) for col in df.columns if re.search(pattern, col)
             ]
 
-        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return DuckDBSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -114,7 +114,7 @@ class DuckDBSelectorNamespace:
 
 class DuckDBSelector(DuckDBExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"DuckDBSelector(" f"function_name={self._function_name})"
+        return f"DuckDBSelector(function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(

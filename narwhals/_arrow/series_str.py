@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import string
 from typing import TYPE_CHECKING
 
 import pyarrow.compute as pc
@@ -40,7 +41,7 @@ class ArrowSeriesStringNamespace:
         return self.replace(pattern, value, literal=literal, n=-1)
 
     def strip_chars(self: Self, characters: str | None) -> ArrowSeries:
-        whitespace = " \t\n\r\v\f"
+        whitespace = string.whitespace
         return self._compliant_series._from_native_series(
             pc.utf8_trim(
                 self._compliant_series._native_series,
