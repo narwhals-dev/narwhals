@@ -54,12 +54,13 @@ if TYPE_CHECKING:
 
     PS = ParamSpec("PS")
 
+_FrameT = TypeVar("_FrameT", bound="IntoFrame")
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
 
 
-class BaseFrame(Generic[FrameT]):
+class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
 
