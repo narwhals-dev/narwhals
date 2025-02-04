@@ -449,8 +449,14 @@ def non_object_native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def object_native_to_narwhals_dtype(series: PandasLikeSeries, version: Version) -> DType:
+def object_native_to_narwhals_dtype(
+    series: PandasLikeSeries, version: Version, implementation: Implementation
+) -> DType:
     dtypes = import_dtypes_module(version)
+    if implementation is Implementation.CUDF:  # pragma: no cover
+        # Per conversations with their maintainers, they don't support arbitrary
+        # objects, so we can just return String.
+        return dtypes.String()
 
     # Arbitrary limit of 100 elements to use to sniff dtype.
     inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)
@@ -482,7 +488,8 @@ def native_to_narwhals_dtype(
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
     elif implementation in (Implementation.DASK, Implementation.CUDF):
-        # Per conversations
+        # Per conversations with their maintainers, they don't support arbitrary
+        # objects, so we can just return String.
         dtypes = import_dtypes_module(version)
         return dtypes.String()
     msg = (
