@@ -12,6 +12,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
@@ -38,8 +39,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
         kwargs: dict[str, Any],
@@ -47,24 +48,17 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
         self._depth = depth
-        self._output_names = output_names
-        self._implementation = Implementation.PYARROW
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
         self._kwargs = kwargs
 
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"ArrowExpr("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
-            f"root_names={self._root_names}, "
-            f"output_names={self._output_names}"
-        )
+        return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
-    def __call__(self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
     @classmethod
@@ -97,8 +91,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             func,
             depth=0,
             function_name="col",
-            root_names=list(column_names),
-            output_names=list(column_names),
+            evaluate_output_names=lambda _df: list(column_names),
+            alias_output_names=None,
             backend_version=backend_version,
             version=version,
             kwargs={},
@@ -128,8 +122,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             func,
             depth=0,
             function_name="nth",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            alias_output_names=None,
             backend_version=backend_version,
             version=version,
             kwargs={},
@@ -197,8 +191,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def filter(self: Self, *predicates: IntoArrowExpr) -> Self:
         plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=expr)
+        other = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", other=other)
 
     def mean(self: Self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
@@ -264,14 +258,20 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(self, "shift", n=n)
 
     def alias(self: Self, name: str) -> Self:
+        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
+
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
             lambda df: [series.alias(name) for series in self._call(df)],
             depth=self._depth,
             function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=[name],
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={**self._kwargs, "name": name},
@@ -351,8 +351,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_last_distinct(self: Self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
 
-    def unique(self: Self, *, maintain_order: bool) -> Self:
-        return reuse_series_implementation(self, "unique", maintain_order=maintain_order)
+    def unique(self: Self) -> Self:
+        return reuse_series_implementation(self, "unique", maintain_order=False)
 
     def replace_strict(
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
@@ -379,7 +379,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             interpolation=interpolation,
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
     def clip(self: Self, lower_bound: Any | None, upper_bound: Any | None) -> Self:
@@ -389,25 +389,28 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
 
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            if self._output_names is None:
+            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+            if overlap := set(output_names).intersection(keys):
+                # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                # we just don't support it yet.
                 msg = (
-                    "Anonymous expressions are not supported in over.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
+                    f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                    "This is not yet supported."
                 )
-                raise ValueError(msg)
+                raise NotImplementedError(msg)
+
             tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-            tmp = df.select(*keys).join(
+            tmp = df.simple_select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
-            return [tmp[name] for name in self._output_names]
+            return [tmp[alias] for alias in aliases]
 
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={**self._kwargs, "keys": keys},
@@ -448,8 +451,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
-            root_names=self._root_names,
-            output_names=self._output_names,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={**self._kwargs, "function": function, "return_dtype": return_dtype},
@@ -474,14 +477,14 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
             self,
             "rolling_sum",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -489,14 +492,14 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
             self,
             "rolling_mean",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
         )
 
@@ -504,7 +507,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -512,7 +515,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             self,
             "rolling_var",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )
@@ -521,7 +524,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -529,7 +532,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             self,
             "rolling_std",
             window_size=window_size,
-            min_periods=min_periods,
+            min_samples=min_samples,
             center=center,
             ddof=ddof,
         )

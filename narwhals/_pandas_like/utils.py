@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
+from contextlib import suppress
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,12 +11,6 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._arrow.utils import (
-    narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-)
-from narwhals._arrow.utils import (
-    native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
-)
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
@@ -127,7 +122,7 @@ def broadcast_align_and_extract_native(
             s = rhs._native_series
             return (
                 lhs._native_series,
-                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype),
+                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype, name=rhs.name),
             )
         if lhs.len() == 1:
             # broadcast
@@ -152,7 +147,7 @@ def broadcast_align_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(index: Any, other: Any) -> Any:
+def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -164,10 +159,13 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        if other.len() == 1:
+        len_other = other.len()
+
+        if len_other == 1:
             # broadcast
             s = other._native_series
             return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+
         if other._native_series.index is not index:
             return set_index(
                 other._native_series,
@@ -458,9 +456,15 @@ def native_to_narwhals_dtype(
     dtypes = import_dtypes_module(version)
 
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
-        if implementation is Implementation.CUDF:
-            return arrow_native_to_narwhals_dtype(native_column.dtype.to_arrow(), version)
-        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, version)
+        from narwhals._arrow.utils import (
+            native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
+        )
+
+        native_dtype = native_column.dtype
+        if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
+            # cudf, cudf.pandas
+            return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
+        return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if dtype != "object":
         return non_object_native_to_narwhals_dtype(dtype, version, implementation)
     if implementation is Implementation.DASK:
@@ -483,28 +487,25 @@ def native_to_narwhals_dtype(
                 map_interchange_dtype_to_narwhals_dtype,
             )
 
-            try:
+            with suppress(Exception):
                 return map_interchange_dtype_to_narwhals_dtype(
                     df.__dataframe__().get_column(0).dtype, version
                 )
-            except Exception:  # noqa: BLE001, S110
-                pass
+        # The most useful assumption is probably String
+        return dtypes.String()
     return dtypes.Unknown()  # pragma: no cover
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
-    if implementation in [Implementation.PANDAS, Implementation.MODIN]:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
         import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
-        try:
+        with suppress(AttributeError):
             if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
                 return "pandas-nullable"
-        except AttributeError:  # pragma: no cover
-            # defensive check for old pandas versions
-            pass
         return "numpy"
     else:  # pragma: no cover
         return "numpy"
@@ -512,12 +513,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType],
-    starting_dtype: Any,
+    dtype_backend: str | None,
     implementation: Implementation,
     backend_version: tuple[int, ...],
     version: Version,
 ) -> Any:
-    dtype_backend = get_dtype_backend(starting_dtype, implementation)
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":
@@ -646,6 +646,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.List):
+        from narwhals._arrow.utils import (
+            narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+        )
+
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
                 import pandas as pd
@@ -676,6 +680,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
                 raise ImportError(msg) from exc
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
 
             return pd.ArrowDtype(
                 pa.struct(
@@ -857,7 +864,7 @@ def pivot_table(
     if df._implementation is Implementation.CUDF:
         if any(
             x == dtypes.Categorical
-            for x in df.select(*[*values, *index, *columns]).schema.values()
+            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
         ):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)

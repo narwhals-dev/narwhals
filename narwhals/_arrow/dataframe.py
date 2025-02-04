@@ -3,35 +3,40 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import pyarrow as pa
+import pyarrow.compute as pc
+
+from narwhals._arrow.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
-from narwhals.utils import flatten
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
+from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import numpy as np
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -54,8 +59,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
+        validate_column_names: bool,
     ) -> None:
-        self._validate_columns(native_dataframe.column_names)
+        if validate_column_names:
+            check_column_names_are_unique(native_dataframe.column_names)
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
@@ -82,26 +89,22 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _validate_columns(self, columns: Iterable[str]) -> None:
-        columns_list = list(columns)
-        len_unique_columns = len(set(columns_list))
-        if len(columns_list) != len_unique_columns:
-            from collections import Counter
-
-            counter = Counter(columns)
-            duplicates = {k: v for k, v in counter.items() if v > 1}
-            msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
-            msg = f"Expected unique column names, got:{msg}"
-            raise ValueError(msg)
-
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame, backend_version=self._backend_version, version=version
+            self._native_frame,
+            backend_version=self._backend_version,
+            version=version,
+            validate_column_names=False,
         )
 
-    def _from_native_frame(self: Self, df: pa.Table) -> Self:
+    def _from_native_frame(
+        self: Self, df: pa.Table, *, validate_column_names: bool = True
+    ) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=validate_column_names,
         )
 
     @property
@@ -301,10 +304,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
-    def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
-        import pyarrow as pa
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(list(column_names)))
 
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+    def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
+        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
@@ -316,7 +320,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr
     ) -> Self:
         native_frame = self._native_frame
-        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
 
         length = len(self)
         columns = self.columns
@@ -324,7 +328,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         for col_value in new_columns:
             col_name = col_value.name
 
-            column = validate_dataframe_comparand(
+            column = broadcast_and_extract_dataframe_comparand(
                 length=length, other=col_value, backend_version=self._backend_version
             )
 
@@ -393,11 +397,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         *,
         left_on: str | None,
         right_on: str | None,
-        on: str | None,
-        by_left: str | list[str] | None,
-        by_right: str | list[str] | None,
-        by: str | list[str] | None,
+        by_left: list[str] | None,
+        by_right: list[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
     ) -> Self:
         msg = "join_asof is not yet supported on PyArrow tables"  # pragma: no cover
         raise NotImplementedError(msg)
@@ -408,30 +411,27 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
         return self._from_native_frame(self._native_frame.drop(to_drop))
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.drop_null())
-        subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def sort(
         self: Self,
-        by: str | Iterable[str],
-        *more_by: str,
+        *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
 
         if isinstance(descending, bool):
             order = "descending" if descending else "ascending"
-            sorting = [(key, order) for key in flat_keys]
+            sorting = [(key, order) for key in by]
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
-                for key, is_descending in zip(flat_keys, descending)
+                for key, is_descending in zip(by, descending)
             ]
 
         null_placement = "at_end" if nulls_last else "at_start"
@@ -479,8 +479,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self: Self, name: str) -> Self:
-        import pyarrow as pa
-
         df = self._native_frame
         cols = self.columns
 
@@ -496,7 +494,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             and all(isinstance(x, bool) for x in predicates[0])
             and not constraints
         ):
-            mask = predicates[0]
+            mask_native = predicates[0]
         else:
             plx = self.__narwhals_namespace__()
             expr = plx.all_horizontal(
@@ -505,12 +503,13 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
             )
             # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]._native_series
-        return self._from_native_frame(self._native_frame.filter(mask))
+            mask = expr._call(self)[0]
+            mask_native = broadcast_and_extract_dataframe_comparand(
+                length=len(self), other=mask, backend_version=self._backend_version
+            )
+        return self._from_native_frame(self._native_frame.filter(mask_native))
 
     def null_count(self: Self) -> Self:
-        import pyarrow as pa
-
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
 
@@ -534,15 +533,86 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             return self._from_native_frame(df.slice(abs(n)))
 
-    def lazy(self: Self) -> Self:
-        return self
+    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+        from narwhals.utils import parse_version
 
-    def collect(self: Self) -> ArrowDataFrame:
-        return ArrowDataFrame(
-            self._native_frame,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        if backend is None:
+            return self
+        elif backend is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+            df = self._native_frame  # noqa: F841
+            return DuckDBLazyFrame(
+                df=duckdb.table("df"),
+                backend_version=parse_version(duckdb.__version__),
+                version=self._version,
+                validate_column_names=False,
+            )
+        elif backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(
+                df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+        elif backend is Implementation.DASK:
+            import dask  # ignore-banned-import
+            import dask.dataframe as dd  # ignore-banned-import
+
+            from narwhals._dask.dataframe import DaskLazyFrame
+
+            return DaskLazyFrame(
+                native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                backend_version=parse_version(dask.__version__),
+                version=self._version,
+            )
+        raise AssertionError  # pragma: no cover
+
+    def collect(
+        self: Self,
+        backend: Implementation | None,
+        **kwargs: Any,
+    ) -> CompliantDataFrame:
+        if backend is Implementation.PYARROW or backend is None:
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                native_dataframe=self._native_frame,
+                backend_version=self._backend_version,
+                version=self._version,
+                validate_column_names=False,
+            )
+
+        if backend is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+            return PandasLikeDataFrame(
+                native_dataframe=self._native_frame.to_pandas(),
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd.__version__),
+                version=self._version,
+            )
+
+        if backend is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(
+                df=pl.from_arrow(self._native_frame),  # type: ignore[arg-type]
+                backend_version=parse_version(pl.__version__),
+                version=self._version,
+            )
+
+        msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -580,26 +650,28 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
-    def write_parquet(self: Self, file: Any) -> None:
+    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
         pp.write_table(self._native_frame, file)
 
-    def write_csv(self: Self, file: Any) -> Any:
-        import pyarrow as pa
+    @overload
+    def write_csv(self: Self, file: None) -> str: ...
+
+    @overload
+    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+
+    def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
         pa_table = self._native_frame
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
-            return csv_buffer.getvalue().to_pybytes().decode()
-        return pa_csv.write_csv(pa_table, file)
+            return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
+        return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
 
     def is_duplicated(self: Self) -> ArrowSeries:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         columns = self.columns
@@ -634,8 +706,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
-        import pyarrow.compute as pc
-
         from narwhals._arrow.series import ArrowSeries
 
         is_duplicated = self.is_duplicated()._native_series
@@ -652,13 +722,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool = False,
+        maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
-        import pyarrow as pa
-        import pyarrow.compute as pc
 
         df = self._native_frame
         check_column_exists(self.columns, subset)
@@ -678,10 +746,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return self._from_native_frame(pc.take(df, keep_idx))
 
-        keep_idx = self.select(*subset).is_unique()
+        keep_idx = self.simple_select(*subset).is_unique()
         return self.filter(keep_idx)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(self._native_frame[offset::n])
 
     def to_arrow(self: Self) -> pa.Table:
@@ -696,7 +764,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         seed: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
-        import pyarrow.compute as pc
 
         frame = self._native_frame
         num_rows = len(self)
@@ -713,14 +780,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         on: str | list[str] | None,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
-        import pyarrow as pa
-
         native_frame = self._native_frame
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
+        n_rows = len(self)
 
         index_: list[str] = (
             [] if index is None else [index] if isinstance(index, str) else index
@@ -732,8 +796,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if isinstance(on, str)
             else on
         )
-
-        n_rows = len(self)
 
         promote_kwargs = (
             {"promote_options": "permissive"}

@@ -111,6 +111,16 @@ before making any change.
 
 ### After `stable.v1`
 
+The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
+
+- Since Narwhals 1.23:
+
+    - Passing an `ibis.Table` to `from_native` returns a `LazyFrame`. In
+      `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
+    - `eager_or_interchange_only` has been removed from `from_native` and `narwhalify`.
+    - Order-dependent expressions can no longer be used with `narwhals.LazyFrame`.
+    - The following expressions have been deprecated from the main namespace: `Expr.head`,
+      `Expr.tail`, `Expr.gather_every`, `Expr.sample`, `Expr.arg_true`, `Expr.sort`.
 
 - Since Narwhals 1.21, passing a `DuckDBPyRelation` to `from_native` returns a `LazyFrame`. In
   `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.

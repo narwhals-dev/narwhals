@@ -4,8 +4,11 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+import ibis.selectors as s
+
 from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
 
@@ -18,7 +21,6 @@ if TYPE_CHECKING:
 
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 @lru_cache(maxsize=16)
@@ -70,7 +72,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-class IbisInterchangeFrame:
+class IbisLazyFrame:
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -81,7 +83,14 @@ class IbisInterchangeFrame:
         self._backend_version = backend_version
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __narwhals_dataframe__(self) -> Any:
+    def __narwhals_dataframe__(self) -> Any:  # pragma: no cover
+        # Keep around for backcompat.
+        if self._version is not Version.V1:
+            msg = "__narwhals_dataframe__ is not implemented for IbisLazyFrame"
+            raise AttributeError(msg)
+        return self
+
+    def __narwhals_lazyframe__(self) -> Any:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
@@ -98,23 +107,21 @@ class IbisInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.to_pyarrow()
 
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(s.cols(*column_names)))
+
     def select(
         self: Self,
         *exprs: Any,
         **named_exprs: Any,
     ) -> Self:
-        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
-            msg = (
-                "`select`-ing not by name is not supported for Ibis backend.\n\n"
-                "If you would like to see this kind of object better supported in "
-                "Narwhals, please open a feature request "
-                "at https://github.com/narwhals-dev/narwhals/issues."
-            )
-            raise NotImplementedError(msg)
-
-        import ibis.selectors as s
-
-        return self._from_native_frame(self._native_frame.select(s.cols(*exprs)))
+        msg = (
+            "`select`-ing not by name is not supported for Ibis backend.\n\n"
+            "If you would like to see this kind of object better supported in "
+            "Narwhals, please open a feature request "
+            "at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":

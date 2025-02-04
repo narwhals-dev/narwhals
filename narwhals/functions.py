@@ -13,10 +13,14 @@ from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import operation_aggregates
+from narwhals._expression_parsing import operation_changes_length
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
@@ -35,6 +39,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -351,8 +356,8 @@ def _new_series_impl(
             dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
-    elif implementation is Implementation.DASK:
-        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+    elif implementation is Implementation.DASK:  # pragma: no cover
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
@@ -402,7 +407,9 @@ def from_dict(
         >>> def agnostic_from_dict(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df_native)
-        ...     return nw.from_dict(new_data, native_namespace=native_namespace).to_native()
+        ...     return nw.from_dict(
+        ...         new_data, native_namespace=native_namespace
+        ...     ).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
@@ -499,6 +506,7 @@ def _from_dict_impl(
         native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
         if schema:
+            from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
@@ -506,7 +514,11 @@ def _from_dict_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
+                    dtype=schema[name],
+                    dtype_backend=get_dtype_backend(native_type, implementation),
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -573,7 +585,9 @@ def from_numpy(
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
         ...     df = nw.from_native(df_native)
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace
+        ...     ).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
@@ -724,6 +738,7 @@ def _from_numpy_impl(
         Implementation.CUDF,
     }:
         if isinstance(schema, (dict, Schema)):
+            from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
@@ -731,7 +746,11 @@ def _from_numpy_impl(
             backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
+                    dtype=schema[name],
+                    dtype_backend=get_dtype_backend(native_type, implementation),
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
                 )
                 for name, native_type in schema.items()
             }
@@ -1014,7 +1033,9 @@ def read_csv(
         Let's create an agnostic function that reads a csv file with a specified native namespace:
 
         >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
-        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.read_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing pandas, Polars or PyArrow namespaces:
 
@@ -1100,7 +1121,9 @@ def scan_csv(
         Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
 
         >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.scan_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing, for example, Polars or Dask namespaces:
 
@@ -1382,7 +1405,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1444,7 +1467,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1501,7 +1524,12 @@ def all_() -> Expr:
         a: [[2,4,6]]
         b: [[8,10,12]]
     """
-    return Expr(lambda plx: plx.all())
+    return Expr(
+        lambda plx: plx.all(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1554,7 +1582,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=True)
 
 
 def sum(*columns: str) -> Expr:
@@ -1610,7 +1638,12 @@ def sum(*columns: str) -> Expr:
         ----
         a: [[3]]
     """
-    return Expr(lambda plx: plx.col(*columns).sum())
+    return Expr(
+        lambda plx: plx.col(*columns).sum(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def mean(*columns: str) -> Expr:
@@ -1666,7 +1699,12 @@ def mean(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.col(*columns).mean())
+    return Expr(
+        lambda plx: plx.col(*columns).mean(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def median(*columns: str) -> Expr:
@@ -1724,7 +1762,12 @@ def median(*columns: str) -> Expr:
         ----
         a: [[4]]
     """
-    return Expr(lambda plx: plx.col(*columns).median())
+    return Expr(
+        lambda plx: plx.col(*columns).median(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def min(*columns: str) -> Expr:
@@ -1780,7 +1823,12 @@ def min(*columns: str) -> Expr:
         ----
         b: [[5]]
     """
-    return Expr(lambda plx: plx.col(*columns).min())
+    return Expr(
+        lambda plx: plx.col(*columns).min(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def max(*columns: str) -> Expr:
@@ -1836,7 +1884,12 @@ def max(*columns: str) -> Expr:
         ----
         a: [[2]]
     """
-    return Expr(lambda plx: plx.col(*columns).max())
+    return Expr(
+        lambda plx: plx.col(*columns).max(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1899,10 +1952,17 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `sum_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.sum_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -1969,10 +2029,17 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `min_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.min_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2039,37 +2106,59 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `max_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.max_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
 class When:
-    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
         if not self._predicates:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
+        if any(
+            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            for x in self._predicates
+        ):
+            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
+            raise ShapeError(msg)
 
-    def _extract_predicates(self, plx: Any) -> Any:
-        return [extract_compliant(plx, v) for v in self._predicates]
+    def _extract_predicates(self: Self, plx: Any) -> Any:
+        return [
+            extract_compliant(plx, v, parse_column_name_as_expr=True)
+            for v in self._predicates
+        ]
 
-    def then(self, value: Any) -> Then:
+    def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
-                extract_compliant(plx, value)
-            )
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
+            ),
+            is_order_dependent=operation_is_order_dependent(*self._predicates, value),
+            changes_length=operation_changes_length(*self._predicates, value),
+            aggregates=operation_aggregates(*self._predicates, value),
         )
 
 
 class Then(Expr):
-    def otherwise(self, value: Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         return Expr(
             lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value)
-            )
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, value),
+            changes_length=operation_changes_length(self, value),
+            aggregates=operation_aggregates(self, value),
         )
 
 
@@ -2219,10 +2308,17 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.all_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2293,7 +2389,12 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(lambda plx: plx.lit(value, dtype))
+    return Expr(
+        lambda plx: plx.lit(value, dtype),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -2367,10 +2468,17 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.any_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2437,10 +2545,17 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `mean_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.mean_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2522,11 +2637,14 @@ def concat_str(
         ----
         full_sentence: [["2 dogs play","4 cats swim",null]]
     """
+    exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            [extract_compliant(plx, v) for v in flatten([exprs])],
-            *[extract_compliant(plx, v) for v in more_exprs],
+            *(extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs),
             separator=separator,
             ignore_nulls=ignore_nulls,
-        )
+        ),
+        is_order_dependent=operation_is_order_dependent(*exprs),
+        changes_length=operation_changes_length(*exprs),
+        aggregates=operation_aggregates(*exprs),
     )

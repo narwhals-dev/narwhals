@@ -5,13 +5,14 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
+import polars as pl
+
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import polars as pl
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -57,10 +58,16 @@ class PolarsExpr:
         half_life: float | None,
         alpha: float | None,
         adjust: bool,
-        min_periods: int,
+        min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
         expr = self._native_expr
+
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
 
         native_expr = expr.ewm_mean(
             com=com,
@@ -68,8 +75,8 @@ class PolarsExpr:
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
             ignore_nulls=ignore_nulls,
+            **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
             import polars as pl
@@ -81,8 +88,6 @@ class PolarsExpr:
 
     def is_nan(self: Self) -> Self:
         if self._backend_version < (1, 18):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_expr(
                 pl.when(self._native_expr.is_not_null()).then(self._native_expr.is_nan())
             )
@@ -92,7 +97,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -100,12 +105,17 @@ class PolarsExpr:
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
         return self._from_native_expr(
             self._native_expr.rolling_var(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 
@@ -113,25 +123,72 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int | None,
         center: bool,
         ddof: int,
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
 
         return self._from_native_expr(
             self._native_expr.rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int | None,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_expr(
+            self._native_expr.rolling_sum(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int | None,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_expr(
+            self._native_expr.rolling_mean(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 
     def map_batches(
-        self,
+        self: Self,
         function: Callable[..., Self],
         return_dtype: DType | None,
     ) -> Self:

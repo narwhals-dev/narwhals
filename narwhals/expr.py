@@ -9,7 +9,11 @@ from typing import Mapping
 from typing import Sequence
 
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import operation_aggregates
+from narwhals._expression_parsing import operation_changes_length
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -17,8 +21,13 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
+from narwhals.utils import issue_deprecation_warning
 
 if TYPE_CHECKING:
+    from typing import TypeVar
+
+    from typing_extensions import Concatenate
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -26,19 +35,44 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
+    PS = ParamSpec("PS")
+    R = TypeVar("R")
+
 
 class Expr:
-    def __init__(self, to_compliant_expr: Callable[[Any], Any]) -> None:
+    def __init__(
+        self: Self,
+        to_compliant_expr: Callable[[Any], Any],
+        is_order_dependent: bool,  # noqa: FBT001
+        changes_length: bool,  # noqa: FBT001
+        aggregates: bool,  # noqa: FBT001
+    ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         self._to_compliant_expr = to_compliant_expr
+        self._is_order_dependent = is_order_dependent
+        self._changes_length = changes_length
+        self._aggregates = aggregates
 
-    def _taxicab_norm(self) -> Self:
+    def __repr__(self: Self) -> str:
+        return (
+            "Narwhals Expr\n"
+            f"is_order_dependent: {self._is_order_dependent}\n"
+            f"changes_length: {self._changes_length}\n"
+            f"aggregates: {self._aggregates}"
+        )
+
+    def _taxicab_norm(self: Self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).abs().sum())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).abs().sum(),
+            self._is_order_dependent,
+            self._changes_length,
+            self._aggregates,
+        )
 
     # --- convert ---
-    def alias(self, name: str) -> Self:
+    def alias(self: Self, name: str) -> Self:
         """Rename the expression.
 
         Arguments:
@@ -49,51 +83,31 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2], "b": [4, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_alias(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select((nw.col("b") + 10).alias("c")).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_alias`:
-
-            >>> agnostic_alias(df_pd)
-                c
-            0  14
-            1  15
-
-            >>> agnostic_alias(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ c   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 14  │
-            │ 15  │
-            └─────┘
-
-            >>> agnostic_alias(df_pa)
-            pyarrow.Table
-            c: int64
-            ----
-            c: [[14,15]]
-
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select((nw.col("b") + 10).alias("c"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |          c       |
+            |      0  14       |
+            |      1  15       |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).alias(name))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).alias(name),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+    def pipe(
+        self: Self,
+        function: Callable[Concatenate[Self, PS], R],
+        *args: PS.args,
+        **kwargs: PS.kwargs,
+    ) -> R:
         """Pipe function call.
 
         Arguments:
@@ -106,50 +120,19 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Lets define a library-agnostic function:
-
-            >>> def agnostic_pipe(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").pipe(lambda x: x + 1)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_pipe`:
-
-            >>> agnostic_pipe(df_pd)
-               a
-            0  2
-            1  3
-            2  4
-            3  5
-
-            >>> agnostic_pipe(df_pl)
-            shape: (4, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 2   │
-            │ 3   │
-            │ 4   │
-            │ 5   │
-            └─────┘
-
-            >>> agnostic_pipe(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[2,3,4,5]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_piped=nw.col("a").pipe(lambda x: x + 1))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |     a  a_piped   |
+            |  0  1        2   |
+            |  1  2        3   |
+            |  2  3        4   |
+            |  3  4        5   |
+            └──────────────────┘
         """
         return function(self, *args, **kwargs)
 
@@ -164,225 +147,305 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_cast(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_cast`:
-
-            >>> agnostic_cast(df_pd)
-               foo  bar
-            0  1.0    6
-            1  2.0    7
-            2  3.0    8
-            >>> agnostic_cast(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ f32 ┆ u8  │
-            ╞═════╪═════╡
-            │ 1.0 ┆ 6   │
-            │ 2.0 ┆ 7   │
-            │ 3.0 ┆ 8   │
-            └─────┴─────┘
-            >>> agnostic_cast(df_pa)
-            pyarrow.Table
-            foo: float
-            bar: uint8
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
+            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      foo  bar    |
+            |   0  1.0    6    |
+            |   1  2.0    7    |
+            |   2  3.0    8    |
+            └──────────────────┘
         """
         _validate_dtype(dtype)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cast(dtype),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     # --- binary ---
-    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__eq__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__eq__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ne__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__ne__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __and__(self, other: Any) -> Self:
+    def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__and__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rand__(self, other: Any) -> Self:
+    def __rand__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__and__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__and__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
-
-    def __or__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__or__(extract_compliant(plx, other))
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __ror__(self, other: Any) -> Self:
+    def __or__(self: Self, other: Any) -> Self:
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).__or__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
+
+    def __ror__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__or__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__or__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __add__(self, other: Any) -> Self:
+    def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__add__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __radd__(self, other: Any) -> Self:
+    def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__add__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__add__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __sub__(self, other: Any) -> Self:
+    def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rsub__(self, other: Any) -> Self:
+    def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__sub__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__sub__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __truediv__(self, other: Any) -> Self:
+    def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__truediv__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rtruediv__(self, other: Any) -> Self:
+    def __rtruediv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__truediv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__truediv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __mul__(self, other: Any) -> Self:
+    def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mul__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rmul__(self, other: Any) -> Self:
+    def __rmul__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mul__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mul__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
-
-    def __le__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__le__(extract_compliant(plx, other))
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __lt__(self, other: Any) -> Self:
+    def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__lt__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__le__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __gt__(self, other: Any) -> Self:
+    def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__gt__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__lt__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __ge__(self, other: Any) -> Self:
+    def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ge__(extract_compliant(plx, other))
+            lambda plx: self._to_compliant_expr(plx).__gt__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __pow__(self, other: Any) -> Self:
+    def __ge__(self: Self, other: Any) -> Self:
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).__ge__(
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
+
+    def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__pow__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rpow__(self, other: Any) -> Self:
+    def __rpow__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__pow__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__pow__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __floordiv__(self, other: Any) -> Self:
+    def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rfloordiv__(self, other: Any) -> Self:
+    def __rfloordiv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__floordiv__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__floordiv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
-    def __mod__(self, other: Any) -> Self:
+    def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mod__(
-                extract_compliant(plx, other)
-            )
+                extract_compliant(plx, other, parse_column_name_as_expr=False)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
         )
 
-    def __rmod__(self, other: Any) -> Self:
+    def __rmod__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(extract_compliant(plx, other), dtype=None).__mod__(
-                extract_compliant(plx, self)
-            )
+            return plx.lit(
+                extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
+            ).__mod__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func)
+        return self.__class__(
+            func,
+            is_order_dependent=operation_is_order_dependent(self, other),
+            changes_length=operation_changes_length(self, other),
+            aggregates=operation_aggregates(self, other),
+        )
 
     # --- unary ---
-    def __invert__(self) -> Self:
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).__invert__())
+    def __invert__(self: Self) -> Self:
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).__invert__(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def any(self) -> Self:
+    def any(self: Self) -> Self:
         """Return whether any of the values in the column are `True`.
 
         Returns:
@@ -390,50 +453,25 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [True, False], "b": [True, True]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a dataframe-agnostic function:
-
-            >>> def agnostic_any(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").any()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_any`:
-
-            >>> agnostic_any(df_pd)
-                  a     b
-            0  True  True
-
-            >>> agnostic_any(df_pl)
-            shape: (1, 2)
-            ┌──────┬──────┐
-            │ a    ┆ b    │
-            │ ---  ┆ ---  │
-            │ bool ┆ bool │
-            ╞══════╪══════╡
-            │ true ┆ true │
-            └──────┴──────┘
-
-            >>> agnostic_any(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[true]]
-            b: [[true]]
+            >>> df_native = pd.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").any())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a     b   |
+            |  0  True  True   |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).any())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).any(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def all(self) -> Self:
+    def all(self: Self) -> Self:
         """Return whether all values in the column are `True`.
 
         Returns:
@@ -441,48 +479,23 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [True, False], "b": [True, True]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_all(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").all()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_all`:
-
-            >>> agnostic_all(df_pd)
-                   a     b
-            0  False  True
-
-            >>> agnostic_all(df_pl)
-            shape: (1, 2)
-            ┌───────┬──────┐
-            │ a     ┆ b    │
-            │ ---   ┆ ---  │
-            │ bool  ┆ bool │
-            ╞═══════╪══════╡
-            │ false ┆ true │
-            └───────┴──────┘
-
-            >>> agnostic_all(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[false]]
-            b: [[true]]
+            >>> df_native = pd.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").all())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |         a     b  |
+            |  0  False  True  |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).all())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).all(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
     def ewm_mean(
         self: Self,
@@ -492,7 +505,7 @@ class Expr:
         half_life: float | None = None,
         alpha: float | None = None,
         adjust: bool = True,
-        min_periods: int = 1,
+        min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
@@ -517,7 +530,7 @@ class Expr:
                   $$
                   y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
                   $$
-            min_periods: Minimum number of observations in window required to have a value, (otherwise result is null).
+            min_samples: Minimum number of observations in window required to have a value, (otherwise result is null).
             ignore_nulls: Ignore missing values when calculating weights.
 
                 - When `ignore_nulls=False` (default), weights are based on absolute
@@ -581,63 +594,41 @@ class Expr:
                 half_life=half_life,
                 alpha=alpha,
                 adjust=adjust,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
-            )
+            ),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def mean(self) -> Self:
+    def mean(self: Self) -> Self:
         """Get mean value.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [-1, 0, 1], "b": [2, 4, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_mean(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").mean()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_mean`:
-
-            >>> agnostic_mean(df_pd)
-                 a    b
-            0  0.0  4.0
-
-            >>> agnostic_mean(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ f64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 0.0 ┆ 4.0 │
-            └─────┴─────┘
-
-            >>> agnostic_mean(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[0]]
-            b: [[4]]
+            >>> df_native = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").mean())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a    b    |
+            |   0  0.0  4.0    |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).mean())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).mean(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def median(self) -> Self:
+    def median(self: Self) -> Self:
         """Get median value.
 
         Returns:
@@ -648,50 +639,25 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 8, 3], "b": [4, 5, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_median(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").median()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_median`:
-
-            >>> agnostic_median(df_pd)
-                 a    b
-            0  3.0  4.0
-
-            >>> agnostic_median(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ f64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 3.0 ┆ 4.0 │
-            └─────┴─────┘
-
-            >>> agnostic_median(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[3]]
-            b: [[4]]
+            >>> df_native = pd.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").median())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a    b    |
+            |   0  3.0  4.0    |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).median())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).median(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def std(self, *, ddof: int = 1) -> Self:
+    def std(self: Self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
         Arguments:
@@ -702,50 +668,26 @@ class Expr:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [20, 25, 60], "b": [1.5, 1, -1.4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_std(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").std(ddof=0)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_std`:
-
-            >>> agnostic_std(df_pd)
-                      a         b
-            0  17.79513  1.265789
-            >>> agnostic_std(df_pl)
-            shape: (1, 2)
-            ┌──────────┬──────────┐
-            │ a        ┆ b        │
-            │ ---      ┆ ---      │
-            │ f64      ┆ f64      │
-            ╞══════════╪══════════╡
-            │ 17.79513 ┆ 1.265789 │
-            └──────────┴──────────┘
-            >>> agnostic_std(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[17.795130420052185]]
-            b: [[1.2657891697365016]]
-
+            >>> df_native = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").std(ddof=0))
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |          a         b|
+            |0  17.79513  1.265789|
+            └─────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).std(ddof=ddof))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def var(self, *, ddof: int = 1) -> Self:
+    def var(self: Self, *, ddof: int = 1) -> Self:
         """Get variance.
 
         Arguments:
@@ -756,52 +698,27 @@ class Expr:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [20, 25, 60], "b": [1.5, 1, -1.4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_var(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").var(ddof=0)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_var`:
-
-            >>> agnostic_var(df_pd)
-                        a         b
-            0  316.666667  1.602222
-
-            >>> agnostic_var(df_pl)
-            shape: (1, 2)
-            ┌────────────┬──────────┐
-            │ a          ┆ b        │
-            │ ---        ┆ ---      │
-            │ f64        ┆ f64      │
-            ╞════════════╪══════════╡
-            │ 316.666667 ┆ 1.602222 │
-            └────────────┴──────────┘
-
-            >>> agnostic_var(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[316.6666666666667]]
-            b: [[1.6022222222222222]]
+            >>> df_native = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").var(ddof=0))
+            ┌───────────────────────┐
+            |  Narwhals DataFrame   |
+            |-----------------------|
+            |            a         b|
+            |0  316.666667  1.602222|
+            └───────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).var(ddof=ddof))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
     def map_batches(
-        self,
+        self: Self,
         function: Callable[[Any], Self],
         return_dtype: DType | None = None,
     ) -> Self:
@@ -821,58 +738,32 @@ class Expr:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_map_batches(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a", "b").map_batches(
-            ...             lambda s: s.to_numpy() + 1, return_dtype=nw.Float64
-            ...         )
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_map_batches`:
-
-            >>> agnostic_map_batches(df_pd)
-                 a    b
-            0  2.0  5.0
-            1  3.0  6.0
-            2  4.0  7.0
-            >>> agnostic_map_batches(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ f64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 2.0 ┆ 5.0 │
-            │ 3.0 ┆ 6.0 │
-            │ 4.0 ┆ 7.0 │
-            └─────┴─────┘
-            >>> agnostic_map_batches(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[2,3,4]]
-            b: [[5,6,7]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a", "b")
+            ...     .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64)
+            ...     .name.suffix("_mapped")
+            ... )
+            ┌───────────────────────────┐
+            |    Narwhals DataFrame     |
+            |---------------------------|
+            |   a  b  a_mapped  b_mapped|
+            |0  1  4       2.0       5.0|
+            |1  2  5       3.0       6.0|
+            |2  3  6       4.0       7.0|
+            └───────────────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).map_batches(
                 function=function, return_dtype=return_dtype
-            )
+            ),
+            # safest assumptions
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=False,
         )
 
     def skew(self: Self) -> Self:
@@ -883,99 +774,55 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_skew(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").skew()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_skew`:
-
-            >>> agnostic_skew(df_pd)
-                 a         b
-            0  0.0  1.472427
-
-            >>> agnostic_skew(df_pl)
-            shape: (1, 2)
-            ┌─────┬──────────┐
-            │ a   ┆ b        │
-            │ --- ┆ ---      │
-            │ f64 ┆ f64      │
-            ╞═════╪══════════╡
-            │ 0.0 ┆ 1.472427 │
-            └─────┴──────────┘
-
-            >>> agnostic_skew(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[0]]
-            b: [[1.4724267269058975]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").skew())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a         b |
+            | 0  0.0  1.472427 |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).skew())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).skew(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def sum(self) -> Expr:
+    def sum(self: Self) -> Expr:
         """Return the sum value.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [5, 10], "b": [50, 100]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_sum(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").sum()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_sum`:
-
-            >>> agnostic_sum(df_pd)
-                a    b
-            0  15  150
-            >>> agnostic_sum(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 15  ┆ 150 │
-            └─────┴─────┘
-            >>> agnostic_sum(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[15]]
-            b: [[150]]
+            >>> df_native = duckdb.sql("SELECT * FROM VALUES (5, 50), (10, 100) df(a, b)")
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").sum())
+            ┌───────────────────┐
+            |Narwhals LazyFrame |
+            |-------------------|
+            |┌────────┬────────┐|
+            |│   a    │   b    │|
+            |│ int128 │ int128 │|
+            |├────────┼────────┤|
+            |│     15 │    150 │|
+            |└────────┴────────┘|
+            └───────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).sum())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).sum(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def min(self) -> Self:
+    def min(self: Self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
         Returns:
@@ -983,420 +830,206 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2], "b": [4, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_min(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.min("a", "b")).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_min`:
-
-            >>> agnostic_min(df_pd)
-               a  b
-            0  1  3
-
-            >>> agnostic_min(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 3   │
-            └─────┴─────┘
-
-            >>> agnostic_min(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1]]
-            b: [[3]]
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.min("a", "b"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a  b      |
+            |     0  1  3      |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).min())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).min(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def max(self) -> Self:
+    def max(self: Self) -> Self:
         """Returns the maximum value(s) from a column(s).
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [10, 20], "b": [50, 100]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_max(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.max("a", "b")).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_max`:
-
-            >>> agnostic_max(df_pd)
-                a    b
-            0  20  100
-
-            >>> agnostic_max(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 20  ┆ 100 │
-            └─────┴─────┘
-
-            >>> agnostic_max(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[20]]
-            b: [[100]]
+            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.max("a", "b"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a    b    |
+            |    0  20  100    |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).max())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).max(),
+            is_order_dependent=self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def arg_min(self) -> Self:
+    def arg_min(self: Self) -> Self:
         """Returns the index of the minimum value.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [10, 20], "b": [150, 100]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_arg_min(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a", "b").arg_min().name.suffix("_arg_min")
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_arg_min`:
-
-            >>> agnostic_arg_min(df_pd)
-               a_arg_min  b_arg_min
-            0          0          1
-
-            >>> agnostic_arg_min(df_pl)
-            shape: (1, 2)
-            ┌───────────┬───────────┐
-            │ a_arg_min ┆ b_arg_min │
-            │ ---       ┆ ---       │
-            │ u32       ┆ u32       │
-            ╞═══════════╪═══════════╡
-            │ 0         ┆ 1         │
-            └───────────┴───────────┘
-
-            >>> agnostic_arg_min(df_pa)
-            pyarrow.Table
-            a_arg_min: int64
-            b_arg_min: int64
-            ----
-            a_arg_min: [[0]]
-            b_arg_min: [[1]]
+            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").arg_min().name.suffix("_arg_min"))
+            ┌───────────────────────┐
+            |  Narwhals DataFrame   |
+            |-----------------------|
+            |   a_arg_min  b_arg_min|
+            |0          0          1|
+            └───────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_min())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).arg_min(),
+            is_order_dependent=True,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def arg_max(self) -> Self:
+    def arg_max(self: Self) -> Self:
         """Returns the index of the maximum value.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [10, 20], "b": [150, 100]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_arg_max(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a", "b").arg_max().name.suffix("_arg_max")
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_arg_max`:
-
-            >>> agnostic_arg_max(df_pd)
-               a_arg_max  b_arg_max
-            0          1          0
-
-            >>> agnostic_arg_max(df_pl)
-            shape: (1, 2)
-            ┌───────────┬───────────┐
-            │ a_arg_max ┆ b_arg_max │
-            │ ---       ┆ ---       │
-            │ u32       ┆ u32       │
-            ╞═══════════╪═══════════╡
-            │ 1         ┆ 0         │
-            └───────────┴───────────┘
-
-            >>> agnostic_arg_max(df_pa)
-            pyarrow.Table
-            a_arg_max: int64
-            b_arg_max: int64
-            ----
-            a_arg_max: [[1]]
-            b_arg_max: [[0]]
+            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").arg_max().name.suffix("_arg_max"))
+            ┌───────────────────────┐
+            |  Narwhals DataFrame   |
+            |-----------------------|
+            |   a_arg_max  b_arg_max|
+            |0          1          0|
+            └───────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_max())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).arg_max(),
+            is_order_dependent=True,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def count(self) -> Self:
+    def count(self: Self) -> Self:
         """Returns the number of non-null elements in the column.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3], "b": [None, 4, 4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_count(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().count()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_count`:
-
-            >>> agnostic_count(df_pd)
-               a  b
-            0  3  2
-
-            >>> agnostic_count(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ u32 ┆ u32 │
-            ╞═════╪═════╡
-            │ 3   ┆ 2   │
-            └─────┴─────┘
-
-            >>> agnostic_count(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[3]]
-            b: [[2]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().count())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a  b      |
+            |     0  3  2      |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).count())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).count(),
+            self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def n_unique(self) -> Self:
+    def n_unique(self: Self) -> Self:
         """Returns count of unique values.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_n_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").n_unique()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_n_unique`:
-
-            >>> agnostic_n_unique(df_pd)
-               a  b
-            0  5  3
-            >>> agnostic_n_unique(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ u32 ┆ u32 │
-            ╞═════╪═════╡
-            │ 5   ┆ 3   │
-            └─────┴─────┘
-            >>> agnostic_n_unique(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[5]]
-            b: [[3]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").n_unique())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a  b      |
+            |     0  5  3      |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).n_unique())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).n_unique(),
+            self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
-    def unique(self, *, maintain_order: bool = False) -> Self:
+    def unique(self: Self) -> Self:
         """Return unique values of this expression.
-
-        Arguments:
-            maintain_order: Keep the same order as the original expression. This may be more
-                expensive to compute. Settings this to `True` blocks the possibility
-                to run on the streaming engine for Polars.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").unique(maintain_order=True)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_unique`:
-
-            >>> agnostic_unique(df_pd)
-               a  b
-            0  1  2
-            1  3  4
-            2  5  6
-
-            >>> agnostic_unique(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            │ 3   ┆ 4   │
-            │ 5   ┆ 6   │
-            └─────┴─────┘
-
-            >>> agnostic_unique(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1,3,5]]
-            b: [[2,4,6]]
+            >>> df_native = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").unique().sum())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a   b     |
+            |     0  9  12     |
+            └──────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).unique(maintain_order=maintain_order)
+            lambda plx: self._to_compliant_expr(plx).unique(),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
-    def abs(self) -> Self:
+    def abs(self: Self) -> Self:
         """Return absolute value of each element.
 
         Returns:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, -2], "b": [-3, 4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_abs(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").abs()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_abs`:
-
-            >>> agnostic_abs(df_pd)
-               a  b
-            0  1  3
-            1  2  4
-
-            >>> agnostic_abs(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 3   │
-            │ 2   ┆ 4   │
-            └─────┴─────┘
-
-            >>> agnostic_abs(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1,2]]
-            b: [[3,4]]
+            >>> df_native = pd.DataFrame({"a": [1, -2], "b": [-3, 4]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.col("a", "b").abs().name.suffix("_abs"))
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |   a  b  a_abs  b_abs|
+            |0  1 -3      1      3|
+            |1 -2  4      2      4|
+            └─────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).abs())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).abs(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -1408,59 +1041,30 @@ class Expr:
             A new expression.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_cum_sum(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a", "b").cum_sum()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_cum_sum`:
-
-            >>> agnostic_cum_sum(df_pd)
-                a   b
-            0   1   2
-            1   2   6
-            2   5  10
-            3  10  16
-            4  15  22
-            >>> agnostic_cum_sum(df_pl)
-            shape: (5, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            │ 2   ┆ 6   │
-            │ 5   ┆ 10  │
-            │ 10  ┆ 16  │
-            │ 15  ┆ 22  │
-            └─────┴─────┘
-            >>> agnostic_cum_sum(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1,2,5,10,15]]
-            b: [[2,6,10,16,22]]
+            >>> df_native = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_cum_sum=nw.col("a").cum_sum())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |   a  b  a_cum_sum|
+            |0  1  2          1|
+            |1  1  4          2|
+            |2  3  4          5|
+            |3  5  6         10|
+            |4  5  6         15|
+            └──────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse)
+            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def diff(self) -> Self:
+    def diff(self: Self) -> Self:
         """Returns the difference between each element and the previous one.
 
         Returns:
@@ -1476,57 +1080,36 @@ class Expr:
                 nw.col("a").diff().fill_null(0).cast(nw.Int64)
 
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 1, 3, 5, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_diff(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(a_diff=nw.col("a").diff()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_diff`:
-
-            >>> agnostic_diff(df_pd)
-               a_diff
-            0     NaN
-            1     0.0
-            2     2.0
-            3     2.0
-            4     0.0
-
-            >>> agnostic_diff(df_pl)
-            shape: (5, 1)
-            ┌────────┐
-            │ a_diff │
-            │ ---    │
-            │ i64    │
-            ╞════════╡
-            │ null   │
-            │ 0      │
-            │ 2      │
-            │ 2      │
-            │ 0      │
-            └────────┘
-
-            >>> agnostic_diff(df_pa)
-            pyarrow.Table
-            a_diff: int64
-            ----
-            a_diff: [[null,0,2,2,0]]
+            >>> df_native = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_diff=nw.col("a").diff())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            | shape: (5, 2)    |
+            | ┌─────┬────────┐ |
+            | │ a   ┆ a_diff │ |
+            | │ --- ┆ ---    │ |
+            | │ i64 ┆ i64    │ |
+            | ╞═════╪════════╡ |
+            | │ 1   ┆ null   │ |
+            | │ 1   ┆ 0      │ |
+            | │ 3   ┆ 2      │ |
+            | │ 5   ┆ 2      │ |
+            | │ 5   ┆ 0      │ |
+            | └─────┴────────┘ |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).diff())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).diff(),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def shift(self, n: int) -> Self:
+    def shift(self: Self, n: int) -> Self:
         """Shift values by `n` positions.
 
         Arguments:
@@ -1545,58 +1128,37 @@ class Expr:
                 nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 1, 3, 5, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_shift(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(a_shift=nw.col("a").shift(n=1)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_shift`:
-
-            >>> agnostic_shift(df_pd)
-               a_shift
-            0      NaN
-            1      1.0
-            2      1.0
-            3      3.0
-            4      5.0
-
-            >>> agnostic_shift(df_pl)
-            shape: (5, 1)
-            ┌─────────┐
-            │ a_shift │
-            │ ---     │
-            │ i64     │
-            ╞═════════╡
-            │ null    │
-            │ 1       │
-            │ 1       │
-            │ 3       │
-            │ 5       │
-            └─────────┘
-
-            >>> agnostic_shift(df_pa)
-            pyarrow.Table
-            a_shift: int64
-            ----
-            a_shift: [[null,1,1,3,5]]
+            >>> df_native = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_shift=nw.col("a").shift(n=1))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |shape: (5, 2)     |
+            |┌─────┬─────────┐ |
+            |│ a   ┆ a_shift │ |
+            |│ --- ┆ ---     │ |
+            |│ i64 ┆ i64     │ |
+            |╞═════╪═════════╡ |
+            |│ 1   ┆ null    │ |
+            |│ 1   ┆ 1       │ |
+            |│ 3   ┆ 1       │ |
+            |│ 5   ┆ 3       │ |
+            |│ 5   ┆ 5       │ |
+            |└─────┴─────────┘ |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).shift(n))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).shift(n),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
     def replace_strict(
-        self,
+        self: Self,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
@@ -1620,58 +1182,25 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [3, 0, 1, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define dataframe-agnostic functions:
-
-            >>> def agnostic_replace_strict(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         b=nw.col("a").replace_strict(
-            ...             [0, 1, 2, 3],
-            ...             ["zero", "one", "two", "three"],
-            ...             return_dtype=nw.String,
-            ...         )
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_replace_strict`:
-
-            >>> agnostic_replace_strict(df_pd)
-               a      b
-            0  3  three
-            1  0   zero
-            2  1    one
-            3  2    two
-
-            >>> agnostic_replace_strict(df_pl)
-            shape: (4, 2)
-            ┌─────┬───────┐
-            │ a   ┆ b     │
-            │ --- ┆ ---   │
-            │ i64 ┆ str   │
-            ╞═════╪═══════╡
-            │ 3   ┆ three │
-            │ 0   ┆ zero  │
-            │ 1   ┆ one   │
-            │ 2   ┆ two   │
-            └─────┴───────┘
-
-            >>> agnostic_replace_strict(df_pa)
-            pyarrow.Table
-            a: int64
-            b: string
-            ----
-            a: [[3,0,1,2]]
-            b: [["three","zero","one","two"]]
+            >>> df_native = pd.DataFrame({"a": [3, 0, 1, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     b=nw.col("a").replace_strict(
+            ...         [0, 1, 2, 3],
+            ...         ["zero", "one", "two", "three"],
+            ...         return_dtype=nw.String,
+            ...     )
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a      b    |
+            |   0  3  three    |
+            |   1  0   zero    |
+            |   2  1    one    |
+            |   3  2    two    |
+            └──────────────────┘
         """
         if new is None:
             if not isinstance(old, Mapping):
@@ -1684,11 +1213,21 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
-            )
+            ),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
+
+        !!! warning
+            `Expr.sort` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sort())`, use
+            `df.select(nw.col('a')).sort()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
 
         Arguments:
             descending: Sort in descending order.
@@ -1696,88 +1235,21 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [5, None, 1, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define dataframe-agnostic functions:
-
-            >>> def agnostic_sort(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").sort()).to_native()
-
-            >>> def agnostic_sort_descending(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").sort(descending=True)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_sort` and `agnostic_sort_descending`:
-
-            >>> agnostic_sort(df_pd)
-                 a
-            1  NaN
-            2  1.0
-            3  2.0
-            0  5.0
-
-            >>> agnostic_sort(df_pl)
-            shape: (4, 1)
-            ┌──────┐
-            │ a    │
-            │ ---  │
-            │ i64  │
-            ╞══════╡
-            │ null │
-            │ 1    │
-            │ 2    │
-            │ 5    │
-            └──────┘
-
-            >>> agnostic_sort(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[null,1,2,5]]
-
-            >>> agnostic_sort_descending(df_pd)
-                 a
-            1  NaN
-            0  5.0
-            3  2.0
-            2  1.0
-
-            >>> agnostic_sort_descending(df_pl)
-            shape: (4, 1)
-            ┌──────┐
-            │ a    │
-            │ ---  │
-            │ i64  │
-            ╞══════╡
-            │ null │
-            │ 5    │
-            │ 2    │
-            │ 1    │
-            └──────┘
-
-            >>> agnostic_sort_descending(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[null,5,2,1]]
         """
+        msg = (
+            "`Expr.sort` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').sort())`, use `df.select(nw.col('a')).sort()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
-            )
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     # --- transform ---
@@ -1790,8 +1262,8 @@ class Expr:
         """Check if this expression is between the given lower and upper bounds.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are interpreted as column names.
+            upper_bound: Upper bound value. String literals are interpreted as column names.
             closed: Define which sides of the interval are closed (inclusive).
 
         Returns:
@@ -1799,62 +1271,35 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_between(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").is_between(2, 4, "right")).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_between`:
-
-            >>> agnostic_is_between(df_pd)
-                   a
-            0  False
-            1  False
-            2   True
-            3   True
-            4  False
-
-            >>> agnostic_is_between(df_pl)
-            shape: (5, 1)
-            ┌───────┐
-            │ a     │
-            │ ---   │
-            │ bool  │
-            ╞═══════╡
-            │ false │
-            │ false │
-            │ true  │
-            │ true  │
-            │ false │
-            └───────┘
-
-            >>> agnostic_is_between(df_pa)
-            pyarrow.Table
-            a: bool
-            ----
-            a: [[false,false,true,true,false]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(b=nw.col("a").is_between(2, 4, "right"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a      b    |
+            |   0  1  False    |
+            |   1  2  False    |
+            |   2  3   True    |
+            |   3  4   True    |
+            |   4  5  False    |
+            └──────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_between(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
                 closed,
-            )
+            ),
+            is_order_dependent=operation_is_order_dependent(
+                self, lower_bound, upper_bound
+            ),
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def is_in(self, other: Any) -> Self:
+    def is_in(self: Self, other: Any) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
         Arguments:
@@ -1865,64 +1310,34 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 9, 10]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_in(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(b=nw.col("a").is_in([1, 2])).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_in`:
-
-            >>> agnostic_is_in(df_pd)
-                a      b
-            0   1   True
-            1   2   True
-            2   9  False
-            3  10  False
-
-            >>> agnostic_is_in(df_pl)
-            shape: (4, 2)
-            ┌─────┬───────┐
-            │ a   ┆ b     │
-            │ --- ┆ ---   │
-            │ i64 ┆ bool  │
-            ╞═════╪═══════╡
-            │ 1   ┆ true  │
-            │ 2   ┆ true  │
-            │ 9   ┆ false │
-            │ 10  ┆ false │
-            └─────┴───────┘
-
-            >>> agnostic_is_in(df_pa)
-            pyarrow.Table
-            a: int64
-            b: bool
-            ----
-            a: [[1,2,9,10]]
-            b: [[true,true,false,false]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 9, 10]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(b=nw.col("a").is_in([1, 2]))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a      b   |
+            |   0   1   True   |
+            |   1   2   True   |
+            |   2   9  False   |
+            |   3  10  False   |
+            └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other)
-                )
+                    extract_compliant(plx, other, parse_column_name_as_expr=False)
+                ),
+                self._is_order_dependent,
+                changes_length=self._changes_length,
+                aggregates=self._aggregates,
             )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             raise NotImplementedError(msg)
 
-    def filter(self, *predicates: Any) -> Self:
+    def filter(self: Self, *predicates: Any) -> Self:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
@@ -1933,61 +1348,38 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a").filter(nw.col("a") > 4),
-            ...         nw.col("b").filter(nw.col("b") < 13),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_filter`:
-
-            >>> agnostic_filter(df_pd)
-               a   b
-            3  5  10
-            4  6  11
-            5  7  12
-
-            >>> agnostic_filter(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 5   ┆ 10  │
-            │ 6   ┆ 11  │
-            │ 7   ┆ 12  │
-            └─────┴─────┘
-
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[5,6,7]]
-            b: [[10,11,12]]
+            >>> df_native = pd.DataFrame(
+            ...     {"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(
+            ...     nw.col("a").filter(nw.col("a") > 4),
+            ...     nw.col("b").filter(nw.col("b") < 13),
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a   b     |
+            |     3  5  10     |
+            |     4  6  11     |
+            |     5  7  12     |
+            └──────────────────┘
         """
+        flat_predicates = flatten(predicates)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)],
-            )
+                *[
+                    extract_compliant(plx, pred, parse_column_name_as_expr=True)
+                    for pred in flat_predicates
+                ],
+            ),
+            is_order_dependent=operation_is_order_dependent(*flat_predicates),
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
-    def is_null(self) -> Self:
+    def is_null(self: Self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
         Returns:
@@ -1999,73 +1391,35 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> df_pd = pd.DataFrame(
-            ...     {
-            ...         "a": [2, 4, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), 3.0, 5.0],
-            ...     }
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
-            >>> data = {
-            ...     "a": [2, 4, None, 3, 5],
-            ...     "b": [2.0, 4.0, None, 3.0, 5.0],
-            ... }
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_null(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_is_null`:
-
-            >>> agnostic_is_null(df_pd)
-                 a    b  a_is_null  b_is_null
-            0  2.0  2.0      False      False
-            1  4.0  4.0      False      False
-            2  NaN  NaN       True       True
-            3  3.0  3.0      False      False
-            4  5.0  5.0      False      False
-
-            >>> agnostic_is_null(df_pl)
-            shape: (5, 4)
-            ┌──────┬──────┬───────────┬───────────┐
-            │ a    ┆ b    ┆ a_is_null ┆ b_is_null │
-            │ ---  ┆ ---  ┆ ---       ┆ ---       │
-            │ i64  ┆ f64  ┆ bool      ┆ bool      │
-            ╞══════╪══════╪═══════════╪═══════════╡
-            │ 2    ┆ 2.0  ┆ false     ┆ false     │
-            │ 4    ┆ 4.0  ┆ false     ┆ false     │
-            │ null ┆ null ┆ true      ┆ true      │
-            │ 3    ┆ 3.0  ┆ false     ┆ false     │
-            │ 5    ┆ 5.0  ┆ false     ┆ false     │
-            └──────┴──────┴───────────┴───────────┘
-
-            >>> agnostic_is_null(df_pa)
-            pyarrow.Table
-            a: int64
-            b: double
-            a_is_null: bool
-            b_is_null: bool
-            ----
-            a: [[2,4,null,3,5]]
-            b: [[2,4,null,3,5]]
-            a_is_null: [[false,false,true,false,false]]
-            b_is_null: [[false,false,true,false,false]]
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
+            ... )
+            ┌──────────────────────────────────────────┐
+            |            Narwhals LazyFrame            |
+            |------------------------------------------|
+            |┌───────┬────────┬───────────┬───────────┐|
+            |│   a   │   b    │ a_is_null │ b_is_null │|
+            |│ int32 │ double │  boolean  │  boolean  │|
+            |├───────┼────────┼───────────┼───────────┤|
+            |│  NULL │    nan │ true      │ false     │|
+            |│     2 │    2.0 │ false     │ false     │|
+            |└───────┴────────┴───────────┴───────────┘|
+            └──────────────────────────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_null())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_null(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def is_nan(self) -> Self:
+    def is_nan(self: Self) -> Self:
         """Indicate which values are NaN.
 
         Returns:
@@ -2077,112 +1431,55 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"orig": [0.0, None, 2.0]}
-            >>> df_pd = pd.DataFrame(data).astype({"orig": "Float64"})
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_self_div_is_nan(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         divided=nw.col("orig") / nw.col("orig"),
-            ...         divided_is_nan=(nw.col("orig") / nw.col("orig")).is_nan(),
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_self_div_is_nan`:
-
-            >>> print(agnostic_self_div_is_nan(df_pd))
-               orig  divided  divided_is_nan
-            0   0.0      NaN            True
-            1  <NA>     <NA>            <NA>
-            2   2.0      1.0           False
-
-            >>> print(agnostic_self_div_is_nan(df_pl))
-            shape: (3, 3)
-            ┌──────┬─────────┬────────────────┐
-            │ orig ┆ divided ┆ divided_is_nan │
-            │ ---  ┆ ---     ┆ ---            │
-            │ f64  ┆ f64     ┆ bool           │
-            ╞══════╪═════════╪════════════════╡
-            │ 0.0  ┆ NaN     ┆ true           │
-            │ null ┆ null    ┆ null           │
-            │ 2.0  ┆ 1.0     ┆ false          │
-            └──────┴─────────┴────────────────┘
-
-            >>> print(agnostic_self_div_is_nan(df_pa))
-            pyarrow.Table
-            orig: double
-            divided: double
-            divided_is_nan: bool
-            ----
-            orig: [[0,null,2]]
-            divided: [[nan,null,1]]
-            divided_is_nan: [[true,null,false]]
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan()
+            ... )
+            ┌────────────────────────────────────────┐
+            |           Narwhals LazyFrame           |
+            |----------------------------------------|
+            |┌───────┬────────┬──────────┬──────────┐|
+            |│   a   │   b    │ a_is_nan │ b_is_nan │|
+            |│ int32 │ double │ boolean  │ boolean  │|
+            |├───────┼────────┼──────────┼──────────┤|
+            |│  NULL │    nan │ NULL     │ true     │|
+            |│     2 │    2.0 │ false    │ false    │|
+            |└───────┴────────┴──────────┴──────────┘|
+            └────────────────────────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_nan())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_nan(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def arg_true(self) -> Self:
+    def arg_true(self: Self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, None, None, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_arg_true(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").is_null().arg_true()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_arg_true`:
-
-            >>> agnostic_arg_true(df_pd)
-               a
-            1  1
-            2  2
-
-            >>> agnostic_arg_true(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ u32 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            └─────┘
-
-            >>> agnostic_arg_true(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1,2]]
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).arg_true())
+        msg = (
+            "`Expr.arg_true` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.23.0")
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
 
     def fill_null(
-        self,
+        self: Self,
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
@@ -2203,111 +1500,56 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> df_pd = pd.DataFrame(
+            >>> df_native = pl.DataFrame(
             ...     {
-            ...         "a": [2, 4, None, None, 3, 5],
-            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...         "a": [2, None, None, 3],
+            ...         "b": [2.0, float("nan"), float("nan"), 3.0],
             ...     }
             ... )
-            >>> data = {
-            ...     "a": [2, 4, None, None, 3, 5],
-            ...     "b": [2.0, 4.0, None, None, 3.0, 5.0],
-            ... }
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_fill_null(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(nw.col("a", "b").fill_null(0)).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_fill_null`:
-
-            >>> agnostic_fill_null(df_pd)
-                 a    b
-            0  2.0  2.0
-            1  4.0  4.0
-            2  0.0  0.0
-            3  0.0  0.0
-            4  3.0  3.0
-            5  5.0  5.0
-
-            >>> agnostic_fill_null(df_pl)
-            shape: (6, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 2   ┆ 2.0 │
-            │ 4   ┆ 4.0 │
-            │ 0   ┆ 0.0 │
-            │ 0   ┆ 0.0 │
-            │ 3   ┆ 3.0 │
-            │ 5   ┆ 5.0 │
-            └─────┴─────┘
-
-            >>> agnostic_fill_null(df_pa)
-            pyarrow.Table
-            a: int64
-            b: double
-            ----
-            a: [[2,4,0,0,3,5]]
-            b: [[2,4,0,0,3,5]]
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled")
+            ... )
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |shape: (4, 4)                                   |
+            |┌──────┬─────┬────────────────┬────────────────┐|
+            |│ a    ┆ b   ┆ a_nulls_filled ┆ b_nulls_filled │|
+            |│ ---  ┆ --- ┆ ---            ┆ ---            │|
+            |│ i64  ┆ f64 ┆ i64            ┆ f64            │|
+            |╞══════╪═════╪════════════════╪════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 2              ┆ 2.0            │|
+            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
+            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
+            |│ 3    ┆ 3.0 ┆ 3              ┆ 3.0            │|
+            |└──────┴─────┴────────────────┴────────────────┘|
+            └────────────────────────────────────────────────┘
 
             Using a strategy:
 
-            >>> def agnostic_fill_null_with_strategy(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         nw.col("a", "b")
-            ...         .fill_null(strategy="forward", limit=1)
-            ...         .name.suffix("_filled")
-            ...     ).to_native()
-
-            >>> agnostic_fill_null_with_strategy(df_pd)
-                 a    b  a_filled  b_filled
-            0  2.0  2.0       2.0       2.0
-            1  4.0  4.0       4.0       4.0
-            2  NaN  NaN       4.0       4.0
-            3  NaN  NaN       NaN       NaN
-            4  3.0  3.0       3.0       3.0
-            5  5.0  5.0       5.0       5.0
-
-            >>> agnostic_fill_null_with_strategy(df_pl)
-            shape: (6, 4)
-            ┌──────┬──────┬──────────┬──────────┐
-            │ a    ┆ b    ┆ a_filled ┆ b_filled │
-            │ ---  ┆ ---  ┆ ---      ┆ ---      │
-            │ i64  ┆ f64  ┆ i64      ┆ f64      │
-            ╞══════╪══════╪══════════╪══════════╡
-            │ 2    ┆ 2.0  ┆ 2        ┆ 2.0      │
-            │ 4    ┆ 4.0  ┆ 4        ┆ 4.0      │
-            │ null ┆ null ┆ 4        ┆ 4.0      │
-            │ null ┆ null ┆ null     ┆ null     │
-            │ 3    ┆ 3.0  ┆ 3        ┆ 3.0      │
-            │ 5    ┆ 5.0  ┆ 5        ┆ 5.0      │
-            └──────┴──────┴──────────┴──────────┘
-
-            >>> agnostic_fill_null_with_strategy(df_pa)
-            pyarrow.Table
-            a: int64
-            b: double
-            a_filled: int64
-            b_filled: double
-            ----
-            a: [[2,4,null,null,3,5]]
-            b: [[2,4,null,null,3,5]]
-            a_filled: [[2,4,4,null,3,5]]
-            b_filled: [[2,4,4,null,3,5]]
+            >>> df.with_columns(
+            ...     nw.col("a", "b")
+            ...     .fill_null(strategy="forward", limit=1)
+            ...     .name.suffix("_nulls_forward_filled")
+            ... )
+            ┌────────────────────────────────────────────────────────────────┐
+            |                       Narwhals DataFrame                       |
+            |----------------------------------------------------------------|
+            |shape: (4, 4)                                                   |
+            |┌──────┬─────┬────────────────────────┬────────────────────────┐|
+            |│ a    ┆ b   ┆ a_nulls_forward_filled ┆ b_nulls_forward_filled │|
+            |│ ---  ┆ --- ┆ ---                    ┆ ---                    │|
+            |│ i64  ┆ f64 ┆ i64                    ┆ f64                    │|
+            |╞══════╪═════╪════════════════════════╪════════════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 2                      ┆ 2.0                    │|
+            |│ null ┆ NaN ┆ 2                      ┆ NaN                    │|
+            |│ null ┆ NaN ┆ null                   ┆ NaN                    │|
+            |│ 3    ┆ 3.0 ┆ 3                      ┆ 3.0                    │|
+            |└──────┴─────┴────────────────────────┴────────────────────────┘|
+            └────────────────────────────────────────────────────────────────┘
         """
         if value is not None and strategy is not None:
             msg = "cannot specify both `value` and `strategy`"
@@ -2321,11 +1563,14 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).fill_null(
                 value=value, strategy=strategy, limit=limit
-            )
+            ),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     # --- partial reduction ---
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self) -> Self:
         """Drop null values.
 
         Returns:
@@ -2337,52 +1582,34 @@ class Expr:
             for reference.
 
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
-            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
-            >>> df_pa = pa.table({"a": [2.0, 4.0, None, 3.0, None, 5.0]})
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_drop_nulls(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").drop_nulls()).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_drop_nulls`:
-
-            >>> agnostic_drop_nulls(df_pd)
-                 a
-            0  2.0
-            1  4.0
-            3  3.0
-            5  5.0
-
-            >>> agnostic_drop_nulls(df_pl)
-            shape: (4, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 2.0 │
-            │ 4.0 │
-            │ 3.0 │
-            │ 5.0 │
-            └─────┘
-
-            >>> agnostic_drop_nulls(df_pa)
-            pyarrow.Table
-            a: double
-            ----
-            a: [[2,4,3,5]]
+            >>> df_native = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").drop_nulls())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (5, 1)   |
+            |  ┌─────┐         |
+            |  │ a   │         |
+            |  │ --- │         |
+            |  │ f64 │         |
+            |  ╞═════╡         |
+            |  │ 2.0 │         |
+            |  │ 4.0 │         |
+            |  │ NaN │         |
+            |  │ 3.0 │         |
+            |  │ 5.0 │         |
+            |  └─────┘         |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).drop_nulls())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).drop_nulls(),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
 
     def sample(
         self: Self,
@@ -2394,6 +1621,13 @@ class Expr:
     ) -> Self:
         """Sample randomly from this expression.
 
+        !!! warning
+            `Expr.sample` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').sample())`, use
+            `df.select(nw.col('a')).sample()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
             fraction: Fraction of items to return. Cannot be used with n.
@@ -2403,61 +1637,24 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_sample(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a").sample(fraction=1.0, with_replacement=True)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_sample`:
-
-            >>> agnostic_sample(df_pd)  # doctest: +SKIP
-               a
-            2  3
-            0  1
-            2  3
-
-            >>> agnostic_sample(df_pl)  # doctest: +SKIP
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 2   │
-            │ 3   │
-            │ 3   │
-            └─────┘
-
-            >>> agnostic_sample(df_pa)  # doctest: +SKIP
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1,3,3]]
         """
+        msg = (
+            "`Expr.sample` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').sample())`, use `df.select(nw.col('a')).sample()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            )
+            ),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
-    def over(self, *keys: str | Iterable[str]) -> Self:
+    def over(self: Self, *keys: str | Iterable[str]) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
@@ -2470,85 +1667,43 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3], "b": [1, 1, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_min_over_b(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         a_min_per_group=nw.col("a").min().over("b")
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_min_over_b`:
-
-            >>> agnostic_min_over_b(df_pd)
-               a  b  a_min_per_group
-            0  1  1                1
-            1  2  1                1
-            2  3  2                3
-
-            >>> agnostic_min_over_b(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────────────────┐
-            │ a   ┆ b   ┆ a_min_per_group │
-            │ --- ┆ --- ┆ ---             │
-            │ i64 ┆ i64 ┆ i64             │
-            ╞═════╪═════╪═════════════════╡
-            │ 1   ┆ 1   ┆ 1               │
-            │ 2   ┆ 1   ┆ 1               │
-            │ 3   ┆ 2   ┆ 3               │
-            └─────┴─────┴─────────────────┘
-
-            >>> agnostic_min_over_b(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            a_min_per_group: int64
-            ----
-            a: [[1,2,3]]
-            b: [[1,1,2]]
-            a_min_per_group: [[1,1,3]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 4], "b": ["x", "x", "y"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_min_per_group=nw.col("a").min().over("b"))
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |   a  b  a_min_per_group|
+            |0  1  x                1|
+            |1  2  x                1|
+            |2  4  y                4|
+            └────────────────────────┘
 
             Cumulative operations are also supported, but (currently) only for
             pandas and Polars:
 
-            >>> def agnostic_cum_sum(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(c=nw.col("a").cum_sum().over("b")).to_native()
-
-            >>> agnostic_cum_sum(df_pd)
-               a  b  c
-            0  1  1  1
-            1  2  1  3
-            2  3  2  3
-
-            >>> agnostic_cum_sum(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ i64 │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 1   ┆ 1   │
-            │ 2   ┆ 1   ┆ 3   │
-            │ 3   ┆ 2   ┆ 3   │
-            └─────┴─────┴─────┘
+            >>> df.with_columns(a_cum_sum_per_group=nw.col("a").cum_sum().over("b"))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |   a  b  a_cum_sum_per_group|
+            |0  1  x                    1|
+            |1  2  x                    3|
+            |2  4  y                    4|
+            └────────────────────────────┘
         """
+        if self._changes_length:
+            msg = "`.over()` can not be used for expressions which change length."
+            raise LengthChangingExprError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys))
+            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def is_duplicated(self) -> Self:
+    def is_duplicated(self: Self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
 
         Returns:
@@ -2556,56 +1711,28 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_duplicated(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().is_duplicated()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_duplicated`:
-
-            >>> agnostic_is_duplicated(df_pd)
-                   a      b
-            0   True   True
-            1  False   True
-            2  False  False
-            3   True  False
-
-            >>> agnostic_is_duplicated(df_pl)
-            shape: (4, 2)
-            ┌───────┬───────┐
-            │ a     ┆ b     │
-            │ ---   ┆ ---   │
-            │ bool  ┆ bool  │
-            ╞═══════╪═══════╡
-            │ true  ┆ true  │
-            │ false ┆ true  │
-            │ false ┆ false │
-            │ true  ┆ false │
-            └───────┴───────┘
-
-            >>> agnostic_is_duplicated(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[true,false,false,true]]
-            b: [[true,true,false,false]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.all().is_duplicated().name.suffix("_is_duplicated"))
+            ┌─────────────────────────────────────────┐
+            |           Narwhals DataFrame            |
+            |-----------------------------------------|
+            |   a  b  a_is_duplicated  b_is_duplicated|
+            |0  1  a             True             True|
+            |1  2  a            False             True|
+            |2  3  b            False            False|
+            |3  1  c             True            False|
+            └─────────────────────────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_duplicated())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_duplicated(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def is_unique(self) -> Self:
+    def is_unique(self: Self) -> Self:
         r"""Return a boolean mask indicating unique values.
 
         Returns:
@@ -2613,56 +1740,28 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().is_unique()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_unique`:
-
-            >>> agnostic_is_unique(df_pd)
-                   a      b
-            0  False  False
-            1   True  False
-            2   True   True
-            3  False   True
-
-            >>> agnostic_is_unique(df_pl)
-            shape: (4, 2)
-            ┌───────┬───────┐
-            │ a     ┆ b     │
-            │ ---   ┆ ---   │
-            │ bool  ┆ bool  │
-            ╞═══════╪═══════╡
-            │ false ┆ false │
-            │ true  ┆ false │
-            │ true  ┆ true  │
-            │ false ┆ true  │
-            └───────┴───────┘
-
-            >>> agnostic_is_unique(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[false,true,true,false]]
-            b: [[false,false,true,true]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.all().is_unique().name.suffix("_is_unique"))
+            ┌─────────────────────────────────┐
+            |       Narwhals DataFrame        |
+            |---------------------------------|
+            |   a  b  a_is_unique  b_is_unique|
+            |0  1  a        False        False|
+            |1  2  a         True        False|
+            |2  3  b         True         True|
+            |3  1  c        False         True|
+            └─────────────────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_unique())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_unique(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def null_count(self) -> Self:
+    def null_count(self: Self) -> Self:
         r"""Count null values.
 
         Returns:
@@ -2675,50 +1774,27 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().null_count()).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_null_count`:
-
-            >>> agnostic_null_count(df_pd)
-               a  b
-            0  1  2
-
-            >>> agnostic_null_count(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ u32 ┆ u32 │
-            ╞═════╪═════╡
-            │ 1   ┆ 2   │
-            └─────┴─────┘
-
-            >>> agnostic_null_count(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[1]]
-            b: [[2]]
+            >>> df_native = pd.DataFrame(
+            ...     {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().null_count())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a  b      |
+            |     0  1  2      |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).null_count())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).null_count(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def is_first_distinct(self) -> Self:
+    def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
         Returns:
@@ -2726,58 +1802,30 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_first_distinct(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().is_first_distinct()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_first_distinct`:
-
-            >>> agnostic_is_first_distinct(df_pd)
-                   a      b
-            0   True   True
-            1   True  False
-            2   True   True
-            3  False   True
-
-            >>> agnostic_is_first_distinct(df_pl)
-            shape: (4, 2)
-            ┌───────┬───────┐
-            │ a     ┆ b     │
-            │ ---   ┆ ---   │
-            │ bool  ┆ bool  │
-            ╞═══════╪═══════╡
-            │ true  ┆ true  │
-            │ true  ┆ false │
-            │ true  ┆ true  │
-            │ false ┆ true  │
-            └───────┴───────┘
-
-            >>> agnostic_is_first_distinct(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[true,true,true,false]]
-            b: [[true,false,true,true]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.all().is_first_distinct().name.suffix("_is_first_distinct")
+            ... )
+            ┌─────────────────────────────────────────────────┐
+            |               Narwhals DataFrame                |
+            |-------------------------------------------------|
+            |   a  b  a_is_first_distinct  b_is_first_distinct|
+            |0  1  a                 True                 True|
+            |1  2  a                 True                False|
+            |2  3  b                 True                 True|
+            |3  1  c                False                 True|
+            └─────────────────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_first_distinct()
+            lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
-    def is_last_distinct(self) -> Self:
+    def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
         Returns:
@@ -2785,57 +1833,31 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_last_distinct(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.all().is_last_distinct()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_last_distinct`:
-
-            >>> agnostic_is_last_distinct(df_pd)
-                   a      b
-            0  False  False
-            1   True   True
-            2   True   True
-            3   True   True
-
-            >>> agnostic_is_last_distinct(df_pl)
-            shape: (4, 2)
-            ┌───────┬───────┐
-            │ a     ┆ b     │
-            │ ---   ┆ ---   │
-            │ bool  ┆ bool  │
-            ╞═══════╪═══════╡
-            │ false ┆ false │
-            │ true  ┆ true  │
-            │ true  ┆ true  │
-            │ true  ┆ true  │
-            └───────┴───────┘
-
-            >>> agnostic_is_last_distinct(df_pa)
-            pyarrow.Table
-            a: bool
-            b: bool
-            ----
-            a: [[false,true,true,true]]
-            b: [[false,true,true,true]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.all().is_last_distinct().name.suffix("_is_last_distinct")
+            ... )
+            ┌───────────────────────────────────────────────┐
+            |              Narwhals DataFrame               |
+            |-----------------------------------------------|
+            |   a  b  a_is_last_distinct  b_is_last_distinct|
+            |0  1  a               False               False|
+            |1  2  a                True                True|
+            |2  3  b                True                True|
+            |3  1  c                True                True|
+            └───────────────────────────────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_last_distinct())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
     def quantile(
-        self,
+        self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
@@ -2857,166 +1879,87 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": list(range(50)), "b": list(range(50, 100))}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_quantile(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a", "b").quantile(0.5, interpolation="linear")
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_quantile`:
-
-            >>> agnostic_quantile(df_pd)
-                  a     b
-            0  24.5  74.5
-
-            >>> agnostic_quantile(df_pl)
-            shape: (1, 2)
-            ┌──────┬──────┐
-            │ a    ┆ b    │
-            │ ---  ┆ ---  │
-            │ f64  ┆ f64  │
-            ╞══════╪══════╡
-            │ 24.5 ┆ 74.5 │
-            └──────┴──────┘
-
-            >>> agnostic_quantile(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[24.5]]
-            b: [[74.5]]
+            >>> df_native = pd.DataFrame(
+            ...     {"a": list(range(50)), "b": list(range(50, 100))}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").quantile(0.5, interpolation="linear"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a     b   |
+            |  0  24.5  74.5   |
+            └──────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation)
+            lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
+            self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
         )
 
-    def head(self, n: int = 10) -> Self:
+    def head(self: Self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
+        !!! warning
+            `Expr.head` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').head())`, use
+            `df.select(nw.col('a')).head()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of rows to return.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": list(range(10))}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns the first 3 rows:
-
-            >>> def agnostic_head(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").head(3)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_head`:
-
-            >>> agnostic_head(df_pd)
-               a
-            0  0
-            1  1
-            2  2
-
-            >>> agnostic_head(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 0   │
-            │ 1   │
-            │ 2   │
-            └─────┘
-
-            >>> agnostic_head(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[0,1,2]]
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).head(n))
+        msg = (
+            "`Expr.head` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').head())`, use `df.select(nw.col('a')).head()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).head(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
 
-    def tail(self, n: int = 10) -> Self:
+    def tail(self: Self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
+        !!! warning
+            `Expr.tail` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').tail())`, use
+            `df.select(nw.col('a')).tail()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Number of rows to return.
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": list(range(10))}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns the last 3 rows:
-
-            >>> def agnostic_tail(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").tail(3)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_tail`:
-
-            >>> agnostic_tail(df_pd)
-               a
-            7  7
-            8  8
-            9  9
-
-            >>> agnostic_tail(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 7   │
-            │ 8   │
-            │ 9   │
-            └─────┘
-
-            >>> agnostic_tail(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[7,8,9]]
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).tail(n))
+        msg = (
+            "`Expr.tail` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').tail())`, use `df.select(nw.col('a')).tail()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).tail(n),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
 
-    def round(self, decimals: int = 0) -> Self:
+    def round(self: Self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
 
         Arguments:
@@ -3036,52 +1979,27 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.12345, 2.56789, 3.901234]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that rounds to the first decimal:
-
-            >>> def agnostic_round(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").round(1)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_round`:
-
-            >>> agnostic_round(df_pd)
-                 a
-            0  1.1
-            1  2.6
-            2  3.9
-
-            >>> agnostic_round(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 1.1 │
-            │ 2.6 │
-            │ 3.9 │
-            └─────┘
-
-            >>> agnostic_round(df_pa)
-            pyarrow.Table
-            a: double
-            ----
-            a: [[1.1,2.6,3.9]]
+            >>> df_native = pd.DataFrame({"a": [1.12345, 2.56789, 3.901234]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_rounded=nw.col("a").round(1))
+            ┌──────────────────────┐
+            |  Narwhals DataFrame  |
+            |----------------------|
+            |          a  a_rounded|
+            |0  1.123450        1.1|
+            |1  2.567890        2.6|
+            |2  3.901234        3.9|
+            └──────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).round(decimals))
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).round(decimals),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
-    def len(self) -> Self:
+    def len(self: Self) -> Self:
         r"""Return the number of elements in the column.
 
         Null values count towards the total.
@@ -3091,55 +2009,36 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": ["x", "y", "z"], "b": [1, 2, 1]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that computes the len over
-            different values of "b" column:
-
-            >>> def agnostic_len(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
-            ...         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_len`:
-
-            >>> agnostic_len(df_pd)
-               a1  a2
-            0   2   1
-
-            >>> agnostic_len(df_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a1  ┆ a2  │
-            │ --- ┆ --- │
-            │ u32 ┆ u32 │
-            ╞═════╪═════╡
-            │ 2   ┆ 1   │
-            └─────┴─────┘
-
-            >>> agnostic_len(df_pa)
-            pyarrow.Table
-            a1: int64
-            a2: int64
-            ----
-            a1: [[2]]
-            a2: [[1]]
+            >>> df_native = pd.DataFrame({"a": ["x", "y", "z"], "b": [1, 2, 1]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(
+            ...     nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
+            ...     nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a1  a2     |
+            |    0   2   1     |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).len())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).len(),
+            self._is_order_dependent,
+            changes_length=False,
+            aggregates=True,
+        )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
+
+        !!! warning
+            `Expr.gather_every` is deprecated and will be removed in a future version.
+            Hint: instead of `df.select(nw.col('a').gather_every())`, use
+            `df.select(nw.col('a')).gather_every()` instead.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
 
         Arguments:
             n: Gather every *n*-th row.
@@ -3147,200 +2046,62 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function in which gather every 2 rows,
-            starting from a offset of 1:
-
-            >>> def agnostic_gather_every(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").gather_every(n=2, offset=1)).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_gather_every`:
-
-            >>> agnostic_gather_every(df_pd)
-               a
-            1  2
-            3  4
-
-            >>> agnostic_gather_every(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 2   │
-            │ 4   │
-            └─────┘
-
-            >>> agnostic_gather_every(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[2,4]]
         """
+        msg = (
+            "`Expr.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "Hint: instead of `df.select(nw.col('a').gather_every())`, use `df.select(nw.col('a')).gather_every()`.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
+            is_order_dependent=True,
+            changes_length=True,
+            aggregates=self._aggregates,
         )
 
     # need to allow numeric typing
     # TODO @aivanoved: make type alias for numeric type
     def clip(
-        self,
+        self: Self,
         lower_bound: IntoExpr | Any | None = None,
         upper_bound: IntoExpr | Any | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
         Arguments:
-            lower_bound: Lower bound value.
-            upper_bound: Upper bound value.
+            lower_bound: Lower bound value. String literals are treated as column names.
+            upper_bound: Upper bound value. String literals are treated as column names.
 
         Returns:
             A new expression.
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_clip_lower(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").clip(2)).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_clip_lower`:
-
-            >>> agnostic_clip_lower(df_pd)
-               a
-            0  2
-            1  2
-            2  3
-
-            >>> agnostic_clip_lower(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 2   │
-            │ 2   │
-            │ 3   │
-            └─────┘
-
-            >>> agnostic_clip_lower(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[2,2,3]]
-
-            We define another library agnostic function:
-
-            >>> def agnostic_clip_upper(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").clip(upper_bound=2)).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_clip_upper`:
-
-            >>> agnostic_clip_upper(df_pd)
-               a
-            0  1
-            1  2
-            2  2
-
-            >>> agnostic_clip_upper(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 2   │
-            └─────┘
-
-            >>> agnostic_clip_upper(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1,2,2]]
-
-            We can have both at the same time
-
-            >>> data = {"a": [-1, 1, -3, 3, -5, 5]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_clip(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").clip(-1, 3)).to_native()
-
-            We can pass any supported library such as Pandas, Polars, or
-            PyArrow to `agnostic_clip`:
-
-            >>> agnostic_clip(df_pd)
-               a
-            0 -1
-            1  1
-            2 -1
-            3  3
-            4 -1
-            5  3
-
-            >>> agnostic_clip(df_pl)
-            shape: (6, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ -1  │
-            │ 1   │
-            │ -1  │
-            │ 3   │
-            │ -1  │
-            │ 3   │
-            └─────┘
-
-            >>> agnostic_clip(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[-1,1,-1,3,-1,3]]
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_clipped=nw.col("a").clip(-1, 3))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |    a  a_clipped  |
+            | 0  1          1  |
+            | 1  2          2  |
+            | 2  3          3  |
+            └──────────────────┘
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound),
-                extract_compliant(plx, upper_bound),
-            )
+                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
+                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
+            ),
+            is_order_dependent=operation_is_order_dependent(
+                self, lower_bound, upper_bound
+            ),
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def mode(self: Self) -> Self:
@@ -3353,109 +2114,66 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "a": [1, 1, 2, 3],
-            ...     "b": [1, 1, 2, 2],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_mode(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").mode()).sort("a").to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_mode`:
-
-            >>> agnostic_mode(df_pd)
-               a
-            0  1
-
-            >>> agnostic_mode(df_pl)
-            shape: (1, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            └─────┘
-
-            >>> agnostic_mode(df_pa)
-            pyarrow.Table
-            a: int64
-            ----
-            a: [[1]]
+            >>> df_native = pd.DataFrame({"a": [1, 1, 2, 3], "b": [1, 1, 2, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").mode()).sort("a")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |          a       |
+            |       0  1       |
+            └──────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).mode())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).mode(),
+            self._is_order_dependent,
+            changes_length=True,
+            aggregates=self._aggregates,
+        )
 
     def is_finite(self: Self) -> Self:
         """Returns boolean values indicating which original values are finite.
 
         Warning:
-            Different backend handle null values differently. `is_finite` will return
-            False for NaN and Null's in the Dask and pandas non-nullable backend, while
-            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            for reference.
+            `is_finite` will return False for NaN and Null's in the Dask and
+            pandas non-nullable backend, while for Polars, PyArrow and pandas
+            nullable backends null values are kept as such.
 
         Returns:
             Expression of `Boolean` data type.
 
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [float("nan"), float("inf"), 2.0, None]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_is_finite(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("a").is_finite()).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_is_finite`:
-
-            >>> agnostic_is_finite(df_pd)
-                   a
-            0  False
-            1  False
-            2   True
-            3  False
-
-            >>> agnostic_is_finite(df_pl)
-            shape: (4, 1)
-            ┌───────┐
-            │ a     │
-            │ ---   │
-            │ bool  │
-            ╞═══════╡
-            │ false │
-            │ false │
-            │ true  │
-            │ null  │
-            └───────┘
-
-            >>> agnostic_is_finite(df_pa)
-            pyarrow.Table
-            a: bool
-            ----
-            a: [[false,false,true,null]]
+            >>> df_native = pl.DataFrame({"a": [float("nan"), float("inf"), 2.0, None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_is_finite=nw.col("a").is_finite())
+            ┌──────────────────────┐
+            |  Narwhals DataFrame  |
+            |----------------------|
+            |shape: (4, 2)         |
+            |┌──────┬─────────────┐|
+            |│ a    ┆ a_is_finite │|
+            |│ ---  ┆ ---         │|
+            |│ f64  ┆ bool        │|
+            |╞══════╪═════════════╡|
+            |│ NaN  ┆ false       │|
+            |│ inf  ┆ false       │|
+            |│ 2.0  ┆ true        │|
+            |│ null ┆ null        │|
+            |└──────┴─────────────┘|
+            └──────────────────────┘
         """
-        return self.__class__(lambda plx: self._to_compliant_expr(plx).is_finite())
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).is_finite(),
+            self._is_order_dependent,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
+        )
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
@@ -3468,60 +2186,28 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": ["x", "k", None, "d"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_cum_count(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         nw.col("a").cum_count().alias("cum_count"),
-            ...         nw.col("a").cum_count(reverse=True).alias("cum_count_reverse"),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_cum_count`:
-
-            >>> agnostic_cum_count(df_pd)
-                  a  cum_count  cum_count_reverse
-            0     x          1                  3
-            1     k          2                  2
-            2  None          2                  1
-            3     d          3                  1
-
-            >>> agnostic_cum_count(df_pl)
-            shape: (4, 3)
-            ┌──────┬───────────┬───────────────────┐
-            │ a    ┆ cum_count ┆ cum_count_reverse │
-            │ ---  ┆ ---       ┆ ---               │
-            │ str  ┆ u32       ┆ u32               │
-            ╞══════╪═══════════╪═══════════════════╡
-            │ x    ┆ 1         ┆ 3                 │
-            │ k    ┆ 2         ┆ 2                 │
-            │ null ┆ 2         ┆ 1                 │
-            │ d    ┆ 3         ┆ 1                 │
-            └──────┴───────────┴───────────────────┘
-
-            >>> agnostic_cum_count(df_pa)
-            pyarrow.Table
-            a: string
-            cum_count: uint32
-            cum_count_reverse: uint32
-            ----
-            a: [["x","k",null,"d"]]
-            cum_count: [[1,2,2,3]]
-            cum_count_reverse: [[3,2,1,1]]
+            >>> df_native = pd.DataFrame({"a": ["x", "k", None, "d"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a").cum_count().alias("a_cum_count"),
+            ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
+            ... )
+            ┌─────────────────────────────────────────┐
+            |           Narwhals DataFrame            |
+            |-----------------------------------------|
+            |      a  a_cum_count  a_cum_count_reverse|
+            |0     x            1                    3|
+            |1     k            2                    2|
+            |2  None            2                    1|
+            |3     d            3                    1|
+            └─────────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse)
+            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -3535,60 +2221,28 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [3, 1, None, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_cum_min(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         nw.col("a").cum_min().alias("cum_min"),
-            ...         nw.col("a").cum_min(reverse=True).alias("cum_min_reverse"),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_cum_min`:
-
-            >>> agnostic_cum_min(df_pd)
-                 a  cum_min  cum_min_reverse
-            0  3.0      3.0              1.0
-            1  1.0      1.0              1.0
-            2  NaN      NaN              NaN
-            3  2.0      1.0              2.0
-
-            >>> agnostic_cum_min(df_pl)
-            shape: (4, 3)
-            ┌──────┬─────────┬─────────────────┐
-            │ a    ┆ cum_min ┆ cum_min_reverse │
-            │ ---  ┆ ---     ┆ ---             │
-            │ i64  ┆ i64     ┆ i64             │
-            ╞══════╪═════════╪═════════════════╡
-            │ 3    ┆ 3       ┆ 1               │
-            │ 1    ┆ 1       ┆ 1               │
-            │ null ┆ null    ┆ null            │
-            │ 2    ┆ 1       ┆ 2               │
-            └──────┴─────────┴─────────────────┘
-
-            >>> agnostic_cum_min(df_pa)
-            pyarrow.Table
-            a: int64
-            cum_min: int64
-            cum_min_reverse: int64
-            ----
-            a: [[3,1,null,2]]
-            cum_min: [[3,1,null,1]]
-            cum_min_reverse: [[1,1,null,2]]
+            >>> df_native = pd.DataFrame({"a": [3, 1, None, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a").cum_min().alias("a_cum_min"),
+            ...     nw.col("a").cum_min(reverse=True).alias("a_cum_min_reverse"),
+            ... )
+            ┌────────────────────────────────────┐
+            |         Narwhals DataFrame         |
+            |------------------------------------|
+            |     a  a_cum_min  a_cum_min_reverse|
+            |0  3.0        3.0                1.0|
+            |1  1.0        1.0                1.0|
+            |2  NaN        NaN                NaN|
+            |3  2.0        1.0                2.0|
+            └────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse)
+            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -3602,60 +2256,28 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 3, None, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_cum_max(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         nw.col("a").cum_max().alias("cum_max"),
-            ...         nw.col("a").cum_max(reverse=True).alias("cum_max_reverse"),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_`:
-
-            >>> agnostic_cum_max(df_pd)
-                 a  cum_max  cum_max_reverse
-            0  1.0      1.0              3.0
-            1  3.0      3.0              3.0
-            2  NaN      NaN              NaN
-            3  2.0      3.0              2.0
-
-            >>> agnostic_cum_max(df_pl)
-            shape: (4, 3)
-            ┌──────┬─────────┬─────────────────┐
-            │ a    ┆ cum_max ┆ cum_max_reverse │
-            │ ---  ┆ ---     ┆ ---             │
-            │ i64  ┆ i64     ┆ i64             │
-            ╞══════╪═════════╪═════════════════╡
-            │ 1    ┆ 1       ┆ 3               │
-            │ 3    ┆ 3       ┆ 3               │
-            │ null ┆ null    ┆ null            │
-            │ 2    ┆ 3       ┆ 2               │
-            └──────┴─────────┴─────────────────┘
-
-            >>> agnostic_cum_max(df_pa)
-            pyarrow.Table
-            a: int64
-            cum_max: int64
-            cum_max_reverse: int64
-            ----
-            a: [[1,3,null,2]]
-            cum_max: [[1,3,null,3]]
-            cum_max_reverse: [[3,3,null,2]]
+            >>> df_native = pd.DataFrame({"a": [1, 3, None, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a").cum_max().alias("a_cum_max"),
+            ...     nw.col("a").cum_max(reverse=True).alias("a_cum_max_reverse"),
+            ... )
+            ┌────────────────────────────────────┐
+            |         Narwhals DataFrame         |
+            |------------------------------------|
+            |     a  a_cum_max  a_cum_max_reverse|
+            |0  1.0        1.0                3.0|
+            |1  3.0        3.0                3.0|
+            |2  NaN        NaN                NaN|
+            |3  2.0        3.0                2.0|
+            └────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse)
+            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -3669,67 +2291,35 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 3, None, 2]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_cum_prod(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         nw.col("a").cum_prod().alias("cum_prod"),
-            ...         nw.col("a").cum_prod(reverse=True).alias("cum_prod_reverse"),
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_cum_prod`:
-
-            >>> agnostic_cum_prod(df_pd)
-                 a  cum_prod  cum_prod_reverse
-            0  1.0       1.0               6.0
-            1  3.0       3.0               6.0
-            2  NaN       NaN               NaN
-            3  2.0       6.0               2.0
-
-            >>> agnostic_cum_prod(df_pl)
-            shape: (4, 3)
-            ┌──────┬──────────┬──────────────────┐
-            │ a    ┆ cum_prod ┆ cum_prod_reverse │
-            │ ---  ┆ ---      ┆ ---              │
-            │ i64  ┆ i64      ┆ i64              │
-            ╞══════╪══════════╪══════════════════╡
-            │ 1    ┆ 1        ┆ 6                │
-            │ 3    ┆ 3        ┆ 6                │
-            │ null ┆ null     ┆ null             │
-            │ 2    ┆ 6        ┆ 2                │
-            └──────┴──────────┴──────────────────┘
-
-            >>> agnostic_cum_prod(df_pa)
-            pyarrow.Table
-            a: int64
-            cum_prod: int64
-            cum_prod_reverse: int64
-            ----
-            a: [[1,3,null,2]]
-            cum_prod: [[1,3,null,6]]
-            cum_prod_reverse: [[6,6,null,2]]
+            >>> df_native = pd.DataFrame({"a": [1, 3, None, 2]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("a").cum_prod().alias("a_cum_prod"),
+            ...     nw.col("a").cum_prod(reverse=True).alias("a_cum_prod_reverse"),
+            ... )
+            ┌──────────────────────────────────────┐
+            |          Narwhals DataFrame          |
+            |--------------------------------------|
+            |     a  a_cum_prod  a_cum_prod_reverse|
+            |0  1.0         1.0                 6.0|
+            |1  3.0         3.0                 6.0|
+            |2  NaN         NaN                 NaN|
+            |3  2.0         6.0                 2.0|
+            └──────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse)
+            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def rolling_sum(
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
@@ -3747,7 +2337,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -3758,72 +2348,42 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.0, 2.0, None, 4.0]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rolling_sum(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_sum(window_size=3, min_periods=1)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_rolling_sum`:
-
-            >>> agnostic_rolling_sum(df_pd)
-                 a    b
-            0  1.0  1.0
-            1  2.0  3.0
-            2  NaN  3.0
-            3  4.0  6.0
-
-            >>> agnostic_rolling_sum(df_pl)
-            shape: (4, 2)
-            ┌──────┬─────┐
-            │ a    ┆ b   │
-            │ ---  ┆ --- │
-            │ f64  ┆ f64 │
-            ╞══════╪═════╡
-            │ 1.0  ┆ 1.0 │
-            │ 2.0  ┆ 3.0 │
-            │ null ┆ 3.0 │
-            │ 4.0  ┆ 6.0 │
-            └──────┴─────┘
-
-            >>> agnostic_rolling_sum(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[1,2,null,4]]
-            b: [[1,3,3,6]]
+            >>> df_native = pd.DataFrame({"a": [1.0, 2.0, None, 4.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_rolling_sum=nw.col("a").rolling_sum(window_size=3, min_samples=1)
+            ... )
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |     a  a_rolling_sum|
+            |0  1.0            1.0|
+            |1  2.0            3.0|
+            |2  NaN            3.0|
+            |3  4.0            6.0|
+            └─────────────────────┘
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
-            )
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def rolling_mean(
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
@@ -3841,7 +2401,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
@@ -3852,72 +2412,42 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.0, 2.0, None, 4.0]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rolling_mean(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_mean(window_size=3, min_periods=1)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_rolling_mean`:
-
-            >>> agnostic_rolling_mean(df_pd)
-                 a    b
-            0  1.0  1.0
-            1  2.0  1.5
-            2  NaN  1.5
-            3  4.0  3.0
-
-            >>> agnostic_rolling_mean(df_pl)
-            shape: (4, 2)
-            ┌──────┬─────┐
-            │ a    ┆ b   │
-            │ ---  ┆ --- │
-            │ f64  ┆ f64 │
-            ╞══════╪═════╡
-            │ 1.0  ┆ 1.0 │
-            │ 2.0  ┆ 1.5 │
-            │ null ┆ 1.5 │
-            │ 4.0  ┆ 3.0 │
-            └──────┴─────┘
-
-            >>> agnostic_rolling_mean(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[1,2,null,4]]
-            b: [[1,1.5,1.5,3]]
+            >>> df_native = pd.DataFrame({"a": [1.0, 2.0, None, 4.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_rolling_mean=nw.col("a").rolling_mean(window_size=3, min_samples=1)
+            ... )
+            ┌──────────────────────┐
+            |  Narwhals DataFrame  |
+            |----------------------|
+            |     a  a_rolling_mean|
+            |0  1.0             1.0|
+            |1  2.0             1.5|
+            |2  NaN             1.5|
+            |3  4.0             3.0|
+            └──────────────────────┘
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
-            )
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def rolling_var(
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -3936,7 +2466,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -3948,70 +2478,40 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.0, 2.0, None, 4.0]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rolling_var(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_var(window_size=3, min_periods=1)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_rolling_var`:
-
-            >>> agnostic_rolling_var(df_pd)
-                 a    b
-            0  1.0  NaN
-            1  2.0  0.5
-            2  NaN  0.5
-            3  4.0  2.0
-
-            >>> agnostic_rolling_var(df_pl)  #  doctest:+SKIP
-            shape: (4, 2)
-            ┌──────┬──────┐
-            │ a    ┆ b    │
-            │ ---  ┆ ---  │
-            │ f64  ┆ f64  │
-            ╞══════╪══════╡
-            │ 1.0  ┆ null │
-            │ 2.0  ┆ 0.5  │
-            │ null ┆ 0.5  │
-            │ 4.0  ┆ 2.0  │
-            └──────┴──────┘
-
-            >>> agnostic_rolling_var(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[1,2,null,4]]
-            b: [[nan,0.5,0.5,2]]
+            >>> df_native = pd.DataFrame({"a": [1.0, 2.0, None, 4.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_rolling_var=nw.col("a").rolling_var(window_size=3, min_samples=1)
+            ... )
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |     a  a_rolling_var|
+            |0  1.0            NaN|
+            |1  2.0            0.5|
+            |2  NaN            0.5|
+            |3  4.0            2.0|
+            └─────────────────────┘
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_var(
-                window_size=window_size, min_periods=min_periods, center=center, ddof=ddof
-            )
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def rolling_std(
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None = None,
+        min_samples: int | None = None,
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
@@ -4030,7 +2530,7 @@ class Expr:
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
-            min_periods: The number of values in the window that should be non-null before
+            min_samples: The number of values in the window that should be non-null before
                 computing a result. If set to `None` (default), it will be set equal to
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`.
@@ -4042,66 +2542,36 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.0, 2.0, None, 4.0]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rolling_std(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(
-            ...         b=nw.col("a").rolling_std(window_size=3, min_periods=1)
-            ...     ).to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_rolling_std`:
-
-            >>> agnostic_rolling_std(df_pd)
-                 a         b
-            0  1.0       NaN
-            1  2.0  0.707107
-            2  NaN  0.707107
-            3  4.0  1.414214
-
-            >>> agnostic_rolling_std(df_pl)  #  doctest:+SKIP
-            shape: (4, 2)
-            ┌──────┬──────────┐
-            │ a    ┆ b        │
-            │ ---  ┆ ---      │
-            │ f64  ┆ f64      │
-            ╞══════╪══════════╡
-            │ 1.0  ┆ null     │
-            │ 2.0  ┆ 0.707107 │
-            │ null ┆ 0.707107 │
-            │ 4.0  ┆ 1.414214 │
-            └──────┴──────────┘
-
-            >>> agnostic_rolling_std(df_pa)
-            pyarrow.Table
-            a: double
-            b: double
-            ----
-            a: [[1,2,null,4]]
-            b: [[nan,0.7071067811865476,0.7071067811865476,1.4142135623730951]]
+            >>> df_native = pd.DataFrame({"a": [1.0, 2.0, None, 4.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_rolling_std=nw.col("a").rolling_std(window_size=3, min_samples=1)
+            ... )
+            ┌─────────────────────┐
+            | Narwhals DataFrame  |
+            |---------------------|
+            |     a  a_rolling_std|
+            |0  1.0            NaN|
+            |1  2.0       0.707107|
+            |2  NaN       0.707107|
+            |3  4.0       1.414214|
+            └─────────────────────┘
         """
-        window_size, min_periods = _validate_rolling_arguments(
-            window_size=window_size, min_periods=min_periods
+        window_size, min_samples = _validate_rolling_arguments(
+            window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
+                min_samples=min_samples,
                 center=center,
                 ddof=ddof,
-            )
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     def rank(
@@ -4139,53 +2609,21 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [3, 6, 1, 1, 6]}
-
-            We define a dataframe-agnostic function that computes the dense rank for
-            the data:
-
-            >>> def agnostic_dense_rank(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     result = df.with_columns(rnk=nw.col("a").rank(method="dense"))
-            ...     return result.to_native()
-
-            We can then pass any supported library such as pandas, Polars, or
-            PyArrow to `agnostic_dense_rank`:
-
-            >>> agnostic_dense_rank(pd.DataFrame(data))
-               a  rnk
-            0  3  2.0
-            1  6  3.0
-            2  1  1.0
-            3  1  1.0
-            4  6  3.0
-
-            >>> agnostic_dense_rank(pl.DataFrame(data))
-            shape: (5, 2)
-            ┌─────┬─────┐
-            │ a   ┆ rnk │
-            │ --- ┆ --- │
-            │ i64 ┆ u32 │
-            ╞═════╪═════╡
-            │ 3   ┆ 2   │
-            │ 6   ┆ 3   │
-            │ 1   ┆ 1   │
-            │ 1   ┆ 1   │
-            │ 6   ┆ 3   │
-            └─────┴─────┘
-
-            >>> agnostic_dense_rank(pa.table(data))
-            pyarrow.Table
-            a: int64
-            rnk: uint64
-            ----
-            a: [[3,6,1,1,6]]
-            rnk: [[2,3,1,1,3]]
+            >>> df_native = pd.DataFrame({"a": [3, 6, 1, 1, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(rank=nw.col("a").rank(method="dense"))
+            >>> result
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a  rank    |
+            |    0  3   2.0    |
+            |    1  6   3.0    |
+            |    2  1   1.0    |
+            |    3  1   1.0    |
+            |    4  6   3.0    |
+            └──────────────────┘
         """
         supported_rank_methods = {"average", "min", "max", "dense", "ordinal"}
         if method not in supported_rank_methods:
@@ -4198,7 +2636,10 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
-            )
+            ),
+            is_order_dependent=True,
+            changes_length=self._changes_length,
+            aggregates=self._aggregates,
         )
 
     @property
