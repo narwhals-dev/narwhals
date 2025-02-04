@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrameT
+    from narwhals.typing import IntoFrame
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
@@ -129,7 +130,7 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
@@ -239,7 +240,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrame | IntoSeries,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
@@ -283,7 +284,7 @@ def from_native(
 
 
 def from_native(
-    native_object: IntoFrameT | IntoSeries | T,
+    native_object: IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
