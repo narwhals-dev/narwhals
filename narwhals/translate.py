@@ -675,6 +675,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_dask().__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="lazy",
         )

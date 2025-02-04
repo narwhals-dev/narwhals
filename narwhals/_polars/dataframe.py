@@ -267,6 +267,7 @@ class PolarsDataFrame:
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
                 backend_version=parse_version(dask.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 

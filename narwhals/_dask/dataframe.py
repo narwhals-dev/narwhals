@@ -11,6 +11,7 @@ import pandas as pd
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
@@ -41,12 +42,15 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
+        validate_column_names: bool,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+        if validate_column_names:
+            check_column_names_are_unique(native_dataframe.columns)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
@@ -65,12 +69,20 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame, backend_version=self._backend_version, version=version
+            self._native_frame,
+            backend_version=self._backend_version,
+            version=version,
+            validate_column_names=False,
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _from_native_frame(
+        self: Self, df: Any, *, validate_column_names: bool = True
+    ) -> Self:
         return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=validate_column_names,
         )
 
     def with_columns(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:

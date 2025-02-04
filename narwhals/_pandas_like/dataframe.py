@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
+from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
@@ -19,7 +20,6 @@ from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -63,12 +63,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
-        self._validate_columns(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+        check_column_names_are_unique(native_dataframe.columns)
 
     def __narwhals_dataframe__(self: Self) -> Self:
         return self
@@ -96,24 +96,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def __len__(self: Self) -> int:
         return len(self._native_frame)
-
-    def _validate_columns(self: Self, columns: pd.Index) -> None:
-        try:
-            len_unique_columns = len(columns.drop_duplicates())
-        except Exception:  # noqa: BLE001  # pragma: no cover
-            msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-            raise ValueError(msg) from None
-
-        if len(columns) != len_unique_columns:
-            from collections import Counter
-
-            counter = Counter(columns)
-            msg = ""
-            for key, value in counter.items():
-                if value > 1:
-                    msg += f"\n- '{key}' {value} times"
-            msg = f"Expected unique column names, got:{msg}"
-            raise DuplicateError(msg)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -790,6 +772,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 native_dataframe=dd.from_pandas(self._native_frame),
                 backend_version=parse_version(dask.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
