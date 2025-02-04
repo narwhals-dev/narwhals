@@ -1875,45 +1875,15 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrameT
             >>> data = {
             ...     "ix": [1, 1, 2, 2, 1, 2],
             ...     "col": ["a", "a", "a", "a", "b", "b"],
             ...     "foo": [0, 1, 2, 2, 7, 1],
             ...     "bar": [0, 2, 0, 0, 9, 4],
             ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_pivot(df_native: IntoDataFrameT) -> IntoDataFrameT:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.pivot(
-            ...         "col", index="ix", aggregate_function="sum"
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas or Polars
-            to `agnostic_pivot`:
-
-            >>> agnostic_pivot(df_pd)
-               ix  foo_a  foo_b  bar_a  bar_b
-            0   1      1      7      2      9
-            1   2      4      1      0      4
-            >>> agnostic_pivot(df_pl)
-            shape: (2, 5)
-            ┌─────┬───────┬───────┬───────┬───────┐
-            │ ix  ┆ foo_a ┆ foo_b ┆ bar_a ┆ bar_b │
-            │ --- ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
-            │ i64 ┆ i64   ┆ i64   ┆ i64   ┆ i64   │
-            ╞═════╪═══════╪═══════╪═══════╪═══════╡
-            │ 1   ┆ 1     ┆ 7     ┆ 2     ┆ 9     │
-            │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
-            └─────┴───────┴───────┴───────┴───────┘
+            >>> df_native = pd.DataFrame(data)
+            >>> df.pivot('col', index='ix', aggregate_function='sum')
         """
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
@@ -1944,47 +1914,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"foo": [1, 2, 3], "bar": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that converts to arrow table:
-
-            >>> def agnostic_to_arrow(df_native: IntoDataFrame) -> pa.Table:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.to_arrow()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_to_arrow`:
-
-            >>> agnostic_to_arrow(df_pd)
-            pyarrow.Table
-            foo: int64
-            bar: string
-            ----
-            foo: [[1,2,3]]
-            bar: [["a","b","c"]]
-
-            >>> agnostic_to_arrow(df_pl)
-            pyarrow.Table
-            foo: int64
-            bar: large_string
-            ----
-            foo: [[1,2,3]]
-            bar: [["a","b","c"]]
-
-            >>> agnostic_to_arrow(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: string
-            ----
-            foo: [[1,2,3]]
-            bar: [["a","b","c"]]
+            >>> df_native = pd.DataFrame({"foo": [1, None], "bar": [2, 3]})
+            >>> nw.from_native(df_native).to_arrow()
         """
         return self._compliant_frame.to_arrow()
 
@@ -2013,48 +1945,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrameT
-            >>> data = {"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_sample(df_native: IntoDataFrameT) -> IntoDataFrameT:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.sample(n=2, seed=123).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_sample`:
-
-            >>> agnostic_sample(df_pd)
-               a  b
-            3  4  y
-            0  1  x
-            >>> agnostic_sample(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ str │
-            ╞═════╪═════╡
-            │ 2   ┆ y   │
-            │ 3   ┆ x   │
-            └─────┴─────┘
-            >>> agnostic_sample(df_pa)
-            pyarrow.Table
-            a: int64
-            b: string
-            ----
-            a: [[1,3]]
-            b: [["x","x"]]
-
-            As you can see, by using the same seed, the result will be consistent within
-            the same backend, but not necessarely across different backends.
+            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [19,32,4]})
+            >>> nw.from_native(df_native).to_sample(n=2)  # doctest:+SKIP
         """
         return self._from_compliant_dataframe(
             self._compliant_frame.sample(
@@ -2096,58 +1989,14 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
             >>> data = {
             ...     "a": ["x", "y", "z"],
             ...     "b": [1, 3, 5],
             ...     "c": [2, 4, 6],
             ... }
-
-            We define a library agnostic function:
-
-            >>> def agnostic_unpivot(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.unpivot(on=["b", "c"], index="a").to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_unpivot`:
-
-            >>> agnostic_unpivot(pl.DataFrame(data))
-            shape: (6, 3)
-            ┌─────┬──────────┬───────┐
-            │ a   ┆ variable ┆ value │
-            │ --- ┆ ---      ┆ ---   │
-            │ str ┆ str      ┆ i64   │
-            ╞═════╪══════════╪═══════╡
-            │ x   ┆ b        ┆ 1     │
-            │ y   ┆ b        ┆ 3     │
-            │ z   ┆ b        ┆ 5     │
-            │ x   ┆ c        ┆ 2     │
-            │ y   ┆ c        ┆ 4     │
-            │ z   ┆ c        ┆ 6     │
-            └─────┴──────────┴───────┘
-
-            >>> agnostic_unpivot(pd.DataFrame(data))
-               a variable  value
-            0  x        b      1
-            1  y        b      3
-            2  z        b      5
-            3  x        c      2
-            4  y        c      4
-            5  z        c      6
-
-            >>> agnostic_unpivot(pa.table(data))
-            pyarrow.Table
-            a: string
-            variable: string
-            value: int64
-            ----
-            a: [["x","y","z"],["x","y","z"]]
-            variable: [["b","b","b"],["c","c","c"]]
-            value: [[1,3,5],[2,4,6]]
+            >>> df_native = pd.DataFrame(data)
+            >>> nw.from_native(df_native).unpivot(['b', 'c'], index='a')
         """
         return super().unpivot(
             on=on, index=index, variable_name=variable_name, value_name=value_name
@@ -2169,49 +2018,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "a": ["x", "y", "z", "w"],
-            ...     "lst1": [[1, 2], None, [None], []],
-            ...     "lst2": [[3, None], None, [42], []],
-            ... }
-
-            We define a library agnostic function:
-
-            >>> def agnostic_explode(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return (
-            ...         nw.from_native(df_native)
-            ...         .with_columns(nw.col("lst1", "lst2").cast(nw.List(nw.Int32())))
-            ...         .explode("lst1", "lst2")
-            ...         .to_native()
-            ...     )
-
-            We can then pass any supported library such as pandas, Polars (eager),
-            or PyArrow to `agnostic_explode`:
-
-            >>> agnostic_explode(pd.DataFrame(data))
-               a  lst1  lst2
-            0  x     1     3
-            0  x     2  <NA>
-            1  y  <NA>  <NA>
-            2  z  <NA>    42
-            3  w  <NA>  <NA>
-            >>> agnostic_explode(pl.DataFrame(data))
-            shape: (5, 3)
-            ┌─────┬──────┬──────┐
-            │ a   ┆ lst1 ┆ lst2 │
-            │ --- ┆ ---  ┆ ---  │
-            │ str ┆ i32  ┆ i32  │
-            ╞═════╪══════╪══════╡
-            │ x   ┆ 1    ┆ 3    │
-            │ x   ┆ 2    ┆ null │
-            │ y   ┆ null ┆ null │
-            │ z   ┆ null ┆ 42   │
-            │ w   ┆ null ┆ null │
-            └─────┴──────┴──────┘
+            >>> data = {'a': ['x', 'y'], 'b': [[1, 2], [3]]}
+            >>> df_native = pd.DataFrame(data).convert_dtypes(dtype_backend='pyarrow')
+            >>> nw.from_native(df_native).explode('lst1')
         """
         return super().explode(columns, *more_columns)
 
