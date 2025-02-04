@@ -487,7 +487,7 @@ def native_to_narwhals_dtype(
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
-    elif implementation in (Implementation.DASK, Implementation.CUDF):
+    elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         dtypes = import_dtypes_module(version)
