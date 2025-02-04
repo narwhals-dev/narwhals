@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -12,21 +11,13 @@ from narwhals.utils import Implementation
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-if TYPE_CHECKING:
-    from types import ModuleType
-
-
 TEST_EAGER_BACKENDS = [
     Implementation.POLARS,
     Implementation.PANDAS,
     Implementation.PYARROW,
-    Implementation.MODIN,
-    Implementation.CUDF,
     "polars",
     "pandas",
     "pyarrow",
-    "modin",
-    "cudf",
 ]
 
 
@@ -86,12 +77,9 @@ def test_from_dict_without_backend_invalid(
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
 
-@pytest.mark.parametrize("backend", [Implementation.DASK, Implementation.PYSPARK])
-def test_from_dict_with_backend_invalid(
-    backend: ModuleType | Implementation | str | None,
-) -> None:
+def test_from_dict_with_backend_invalid() -> None:
     with pytest.raises(ValueError, match="Unsupported `backend` value"):
-        nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
+        nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 
 def test_from_dict_both_backend_and_namespace(

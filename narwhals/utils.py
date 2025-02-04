@@ -189,7 +189,12 @@ class Implementation(Enum):
             import dask.dataframe  # ignore-banned-import
 
             return dask.dataframe  # type: ignore[no-any-return]
-        msg = "Not supported Implementation"
+
+        if self is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            return duckdb  # type: ignore[no-any-return]
+        msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
     def is_pandas(self: Self) -> bool:
