@@ -96,9 +96,12 @@ class Schema(BaseSchema):
         return len(self)
 
     def to_native(
-        self: Self, *, native_namespace: ModuleType, dtype_backend: str | None = None
+        self: Self,
+        *,
+        backend: ModuleType | Implementation | str,
+        dtype_backend: str | None = None,
     ) -> dict[str, Any] | pl.Schema | pa.Schema:
-        implementation = Implementation.from_native_namespace(native_namespace)
+        implementation = Implementation.from_backend(backend)
         version = Version.MAIN
         if implementation is Implementation.POLARS:
             return self.to_polars(backend=implementation, version=version)
