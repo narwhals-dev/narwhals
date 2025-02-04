@@ -472,7 +472,9 @@ class Datetime(TemporalType):
         ...     .astype("datetime64[ms, Africa/Accra]")
         ... )
         >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ...     pl.Series(data)
+        ...     .cast(pl.Datetime("ms"))
+        ...     .dt.replace_time_zone("Africa/Accra")
         ... )
         >>> ser_pa = pc.assume_timezone(
         ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"

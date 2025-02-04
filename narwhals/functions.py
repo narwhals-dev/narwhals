@@ -357,7 +357,7 @@ def _new_series_impl(
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:  # pragma: no cover
-        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
@@ -407,7 +407,9 @@ def from_dict(
         >>> def agnostic_from_dict(df_native: IntoFrameT) -> IntoFrameT:
         ...     new_data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df_native)
-        ...     return nw.from_dict(new_data, native_namespace=native_namespace).to_native()
+        ...     return nw.from_dict(
+        ...         new_data, native_namespace=native_namespace
+        ...     ).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
@@ -584,7 +586,9 @@ def from_numpy(
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
         ...     df = nw.from_native(df_native)
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace
+        ...     ).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
@@ -1030,7 +1034,9 @@ def read_csv(
         Let's create an agnostic function that reads a csv file with a specified native namespace:
 
         >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
-        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.read_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing pandas, Polars or PyArrow namespaces:
 
@@ -1116,7 +1122,9 @@ def scan_csv(
         Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
 
         >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.scan_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing, for example, Polars or Dask namespaces:
 

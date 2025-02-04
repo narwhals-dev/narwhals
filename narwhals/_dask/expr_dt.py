@@ -110,7 +110,7 @@ class DaskExprDateTimeNamespace:
 
     def to_string(self: Self, format: str) -> DaskExpr:  # noqa: A002
         return self._compliant_expr._from_call(
-            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),
+            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),  # noqa: A006
             "strftime",
             format=format,
             returns_scalar=self._compliant_expr._returns_scalar,

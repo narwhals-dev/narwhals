@@ -14,6 +14,7 @@ from typing import TypeVar
 import pandas as pd
 
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
@@ -890,3 +891,22 @@ def pivot_table(
             observed=True,
         )
     return result
+
+
+def check_column_names_are_unique(columns: pd.Index) -> None:
+    try:
+        len_unique_columns = len(columns.drop_duplicates())
+    except Exception:  # noqa: BLE001  # pragma: no cover
+        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
+        raise ValueError(msg) from None
+
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        msg = ""
+        for key, value in counter.items():
+            if value > 1:
+                msg += f"\n- '{key}' {value} times"
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)

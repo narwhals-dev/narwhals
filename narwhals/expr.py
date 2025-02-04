@@ -1437,7 +1437,9 @@ class Expr:
             ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan())
+            >>> df.with_columns(
+            ...     a_is_nan=nw.col("a").is_nan(), b_is_nan=nw.col("b").is_nan()
+            ... )
             ┌────────────────────────────────────────┐
             |           Narwhals LazyFrame           |
             |----------------------------------------|
@@ -1507,7 +1509,9 @@ class Expr:
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled"))
+            >>> df.with_columns(
+            ...     nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled")
+            ... )
             ┌────────────────────────────────────────────────┐
             |               Narwhals DataFrame               |
             |------------------------------------------------|
@@ -1771,7 +1775,9 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 2, None, 1], "b": ["a", None, "b", None]})
+            >>> df_native = pd.DataFrame(
+            ...     {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
+            ... )
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.all().null_count())
             ┌──────────────────┐
@@ -1830,7 +1836,9 @@ class Expr:
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.all().is_last_distinct().name.suffix("_is_last_distinct"))
+            >>> df.with_columns(
+            ...     nw.all().is_last_distinct().name.suffix("_is_last_distinct")
+            ... )
             ┌───────────────────────────────────────────────┐
             |              Narwhals DataFrame               |
             |-----------------------------------------------|
@@ -1872,7 +1880,9 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": list(range(50)), "b": list(range(50, 100))})
+            >>> df_native = pd.DataFrame(
+            ...     {"a": list(range(50)), "b": list(range(50, 100))}
+            ... )
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a", "b").quantile(0.5, interpolation="linear"))
             ┌──────────────────┐
