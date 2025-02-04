@@ -449,12 +449,7 @@ def from_dict(
     backend = validate_native_namespace_and_backend(
         backend, native_namespace, emit_deprecation_warning=True
     )
-    return _from_dict_impl(
-        data,
-        schema,
-        backend=backend,
-        version=Version.MAIN,
-    )
+    return _from_dict_impl(data, schema, backend=backend)
 
 
 def _from_dict_impl(
@@ -462,7 +457,6 @@ def _from_dict_impl(
     schema: dict[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    version: Version,  # noqa: ARG001
 ) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native

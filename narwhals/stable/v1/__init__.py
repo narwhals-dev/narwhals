@@ -2202,12 +2202,7 @@ def from_dict(
         backend, native_namespace, emit_deprecation_warning=False
     )
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(
-            data,
-            schema,
-            backend=backend,
-            version=Version.V1,
-        )
+        _from_dict_impl(data, schema, backend=backend)
     )
 
 
