@@ -454,7 +454,7 @@ def from_dict(
         )
         issue_deprecation_warning(msg, _version="1.26.0")
         backend = native_namespace
-    elif backend is not None:
+    elif native_namespace is not None and backend is not None:
         msg = "Can't pass both `native_namespace` and `backend`"
         raise ValueError(msg)
     return _from_dict_impl(

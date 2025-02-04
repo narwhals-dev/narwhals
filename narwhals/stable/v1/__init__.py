@@ -2198,7 +2198,7 @@ def from_dict(
     """
     if native_namespace is not None and backend is None:
         backend = native_namespace
-    elif backend is not None:
+    elif native_namespace is not None and backend is not None:
         msg = "Can't pass both `native_namespace` and `backend`"
         raise ValueError(msg)
     return _stableify(  # type: ignore[no-any-return]
