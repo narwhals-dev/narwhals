@@ -457,12 +457,12 @@ def from_dict(
     )
 
 
-def _from_dict_impl(  # noqa: PLR0915
+def _from_dict_impl(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    version: Version,
+    version: Version,  # noqa: ARG001
 ) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
@@ -523,22 +523,14 @@ def _from_dict_impl(  # noqa: PLR0915
 
         if schema:
             from narwhals._pandas_like.utils import get_dtype_backend
-            from narwhals._pandas_like.utils import (
-                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
-            )
 
-            backend_version = parse_version(native_namespace.__version__)
-            schema = {
-                name: pandas_like_narwhals_to_native_dtype(
-                    dtype=schema[name],
-                    dtype_backend=get_dtype_backend(native_type, eager_backend),
-                    implementation=eager_backend,
-                    backend_version=backend_version,
-                    version=version,
+            pd_schema = Schema(schema).to_pandas(
+                dtype_backend=(
+                    get_dtype_backend(native_type, eager_backend)
+                    for native_type in native_frame.dtypes
                 )
-                for name, native_type in native_frame.dtypes.items()
-            }
-            native_frame = native_frame.astype(schema)
+            )
+            native_frame = native_frame.astype(pd_schema)
 
     elif eager_backend is Implementation.PYARROW:
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema

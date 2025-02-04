@@ -7,6 +7,7 @@ https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py.
 from __future__ import annotations
 
 from collections import OrderedDict
+from functools import partial
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Mapping
@@ -107,23 +108,29 @@ class Schema(BaseSchema):
             for name, dtype in self.items()
         )
 
-    def to_pandas(self: Self, *, dtype_backend: str | None = None) -> dict[str, Any]:
+    def to_pandas(
+        self: Self, *, dtype_backend: str | Iterable[str] | None = None
+    ) -> dict[str, Any]:
         import pandas as pd
 
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
 
-        backend_version = parse_version(pd.__version__)
-        implementation = Implementation.from_native_namespace(pd)
-        return {
-            name: narwhals_to_native_dtype(
-                dtype=dtype,
-                dtype_backend=dtype_backend,
-                implementation=implementation,
-                backend_version=backend_version,
-                version=self._version,
-            )
-            for name, dtype in self.items()
-        }
+        to_native = partial(
+            narwhals_to_native_dtype,
+            implementation=Implementation.from_native_namespace(pd),
+            backend_version=parse_version(pd.__version__),
+            version=self._version,
+        )
+        if dtype_backend is None or isinstance(dtype_backend, str):
+            return {
+                name: to_native(dtype=dtype, dtype_backend=dtype_backend)
+                for name, dtype in self.items()
+            }
+        else:
+            return {
+                name: to_native(dtype=dtype, dtype_backend=backend)
+                for name, dtype, backend in zip(self.keys(), self.values(), dtype_backend)
+            }
 
     def to_polars(self: Self) -> pl.Schema:
         import polars as pl
