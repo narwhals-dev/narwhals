@@ -475,6 +475,7 @@ class PolarsLazyFrame:
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.PYARROW:

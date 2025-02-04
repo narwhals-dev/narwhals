@@ -127,6 +127,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         elif backend is None or backend is Implementation.PYARROW:

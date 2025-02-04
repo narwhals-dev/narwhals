@@ -514,6 +514,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -552,6 +553,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -590,6 +592,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )

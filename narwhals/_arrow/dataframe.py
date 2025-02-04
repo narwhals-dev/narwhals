@@ -305,16 +305,20 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.schema.names  # type: ignore[no-any-return]
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(list(column_names)))
+        return self._from_native_frame(
+            self._native_frame.select(list(column_names)), validate_column_names=False
+        )
 
     def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
         new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
+            return self._from_native_frame(
+                self._native_frame.__class__.from_arrays([]), validate_column_names=False
+            )
         names = [s.name for s in new_series]
         df = pa.Table.from_arrays(broadcast_series(new_series), names=names)
-        return self._from_native_frame(df)
+        return self._from_native_frame(df, validate_column_names=False)
 
     def with_columns(
         self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr
@@ -340,7 +344,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 else native_frame.append_column(field_=col_name, column=column)
             )
 
-        return self._from_native_frame(native_frame)
+        return self._from_native_frame(native_frame, validate_column_names=False)
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
@@ -409,13 +413,19 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(self._native_frame.drop(to_drop))
+        return self._from_native_frame(
+            self._native_frame.drop(to_drop), validate_column_names=False
+        )
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
-            return self._from_native_frame(self._native_frame.drop_null())
+            return self._from_native_frame(
+                self._native_frame.drop_null(), validate_column_names=False
+            )
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        return self.filter(
+            ~plx.any_horizontal(plx.col(*subset).is_null()), validate_column_names=False
+        )
 
     def sort(
         self: Self,
@@ -436,7 +446,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         null_placement = "at_end" if nulls_last else "at_start"
 
-        return self._from_native_frame(df.sort_by(sorting, null_placement=null_placement))
+        return self._from_native_frame(
+            df.sort_by(sorting, null_placement=null_placement),
+            validate_column_names=False,
+        )
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
@@ -507,7 +520,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             mask_native = broadcast_and_extract_dataframe_comparand(
                 length=len(self), other=mask, backend_version=self._backend_version
             )
-        return self._from_native_frame(self._native_frame.filter(mask_native))
+        return self._from_native_frame(
+            self._native_frame.filter(mask_native), validate_column_names=False
+        )
 
     def null_count(self: Self) -> Self:
         df = self._native_frame
@@ -520,18 +535,22 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def head(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
-            return self._from_native_frame(df.slice(0, n))
+            return self._from_native_frame(df.slice(0, n), validate_column_names=False)
         else:
             num_rows = df.num_rows
-            return self._from_native_frame(df.slice(0, max(0, num_rows + n)))
+            return self._from_native_frame(
+                df.slice(0, max(0, num_rows + n)), validate_column_names=False
+            )
 
     def tail(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
             num_rows = df.num_rows
-            return self._from_native_frame(df.slice(max(0, num_rows - n)))
+            return self._from_native_frame(
+                df.slice(max(0, num_rows - n)), validate_column_names=False
+            )
         else:
-            return self._from_native_frame(df.slice(abs(n)))
+            return self._from_native_frame(df.slice(abs(n)), validate_column_names=False)
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
@@ -599,6 +618,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.POLARS:
@@ -745,13 +765,17 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 .column(f"{col_token}_{agg_func}")
             )
 
-            return self._from_native_frame(pc.take(df, keep_idx))
+            return self._from_native_frame(
+                pc.take(df, keep_idx), validate_column_names=False
+            )
 
         keep_idx = self.simple_select(*subset).is_unique()
-        return self.filter(keep_idx)
+        return self.filter(keep_idx, validate_column_names=False)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        return self._from_native_frame(self._native_frame[offset::n])
+        return self._from_native_frame(
+            self._native_frame[offset::n], validate_column_names=False
+        )
 
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame
@@ -775,7 +799,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
-        return self._from_native_frame(pc.take(frame, mask))
+        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)
 
     def unpivot(
         self: Self,
