@@ -32,6 +32,7 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -387,11 +388,7 @@ def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
 
 
 def flatten(args: Any) -> list[Any]:
-    if not args:
-        return []
-    if len(args) == 1 and _is_iterable(args[0]):
-        return args[0]  # type: ignore[no-any-return]
-    return args  # type: ignore[no-any-return]
+    return list(args[0] if (len(args) == 1 and _is_iterable(args[0])) else args)
 
 
 def tupleify(arg: Any) -> Any:
@@ -777,7 +774,9 @@ def maybe_convert_dtypes(
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
+        >>> nw.to_native(
+        ...     nw.maybe_convert_dtypes(df)
+        ... ).dtypes  # doctest: +NORMALIZE_WHITESPACE
         a             Int32
         b           boolean
         dtype: object
@@ -1089,23 +1088,21 @@ def generate_repr(header: str, native_repr: str) -> str:
 
     if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
-        output = f"┌{'─'*length}┐\n"
+        output = f"┌{'─' * length}┐\n"
         header_extra = length - len(header)
-        output += (
-            f"|{' '*(header_extra//2)}{header}{' '*(header_extra//2 + header_extra%2)}|\n"
-        )
-        output += f"|{'-'*(length)}|\n"
+        output += f"|{' ' * (header_extra // 2)}{header}{' ' * (header_extra // 2 + header_extra % 2)}|\n"
+        output += f"|{'-' * (length)}|\n"
         start_extra = (length - max_native_width) // 2
         end_extra = (length - max_native_width) // 2 + (length - max_native_width) % 2
         for line in native_lines:
-            output += f"|{' '*(start_extra)}{line}{' '*(end_extra + max_native_width - len(line))}|\n"
+            output += f"|{' ' * (start_extra)}{line}{' ' * (end_extra + max_native_width - len(line))}|\n"
         output += f"└{'─' * length}┘"
         return output
 
     diff = 39 - len(header)
     return (
         f"┌{'─' * (39)}┐\n"
-        f"|{' '*(diff//2)}{header}{' '*(diff//2+diff%2)}|\n"
+        f"|{' ' * (diff // 2)}{header}{' ' * (diff // 2 + diff % 2)}|\n"
         "| Use `.to_native` to see native output |\n└"
         f"{'─' * 39}┘"
     )
@@ -1115,3 +1112,15 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
+
+
+def check_column_names_are_unique(columns: list[str]) -> None:
+    len_unique_columns = len(set(columns))
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        duplicates = {k: v for k, v in counter.items() if v > 1}
+        msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)

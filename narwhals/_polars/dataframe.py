@@ -255,6 +255,7 @@ class PolarsDataFrame:
                 df=duckdb.table("df"),
                 backend_version=parse_version(duckdb.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         elif backend is Implementation.DASK:
             import dask  # ignore-banned-import
@@ -266,6 +267,7 @@ class PolarsDataFrame:
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
                 backend_version=parse_version(dask.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -473,6 +475,7 @@ class PolarsLazyFrame:
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.PYARROW:
@@ -484,6 +487,7 @@ class PolarsLazyFrame:
                 result.to_arrow(),
                 backend_version=parse_version(pa.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
