@@ -423,9 +423,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 self._native_frame.drop_null(), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
-        return self.filter(
-            ~plx.any_horizontal(plx.col(*subset).is_null()), validate_column_names=False
-        )
+        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def sort(
         self: Self,
@@ -770,7 +768,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
         keep_idx = self.simple_select(*subset).is_unique()
-        return self.filter(keep_idx, validate_column_names=False)
+        return self.filter(keep_idx)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(
