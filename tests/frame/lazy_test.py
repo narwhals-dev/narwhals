@@ -56,12 +56,9 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_lazy_backend(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     backend: Implementation | str,
 ) -> None:
-    if "modin" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
     if (backend is Implementation.DASK) or backend == "dask":
         pytest.importorskip("dask")
     if (backend is Implementation.DUCKDB) or backend == "duckdb":
