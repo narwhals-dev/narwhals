@@ -19,6 +19,7 @@ from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -1011,8 +1012,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             }
         else:
             uniques = {col: self._native_frame[col].unique().tolist() for col in on}
-        all_lists = [values, *list(uniques.values())]
-        ordered_cols = list(product(*all_lists))
+        ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
 
@@ -1071,18 +1071,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
         )
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        from narwhals.exceptions import InvalidOperationError
-
+    def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
-        to_explode = (
-            [columns, *more_columns]
-            if isinstance(columns, str)
-            else [*columns, *more_columns]
-        )
         schema = self.collect_schema()
-        for col_to_explode in to_explode:
+        for col_to_explode in columns:
             dtype = schema[col_to_explode]
 
             if dtype != dtypes.List:
@@ -1092,15 +1085,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
                 raise InvalidOperationError(msg)
 
-        if len(to_explode) == 1:
-            return self._from_native_frame(self._native_frame.explode(to_explode[0]))
+        if len(columns) == 1:
+            return self._from_native_frame(self._native_frame.explode(columns[0]))
         else:
             native_frame = self._native_frame
-            anchor_series = native_frame[to_explode[0]].list.len()
+            anchor_series = native_frame[columns[0]].list.len()
 
             if not all(
                 (native_frame[col_name].list.len() == anchor_series).all()
-                for col_name in to_explode[1:]
+                for col_name in columns[1:]
             ):
                 from narwhals.exceptions import ShapeError
 
@@ -1108,13 +1101,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 raise ShapeError(msg)
 
             original_columns = self.columns
-            other_columns = [c for c in original_columns if c not in to_explode]
+            other_columns = [c for c in original_columns if c not in columns]
 
-            exploded_frame = native_frame[[*other_columns, to_explode[0]]].explode(
-                to_explode[0]
+            exploded_frame = native_frame[[*other_columns, columns[0]]].explode(
+                columns[0]
             )
             exploded_series = [
-                native_frame[col_name].explode().to_frame() for col_name in to_explode[1:]
+                native_frame[col_name].explode().to_frame() for col_name in columns[1:]
             ]
 
             plx = self.__native_namespace__()

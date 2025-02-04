@@ -8,16 +8,20 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
+from duckdb import ConstantExpression
+from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -198,14 +202,13 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             )
             raise NotImplementedError(msg)
 
-        result = []
-        for col in self._native_frame.columns:
-            if col in new_columns_map:
-                result.append(new_columns_map.pop(col).alias(col))
-            else:
-                result.append(ColumnExpression(col))
-        for col, value in new_columns_map.items():
-            result.append(value.alias(col))
+        result = [
+            new_columns_map.pop(col).alias(col)
+            if col in new_columns_map
+            else ColumnExpression(col)
+            for col in self._native_frame.columns
+        ]
+        result.extend(value.alias(col) for col, value in new_columns_map.items())
         return self._from_native_frame(self._native_frame.select(*result))
 
     def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
@@ -349,10 +352,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         select = ["lhs.*"]
         for col in rhs.columns:
             if col in lhs.columns and (
-                right_on is None or col not in [right_on, *by_right]
+                right_on is None or col not in (right_on, *by_right)
             ):
                 select.append(f'rhs."{col}" as "{col}{suffix}"')
-            elif right_on is None or col not in [right_on, *by_right]:
+            elif right_on is None or col not in (right_on, *by_right):
                 select.append(col)
         query = f"""
             SELECT {",".join(select)}
@@ -427,6 +430,51 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         query = f"select * from rel where {keep_condition}"  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
 
+    def explode(self: Self, columns: list[str]) -> Self:
+        dtypes = import_dtypes_module(self._version)
+        schema = self.collect_schema()
+        for col in columns:
+            dtype = schema[col]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        if len(columns) != 1:
+            msg = (
+                "Exploding on multiple columns is not supported with DuckDB backend since "
+                "we cannot guarantee that the exploded columns have matching element counts."
+            )
+            raise NotImplementedError(msg)
+
+        col_to_explode = ColumnExpression(columns[0])
+        rel = self._native_frame
+        original_columns = self.columns
+
+        not_null_condition = (
+            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
+        )
+        non_null_rel = rel.filter(not_null_condition).select(
+            *(
+                FunctionExpression("unnest", col_to_explode).alias(col)
+                if col in columns
+                else col
+                for col in original_columns
+            )
+        )
+
+        null_rel = rel.filter(~not_null_condition).select(
+            *(
+                ConstantExpression(None).alias(col) if col in columns else col
+                for col in original_columns
+            )
+        )
+
+        return self._from_native_frame(non_null_rel.union(null_rel))
+
     def unpivot(
         self: Self,
         on: str | list[str] | None,
@@ -454,7 +502,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise NotImplementedError(msg)
 
         cols_to_select = ", ".join(
-            f'"{col}"' for col in [*index_, variable_name, value_name]
+            f'"{col}"' for col in (*index_, variable_name, value_name)
         )
         unpivot_on = ", ".join(f'"{col}"' for col in on_)
 

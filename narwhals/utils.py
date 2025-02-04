@@ -433,7 +433,7 @@ def parse_version(version: str) -> tuple[int, ...]:
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
     # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
     version = re.sub(r"(\D?dev.*$)", "", version)
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version.split("."))
+    return tuple(int(re.sub(r"\D", "", v)) for v in version.split("."))
 
 
 def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:
@@ -777,7 +777,9 @@ def maybe_convert_dtypes(
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
+        >>> nw.to_native(
+        ...     nw.maybe_convert_dtypes(df)
+        ... ).dtypes  # doctest: +NORMALIZE_WHITESPACE
         a             Int32
         b           boolean
         dtype: object
@@ -1089,23 +1091,21 @@ def generate_repr(header: str, native_repr: str) -> str:
 
     if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
-        output = f"┌{'─'*length}┐\n"
+        output = f"┌{'─' * length}┐\n"
         header_extra = length - len(header)
-        output += (
-            f"|{' '*(header_extra//2)}{header}{' '*(header_extra//2 + header_extra%2)}|\n"
-        )
-        output += f"|{'-'*(length)}|\n"
+        output += f"|{' ' * (header_extra // 2)}{header}{' ' * (header_extra // 2 + header_extra % 2)}|\n"
+        output += f"|{'-' * (length)}|\n"
         start_extra = (length - max_native_width) // 2
         end_extra = (length - max_native_width) // 2 + (length - max_native_width) % 2
         for line in native_lines:
-            output += f"|{' '*(start_extra)}{line}{' '*(end_extra + max_native_width - len(line))}|\n"
+            output += f"|{' ' * (start_extra)}{line}{' ' * (end_extra + max_native_width - len(line))}|\n"
         output += f"└{'─' * length}┘"
         return output
 
     diff = 39 - len(header)
     return (
         f"┌{'─' * (39)}┐\n"
-        f"|{' '*(diff//2)}{header}{' '*(diff//2+diff%2)}|\n"
+        f"|{' ' * (diff // 2)}{header}{' ' * (diff // 2 + diff % 2)}|\n"
         "| Use `.to_native` to see native output |\n└"
         f"{'─' * 39}┘"
     )

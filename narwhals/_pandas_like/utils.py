@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
+from contextlib import suppress
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -486,30 +487,25 @@ def native_to_narwhals_dtype(
                 map_interchange_dtype_to_narwhals_dtype,
             )
 
-            try:
+            with suppress(Exception):
                 return map_interchange_dtype_to_narwhals_dtype(
                     df.__dataframe__().get_column(0).dtype, version
                 )
-            except Exception:  # noqa: BLE001, S110
-                pass
         # The most useful assumption is probably String
         return dtypes.String()
     return dtypes.Unknown()  # pragma: no cover
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
-    if implementation in [Implementation.PANDAS, Implementation.MODIN]:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
         import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
-        try:
+        with suppress(AttributeError):
             if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
                 return "pandas-nullable"
-        except AttributeError:  # pragma: no cover
-            # defensive check for old pandas versions
-            pass
         return "numpy"
     else:  # pragma: no cover
         return "numpy"
