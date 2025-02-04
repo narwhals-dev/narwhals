@@ -412,11 +412,7 @@ def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
 
 
 def flatten(args: Any) -> list[Any]:
-    if not args:
-        return []
-    if len(args) == 1 and _is_iterable(args[0]):
-        return args[0]  # type: ignore[no-any-return]
-    return args  # type: ignore[no-any-return]
+    return list(args[0] if (len(args) == 1 and _is_iterable(args[0])) else args)
 
 
 def tupleify(arg: Any) -> Any:
