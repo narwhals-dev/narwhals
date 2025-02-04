@@ -208,9 +208,7 @@ class PandasLikeSeries(CompliantSeries):
         return (
             native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
             if native_dtype != "object"
-            else object_native_to_narwhals_dtype(
-                self._native_series, self._version, self._implementation
-            )
+            else object_native_to_narwhals_dtype(self._native_series, self._version)
         )
 
     def ewm_mean(

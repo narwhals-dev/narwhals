@@ -11,6 +11,8 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
+import pandas as pd
+
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -26,7 +28,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
-    import pandas as pd
 
 
 PANDAS_LIKE_IMPLEMENTATION = {
@@ -448,17 +449,8 @@ def non_object_native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def object_native_to_narwhals_dtype(
-    series: PandasLikeSeries, version: Version, implementation: Implementation
-) -> DType:
+def object_native_to_narwhals_dtype(series: PandasLikeSeries, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
-
-    if implementation in (Implementation.DASK, Implementation.CUDF):
-        # These libraries don't support arbitrary objects, so if they report the dtype
-        # as being object, it's definitely string.
-        return dtypes.String()
-
-    import pandas as pd
 
     # Arbitrary limit of 100 elements to use to sniff dtype.
     inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)

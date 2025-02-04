@@ -342,9 +342,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 native_dtypes[col], self._version, self._implementation
             )
             if native_dtypes[col] != "object"
-            else object_native_to_narwhals_dtype(
-                self._native_frame[col], self._version, self._implementation
-            )
+            else object_native_to_narwhals_dtype(self._native_frame[col], self._version)
             for col in self._native_frame.columns
         }
 
