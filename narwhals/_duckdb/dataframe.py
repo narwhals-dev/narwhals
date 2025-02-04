@@ -132,10 +132,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.limit(n))
+        return self._from_native_frame(
+            self._native_frame.limit(n), validate_column_names=False
+        )
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(*column_names))
+        return self._from_native_frame(
+            self._native_frame.select(*column_names), validate_column_names=False
+        )
 
     def select(
         self: Self,
@@ -145,7 +149,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
-            return self._from_native_frame(self._native_frame.limit(0))
+            return self._from_native_frame(
+                self._native_frame.limit(0), validate_column_names=False
+            )
 
         if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs) and not any(
             expr._expr_kind is ExprKind.TRANSFORM for expr in named_exprs.values()
@@ -153,7 +159,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(
                 self._native_frame.aggregate(
                     [val.alias(col) for col, val in new_columns_map.items()]
-                )
+                ),
+                validate_column_names=False,
             )
         if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
             expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
@@ -169,7 +176,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(
             self._native_frame.select(
                 *(val.alias(col) for col, val in new_columns_map.items())
-            )
+            ),
+            validate_column_names=False,
         )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -177,7 +185,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             compliant_frame=self, columns=columns, strict=strict
         )
         selection = (col for col in self.columns if col not in columns_to_drop)
-        return self._from_native_frame(self._native_frame.select(*selection))
+        return self._from_native_frame(
+            self._native_frame.select(*selection), validate_column_names=False
+        )
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
@@ -214,7 +224,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             for col in self._native_frame.columns
         ]
         result.extend(value.alias(col) for col, value in new_columns_map.items())
-        return self._from_native_frame(self._native_frame.select(*result))
+        return self._from_native_frame(
+            self._native_frame.select(*result), validate_column_names=False
+        )
 
     def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
         plx = self.__narwhals_namespace__()
@@ -223,7 +235,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         )
         # `[0]` is safe as all_horizontal's expression only returns a single column
         mask = expr._call(self)[0]
-        return self._from_native_frame(self._native_frame.filter(mask))
+        return self._from_native_frame(
+            self._native_frame.filter(mask), validate_column_names=False
+        )
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -411,8 +425,11 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
                 """  # noqa: S608
-            return self._from_native_frame(duckdb.sql(query))
-        return self._from_native_frame(self._native_frame.unique(", ".join(self.columns)))
+            return self._from_native_frame(duckdb.sql(query), validate_column_names=False)
+        return self._from_native_frame(
+            self._native_frame.unique(", ".join(self.columns)),
+            validate_column_names=False,
+        )
 
     def sort(
         self: Self,
@@ -434,14 +451,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 )
             )
         )
-        return self._from_native_frame(result)
+        return self._from_native_frame(result, validate_column_names=False)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._from_native_frame(duckdb.sql(query), validate_column_names=False)
 
     def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
@@ -486,7 +503,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             )
         )
 
-        return self._from_native_frame(non_null_rel.union(null_rel))
+        return self._from_native_frame(
+            non_null_rel.union(null_rel), validate_column_names=False
+        )
 
     def unpivot(
         self: Self,
