@@ -11,6 +11,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
@@ -292,3 +293,14 @@ def test_nested_dtypes_dask() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
+
+
+def test_all_nulls_pandas() -> None:
+    assert (
+        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw_main.String
+    )
+    assert (
+        nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw.Object
+    )

@@ -485,7 +485,9 @@ def native_to_narwhals_dtype(
         # Per conversations
         dtypes = import_dtypes_module(version)
         return dtypes.String()
-    msg = "Unreachable code, object dtype should be handled separately"
+    msg = (
+        "Unreachable code, object dtype should be handled separately"  # pragma: no cover
+    )
     raise AssertionError(msg)
 
 
