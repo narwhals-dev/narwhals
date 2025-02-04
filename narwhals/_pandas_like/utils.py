@@ -843,7 +843,7 @@ def select_columns_by_name(
             )
         return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
     try:
-        return df[list(column_names)]  # type: ignore[no-any-return, index]
+        return df[column_names]  # type: ignore[no-any-return, index]
     except KeyError as e:
         available_columns = df.columns.tolist()  # type: ignore[attr-defined]
         missing_columns = [x for x in column_names if x not in available_columns]
