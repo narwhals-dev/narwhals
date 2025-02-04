@@ -2239,21 +2239,8 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Examples:
             >>> import narwhals as nw
-            >>> import polars as pl
             >>> import dask.dataframe as dd
-            >>> lf_pl = pl.LazyFrame({"a": [1, 2, 3]})
-            >>> lf_dask = dd.from_dict({"a": [1, 2, 3]}, npartitions=2)
-
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf.implementation
-            <Implementation.POLARS: 6>
-            >>> lf.implementation.is_pandas()
-            False
-            >>> lf.implementation.is_polars()
-            True
-
-            >>> lf = nw.from_native(lf_dask)
-            >>> lf.implementation
+            >>> nw.from_native(lf_dask).implementation
             <Implementation.DASK: 7>
             >>> lf.implementation.is_dask()
             True
@@ -2301,117 +2288,20 @@ class LazyFrame(BaseFrame[FrameT]):
             DataFrame
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame, IntoFrame
-            >>>
-            >>> data = {
-            ...     "a": ["a", "b", "a", "b", "b", "c"],
-            ...     "b": [1, 2, 3, 4, 5, 6],
-            ...     "c": [6, 5, 4, 3, 2, 1],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            >>> nw.from_native(lf_pl)  # doctest:+ELLIPSIS
-            ┌─────────────────────────────┐
-            |     Narwhals LazyFrame      |
-            |-----------------------------|
-            |<LazyFrame at ...
-            └─────────────────────────────┘
-
-            >>> nw.from_native(lf_dask)
-            ┌───────────────────────────────────┐
-            |        Narwhals LazyFrame         |
-            |-----------------------------------|
-            |Dask DataFrame Structure:          |
-            |                    a      b      c|
-            |npartitions=2                      |
-            |0              string  int64  int64|
-            |3                 ...    ...    ...|
-            |5                 ...    ...    ...|
-            |Dask Name: frompandas, 1 expression|
-            |Expr=df                            |
-            └───────────────────────────────────┘
-
-            Let's define a dataframe-agnostic that does some grouping computation and
-            finally collects to a DataFrame:
-
-            >>> def agnostic_group_by_and_collect(lf_native: IntoFrame) -> IntoDataFrame:
-            ...     lf = nw.from_native(lf_native)
-            ...     return (
-            ...         lf.group_by("a")
-            ...         .agg(nw.col("b", "c").sum())
-            ...         .sort("a")
-            ...         .collect()
-            ...         .to_native()
-            ...     )
-
-            We can then pass any supported library such as Polars or Dask
-            to `agnostic_group_by_and_collect`:
-
-            >>> agnostic_group_by_and_collect(lf_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
-            │ --- ┆ --- ┆ --- │
-            │ str ┆ i64 ┆ i64 │
-            ╞═════╪═════╪═════╡
-            │ a   ┆ 4   ┆ 10  │
-            │ b   ┆ 11  ┆ 10  │
-            │ c   ┆ 6   ┆ 1   │
-            └─────┴─────┴─────┘
-
-            >>> agnostic_group_by_and_collect(lf_dask)
-               a   b   c
-            0  a   4  10
-            1  b  11  10
-            2  c   6   1
-
-            Now, let's suppose that we want to run lazily, yet without
-            query optimization (e.g. for debugging purpose) _and_ collect to pyarrow.
-            As this is achieved differently in polars and dask, to keep a unified workflow
-            we can specify the native kwargs for each lazy backend, and specify
-            backend="pyarrow" in order to collect to pyarrow instead of their default.
-
-            >>> collect_kwargs = {
-            ...     nw.Implementation.POLARS: {"no_optimization": True},
-            ...     nw.Implementation.DASK: {"optimize_graph": False},
-            ...     nw.Implementation.PYARROW: {},
-            ... }
-
-            >>> def agnostic_collect_no_opt(lf_native: IntoFrame) -> IntoDataFrame:
-            ...     lf = nw.from_native(lf_native)
-            ...     return (
-            ...         lf.group_by("a")
-            ...         .agg(nw.col("b", "c").sum())
-            ...         .sort("a")
-            ...         .collect(
-            ...             backend="pyarrow", **collect_kwargs.get(lf.implementation, {})
-            ...         )
-            ...         .to_native()
-            ...     )
-
-            >>> agnostic_collect_no_opt(lf_pl)
-            pyarrow.Table
-            a: large_string
-            b: int64
-            c: int64
-            ----
-            a: [["a","b","c"]]
-            b: [[4,11,6]]
-            c: [[10,10,1]]
-
-            >>> agnostic_collect_no_opt(lf_dask)
-            pyarrow.Table
-            a: large_string
-            b: int64
-            c: int64
-            ----
-            a: [["a","b","c"]]
-            b: [[4,11,6]]
-            c: [[10,10,1]]
+            >>> lf_native = duckdb.sql('select * from (values (1, 2), (3, 4)) df(a, b)')
+            >>> lf = nw.from_native(df_native)
+            >>> lf.collect()
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 2   │
+            │ 3   ┆ 4   │
+            └─────┴─────┘
         """
         eager_backend = None if backend is None else Implementation.from_backend(backend)
         supported_eager_backends = (
@@ -2434,32 +2324,10 @@ class LazyFrame(BaseFrame[FrameT]):
             Object of class that user started with.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>>
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Calling `to_native` on a Narwhals LazyFrame returns the native object:
-
-            >>> nw.from_native(lf_pl).to_native().collect()
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6.0 ┆ a   │
-            │ 2   ┆ 7.0 ┆ b   │
-            │ 3   ┆ 8.0 ┆ c   │
-            └─────┴─────┴─────┘
-            >>> nw.from_native(lf_dask).to_native().compute()
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
+            >>> lf_native = duckdb.sql('select * from (values (1, 2), (3, 4)) df(a, b)')
+            >>> nw.from_native(df_native).to_native()
         """
         return to_native(narwhals_object=self, pass_through=False)
 
@@ -2481,39 +2349,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The original object with the function applied.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3], "ba": [4, 5, 6]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_pipe(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.pipe(lambda _df: _df.select("a")).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_pipe`:
-
-            >>> agnostic_pipe(lf_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
-            >>> agnostic_pipe(lf_dask)
-               a
-            0  1
-            1  2
-            2  3
+            >>> lf_native = duckdb.sql('select * from (values (1, 2), (3, 4)) df(a, b)')
+            >>> nw.from_native(lf_native).pipe(lambda x: x.select('a'))
         """
         return super().pipe(function, *args, **kwargs)
 
@@ -2533,35 +2372,10 @@ class LazyFrame(BaseFrame[FrameT]):
             for reference.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_drop_nulls(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.drop_nulls().collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_drop_nulls`:
-
-            >>> agnostic_drop_nulls(lf_pl)
-            shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ ba  │
-            │ --- ┆ --- │
-            │ f64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 1.0 ┆ 1.0 │
-            └─────┴─────┘
-            >>> agnostic_drop_nulls(lf_dask)
-                 a   ba
-            0  1.0  1.0
+            >>> lf_native = duckdb.sql('select * from (values (1, null), (3, 4)) df(a, b)')
+            >>> nw.from_native(lf_native).drop_nulls()
         """
         return super().drop_nulls(subset=subset)
 
@@ -2575,39 +2389,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The original object with the column added.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import dask
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_with_row_index(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.with_row_index().collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_with_row_index`:
-
-            >>> agnostic_with_row_index(lf_pl)
-            shape: (3, 3)
-            ┌───────┬─────┬─────┐
-            │ index ┆ a   ┆ b   │
-            │ ---   ┆ --- ┆ --- │
-            │ u32   ┆ i64 ┆ i64 │
-            ╞═══════╪═════╪═════╡
-            │ 0     ┆ 1   ┆ 4   │
-            │ 1     ┆ 2   ┆ 5   │
-            │ 2     ┆ 3   ┆ 6   │
-            └───────┴─────┴─────┘
-            >>> agnostic_with_row_index(lf_dask)
-               index  a  b
-            0      0  1  4
-            1      1  2  5
-            2      2  3  6
+            >>> lf_native = dask.from_dict({'a': [1,2], 'b': [4, 5]})
+            >>> nw.from_native(lf_native).with_row_index()
         """
         return super().with_row_index(name)
 
@@ -2619,24 +2404,10 @@ class LazyFrame(BaseFrame[FrameT]):
             A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest: +SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
-
-            >>> lf = nw.from_native(lf_dask)
-            >>> lf.schema  # doctest: +SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).schema
         """
         return super().schema
 
@@ -2647,24 +2418,10 @@ class LazyFrame(BaseFrame[FrameT]):
             A Narwhals Schema object that displays the mapping of column names.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf.collect_schema()
-            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
-
-            >>> lf = nw.from_native(lf_dask)
-            >>> lf.collect_schema()
-            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).collect_schema()
         """
         return super().collect_schema()
 
@@ -2676,27 +2433,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The column names stored in a list.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrame
-            >>>
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_columns(df_native: IntoFrame) -> list[str]:
-            ...     df = nw.from_native(df_native)
-            ...     return df.columns
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_columns`:
-
-            >>> agnostic_columns(lf_pl)  # doctest: +SKIP
-            ['foo', 'bar', 'ham']
-            >>> agnostic_columns(lf_dask)
-            ['foo', 'bar', 'ham']
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).columns
         """
         return super().columns
 
@@ -2723,17 +2463,10 @@ class LazyFrame(BaseFrame[FrameT]):
             existing data.
 
         Examples:
-            >>> import pandas as pd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
-            >>> (
-            ...     nw.from_native(df_native)
-            ...     .with_columns((nw.col("a") * 2).alias("a*2"))
-            ...     .to_native()
-            ... )
-               a    b  a*2
-            0  1  0.5    2
-            1  2  4.0    4
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).with_columns(c=nw.col('a')+1)
         """
         return super().with_columns(*exprs, **named_exprs)
 
@@ -2760,116 +2493,10 @@ class LazyFrame(BaseFrame[FrameT]):
             `0` use `df.select(nw.col(0))`, not `df.select(0)`.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function in which we pass the name of a
-            column to select that column.
-
-            >>> def agnostic_select(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select("foo").collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_select`:
-
-            >>> agnostic_select(lf_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ foo │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
-            >>> agnostic_select(lf_dask)
-               foo
-            0    1
-            1    2
-            2    3
-
-            Multiple columns can be selected by passing a list of column names.
-
-            >>> def agnostic_select(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(["foo", "bar"]).collect().to_native()
-
-            >>> agnostic_select(lf_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 6   │
-            │ 2   ┆ 7   │
-            │ 3   ┆ 8   │
-            └─────┴─────┘
-            >>> agnostic_select(lf_dask)
-               foo  bar
-            0    1    6
-            1    2    7
-            2    3    8
-
-            Multiple columns can also be selected using positional arguments instead of a
-            list. Expressions are also accepted.
-
-            >>> def agnostic_select(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return (
-            ...         df.select(nw.col("foo"), nw.col("bar") + 1).collect().to_native()
-            ...     )
-
-            >>> agnostic_select(lf_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 7   │
-            │ 2   ┆ 8   │
-            │ 3   ┆ 9   │
-            └─────┴─────┘
-            >>> agnostic_select(lf_dask)
-               foo  bar
-            0    1    7
-            1    2    8
-            2    3    9
-
-            Use keyword arguments to easily name your expression inputs.
-
-            >>> def agnostic_select(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(threshold=nw.col("foo") * 2).collect().to_native()
-
-            >>> agnostic_select(lf_pl)
-            shape: (3, 1)
-            ┌───────────┐
-            │ threshold │
-            │ ---       │
-            │ i64       │
-            ╞═══════════╡
-            │ 2         │
-            │ 4         │
-            │ 6         │
-            └───────────┘
-            >>> agnostic_select(lf_dask)
-               threshold
-            0          2
-            1          4
-            2          6
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).select('a', a_plus_1=nw.col('a')+1)
         """
         return super().select(*exprs, **named_exprs)
 
@@ -2885,39 +2512,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The LazyFrame with the specified columns renamed.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rename(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.rename({"foo": "apple"}).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_rename`:
-
-            >>> agnostic_rename(lf_pl)
-            shape: (3, 3)
-            ┌───────┬─────┬─────┐
-            │ apple ┆ bar ┆ ham │
-            │ ---   ┆ --- ┆ --- │
-            │ i64   ┆ i64 ┆ str │
-            ╞═══════╪═════╪═════╡
-            │ 1     ┆ 6   ┆ a   │
-            │ 2     ┆ 7   ┆ b   │
-            │ 3     ┆ 8   ┆ c   │
-            └───────┴─────┴─────┘
-            >>> agnostic_rename(lf_dask)
-               apple  bar ham
-            0      1    6   a
-            1      2    7   b
-            2      3    8   c
+            >>> lf_native = duckdb.sql('select * from (values (1, 4.5), (3, 2.)) df(a, b)')
+            >>> nw.from_native(lf_native).rename({'a': 'c'})
         """
         return super().rename(mapping)
 
@@ -2931,42 +2529,10 @@ class LazyFrame(BaseFrame[FrameT]):
             A subset of the LazyFrame of shape (n, n_columns).
 
         Examples:
+            >>> import dask
             >>> import narwhals as nw
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "a": [1, 2, 3, 4, 5, 6],
-            ...     "b": [7, 8, 9, 10, 11, 12],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function that gets the first 3 rows.
-
-            >>> def agnostic_head(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.head(3).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_head`:
-
-            >>> agnostic_head(lf_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 7   │
-            │ 2   ┆ 8   │
-            │ 3   ┆ 9   │
-            └─────┴─────┘
-            >>> agnostic_head(lf_dask)
-               a  b
-            0  1  7
-            1  2  8
-            2  3  9
+            >>> lf_native = dask.from_dict({'a': [1,2,3], 'b': [4,5,6]})
+            >>> nw.from_native(lf_native).head(2)
         """
         return super().head(n)
 
@@ -3003,62 +2569,10 @@ class LazyFrame(BaseFrame[FrameT]):
             Please consider upgrading to a newer version or pass to eager mode.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_drop(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.drop("ham").collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_drop`:
-
-            >>> agnostic_drop(lf_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ i64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 6.0 │
-            │ 2   ┆ 7.0 │
-            │ 3   ┆ 8.0 │
-            └─────┴─────┘
-            >>> agnostic_drop(lf_dask)
-               foo  bar
-            0    1  6.0
-            1    2  7.0
-            2    3  8.0
-
-            Use positional arguments to drop multiple columns.
-
-            >>> def agnostic_drop(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.drop("foo", "ham").collect().to_native()
-
-            >>> agnostic_drop(lf_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ bar │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 6.0 │
-            │ 7.0 │
-            │ 8.0 │
-            └─────┘
-            >>> agnostic_drop(lf_dask)
-               bar
-            0  6.0
-            1  7.0
-            2  8.0
+            >>> lf_native = duckdb.sql('select * from (values (1, 2), (3, 4)) df(a, b)')
+            >>> nw.from_native(df_native).drop('a')
         """
         return super().drop(*flatten(columns), strict=strict)
 
@@ -3086,39 +2600,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The LazyFrame with unique rows.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3, 1],
-            ...     "bar": ["a", "a", "a", "a"],
-            ...     "ham": ["b", "b", "b", "b"],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.unique(["bar", "ham"]).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_unique`:
-
-            >>> agnostic_unique(lf_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ str ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ a   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> agnostic_unique(lf_dask)
-               foo bar ham
-            0    1   a   b
+            >>> lf_native = duckdb.sql('select * from (values (1, 1), (3, 4)) df(a, b)')
+            >>> nw.from_native(df_native).unique('a')
         """
         if keep not in {"any", "none"}:
             msg = (
@@ -3161,135 +2646,10 @@ class LazyFrame(BaseFrame[FrameT]):
             The filtered LazyFrame.
 
         Examples:
-            >>> import polars as pl
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> lf_pl = pl.LazyFrame(data)
-            >>> lf_dask = dd.from_dict(data, npartitions=2)
-
-            Let's define a dataframe-agnostic function in which we filter on
-            one condition.
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.filter(nw.col("foo") > 1).collect().to_native()
-
-            We can then pass any supported library such as Polars or Dask to `agnostic_filter`:
-
-            >>> agnostic_filter(lf_pl)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 2   ┆ 7   ┆ b   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(lf_dask)
-               foo  bar ham
-            1    2    7   b
-            2    3    8   c
-
-            Filter on multiple conditions:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return (
-            ...         df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
-            ...         .collect()
-            ...         .to_native()
-            ...     )
-
-            >>> agnostic_filter(lf_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(lf_dask)
-               foo  bar ham
-            0    1    6   a
-
-            Provide multiple filters using `*args` syntax:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return (
-            ...         df.filter(
-            ...             nw.col("foo") == 1,
-            ...             nw.col("ham") == "a",
-            ...         )
-            ...         .collect()
-            ...         .to_native()
-            ...     )
-
-            >>> agnostic_filter(lf_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(lf_dask)
-               foo  bar ham
-            0    1    6   a
-
-            Filter on an OR condition:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return (
-            ...         df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
-            ...         .collect()
-            ...         .to_native()
-            ...     )
-
-            >>> agnostic_filter(lf_pl)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(lf_dask)
-               foo  bar ham
-            0    1    6   a
-            2    3    8   c
-
-            Provide multiple filters using `**kwargs` syntax:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.filter(foo=2, ham="b").collect().to_native()
-
-            >>> agnostic_filter(lf_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 2   ┆ 7   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(lf_dask)
-               foo  bar ham
-            1    2    7   b
+            >>> lf_native = duckdb.sql('select * from (values (1, 1), (3, 4)) df(a, b)')
+            >>> nw.from_native(lf_native).filter(nw.col('b')==3)
         """
         if (
             len(predicates) == 1
