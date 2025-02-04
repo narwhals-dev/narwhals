@@ -1348,49 +1348,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             The dataframe with the specified columns renamed.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_rename(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).rename({"foo": "apple"}).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_rename`:
-
-            >>> agnostic_rename(df_pd)
-               apple  bar ham
-            0      1    6   a
-            1      2    7   b
-            2      3    8   c
-            >>> agnostic_rename(df_pl)
-            shape: (3, 3)
-            ┌───────┬─────┬─────┐
-            │ apple ┆ bar ┆ ham │
-            │ ---   ┆ --- ┆ --- │
-            │ i64   ┆ i64 ┆ str │
-            ╞═══════╪═════╪═════╡
-            │ 1     ┆ 6   ┆ a   │
-            │ 2     ┆ 7   ┆ b   │
-            │ 3     ┆ 8   ┆ c   │
-            └───────┴─────┴─────┘
-            >>> agnostic_rename(df_pa)
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6, 7]})
+            >>> nw.from_native(df_native).rename({"foo": "apple"}).to_native()
             pyarrow.Table
             apple: int64
             bar: int64
-            ham: string
             ----
-            apple: [[1,2,3]]
-            bar: [[6,7,8]]
-            ham: [["a","b","c"]]
+            apple: [[1,2]]
+            bar: [[6,7]]
         """
         return super().rename(mapping)
 
@@ -1406,52 +1373,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3, 4, 5],
-            ...     "bar": [6, 7, 8, 9, 10],
-            ...     "ham": ["a", "b", "c", "d", "e"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that gets the first 3 rows.
-
-            >>> def agnostic_head(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).head(3).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_head`:
-
-            >>> agnostic_head(df_pd)
-               foo  bar ham
-            0    1    6   a
-            1    2    7   b
-            2    3    8   c
-            >>> agnostic_head(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 2   ┆ 7   ┆ b   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-            >>> agnostic_head(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
-            ham: [["a","b","c"]]
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
+            >>> nw.from_native(df_native).head(1)
+               a    b
+            0  1  0.5
         """
         return super().head(n)
 
@@ -1467,52 +1393,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3, 4, 5],
-            ...     "bar": [6, 7, 8, 9, 10],
-            ...     "ham": ["a", "b", "c", "d", "e"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that gets the last 3 rows.
-
-            >>> def agnostic_tail(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).tail(3).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_tail`:
-
-            >>> agnostic_tail(df_pd)
-               foo  bar ham
-            2    3    8   c
-            3    4    9   d
-            4    5   10   e
-            >>> agnostic_tail(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 3   ┆ 8   ┆ c   │
-            │ 4   ┆ 9   ┆ d   │
-            │ 5   ┆ 10  ┆ e   │
-            └─────┴─────┴─────┘
-            >>> agnostic_tail(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[3,4,5]]
-            bar: [[8,9,10]]
-            ham: [["c","d","e"]]
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
+            >>> nw.from_native(df_native).tail(1)
+               a    b
+            0  2  4.0
         """
         return super().tail(n)
 
@@ -1529,74 +1414,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_drop(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).drop("ham").to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_drop`:
-
-            >>> agnostic_drop(df_pd)
+            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": [6.0, 7.0], "ham": ["a", "b"]})
+            >>> nw.from_native(df_native).drop("ham").to_native()
                foo  bar
             0    1  6.0
             1    2  7.0
-            2    3  8.0
-            >>> agnostic_drop(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ i64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 6.0 │
-            │ 2   ┆ 7.0 │
-            │ 3   ┆ 8.0 │
-            └─────┴─────┘
-            >>> agnostic_drop(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: double
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
-
-            Use positional arguments to drop multiple columns.
-
-            >>> def agnostic_drop_multi(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).drop("foo", "ham").to_native()
-
-            >>> agnostic_drop_multi(df_pd)
-               bar
-            0  6.0
-            1  7.0
-            2  8.0
-            >>> agnostic_drop_multi(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ bar │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 6.0 │
-            │ 7.0 │
-            │ 8.0 │
-            └─────┘
-            >>> agnostic_drop_multi(df_pa)
-            pyarrow.Table
-            bar: double
-            ----
-            bar: [[6,7,8]]
-
         """
         return super().drop(*flatten(columns), strict=strict)
 
@@ -1627,48 +1450,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3, 1],
-            ...     "bar": ["a", "a", "a", "a"],
-            ...     "ham": ["b", "b", "b", "b"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_unique(df_native: IntoFrameT) -> IntoFrameT:
-            ...     return nw.from_native(df_native).unique(["bar", "ham"]).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_unique`:
-
-            >>> agnostic_unique(df_pd)
+            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": ["a", "a"], "ham": ["b", "b"]})
+            >>> nw.from_native(df_native).unique(["bar", "ham"]).to_native()
                foo bar ham
             0    1   a   b
-            >>> agnostic_unique(df_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ str ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ a   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> agnostic_unique(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: string
-            ham: string
-            ----
-            foo: [[1]]
-            bar: [["a"]]
-            ham: [["b"]]
         """
         if keep not in {"any", "none", "first", "last"}:
             msg = f"Expected {'any', 'none', 'first', 'last'}, got: {keep}"
@@ -1702,169 +1488,30 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6, 7, 8],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]})
 
-            Let's define a dataframe-agnostic function in which we filter on
-            one condition.
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.filter(nw.col("foo") > 1).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_filter`:
-
-            >>> agnostic_filter(df_pd)
+            Filter on one condition
+            >>> nw.from_native(df_native).filter(nw.col("foo") > 1).to_native()
                foo  bar ham
             1    2    7   b
             2    3    8   c
-            >>> agnostic_filter(df_pl)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 2   ┆ 7   ┆ b   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[2,3]]
-            bar: [[7,8]]
-            ham: [["b","c"]]
 
-            Filter on multiple conditions, combined with and/or operators:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.filter(
-            ...         (nw.col("foo") < 3) & (nw.col("ham") == "a")
-            ...     ).to_native()
-            >>> agnostic_filter(df_pd)
+            Filter on multiple conditions with `&`
+            >>> nw.from_native(df_native).filter(nw.col("foo") < 3, nw.col("ham") == "a").to_native()
                foo  bar ham
             0    1    6   a
-            >>> agnostic_filter(df_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[1]]
-            bar: [[6]]
-            ham: [["a"]]
 
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     dframe = df.filter(
-            ...         (nw.col("foo") == 1) | (nw.col("ham") == "c")
-            ...     ).to_native()
-            ...     return dframe
-            >>> agnostic_filter(df_pd)
+            # Filter on multiple conditions with `|`
+            >>> nw.from_native(df_native).filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).to_native()
                foo  bar ham
             0    1    6   a
             2    3    8   c
-            >>> agnostic_filter(df_pl)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[1,3]]
-            bar: [[6,8]]
-            ham: [["a","c"]]
 
-            Provide multiple filters using `*args` syntax:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     dframe = df.filter(
-            ...         nw.col("foo") <= 2,
-            ...         ~nw.col("ham").is_in(["b", "c"]),
-            ...     ).to_native()
-            ...     return dframe
-            >>> agnostic_filter(df_pd)
-               foo  bar ham
-            0    1    6   a
-            >>> agnostic_filter(df_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[1]]
-            bar: [[6]]
-            ham: [["a"]]
-
-            Provide multiple filters using `**kwargs` syntax:
-
-            >>> def agnostic_filter(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.filter(foo=2, ham="b").to_native()
-            >>> agnostic_filter(df_pd)
+            # Filter using `**kwargs` syntax
+            >>> nw.from_native(df_native).filter(foo=2, ham="b").to_native()
                foo  bar ham
             1    2    7   b
-            >>> agnostic_filter(df_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 2   ┆ 7   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> agnostic_filter(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: string
-            ----
-            foo: [[2]]
-            bar: [[7]]
-            ham: [["b"]]
         """
         return super().filter(*predicates, **constraints)
 
@@ -1883,91 +1530,29 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrameT
-            >>> data = {
-            ...     "a": ["a", "b", "a", "b", "c"],
-            ...     "b": [1, 2, 1, 3, 3],
-            ...     "c": [5, 4, 3, 2, 1],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> df_native = pd.DataFrame({"a": ["a", "b", "a", "b", "c"], "b": [1, 2, 1, 3, 3], "c": [5, 4, 3, 2, 1]})
 
-            Let's define a dataframe-agnostic function in which we group by one column
-            and call `agg` to compute the grouped sum of another column.
-
-            >>> def agnostic_group_by_agg(df_native: IntoDataFrameT) -> IntoDataFrameT:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a").to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_group_by_agg`:
-
-            >>> agnostic_group_by_agg(df_pd)
+            # Group by one column and compute the sum of another column
+            >>> nw.from_native(df_native, eager_only=True).group_by("a").agg(nw.col("b").sum()).sort("a").to_native()
                a  b
             0  a  2
             1  b  5
             2  c  3
-            >>> agnostic_group_by_agg(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ str ┆ i64 │
-            ╞═════╪═════╡
-            │ a   ┆ 2   │
-            │ b   ┆ 5   │
-            │ c   ┆ 3   │
-            └─────┴─────┘
-            >>> agnostic_group_by_agg(df_pa)
-            pyarrow.Table
-            a: string
-            b: int64
-            ----
-            a: [["a","b","c"]]
-            b: [[2,5,3]]
 
-            Group by multiple columns by passing a list of column names.
-
-            >>> def agnostic_group_by_agg(df_native: IntoDataFrameT) -> IntoDataFrameT:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return (
-            ...         df.group_by(["a", "b"])
-            ...         .agg(nw.max("c"))
-            ...         .sort("a", "b")
-            ...         .to_native()
-            ...     )
-
-            >>> agnostic_group_by_agg(df_pd)
+            # Group by multiple columns and compute the max of another column
+            >>> (
+            ...     nw.from_native(df_native, eager_only=True)
+            ...     .group_by(["a", "b"])
+            ...     .agg(nw.max("c"))
+            ...     .sort("a", "b")
+            ...     .to_native()
+            ... )
                a  b  c
             0  a  1  5
             1  b  2  4
             2  b  3  2
             3  c  3  1
-            >>> agnostic_group_by_agg(df_pl)
-            shape: (4, 3)
-            ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
-            │ --- ┆ --- ┆ --- │
-            │ str ┆ i64 ┆ i64 │
-            ╞═════╪═════╪═════╡
-            │ a   ┆ 1   ┆ 5   │
-            │ b   ┆ 2   ┆ 4   │
-            │ b   ┆ 3   ┆ 2   │
-            │ c   ┆ 3   ┆ 1   │
-            └─────┴─────┴─────┘
-            >>> agnostic_group_by_agg(df_pa)
-            pyarrow.Table
-            a: string
-            b: int64
-            c: int64
-            ----
-            a: [["a","b","b","c"]]
-            b: [[1,2,3,3]]
-            c: [[5,4,2,1]]
         """
         from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
@@ -2001,61 +1586,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         Returns:
             The sorted dataframe.
 
-        Warning:
+        Note:
             Unlike Polars, it is not possible to specify a sequence of booleans for
             `nulls_last` in order to control per-column behaviour. Instead a single
             boolean is applied for all `by` columns.
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "a": [1, 2, None],
-            ...     "b": [6.0, 5.0, 4.0],
-            ...     "c": ["a", "c", "b"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function in which we sort by multiple
-            columns in different orders
-
-            >>> def agnostic_sort(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.sort("c", "a", descending=[False, True]).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_sort`:
-
-            >>> agnostic_sort(df_pd)
-                 a    b  c
-            0  1.0  6.0  a
-            2  NaN  4.0  b
-            1  2.0  5.0  c
-            >>> agnostic_sort(df_pl)
-            shape: (3, 3)
-            ┌──────┬─────┬─────┐
-            │ a    ┆ b   ┆ c   │
-            │ ---  ┆ --- ┆ --- │
-            │ i64  ┆ f64 ┆ str │
-            ╞══════╪═════╪═════╡
-            │ 1    ┆ 6.0 ┆ a   │
-            │ null ┆ 4.0 ┆ b   │
-            │ 2    ┆ 5.0 ┆ c   │
-            └──────┴─────┴─────┘
-            >>> agnostic_sort(df_pa)
-            pyarrow.Table
-            a: int64
-            b: double
-            c: string
-            ----
-            a: [[1,null,2]]
-            b: [[6,4,5]]
-            c: [["a","b","c"]]
+            >>> df_native = pd.DataFrame({"foo": [2, 1], "bar": [6.0, 7.0], "ham": ["a", "b"]})
+            >>> nw.from_native(df_native).sort('foo')
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
@@ -2091,67 +1631,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, 2, 3],
-            ...     "bar": [6.0, 7.0, 8.0],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> data_other = {
-            ...     "apple": ["x", "y", "z"],
-            ...     "ham": ["a", "b", "d"],
-            ... }
-
-            >>> df_pd = pd.DataFrame(data)
-            >>> other_pd = pd.DataFrame(data_other)
-
-            >>> df_pl = pl.DataFrame(data)
-            >>> other_pl = pl.DataFrame(data_other)
-
-            >>> df_pa = pa.table(data)
-            >>> other_pa = pa.table(data_other)
-
-            Let's define a dataframe-agnostic function in which we join over "ham" column:
-
-            >>> def agnostic_join_on_ham(
-            ...     df_native: IntoFrameT, other_native: IntoFrameT
-            ... ) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     other = nw.from_native(other_native)
-            ...     return df.join(other, left_on="ham", right_on="ham").to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_join_on_ham`:
-
-            >>> agnostic_join_on_ham(df_pd, other_pd)
-               foo  bar ham apple
-            0    1  6.0   a     x
-            1    2  7.0   b     y
-
-            >>> agnostic_join_on_ham(df_pl, other_pl)
-            shape: (2, 4)
-            ┌─────┬─────┬─────┬───────┐
-            │ foo ┆ bar ┆ ham ┆ apple │
-            │ --- ┆ --- ┆ --- ┆ ---   │
-            │ i64 ┆ f64 ┆ str ┆ str   │
-            ╞═════╪═════╪═════╪═══════╡
-            │ 1   ┆ 6.0 ┆ a   ┆ x     │
-            │ 2   ┆ 7.0 ┆ b   ┆ y     │
-            └─────┴─────┴─────┴───────┘
-            >>> agnostic_join_on_ham(df_pa, other_pa)
-            pyarrow.Table
-            foo: int64
-            bar: double
-            ham: string
-            apple: string
-            ----
-            foo: [[1,2]]
-            bar: [[6,7]]
-            ham: [["a","b"]]
-            apple: [["x","y"]]
+            >>> df_1_native = pd.DataFrame({"id": ['a', 'b'], "price": [6.0, 7.0]})
+            >>> df_2_native = pd.DataFrame({"id": ['a', 'b', 'c'], "qty": [1,2,3]})
+            >>> nw.from_native(df_1_native).join(nw.from_native(df_2_native), on='id')
         """
         return super().join(
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
@@ -2196,11 +1679,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> from datetime import datetime
-            >>> from typing import Literal
             >>> import pandas as pd
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
             >>> data_gdp = {
             ...     "datetime": [
             ...         datetime(2016, 1, 1),
@@ -2219,125 +1699,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     ],
             ...     "population": [82.19, 82.66, 83.12],
             ... }
-            >>> gdp_pd = pd.DataFrame(data_gdp)
-            >>> population_pd = pd.DataFrame(data_population)
-
-            >>> gdp_pl = pl.DataFrame(data_gdp).sort("datetime")
-            >>> population_pl = pl.DataFrame(data_population).sort("datetime")
-
-            Let's define a dataframe-agnostic function in which we join over "datetime" column:
-
-            >>> def agnostic_join_asof_datetime(
-            ...     df_native: IntoFrameT,
-            ...     other_native: IntoFrameT,
-            ...     strategy: Literal["backward", "forward", "nearest"],
-            ... ) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     other = nw.from_native(other_native)
-            ...     return df.join_asof(
-            ...         other, on="datetime", strategy=strategy
-            ...     ).to_native()
-
-            We can then pass any supported library such as Pandas or Polars
-            to `agnostic_join_asof_datetime`:
-
-            >>> agnostic_join_asof_datetime(population_pd, gdp_pd, strategy="backward")
-                datetime  population   gdp
-            0 2016-03-01       82.19  4164
-            1 2018-08-01       82.66  4566
-            2 2019-01-01       83.12  4696
-
-            >>> agnostic_join_asof_datetime(population_pl, gdp_pl, strategy="backward")
-            shape: (3, 3)
-            ┌─────────────────────┬────────────┬──────┐
-            │ datetime            ┆ population ┆ gdp  │
-            │ ---                 ┆ ---        ┆ ---  │
-            │ datetime[μs]        ┆ f64        ┆ i64  │
-            ╞═════════════════════╪════════════╪══════╡
-            │ 2016-03-01 00:00:00 ┆ 82.19      ┆ 4164 │
-            │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
-            │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
-            └─────────────────────┴────────────┴──────┘
-
-            Here is a real-world times-series example that uses `by` argument.
-
-            >>> from datetime import datetime
-            >>> import narwhals as nw
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> data_quotes = {
-            ...     "datetime": [
-            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 30),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 41),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 49),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 72),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 75),
-            ...     ],
-            ...     "ticker": [
-            ...         "GOOG",
-            ...         "MSFT",
-            ...         "MSFT",
-            ...         "MSFT",
-            ...         "GOOG",
-            ...         "AAPL",
-            ...         "GOOG",
-            ...         "MSFT",
-            ...     ],
-            ...     "bid": [720.50, 51.95, 51.97, 51.99, 720.50, 97.99, 720.50, 52.01],
-            ...     "ask": [720.93, 51.96, 51.98, 52.00, 720.93, 98.01, 720.88, 52.03],
-            ... }
-            >>> data_trades = {
-            ...     "datetime": [
-            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 38),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
-            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
-            ...     ],
-            ...     "ticker": ["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"],
-            ...     "price": [51.95, 51.95, 720.77, 720.92, 98.0],
-            ...     "quantity": [75, 155, 100, 100, 100],
-            ... }
-            >>> quotes_pd = pd.DataFrame(data_quotes)
-            >>> trades_pd = pd.DataFrame(data_trades)
-            >>> quotes_pl = pl.DataFrame(data_quotes).sort("datetime")
-            >>> trades_pl = pl.DataFrame(data_trades).sort("datetime")
-
-            Let's define a dataframe-agnostic function in which we join over "datetime" and by "ticker" columns:
-
-            >>> def agnostic_join_asof_datetime_by_ticker(
-            ...     df_native: IntoFrameT, other_native: IntoFrameT
-            ... ) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     other = nw.from_native(other_native)
-            ...     return df.join_asof(other, on="datetime", by="ticker").to_native()
-
-            We can now pass either pandas or Polars to the function:
-
-            >>> agnostic_join_asof_datetime_by_ticker(trades_pd, quotes_pd)
-                                datetime ticker   price  quantity     bid     ask
-            0 2016-05-25 13:30:00.000023   MSFT   51.95        75   51.95   51.96
-            1 2016-05-25 13:30:00.000038   MSFT   51.95       155   51.97   51.98
-            2 2016-05-25 13:30:00.000048   GOOG  720.77       100  720.50  720.93
-            3 2016-05-25 13:30:00.000048   GOOG  720.92       100  720.50  720.93
-            4 2016-05-25 13:30:00.000048   AAPL   98.00       100     NaN     NaN
-
-            >>> agnostic_join_asof_datetime_by_ticker(trades_pl, quotes_pl)
-            shape: (5, 6)
-            ┌────────────────────────────┬────────┬────────┬──────────┬───────┬────────┐
-            │ datetime                   ┆ ticker ┆ price  ┆ quantity ┆ bid   ┆ ask    │
-            │ ---                        ┆ ---    ┆ ---    ┆ ---      ┆ ---   ┆ ---    │
-            │ datetime[μs]               ┆ str    ┆ f64    ┆ i64      ┆ f64   ┆ f64    │
-            ╞════════════════════════════╪════════╪════════╪══════════╪═══════╪════════╡
-            │ 2016-05-25 13:30:00.000023 ┆ MSFT   ┆ 51.95  ┆ 75       ┆ 51.95 ┆ 51.96  │
-            │ 2016-05-25 13:30:00.000038 ┆ MSFT   ┆ 51.95  ┆ 155      ┆ 51.97 ┆ 51.98  │
-            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.77 ┆ 100      ┆ 720.5 ┆ 720.93 │
-            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.92 ┆ 100      ┆ 720.5 ┆ 720.93 │
-            │ 2016-05-25 13:30:00.000048 ┆ AAPL   ┆ 98.0   ┆ 100      ┆ null  ┆ null   │
-            └────────────────────────────┴────────┴────────┴──────────┴───────┴────────┘
+            >>> gdp_native = pd.DataFrame(data_gdp)
+            >>> population_native = pd.DataFrame(data_population)
+            >>> gdp = nw.from_native(gdp_native)
+            >>> population = nw.from_native(population_native)
+            >>> population.join_asof(gdp, on='datetime', strategy='backward')
         """
         return super().join_asof(
             other,
@@ -2360,54 +1726,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_duplicated(df_native: IntoDataFrame) -> IntoSeries:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.is_duplicated().to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_is_duplicated`:
-
-            >>> agnostic_is_duplicated(df_pd)
-            0     True
-            1    False
-            2    False
-            3     True
-            dtype: bool
-
-            >>> agnostic_is_duplicated(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (4,)
-            Series: '' [bool]
-            [
-                true
-                false
-                false
-                true
-            ]
-            >>> agnostic_is_duplicated(df_pa)  # doctest: +ELLIPSIS
-            <pyarrow.lib.ChunkedArray object at ...>
-            [
-              [
-                true,
-                false,
-                false,
-                true
-              ]
-            ]
+            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> nw.from_native(df_native).is_duplicated()
         """
         return self._series(
             self._compliant_frame.is_duplicated(),
@@ -2422,42 +1743,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-
-            Let's define a dataframe-agnostic function that filters rows in which "foo"
-            values are greater than 10, and then checks if the result is empty or not:
-
-            >>> def agnostic_is_empty(df_native: IntoDataFrame) -> bool:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.filter(nw.col("foo") > 10).is_empty()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_is_empty`:
-
-            >>> data = {"foo": [1, 2, 3], "bar": [4, 5, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-            >>> (
-            ...     agnostic_is_empty(df_pd),
-            ...     agnostic_is_empty(df_pl),
-            ...     agnostic_is_empty(df_pa),
-            ... )
-            (True, True, True)
-
-            >>> data = {"foo": [100, 2, 3], "bar": [4, 5, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-            >>> (
-            ...     agnostic_is_empty(df_pd),
-            ...     agnostic_is_empty(df_pl),
-            ...     agnostic_is_empty(df_pa),
-            ... )
-            (False, False, False)
+            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> nw.from_native(df_native).is_empty()
         """
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
@@ -2469,54 +1757,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> from narwhals.typing import IntoSeries
-            >>> data = {
-            ...     "a": [1, 2, 3, 1],
-            ...     "b": ["x", "y", "z", "x"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function:
-
-            >>> def agnostic_is_unique(df_native: IntoDataFrame) -> IntoSeries:
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.is_unique().to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_is_unique`:
-
-            >>> agnostic_is_unique(df_pd)
-            0    False
-            1     True
-            2     True
-            3    False
-            dtype: bool
-
-            >>> agnostic_is_unique(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (4,)
-            Series: '' [bool]
-            [
-                false
-                 true
-                 true
-                false
-            ]
-            >>> agnostic_is_unique(df_pa)  # doctest: +ELLIPSIS
-            <pyarrow.lib.ChunkedArray object at ...>
-            [
-              [
-                false,
-                true,
-                true,
-                false
-              ]
-            ]
+            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> nw.from_native(df_native).is_unique()
         """
         return self._series(
             self._compliant_frame.is_unique(),
@@ -2535,53 +1778,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             for reference.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {
-            ...     "foo": [1, None, 3],
-            ...     "bar": [6, 7, None],
-            ...     "ham": ["a", "b", "c"],
-            ... }
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns the null count of
-            each columns:
-
-            >>> def agnostic_null_count(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.null_count().to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow to
-            `agnostic_null_count`:
-
-            >>> agnostic_null_count(df_pd)
-               foo  bar  ham
-            0    1    1    0
-
-            >>> agnostic_null_count(df_pl)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ u32 ┆ u32 ┆ u32 │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 1   ┆ 0   │
-            └─────┴─────┴─────┘
-
-            >>> agnostic_null_count(df_pa)
-            pyarrow.Table
-            foo: int64
-            bar: int64
-            ham: int64
-            ----
-            foo: [[1]]
-            bar: [[1]]
-            ham: [[0]]
+            >>> df_native = pa.table({"foo": [1, None], "bar": [2, 3]})
+            >>> nw.from_native(df_native).null_count()
         """
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
@@ -2600,33 +1800,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             With row/col, this is equivalent to df[row,col].
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function that returns item at given row/column
-
-            >>> def agnostic_item(
-            ...     df_native: IntoDataFrame, row: int | None, column: int | str | None
-            ... ):
-            ...     df = nw.from_native(df_native, eager_only=True)
-            ...     return df.item(row, column)
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_item`:
-
-            >>> agnostic_item(df_pd, 1, 1), agnostic_item(df_pd, 2, "b")
-            (np.int64(5), np.int64(6))
-            >>> agnostic_item(df_pl, 1, 1), agnostic_item(df_pl, 2, "b")
-            (5, 6)
-            >>> agnostic_item(df_pa, 1, 1), agnostic_item(df_pa, 2, "b")
-            (5, 6)
+            >>> df_native = pa.table({"foo": [1, None], "bar": [2, 3]})
+            >>> nw.from_native(df_native).item(0, 1)
         """
         return self._compliant_frame.item(row=row, column=column)
 
@@ -2635,41 +1812,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Returns:
             An identical copy of the original dataframe.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {"a": [1, 2], "b": [3, 4]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-
-            Let's define a dataframe-agnostic function in which we clone the DataFrame:
-
-            >>> def agnostic_clone(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.clone().to_native()
-
-            We can then pass any supported library such as Pandas or Polars
-            to `agnostic_clone`:
-
-            >>> agnostic_clone(df_pd)
-               a  b
-            0  1  3
-            1  2  4
-
-            >>> agnostic_clone(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 3   │
-            │ 2   ┆ 4   │
-            └─────┴─────┘
         """
         return super().clone()
 
@@ -2684,48 +1826,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             The dataframe containing only the selected rows.
 
         Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            Let's define a dataframe-agnostic function in which gather every 2 rows,
-            starting from a offset of 1:
-
-            >>> def agnostic_gather_every(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.gather_every(n=2, offset=1).to_native()
-
-            We can then pass any supported library such as Pandas, Polars, or PyArrow
-            to `agnostic_gather_every`:
-
-            >>> agnostic_gather_every(df_pd)
-               a  b
-            1  2  6
-            3  4  8
-
-            >>> agnostic_gather_every(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 2   ┆ 6   │
-            │ 4   ┆ 8   │
-            └─────┴─────┘
-            >>> agnostic_gather_every(df_pa)
-            pyarrow.Table
-            a: int64
-            b: int64
-            ----
-            a: [[2,4]]
-            b: [[6,8]]
+            >>> df_native = pa.table({"foo": [1, None, 2 3]})
+            >>> nw.from_native(df_native).gather_every(2)
         """
         return super().gather_every(n=n, offset=offset)
 
