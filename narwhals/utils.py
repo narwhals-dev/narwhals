@@ -169,7 +169,7 @@ class Implementation(Enum):
             import modin.pandas
 
             return modin.pandas  # type: ignore[no-any-return]
-        if self is Implementation.CUDF:
+        if self is Implementation.CUDF:  # pragma: no cover
             import cudf  # ignore-banned-import
 
             return cudf  # type: ignore[no-any-return]
@@ -177,7 +177,7 @@ class Implementation(Enum):
             import pyarrow as pa  # ignore-banned-import
 
             return pa  # type: ignore[no-any-return]
-        if self is Implementation.PYSPARK:
+        if self is Implementation.PYSPARK:  # pragma: no cover
             import pyspark.sql
 
             return pyspark.sql  # type: ignore[no-any-return]
