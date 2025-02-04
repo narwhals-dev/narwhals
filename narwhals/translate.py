@@ -517,6 +517,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -555,6 +556,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -593,6 +595,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -630,6 +633,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(pa.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -677,6 +681,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_dask().__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="lazy",
         )
@@ -700,13 +705,19 @@ def _from_native_impl(  # noqa: PLR0915
         if version is Version.V1:
             return DataFrame(
                 DuckDBLazyFrame(
-                    native_object, backend_version=backend_version, version=version
+                    native_object,
+                    backend_version=backend_version,
+                    version=version,
+                    validate_column_names=True,
                 ),
                 level="interchange",
             )
         return LazyFrame(
             DuckDBLazyFrame(
-                native_object, backend_version=backend_version, version=version
+                native_object,
+                backend_version=backend_version,
+                version=version,
+                validate_column_names=True,
             ),
             level="lazy",
         )

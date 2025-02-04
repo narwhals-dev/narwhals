@@ -32,6 +32,7 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -1111,3 +1112,15 @@ def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
+
+
+def check_column_names_are_unique(columns: list[str]) -> None:
+    len_unique_columns = len(set(columns))
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        duplicates = {k: v for k, v in counter.items() if v > 1}
+        msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)

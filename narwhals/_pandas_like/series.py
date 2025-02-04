@@ -264,6 +264,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=False,
         )
 
     def to_list(self: Self) -> list[Any]:
@@ -788,6 +789,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         )
 
     def quantile(
@@ -850,6 +852,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         )
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
