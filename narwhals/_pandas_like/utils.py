@@ -467,33 +467,18 @@ def native_to_narwhals_dtype(
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if dtype != "object":
         return non_object_native_to_narwhals_dtype(dtype, version, implementation)
-    if implementation is Implementation.DASK:
-        # Dask columns are lazy, so we can't inspect values.
-        # The most useful assumption is probably String
+    if implementation is not Implementation.PANDAS:
+        # These libraries don't support arbitrary objects, so if they report the dtype
+        # as being object, it's definitely string.
         return dtypes.String()
-    if implementation is Implementation.PANDAS:  # pragma: no cover
-        # This is the most efficient implementation for pandas,
-        # and doesn't require the interchange protocol
-        import pandas as pd
+    # This is the most efficient implementation for pandas,
+    # and doesn't require the interchange protocol
+    import pandas as pd
 
-        dtype = pd.api.types.infer_dtype(native_column, skipna=True)
-        if dtype == "string":
-            return dtypes.String()
-        return dtypes.Object()
-    else:  # pragma: no cover
-        df = native_column.to_frame()
-        if hasattr(df, "__dataframe__"):
-            from narwhals._interchange.dataframe import (
-                map_interchange_dtype_to_narwhals_dtype,
-            )
-
-            with suppress(Exception):
-                return map_interchange_dtype_to_narwhals_dtype(
-                    df.__dataframe__().get_column(0).dtype, version
-                )
-        # The most useful assumption is probably String
+    dtype = pd.api.types.infer_dtype(native_column.head(10), skipna=True)
+    if dtype == "string":
         return dtypes.String()
-    return dtypes.Unknown()  # pragma: no cover
+    return dtypes.Object()
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
