@@ -501,6 +501,7 @@ def _from_native_impl(  # noqa: PLR0915
 
     # pandas
     elif is_pandas_dataframe(native_object):
+        import narwhals._pandas_like.utils as pd_utils
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         if series_only:
@@ -509,7 +510,10 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         pd = get_pandas()
-        result = DataFrame(
+        # Early return so we can use pandas' own `check_column_names_are_unique`
+        # function.
+        pd_utils.check_column_names_are_unique(native_object.columns)
+        return DataFrame(
             PandasLikeDataFrame(
                 native_object,
                 backend_version=parse_version(pd.__version__),

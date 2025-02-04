@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -34,6 +35,8 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
+    columns: ClassVar = ["a", "b"]
+
     def _change_version(self: Self, _version: Version) -> MockDataFrame:
         return self
 
@@ -42,6 +45,8 @@ class MockDataFrame:
 
 
 class MockLazyFrame:
+    columns: ClassVar = ["a", "b"]
+
     def _change_version(self: Self, _version: Version) -> MockLazyFrame:
         return self
 

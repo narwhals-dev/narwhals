@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
+from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
@@ -22,7 +23,6 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
@@ -96,24 +96,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def __len__(self: Self) -> int:
         return len(self._native_frame)
 
-    def _validate_columns(self: Self, columns: pd.Index) -> None:
-        try:
-            len_unique_columns = len(columns.drop_duplicates())
-        except Exception:  # noqa: BLE001  # pragma: no cover
-            msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-            raise ValueError(msg) from None
-
-        if len(columns) != len_unique_columns:
-            from collections import Counter
-
-            counter = Counter(columns)
-            msg = ""
-            for key, value in counter.items():
-                if value > 1:
-                    msg += f"\n- '{key}' {value} times"
-            msg = f"Expected unique column names, got:{msg}"
-            raise ValueError(msg)
-
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame,
@@ -123,7 +105,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     def _from_native_frame(
-        self: Self, df: Any, *, validate_column_names: bool = False
+        self: Self, df: pd.DataFrame, *, validate_column_names: bool = False
     ) -> Self:
         result = self.__class__(
             df,
@@ -132,7 +114,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
         if validate_column_names:
-            check_column_names_are_unique(result.columns)
+            check_column_names_are_unique(df.columns)
         return result
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
