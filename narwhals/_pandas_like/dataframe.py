@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
+from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
@@ -61,13 +62,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        validate_column_names: bool,
     ) -> None:
-        self._validate_columns(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+        if validate_column_names:
+            check_column_names_are_unique(native_dataframe.columns)
 
     def __narwhals_dataframe__(self: Self) -> Self:
         return self
@@ -96,38 +99,24 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def __len__(self: Self) -> int:
         return len(self._native_frame)
 
-    def _validate_columns(self: Self, columns: pd.Index) -> None:
-        try:
-            len_unique_columns = len(columns.drop_duplicates())
-        except Exception:  # noqa: BLE001  # pragma: no cover
-            msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-            raise ValueError(msg) from None
-
-        if len(columns) != len_unique_columns:
-            from collections import Counter
-
-            counter = Counter(columns)
-            msg = ""
-            for key, value in counter.items():
-                if value > 1:
-                    msg += f"\n- '{key}' {value} times"
-            msg = f"Expected unique column names, got:{msg}"
-            raise ValueError(msg)
-
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,
+            validate_column_names=False,
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _from_native_frame(
+        self: Self, df: Any, *, validate_column_names: bool = True
+    ) -> Self:
         return self.__class__(
             df,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=validate_column_names,
         )
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
@@ -206,15 +195,21 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         ):
             if len(item[1]) == 0:
                 # Return empty dataframe
-                return self._from_native_frame(self._native_frame.__class__())
+                return self._from_native_frame(
+                    self._native_frame.__class__(), validate_column_names=False
+                )
             if all(isinstance(x, int) for x in item[1]):
-                return self._from_native_frame(self._native_frame.iloc[item])
+                return self._from_native_frame(
+                    self._native_frame.iloc[item], validate_column_names=False
+                )
             if all(isinstance(x, str) for x in item[1]):
                 indexer = (
                     item[0],
                     self._native_frame.columns.get_indexer(item[1]),
                 )
-                return self._from_native_frame(self._native_frame.iloc[indexer])
+                return self._from_native_frame(
+                    self._native_frame.iloc[indexer], validate_column_names=False
+                )
             msg = (
                 f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
             )
@@ -223,17 +218,21 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
             columns = self._native_frame.columns
             if item[1] == slice(None):
-                return self._from_native_frame(self._native_frame.iloc[item[0], :])
+                return self._from_native_frame(
+                    self._native_frame.iloc[item[0], :], validate_column_names=False
+                )
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                 return self._from_native_frame(
-                    self._native_frame.iloc[item[0], slice(start, stop, step)]
+                    self._native_frame.iloc[item[0], slice(start, stop, step)],
+                    validate_column_names=False,
                 )
             if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
                 return self._from_native_frame(
                     self._native_frame.iloc[
                         item[0], slice(item[1].start, item[1].stop, item[1].step)
-                    ]
+                    ],
+                    validate_column_names=False,
                 )
             msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
@@ -265,9 +264,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         item,
                         self._backend_version,
                         self._implementation,
-                    )
+                    ),
+                    validate_column_names=False,
                 )
-            return self._from_native_frame(self._native_frame.iloc[item])
+            return self._from_native_frame(
+                self._native_frame.iloc[item], validate_column_names=False
+            )
 
         elif isinstance(item, slice):
             if isinstance(item.start, str) or isinstance(item.stop, str):
@@ -275,9 +277,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                     item, self._native_frame.columns
                 )
                 return self._from_native_frame(
-                    self._native_frame.iloc[:, slice(start, stop, step)]
+                    self._native_frame.iloc[:, slice(start, stop, step)],
+                    validate_column_names=False,
                 )
-            return self._from_native_frame(self._native_frame.iloc[item])
+            return self._from_native_frame(
+                self._native_frame.iloc[item], validate_column_names=False
+            )
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -357,7 +362,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 list(column_names),
                 self._backend_version,
                 self._implementation,
-            )
+            ),
+            validate_column_names=False,
         )
 
     def select(
@@ -370,18 +376,22 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_frame(self._native_frame.__class__())
+            return self._from_native_frame(
+                self._native_frame.__class__(), validate_column_names=False
+            )
         new_series = broadcast_series(new_series)
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df)
+        return self._from_native_frame(df, validate_column_names=False)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
-            return self._from_native_frame(self._native_frame.dropna(axis=0))
+            return self._from_native_frame(
+                self._native_frame.dropna(axis=0), validate_column_names=False
+            )
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
@@ -429,7 +439,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 self._native_frame.index, mask
             )
 
-        return self._from_native_frame(self._native_frame.loc[mask_native])
+        return self._from_native_frame(
+            self._native_frame.loc[mask_native], validate_column_names=False
+        )
 
     def with_columns(
         self: Self,
@@ -467,7 +479,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df)
+        return self._from_native_frame(df, validate_column_names=False)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(
@@ -483,7 +495,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(self._native_frame.drop(columns=to_drop))
+        return self._from_native_frame(
+            self._native_frame.drop(columns=to_drop), validate_column_names=False
+        )
 
     # --- transform ---
     def sort(
@@ -499,7 +513,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
         return self._from_native_frame(
-            df.sort_values(list(by), ascending=ascending, na_position=na_position)
+            df.sort_values(list(by), ascending=ascending, na_position=na_position),
+            validate_column_names=False,
         )
 
     # --- convert ---
@@ -514,6 +529,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.PANDAS:
@@ -524,6 +540,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.PYARROW:
@@ -535,6 +552,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 native_dataframe=self.to_arrow(),
                 backend_version=parse_version(pa.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.POLARS:
@@ -730,10 +748,14 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- partial reduction ---
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.head(n))
+        return self._from_native_frame(
+            self._native_frame.head(n), validate_column_names=False
+        )
 
     def tail(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.tail(n))
+        return self._from_native_frame(
+            self._native_frame.tail(n), validate_column_names=False
+        )
 
     def unique(
         self: Self,
@@ -747,13 +769,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         check_column_exists(self.columns, subset)
         return self._from_native_frame(
-            self._native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
+            self._native_frame.drop_duplicates(subset=subset, keep=mapped_keep),
+            validate_column_names=False,
         )
 
     # --- lazy-only ---
     def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
 
+        pandas_df = self.to_pandas()
         if backend is None:
             return self
         elif backend is Implementation.DUCKDB:
@@ -761,11 +785,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
-                df=duckdb.table("df"),
+                df=duckdb.table("pandas_df"),
                 backend_version=parse_version(duckdb.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -773,7 +797,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             from narwhals._polars.dataframe import PolarsLazyFrame
 
             return PolarsLazyFrame(
-                df=pl.from_pandas(self._native_frame).lazy(),
+                df=pl.from_pandas(pandas_df).lazy(),
                 backend_version=parse_version(pl.__version__),
                 version=self._version,
             )
@@ -784,9 +808,10 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
-                native_dataframe=dd.from_pandas(self._native_frame),
+                native_dataframe=dd.from_pandas(pandas_df),
                 backend_version=parse_version(dask.__version__),
                 version=self._version,
+                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -916,6 +941,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=False,
         )
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
@@ -937,10 +963,14 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.iloc[row, _col]
 
     def clone(self: Self) -> Self:
-        return self._from_native_frame(self._native_frame.copy())
+        return self._from_native_frame(
+            self._native_frame.copy(), validate_column_names=False
+        )
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        return self._from_native_frame(self._native_frame.iloc[offset::n])
+        return self._from_native_frame(
+            self._native_frame.iloc[offset::n], validate_column_names=False
+        )
 
     def pivot(
         self: Self,
@@ -1012,8 +1042,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             }
         else:
             uniques = {col: self._native_frame[col].unique().tolist() for col in on}
-        all_lists = [values, *list(uniques.values())]
-        ordered_cols = list(product(*all_lists))
+        ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
 
@@ -1053,7 +1082,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._from_native_frame(
             self._native_frame.sample(
                 n=n, frac=fraction, replace=with_replacement, random_state=seed
-            )
+            ),
+            validate_column_names=False,
         )
 
     def unpivot(
@@ -1087,7 +1117,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 raise InvalidOperationError(msg)
 
         if len(columns) == 1:
-            return self._from_native_frame(self._native_frame.explode(columns[0]))
+            return self._from_native_frame(
+                self._native_frame.explode(columns[0]), validate_column_names=False
+            )
         else:
             native_frame = self._native_frame
             anchor_series = native_frame[columns[0]].list.len()
@@ -1113,5 +1145,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             plx = self.__native_namespace__()
             return self._from_native_frame(
-                plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns]
+                plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns],
+                validate_column_names=False,
             )

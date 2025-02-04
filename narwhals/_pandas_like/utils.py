@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
+from contextlib import suppress
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -486,30 +488,25 @@ def native_to_narwhals_dtype(
                 map_interchange_dtype_to_narwhals_dtype,
             )
 
-            try:
+            with suppress(Exception):
                 return map_interchange_dtype_to_narwhals_dtype(
                     df.__dataframe__().get_column(0).dtype, version
                 )
-            except Exception:  # noqa: BLE001, S110
-                pass
         # The most useful assumption is probably String
         return dtypes.String()
     return dtypes.Unknown()  # pragma: no cover
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
-    if implementation in [Implementation.PANDAS, Implementation.MODIN]:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
         import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
-        try:
+        with suppress(AttributeError):
             if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
                 return "pandas-nullable"
-        except AttributeError:  # pragma: no cover
-            # defensive check for old pandas versions
-            pass
         return "numpy"
     else:  # pragma: no cover
         return "numpy"
@@ -890,3 +887,22 @@ def pivot_table(
             observed=True,
         )
     return result
+
+
+def check_column_names_are_unique(columns: pd.Index) -> None:
+    try:
+        len_unique_columns = len(columns.drop_duplicates())
+    except Exception:  # noqa: BLE001  # pragma: no cover
+        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
+        raise ValueError(msg) from None
+
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        msg = ""
+        for key, value in counter.items():
+            if value > 1:
+                msg += f"\n- '{key}' {value} times"
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)

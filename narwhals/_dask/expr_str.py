@@ -96,7 +96,7 @@ class DaskExprStringNamespace:
 
     def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
         return self._compliant_expr._from_call(
-            lambda _input, format: dd.to_datetime(_input, format=format),
+            lambda _input, format: dd.to_datetime(_input, format=format),  # noqa: A006
             "to_datetime",
             format=format,
             returns_scalar=self._compliant_expr._returns_scalar,

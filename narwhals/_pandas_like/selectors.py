@@ -40,14 +40,14 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return PandasSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -59,14 +59,14 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return PandasSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -171,9 +171,7 @@ class PandasSelectorNamespace:
 class PandasSelector(PandasLikeExpr):
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"PandasSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name}, "
+            f"PandasSelector(depth={self._depth}, function_name={self._function_name}, "
         )
 
     def _to_expr(self: Self) -> PandasLikeExpr:

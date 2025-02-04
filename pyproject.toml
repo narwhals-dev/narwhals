@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.24.2"
+version = "1.25.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -102,6 +102,7 @@ lint.select = [
 lint.ignore = [
   "A001",
   "A004",
+  "A005",
   "ARG002",
   "ANN401",
   "C901",

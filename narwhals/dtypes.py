@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import timezone
+from itertools import starmap
 from typing import TYPE_CHECKING
 from typing import Mapping
 
@@ -472,7 +473,9 @@ class Datetime(TemporalType):
         ...     .astype("datetime64[ms, Africa/Accra]")
         ... )
         >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ...     pl.Series(data)
+        ...     .cast(pl.Datetime("ms"))
+        ...     .dt.replace_time_zone("Africa/Accra")
         ... )
         >>> ser_pa = pc.assume_timezone(
         ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
@@ -670,7 +673,7 @@ class Struct(NestedType):
         self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
-            self.fields = [Field(name, dtype) for name, dtype in fields.items()]
+            self.fields = list(starmap(Field, fields.items()))
         else:
             self.fields = list(fields)
 

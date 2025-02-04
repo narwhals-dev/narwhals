@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrameT
+    from narwhals.typing import IntoFrame
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
@@ -82,11 +83,13 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT],
+    narwhals_object: DataFrame[IntoDataFrameT]
+    | LazyFrame[IntoFrameT]
+    | Series[IntoSeriesT],
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
-) -> IntoFrameT | Any:
+) -> IntoDataFrameT | IntoFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:
@@ -129,7 +132,7 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
@@ -239,7 +242,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrame | IntoSeries,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
@@ -283,7 +286,7 @@ def from_native(
 
 
 def from_native(
-    native_object: IntoFrameT | IntoSeries | T,
+    native_object: IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
@@ -514,6 +517,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -552,6 +556,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -590,6 +595,7 @@ def _from_native_impl(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -627,6 +633,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(pa.__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="full",
         )
@@ -673,6 +680,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_dask().__version__),
                 version=version,
+                validate_column_names=True,
             ),
             level="lazy",
         )
@@ -696,13 +704,19 @@ def _from_native_impl(  # noqa: PLR0915
         if version is Version.V1:
             return DataFrame(
                 DuckDBLazyFrame(
-                    native_object, backend_version=backend_version, version=version
+                    native_object,
+                    backend_version=backend_version,
+                    version=version,
+                    validate_column_names=True,
                 ),
                 level="interchange",
             )
         return LazyFrame(
             DuckDBLazyFrame(
-                native_object, backend_version=backend_version, version=version
+                native_object,
+                backend_version=backend_version,
+                version=version,
+                validate_column_names=True,
             ),
             level="lazy",
         )

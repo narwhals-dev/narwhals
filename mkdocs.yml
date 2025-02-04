@@ -105,11 +105,10 @@ plugins:
 - mkdocstrings:
     handlers:
       python:
-        import:
+        inventories:
         - https://installer.readthedocs.io/en/stable/objects.inv
-        rendering:
-          show_signature_annotations: true
         options:
+          show_signature_annotations: true
           members_order: alphabetical
     enable_inventory: true
 

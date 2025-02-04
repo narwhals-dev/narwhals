@@ -709,7 +709,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         import dask.array as da
 
         return self._from_call(
-            lambda _input: da.isfinite(_input),
+            da.isfinite,
             "is_finite",
             returns_scalar=self._returns_scalar,
         )
