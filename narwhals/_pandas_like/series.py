@@ -8,6 +8,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import numpy as np
+
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -31,7 +33,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -87,19 +88,25 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 CLASSICAL_NUMPY_DTYPES = frozenset(
     [
-        "float64",
-        "float32",
-        "int64",
-        "int32",
-        "int16",
-        "int8",
-        "uint64",
-        "uint32",
-        "uint16",
-        "uint8",
-        "bool",
-        "datetime64",
-        "timedelta64",
+        np.dtype("float64"),
+        np.dtype("float32"),
+        np.dtype("int64"),
+        np.dtype("int32"),
+        np.dtype("int16"),
+        np.dtype("int8"),
+        np.dtype("uint64"),
+        np.dtype("uint32"),
+        np.dtype("uint16"),
+        np.dtype("uint8"),
+        np.dtype("bool"),
+        np.dtype("datetime64[s]"),
+        np.dtype("datetime64[ms]"),
+        np.dtype("datetime64[us]"),
+        np.dtype("datetime64[ns]"),
+        np.dtype("timedelta64[s]"),
+        np.dtype("timedelta64[ms]"),
+        np.dtype("timedelta64[us]"),
+        np.dtype("timedelta64[ns]"),
     ]
 )
 

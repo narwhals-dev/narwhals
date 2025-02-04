@@ -9,6 +9,9 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._pandas_like.series import CLASSICAL_NUMPY_DTYPES
+from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
@@ -43,7 +46,6 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
@@ -132,8 +134,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             self._native_frame[name],
             implementation=self._implementation,
@@ -191,8 +191,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
-            from narwhals._pandas_like.series import PandasLikeSeries
-
             return PandasLikeSeries(
                 self._native_frame[item],
                 implementation=self._implementation,
@@ -240,8 +238,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:
-            from narwhals._pandas_like.series import PandasLikeSeries
-
             if isinstance(item[1], str):
                 item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
                 native_series = self._native_frame.iloc[item]
@@ -801,8 +797,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.shape  # type: ignore[no-any-return]
 
     def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         if as_series:
             return {
                 col: PandasLikeSeries(
@@ -816,9 +810,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        from narwhals._pandas_like.series import CLASSICAL_NUMPY_DTYPES
-        from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
-
         native_dtypes = self._native_frame.dtypes
         if native_dtypes.isin(CLASSICAL_NUMPY_DTYPES).all():
             # Fast path, no conversions necessary.
@@ -902,8 +893,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
@@ -915,8 +904,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
