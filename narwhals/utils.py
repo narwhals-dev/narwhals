@@ -161,16 +161,36 @@ class Implementation(Enum):
         Returns:
             Native module.
         """
-        mapping = {
-            Implementation.PANDAS: get_pandas(),
-            Implementation.MODIN: get_modin(),
-            Implementation.CUDF: get_cudf(),
-            Implementation.PYARROW: get_pyarrow(),
-            Implementation.PYSPARK: get_pyspark_sql(),
-            Implementation.POLARS: get_polars(),
-            Implementation.DASK: get_dask_dataframe(),
-        }
-        return mapping[self]  # type: ignore[no-any-return]
+        if self is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
+
+            return pd  # type: ignore[no-any-return]
+        if self is Implementation.MODIN:
+            import modin.pandas
+
+            return modin.pandas  # type: ignore[no-any-return]
+        if self is Implementation.CUDF:
+            import cudf  # ignore-banned-import
+
+            return cudf  # type: ignore[no-any-return]
+        if self is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            return pa  # type: ignore[no-any-return]
+        if self is Implementation.PYSPARK:
+            import pyspark.sql
+
+            return pyspark.sql  # type: ignore[no-any-return]
+        if self is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            return pl
+        if self is Implementation.DASK:
+            import dask.dataframe  # ignore-banned-import
+
+            return dask.dataframe  # type: ignore[no-any-return]
+        msg = "Not supported Implementation"
+        raise AssertionError(msg)
 
     def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
