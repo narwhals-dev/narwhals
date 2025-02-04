@@ -22,6 +22,7 @@ from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
+from narwhals.schema import Schema
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
@@ -495,18 +495,7 @@ def _from_dict_impl(  # noqa: PLR0915
         msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
         raise ValueError(msg)
     if eager_backend is Implementation.POLARS:
-        if schema:
-            from narwhals._polars.utils import (
-                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
-            )
-
-            schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, version=version)
-                for name, dtype in schema.items()
-            }
-        else:
-            schema_pl = None
-
+        schema_pl = Schema(schema).to_polars() if schema else None
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif eager_backend in (
         Implementation.PANDAS,
@@ -552,18 +541,8 @@ def _from_dict_impl(  # noqa: PLR0915
             native_frame = native_frame.astype(schema)
 
     elif eager_backend is Implementation.PYARROW:
-        if schema:
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-            )
-
-            schema = native_namespace.schema(
-                [
-                    (name, arrow_narwhals_to_native_dtype(dtype, version))
-                    for name, dtype in schema.items()
-                ]
-            )
-        native_frame = native_namespace.table(data, schema=schema)
+        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        native_frame = native_namespace.table(data, schema=pa_schema)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
