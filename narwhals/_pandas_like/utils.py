@@ -476,7 +476,7 @@ def native_to_narwhals_dtype(
     import pandas as pd
 
     dtype = pd.api.types.infer_dtype(native_column.head(10), skipna=True)
-    if dtype == "string":
+    if dtype in ("string", "empty"):
         return dtypes.String()
     return dtypes.Object()
 
