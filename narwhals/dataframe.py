@@ -507,7 +507,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def lazy(
         self: Self,
-        *,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.

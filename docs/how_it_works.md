@@ -111,6 +111,7 @@ df = PandasLikeDataFrame(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
+    validate_column_names=True,
 )
 expression = pn.col("a") + 1
 result = expression._call(df)

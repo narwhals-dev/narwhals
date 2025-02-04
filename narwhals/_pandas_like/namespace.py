@@ -336,6 +336,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         if how == "vertical":
             return PandasLikeDataFrame(
@@ -347,6 +348,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
 
         if how == "diagonal":
@@ -359,6 +361,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         raise NotImplementedError
 

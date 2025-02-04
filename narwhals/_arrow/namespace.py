@@ -342,7 +342,10 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             raise NotImplementedError
 
         return ArrowDataFrame(
-            result_table, backend_version=self._backend_version, version=self._version
+            result_table,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
         )
 
     @property
