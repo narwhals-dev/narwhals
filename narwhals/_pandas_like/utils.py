@@ -13,6 +13,7 @@ from typing import TypeVar
 
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
@@ -476,8 +476,14 @@ def native_to_narwhals_dtype(
     import pandas as pd
 
     dtype = pd.api.types.infer_dtype(native_column.head(10), skipna=True)
-    if dtype in ("string", "empty"):
+    if dtype == "string":
         return dtypes.String()
+    if dtype == "empty" and version is not Version.V1:
+        # Default to String for empty Series.
+        return dtypes.String()
+    elif dtype == "empty":
+        # But preserve returning Object in V1.
+        return dtypes.Object()
     return dtypes.Object()
 
 
