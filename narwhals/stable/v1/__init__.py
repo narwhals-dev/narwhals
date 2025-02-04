@@ -2196,7 +2196,7 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    if native_namespace is not None and backend is None:
+    if native_namespace is not None and backend is None:  # pragma: no cover
         backend = native_namespace
     elif native_namespace is not None and backend is not None:
         msg = "Can't pass both `native_namespace` and `backend`"

@@ -115,6 +115,19 @@ def test_from_dict_both_backend_and_namespace(
         )
 
 
+def test_from_dict_both_backend_and_namespace_v1(
+    constructor: Constructor,
+) -> None:
+    df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    native_namespace = nw_v1.get_native_namespace(df)
+    with pytest.raises(ValueError, match="Can't pass both"):
+        nw_v1.from_dict(
+            {"c": [1, 2], "d": [5, 6]},
+            backend="pandas",
+            native_namespace=native_namespace,
+        )
+
+
 @pytest.mark.parametrize(
     "backend",
     [
