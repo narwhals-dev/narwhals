@@ -28,7 +28,7 @@ def test_from_dict(
     request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
     expected = {"c": [1, 2], "d": [5, 6]}
@@ -52,7 +52,7 @@ def test_from_dict_schema(
     request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
     result = nw_v1.from_dict(
@@ -63,8 +63,25 @@ def test_from_dict_schema(
     assert result.collect_schema() == schema
 
 
-def test_from_dict_without_backend(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
+@pytest.mark.parametrize(
+    "backend",
+    [
+        Implementation.POLARS,
+        Implementation.PANDAS,
+        Implementation.PYARROW,
+        "polars",
+        "pandas",
+        "pyarrow",
+    ],
+)
+def test_from_dict_without_backend(
+    constructor: Constructor, backend: Implementation | str
+) -> None:
+    df = (
+        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        .lazy()
+        .collect(backend=backend)
+    )
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
@@ -77,10 +94,25 @@ def test_from_dict_without_backend_invalid(
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
 
+@pytest.mark.parametrize(
+    "backend",
+    [
+        Implementation.POLARS,
+        Implementation.PANDAS,
+        Implementation.PYARROW,
+        "polars",
+        "pandas",
+        "pyarrow",
+    ],
+)
 def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor,
+    constructor: Constructor, backend: Implementation | str
 ) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
+    df = (
+        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        .lazy()
+        .collect(backend=backend)
+    )
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
     expected = {"c": [1, 2, 3], "d": [4, 5, 6]}
     assert_equal_data(result, expected)
@@ -102,7 +134,7 @@ def test_from_dict_v1(
     request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw_v1.from_dict(
         {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]},
