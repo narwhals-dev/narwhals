@@ -8,8 +8,9 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import numpy as np
+
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals._pandas_like.series import CLASSICAL_NUMPY_DTYPES
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
@@ -39,7 +40,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
@@ -53,6 +53,31 @@ if TYPE_CHECKING:
 
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
+
+CLASSICAL_NUMPY_DTYPES = frozenset(
+    [
+        np.dtype("float64"),
+        np.dtype("float32"),
+        np.dtype("int64"),
+        np.dtype("int32"),
+        np.dtype("int16"),
+        np.dtype("int8"),
+        np.dtype("uint64"),
+        np.dtype("uint32"),
+        np.dtype("uint16"),
+        np.dtype("uint8"),
+        np.dtype("bool"),
+        np.dtype("datetime64[s]"),
+        np.dtype("datetime64[ms]"),
+        np.dtype("datetime64[us]"),
+        np.dtype("datetime64[ns]"),
+        np.dtype("timedelta64[s]"),
+        np.dtype("timedelta64[ms]"),
+        np.dtype("timedelta64[us]"),
+        np.dtype("timedelta64[ns]"),
+        np.dtype("object"),
+    ]
+)
 
 
 class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
