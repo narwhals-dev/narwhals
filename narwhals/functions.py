@@ -446,7 +446,7 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    if native_namespace is not None and backend is None:
+    if native_namespace is not None and backend is None:  # pragma: no cover
         msg = (
             "Please use `backend` instead. Note that `native_namespace` is still available"
             "(and won't emit a deprecation warning) if you use `narwhals.stable.v1`, "

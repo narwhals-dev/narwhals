@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -10,6 +11,9 @@ import narwhals.stable.v1 as nw_v1
 from narwhals.utils import Implementation
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 @pytest.mark.parametrize(
@@ -67,11 +71,7 @@ def test_from_dict_schema(
     "backend",
     [
         Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
         "polars",
-        "pandas",
-        "pyarrow",
     ],
 )
 def test_from_dict_without_backend(
@@ -94,15 +94,32 @@ def test_from_dict_without_backend_invalid(
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
 
+@pytest.mark.parametrize("backend", [Implementation.DASK, Implementation.PYSPARK])
+def test_from_dict_with_backend_invalid(
+    backend: ModuleType | Implementation | str | None,
+) -> None:
+    with pytest.raises(ValueError, match="Unsupported `backend` value"):
+        nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
+
+
+def test_from_dict_both_backend_and_namespace(
+    constructor: Constructor,
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    native_namespace = nw.get_native_namespace(df)
+    with pytest.raises(ValueError, match="Can't pass both"):
+        nw.from_dict(
+            {"c": [1, 2], "d": [5, 6]},
+            backend="pandas",
+            native_namespace=native_namespace,
+        )
+
+
 @pytest.mark.parametrize(
     "backend",
     [
         Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
         "polars",
-        "pandas",
-        "pyarrow",
     ],
 )
 def test_from_dict_one_native_one_narwhals(
