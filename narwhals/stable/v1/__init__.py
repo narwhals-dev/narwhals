@@ -2162,7 +2162,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
+    backend: ModuleType | Implementation | str | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -2176,8 +2176,15 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
+        backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
+                    or `POLARS`.
+                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
+                - Directly as a module `pandas`, `pyarrow` or `polars`.
 
     Returns:
         A new DataFrame.
@@ -2186,7 +2193,7 @@ def from_dict(
         _from_dict_impl(
             data,
             schema,
-            native_namespace=native_namespace,
+            backend=backend,
             version=Version.V1,
         )
     )
