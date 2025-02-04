@@ -131,7 +131,7 @@ class DaskExprDateTimeNamespace:
     def convert_time_zone(self: Self, time_zone: str) -> DaskExpr:
         def func(s: dx.Series, time_zone: str) -> dx.Series:
             dtype = native_to_narwhals_dtype(
-                s, self._compliant_expr._version, Implementation.DASK
+                s.dtype, self._compliant_expr._version, Implementation.DASK
             )
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
