@@ -28,12 +28,8 @@ if TYPE_CHECKING:
     ],
 )
 def test_from_dict(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
     expected = {"c": [1, 2], "d": [5, 6]}
     assert_equal_data(result, expected)
@@ -52,12 +48,8 @@ def test_from_dict(
     ],
 )
 def test_from_dict_schema(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
     result = nw_v1.from_dict(
         {"c": [1, 2], "d": [5, 6]},
@@ -160,12 +152,8 @@ def test_from_dict_one_native_one_narwhals(
     ],
 )
 def test_from_dict_v1(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
     backend: Implementation | str,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     result = nw_v1.from_dict(
         {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]},
         backend=backend,
