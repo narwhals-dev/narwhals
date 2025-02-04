@@ -686,7 +686,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'foo': [1, 2], 'bar': [6.0, 7.0]})
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
             >>> df = nw.from_native(df_native)
             >>> df.to_polars()
             shape: (2, 2)
@@ -763,10 +763,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'foo': [1, 2], 'bar': [6.0, 7.0]})
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
             >>> df = nw.from_native(df_native)
-            >>> df.write_csv()
-            'foo,bar\n1,6.0\n2,7.0\n'
+            >>> df.write_parquet("out.parquet")  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
@@ -779,11 +778,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame{'foo': [1, 2], 'bar': [6.5, 7.0]})
+            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": [6.5, 7.0]})
             >>> df = nw.from_native(df_native)
             >>> df.to_numpy()
             array([[1. , 6.5],
-                   [2. , 7.0]])
+                   [2. , 7. ]])
         """
         return self._compliant_frame.to_numpy()
 
@@ -797,7 +796,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame{'foo': [1, 2]})
+            >>> df_native = pd.DataFrame({"foo": [1, 2]})
             >>> df = nw.from_native(df_native)
             >>> df.shape
             (2, 1)
@@ -821,17 +820,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             there is no risk of ambiguity.
 
         Examples:
-            >>> import pyarrow as pa
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pa.table({'a': [1, 2]})
+            >>> df_native = pd.DataFrame({"a": [1, 2]})
             >>> df = nw.from_native(df_native)
-            >>> df.get_column('a').to_native()
-            [
-              [
-                1,
-                2
-              ]
-            ]
+            >>> df.get_column("a").to_native()
+            0    1
+            1    2
+            Name: a, dtype: int64
         """
         return self._series(
             self._compliant_frame.get_column(name),
@@ -853,10 +849,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'foo': [1, 2], 'bar': [6.0, 7.0]})
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
             >>> df = nw.from_native(df_native)
             >>> df.estimated_size()
-            63
+            32
         """
         return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
 
@@ -947,17 +943,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             use `DataFrame.get_column` instead.
 
         Examples:
-            >>> import pyarrow as pa
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pa.table({'a': [1, 2]})
+            >>> df_native = pd.DataFrame({"a": [1, 2]})
             >>> df = nw.from_native(df_native)
-            >>> df['a'].to_native()
-            [
-            [
-                1,
-                2
-            ]
-            ]
+            >>> df["a"].to_native()
+            0    1
+            1    2
+            Name: a, dtype: int64
         """
         if isinstance(item, int):
             item = [item]
@@ -1025,7 +1018,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
         >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'A': [1, 2], 'fruits': ['banana', 'apple']})
+            >>> df_native = pa.table({"A": [1, 2], "fruits": ["banana", "apple"]})
             >>> df = nw.from_native(df_native)
             >>> df.to_dict(as_series=False)
             {'A': [1, 2], 'fruits': ['banana', 'apple']}
@@ -1062,7 +1055,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'a': [1, 2], 'b': [4, 5]})
+            >>> df_native = pa.table({"a": [1, 2], "b": [4, 5]})
             >>> nw.from_native(df_native).row(1)
             (<pyarrow.Int64Scalar: 2>, <pyarrow.Int64Scalar: 5>)
         """
@@ -1090,9 +1083,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2], "ba": [4, 5]})
             >>> nw.from_native(df_native).pipe(
-            ...     lambda _df: _df.select([x for x in _df.columns if len(x) == 1]).to_native()
+            ...     lambda _df: _df.select(
+            ...         [x for x in _df.columns if len(x) == 1]
+            ...     ).to_native()
             ... )
-            a
+               a
             0  1
             1  2
         """
@@ -1164,7 +1159,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
             >>> nw.from_native(df_native).schema
-            Schema({'foo': Int64, 'bar': Float64}) 
+            Schema({'foo': Int64, 'bar': Float64})
         """
         return super().schema
 
@@ -1227,7 +1222,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
-            >>> nw.from_native(df_native).rows
+            >>> nw.from_native(df_native).rows()
+            [(1, 6.0), (2, 7.0)]
         """
         return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
 
@@ -1271,7 +1267,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
             >>> iter_rows = nw.from_native(df_native).iter_rows()
             >>> next(iter_rows)
+            (1, 6.0)
             >>> next(iter_rows)
+            (2, 7.0)
         """
         return self._compliant_frame.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
 
@@ -1333,8 +1331,18 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({'a': [1, 2], 'b': [3, 4]})
-            >>> nw.from_native(df_native).select('a', a_plus_1=nw.col('a')+1)
+            >>> df_native = pa.table({"a": [1, 2], "b": [3, 4]})
+            >>> nw.from_native(df_native).select("a", a_plus_1=nw.col("a") + 1)
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |a: int64          |
+            |a_plus_1: int64   |
+            |----              |
+            |a: [[1,2]]        |
+            |a_plus_1: [[2,3]] |
+            └──────────────────┘
         """
         return super().select(*exprs, **named_exprs)
 
@@ -1375,7 +1383,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
-            >>> nw.from_native(df_native).head(1)
+            >>> nw.from_native(df_native).head(1).to_native()
                a    b
             0  1  0.5
         """
@@ -1396,8 +1404,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
             >>> nw.from_native(df_native).tail(1)
-               a    b
-            0  2  4.0
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a    b     |
+            |    1  2  4.0     |
+            └──────────────────┘
         """
         return super().tail(n)
 
@@ -1415,7 +1427,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": [6.0, 7.0], "ham": ["a", "b"]})
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2], "bar": [6.0, 7.0], "ham": ["a", "b"]}
+            ... )
             >>> nw.from_native(df_native).drop("ham").to_native()
                foo  bar
             0    1  6.0
@@ -1451,7 +1465,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": ["a", "a"], "ham": ["b", "b"]})
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2], "bar": ["a", "a"], "ham": ["b", "b"]}
+            ... )
             >>> nw.from_native(df_native).unique(["bar", "ham"]).to_native()
                foo bar ham
             0    1   a   b
@@ -1489,7 +1505,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]})
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
+            ... )
 
             Filter on one condition
             >>> nw.from_native(df_native).filter(nw.col("foo") > 1).to_native()
@@ -1498,12 +1516,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             2    3    8   c
 
             Filter on multiple conditions with `&`
-            >>> nw.from_native(df_native).filter(nw.col("foo") < 3, nw.col("ham") == "a").to_native()
+            >>> nw.from_native(df_native).filter(
+            ...     nw.col("foo") < 3, nw.col("ham") == "a"
+            ... ).to_native()
                foo  bar ham
             0    1    6   a
 
             # Filter on multiple conditions with `|`
-            >>> nw.from_native(df_native).filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).to_native()
+            >>> nw.from_native(df_native).filter(
+            ...     (nw.col("foo") == 1) | (nw.col("ham") == "c")
+            ... ).to_native()
                foo  bar ham
             0    1    6   a
             2    3    8   c
@@ -1531,10 +1553,18 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": ["a", "b", "a", "b", "c"], "b": [1, 2, 1, 3, 3], "c": [5, 4, 3, 2, 1]})
+            >>> df_native = pd.DataFrame(
+            ...     {
+            ...         "a": ["a", "b", "a", "b", "c"],
+            ...         "b": [1, 2, 1, 3, 3],
+            ...         "c": [5, 4, 3, 2, 1],
+            ...     }
+            ... )
 
             # Group by one column and compute the sum of another column
-            >>> nw.from_native(df_native, eager_only=True).group_by("a").agg(nw.col("b").sum()).sort("a").to_native()
+            >>> nw.from_native(df_native, eager_only=True).group_by("a").agg(
+            ...     nw.col("b").sum()
+            ... ).sort("a").to_native()
                a  b
             0  a  2
             1  b  5
@@ -1594,8 +1624,17 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [2, 1], "bar": [6.0, 7.0], "ham": ["a", "b"]})
-            >>> nw.from_native(df_native).sort('foo')
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [2, 1], "bar": [6.0, 7.0], "ham": ["a", "b"]}
+            ... )
+            >>> nw.from_native(df_native).sort("foo")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |    foo  bar ham  |
+            | 1    1  7.0   b  |
+            | 0    2  6.0   a  |
+            └──────────────────┘
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
@@ -1632,9 +1671,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_1_native = pd.DataFrame({"id": ['a', 'b'], "price": [6.0, 7.0]})
-            >>> df_2_native = pd.DataFrame({"id": ['a', 'b', 'c'], "qty": [1,2,3]})
-            >>> nw.from_native(df_1_native).join(nw.from_native(df_2_native), on='id')
+            >>> df_1_native = pd.DataFrame({"id": ["a", "b"], "price": [6.0, 7.0]})
+            >>> df_2_native = pd.DataFrame({"id": ["a", "b", "c"], "qty": [1, 2, 3]})
+            >>> nw.from_native(df_1_native).join(nw.from_native(df_2_native), on="id")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |   id  price  qty |
+            | 0  a    6.0    1 |
+            | 1  b    7.0    2 |
+            └──────────────────┘
         """
         return super().join(
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
@@ -1703,7 +1749,15 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> population_native = pd.DataFrame(data_population)
             >>> gdp = nw.from_native(gdp_native)
             >>> population = nw.from_native(population_native)
-            >>> population.join_asof(gdp, on='datetime', strategy='backward')
+            >>> population.join_asof(gdp, on="datetime", strategy="backward")
+            ┌──────────────────────────────┐
+            |      Narwhals DataFrame      |
+            |------------------------------|
+            |    datetime  population   gdp|
+            |0 2016-03-01       82.19  4164|
+            |1 2018-08-01       82.66  4566|
+            |2 2019-01-01       83.12  4696|
+            └──────────────────────────────┘
         """
         return super().join_asof(
             other,
@@ -1727,8 +1781,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> df_native = pd.DataFrame({"foo": [2, 2, 2], "bar": [6.0, 6.0, 7.0]})
             >>> nw.from_native(df_native).is_duplicated()
+            ┌───────────────┐
+            |Narwhals Series|
+            |---------------|
+            |  0     True   |
+            |  1     True   |
+            |  2    False   |
+            |  dtype: bool  |
+            └───────────────┘
         """
         return self._series(
             self._compliant_frame.is_duplicated(),
@@ -1744,8 +1806,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> df_native = pd.DataFrame({"foo": [2, 2, 2], "bar": [6.0, 6.0, 7.0]})
             >>> nw.from_native(df_native).is_empty()
+            False
         """
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
@@ -1758,8 +1821,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [2, 2,2], "bar": [6.0, 6., 7.0]})
+            >>> df_native = pd.DataFrame({"foo": [2, 2, 2], "bar": [6.0, 6.0, 7.0]})
             >>> nw.from_native(df_native).is_unique()
+            ┌───────────────┐
+            |Narwhals Series|
+            |---------------|
+            |  0    False   |
+            |  1    False   |
+            |  2     True   |
+            |  dtype: bool  |
+            └───────────────┘
         """
         return self._series(
             self._compliant_frame.is_unique(),
@@ -1782,6 +1853,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"foo": [1, None], "bar": [2, 3]})
             >>> nw.from_native(df_native).null_count()
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  foo: int64      |
+            |  bar: int64      |
+            |  ----            |
+            |  foo: [[1]]      |
+            |  bar: [[0]]      |
+            └──────────────────┘
         """
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
@@ -1804,6 +1885,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"foo": [1, None], "bar": [2, 3]})
             >>> nw.from_native(df_native).item(0, 1)
+            2
         """
         return self._compliant_frame.item(row=row, column=column)
 
@@ -1828,8 +1910,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table({"foo": [1, None, 2 3]})
+            >>> df_native = pa.table({"foo": [1, None, 2, 3]})
             >>> nw.from_native(df_native).gather_every(2)
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  foo: int64      |
+            |  ----            |
+            |  foo: [[1,2]]    |
+            └──────────────────┘
         """
         return super().gather_every(n=n, offset=offset)
 
@@ -1883,7 +1973,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     "bar": [0, 2, 0, 0, 9, 4],
             ... }
             >>> df_native = pd.DataFrame(data)
-            >>> df.pivot('col', index='ix', aggregate_function='sum')
+            >>> nw.from_native(df_native).pivot(
+            ...     "col", index="ix", aggregate_function="sum"
+            ... )
+            ┌─────────────────────────────────┐
+            |       Narwhals DataFrame        |
+            |---------------------------------|
+            |   ix  foo_a  foo_b  bar_a  bar_b|
+            |0   1      1      7      2      9|
+            |1   2      4      1      0      4|
+            └─────────────────────────────────┘
         """
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
@@ -1917,6 +2016,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"foo": [1, None], "bar": [2, 3]})
             >>> nw.from_native(df_native).to_arrow()
+            pyarrow.Table
+            foo: double
+            bar: int64
+            ----
+            foo: [[1,null]]
+            bar: [[2,3]]
         """
         return self._compliant_frame.to_arrow()
 
@@ -1946,7 +2051,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [19,32,4]})
+            >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [19, 32, 4]})
             >>> nw.from_native(df_native).to_sample(n=2)  # doctest:+SKIP
         """
         return self._from_compliant_dataframe(
@@ -1996,7 +2101,18 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     "c": [2, 4, 6],
             ... }
             >>> df_native = pd.DataFrame(data)
-            >>> nw.from_native(df_native).unpivot(['b', 'c'], index='a')
+            >>> nw.from_native(df_native).unpivot(["b", "c"], index="a")
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |   a variable  value|
+            |0  x        b      1|
+            |1  y        b      3|
+            |2  z        b      5|
+            |3  x        c      2|
+            |4  y        c      4|
+            |5  z        c      6|
+            └────────────────────┘
         """
         return super().unpivot(
             on=on, index=index, variable_name=variable_name, value_name=value_name
@@ -2017,12 +2133,21 @@ class DataFrame(BaseFrame[DataFrameT]):
             New DataFrame
 
         Examples:
-            >>> import pandas as pd
-            >>> import pyarrow as pa
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> data = {'a': ['x', 'y'], 'b': [[1, 2], [3]]}
-            >>> df_native = pd.DataFrame(data).convert_dtypes(dtype_backend='pyarrow')
-            >>> nw.from_native(df_native).explode('lst1')
+            >>> data = {"a": ["x", "y"], "b": [[1, 2], [3]]}
+            >>> df_native = pl.DataFrame(data)
+            >>> nw.from_native(df_native).explode("b").to_native()
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ str ┆ i64 │
+            ╞═════╪═════╡
+            │ x   ┆ 1   │
+            │ x   ┆ 2   │
+            │ y   ┆ 3   │
+            └─────┴─────┘
         """
         return super().explode(columns, *more_columns)
 
