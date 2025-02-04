@@ -16,7 +16,6 @@ from narwhals.utils import Version
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    from types import ModuleType
     from typing import Any
     from typing import ClassVar
 
@@ -98,26 +97,23 @@ class Schema(BaseSchema):
         """
         return len(self)
 
-    def to_arrow(self: Self, *, backend: ModuleType | Implementation | str) -> pa.Schema:
+    def to_arrow(self: Self) -> pa.Schema:
+        import pyarrow as pa
+
         from narwhals._arrow.utils import narwhals_to_native_dtype
 
-        implementation = Implementation.from_backend(backend)
-        schema: pa.Schema = implementation.to_native_namespace().schema(
+        return pa.schema(
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        return schema
 
-    def to_pandas(
-        self: Self,
-        *,
-        backend: ModuleType | Implementation | str,
-        dtype_backend: str | None = None,
-    ) -> dict[str, Any]:
+    def to_pandas(self: Self, *, dtype_backend: str | None = None) -> dict[str, Any]:
+        import pandas as pd
+
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
 
-        implementation = Implementation.from_backend(backend)
-        backend_version = parse_version(implementation.to_native_namespace().__version__)
+        backend_version = parse_version(pd.__version__)
+        implementation = Implementation.from_native_namespace(pd)
         return {
             name: narwhals_to_native_dtype(
                 dtype=dtype,
@@ -129,12 +125,12 @@ class Schema(BaseSchema):
             for name, dtype in self.items()
         }
 
-    def to_polars(self: Self, *, backend: ModuleType | Implementation | str) -> pl.Schema:
+    def to_polars(self: Self) -> pl.Schema:
+        import polars as pl
+
         from narwhals._polars.utils import narwhals_to_native_dtype
 
-        implementation = Implementation.from_backend(backend)
-        schema: pl.Schema = implementation.to_native_namespace().Schema(
+        return pl.Schema(
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        return schema
