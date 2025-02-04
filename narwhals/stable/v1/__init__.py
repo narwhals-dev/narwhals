@@ -1081,6 +1081,8 @@ class Schema(NwSchema):
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
     """
 
+    _version = Version.V1
+
 
 @overload
 def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...

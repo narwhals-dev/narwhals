@@ -18,6 +18,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import Any
+    from typing import ClassVar
 
     import polars as pl
     import pyarrow as pa
@@ -64,6 +65,8 @@ class Schema(BaseSchema):
         2
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     def __init__(
         self: Self,
         schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
@@ -102,26 +105,21 @@ class Schema(BaseSchema):
         dtype_backend: str | None = None,
     ) -> dict[str, Any] | pl.Schema | pa.Schema:
         implementation = Implementation.from_backend(backend)
-        version = Version.MAIN
         if implementation is Implementation.POLARS:
-            return self.to_polars(backend=implementation, version=version)
+            return self.to_polars(backend=implementation)
         elif implementation.is_pandas_like():
-            return self.to_pandas(
-                backend=implementation, version=version, dtype_backend=dtype_backend
-            )
+            return self.to_pandas(backend=implementation, dtype_backend=dtype_backend)
         elif implementation is Implementation.PYARROW:
-            return self.to_arrow(backend=implementation, version=version)
+            return self.to_arrow(backend=implementation)
 
         raise NotImplementedError
 
-    def to_arrow(
-        self: Self, *, backend: ModuleType | Implementation | str, version: Version
-    ) -> pa.Schema:
+    def to_arrow(self: Self, *, backend: ModuleType | Implementation | str) -> pa.Schema:
         from narwhals._arrow.utils import narwhals_to_native_dtype
 
         implementation = Implementation.from_backend(backend)
         schema: pa.Schema = implementation.to_native_namespace().schema(
-            (name, narwhals_to_native_dtype(dtype, version))
+            (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
         return schema
@@ -130,7 +128,6 @@ class Schema(BaseSchema):
         self: Self,
         *,
         backend: ModuleType | Implementation | str,
-        version: Version,
         dtype_backend: str | None = None,
     ) -> dict[str, Any]:
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
@@ -143,19 +140,17 @@ class Schema(BaseSchema):
                 dtype_backend=dtype_backend,
                 implementation=implementation,
                 backend_version=backend_version,
-                version=version,
+                version=self._version,
             )
             for name, dtype in self.items()
         }
 
-    def to_polars(
-        self: Self, *, backend: ModuleType | Implementation | str, version: Version
-    ) -> pl.Schema:
+    def to_polars(self: Self, *, backend: ModuleType | Implementation | str) -> pl.Schema:
         from narwhals._polars.utils import narwhals_to_native_dtype
 
         implementation = Implementation.from_backend(backend)
         schema: pl.Schema = implementation.to_native_namespace().Schema(
-            (name, narwhals_to_native_dtype(dtype, version))
+            (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
         return schema
