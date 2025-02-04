@@ -816,7 +816,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        from narwhals._pandas_like.series import CLASSICAL_NUMPY_DTYPES
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+
+        native_dtypes = self._native_frame.dtypes
+        if native_dtypes.isin(CLASSICAL_NUMPY_DTYPES).all():
+            # Fast path, no conversions necessary.
+            if dtype is not None:
+                return self._native_frame.to_numpy(dtype=dtype, copy=copy)
+            return self._native_frame.to_numpy(copy=copy)
 
         if copy is None:
             # pandas default differs from Polars, but cuDF default is True
@@ -846,7 +854,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for col_dtype in df.dtypes:
+        for col_dtype in native_dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np
 

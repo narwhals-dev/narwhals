@@ -85,6 +85,23 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "Float32": "float32",
     "float32[pyarrow]": "float32",
 }
+CLASSICAL_NUMPY_DTYPES = frozenset(
+    [
+        "float64",
+        "float32",
+        "int64",
+        "int32",
+        "int16",
+        "int8",
+        "uint64",
+        "uint32",
+        "uint16",
+        "uint8",
+        "bool",
+        "datetime64",
+        "timedelta64",
+    ]
+)
 
 
 class PandasLikeSeries(CompliantSeries):
