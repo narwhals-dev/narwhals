@@ -395,10 +395,10 @@ def from_dict(
 
                 `backend` can be specified in various ways:
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
-                    or `POLARS`.
-                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
-                - Directly as a module `pandas`, `pyarrow` or `polars`.
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.26.0):
@@ -496,6 +496,8 @@ def _from_dict_impl(  # noqa: PLR0915
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.PYARROW,
+        Implementation.MODIN,
+        Implementation.CUDF,
     )
     if eager_backend is not None and eager_backend not in supported_eager_backends:
         msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
@@ -514,7 +516,11 @@ def _from_dict_impl(  # noqa: PLR0915
             schema_pl = None
 
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
-    elif eager_backend is Implementation.PANDAS:
+    elif eager_backend in (
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    ):
         aligned_data = {}
         left_most_series = None
         for key, native_series in data.items():

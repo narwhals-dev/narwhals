@@ -16,16 +16,23 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 
+TEST_EAGER_BACKENDS = [
+    Implementation.POLARS,
+    Implementation.PANDAS,
+    Implementation.PYARROW,
+    Implementation.MODIN,
+    Implementation.CUDF,
+    "polars",
+    "pandas",
+    "pyarrow",
+    "modin",
+    "cudf",
+]
+
+
 @pytest.mark.parametrize(
     "backend",
-    [
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
-        "polars",
-        "pandas",
-        "pyarrow",
-    ],
+    TEST_EAGER_BACKENDS,
 )
 def test_from_dict(
     backend: Implementation | str,
@@ -38,14 +45,7 @@ def test_from_dict(
 
 @pytest.mark.parametrize(
     "backend",
-    [
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
-        "polars",
-        "pandas",
-        "pyarrow",
-    ],
+    TEST_EAGER_BACKENDS,
 )
 def test_from_dict_schema(
     backend: Implementation | str,
@@ -142,14 +142,7 @@ def test_from_dict_one_native_one_narwhals(
 
 @pytest.mark.parametrize(
     "backend",
-    [
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
-        "polars",
-        "pandas",
-        "pyarrow",
-    ],
+    TEST_EAGER_BACKENDS,
 )
 def test_from_dict_v1(
     backend: Implementation | str,
