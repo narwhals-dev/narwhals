@@ -7,7 +7,6 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
-import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -232,6 +231,7 @@ def test_validate_not_duplicated_columns_arrow() -> None:
 
 
 def test_validate_not_duplicated_columns_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
     rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
