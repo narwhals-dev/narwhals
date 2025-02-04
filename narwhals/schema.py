@@ -98,22 +98,6 @@ class Schema(BaseSchema):
         """
         return len(self)
 
-    def to_native(
-        self: Self,
-        *,
-        backend: ModuleType | Implementation | str,
-        dtype_backend: str | None = None,
-    ) -> dict[str, Any] | pl.Schema | pa.Schema:
-        implementation = Implementation.from_backend(backend)
-        if implementation is Implementation.POLARS:
-            return self.to_polars(backend=implementation)
-        elif implementation.is_pandas_like():
-            return self.to_pandas(backend=implementation, dtype_backend=dtype_backend)
-        elif implementation is Implementation.PYARROW:
-            return self.to_arrow(backend=implementation)
-
-        raise NotImplementedError
-
     def to_arrow(self: Self, *, backend: ModuleType | Implementation | str) -> pa.Schema:
         from narwhals._arrow.utils import narwhals_to_native_dtype
 
