@@ -78,6 +78,7 @@ from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
+from narwhals.utils import validate_native_namespace_and_backend
 from narwhals.utils import validate_strict_and_pass_though
 
 if TYPE_CHECKING:
@@ -169,7 +170,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     def lazy(
         self: Self,
-        *,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
@@ -2196,11 +2196,9 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=False
+    )
     return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
             data,

@@ -26,9 +26,9 @@ from narwhals.translate import from_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
-from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
+from narwhals.utils import validate_native_namespace_and_backend
 
 # Missing type parameters for generic type "DataFrame"
 # However, trying to provide one results in mypy still complaining...
@@ -446,17 +446,9 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        msg = (
-            "Please use `backend` instead. Note that `native_namespace` is still available"
-            "(and won't emit a deprecation warning) if you use `narwhals.stable.v1`, "
-            "see [perfect backwards compatibility policy](../backcompat.md/)."
-        )
-        issue_deprecation_warning(msg, _version="1.26.0")
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
+    )
     return _from_dict_impl(
         data,
         schema,

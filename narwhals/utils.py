@@ -1066,6 +1066,27 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
+def validate_native_namespace_and_backend(
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
+    *,
+    emit_deprecation_warning: bool,
+) -> ModuleType | Implementation | str | None:
+    if native_namespace is not None and backend is None:  # pragma: no cover
+        if emit_deprecation_warning:
+            msg = (
+                "`native_namespace` is deprecated, please use `pass_through` instead.\n\n"
+                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+            )
+            issue_deprecation_warning(msg, _version="1.25.1")
+        backend = native_namespace
+    elif native_namespace is not None and backend is not None:
+        msg = "Can't pass both `native_namespace` and `backend`"
+        raise ValueError(msg)
+    return backend
+
+
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:

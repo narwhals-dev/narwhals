@@ -754,6 +754,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
         from narwhals.utils import parse_version
 
+        pandas_df = self.to_pandas()
         if backend is None:
             return self
         elif backend is Implementation.DUCKDB:
@@ -761,9 +762,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
-                df=duckdb.table("df"),
+                df=duckdb.table("pandas_df"),
                 backend_version=parse_version(duckdb.__version__),
                 version=self._version,
             )
@@ -773,7 +773,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             from narwhals._polars.dataframe import PolarsLazyFrame
 
             return PolarsLazyFrame(
-                df=pl.from_pandas(self._native_frame).lazy(),
+                df=pl.from_pandas(pandas_df).lazy(),
                 backend_version=parse_version(pl.__version__),
                 version=self._version,
             )
@@ -784,7 +784,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
-                native_dataframe=dd.from_pandas(self._native_frame),
+                native_dataframe=dd.from_pandas(pandas_df),
                 backend_version=parse_version(dask.__version__),
                 version=self._version,
             )
