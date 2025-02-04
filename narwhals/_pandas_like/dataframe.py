@@ -19,6 +19,7 @@ from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -112,7 +113,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 if value > 1:
                     msg += f"\n- '{key}' {value} times"
             msg = f"Expected unique column names, got:{msg}"
-            raise ValueError(msg)
+            raise DuplicateError(msg)
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
