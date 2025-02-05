@@ -15,7 +15,6 @@ from tests.utils import assert_equal_data
 
 data = {
     "int": [0, 1, 2, 3, 4, 5, 6],
-    "float": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
 }
 
 bins_and_expected = [
@@ -38,6 +37,10 @@ bins_and_expected = [
     {
         "bins": [1.0, 2.0625],
         "expected": [1],
+    },
+    {
+        "bins": [1],
+        "expected": [],
     },
 ]
 counts_and_expected = [
@@ -88,7 +91,9 @@ def test_hist_bin(
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor_eager(data)).with_columns(
+        float=nw.col("int").cast(nw.Float64),
+    )
     bins = params["bins"]
 
     expected = {
@@ -98,20 +103,45 @@ def test_hist_bin(
     if not include_breakpoint:
         del expected["breakpoint"]
 
-    result = df["int"].hist(
-        bins=bins,
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+    # smoke tests
+    for col in df.columns:
+        result = df[col].hist(
+            bins=bins,
+            include_breakpoint=include_breakpoint,
+        )
+        assert_equal_data(result, expected)
 
-    result = df["float"].hist(
-        bins=bins,
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+        # result size property
+        if len(bins) < 2:
+            assert len(result) == 0
 
+    # shift bins property
     shift_by = 10
-    bins = [b + shift_by for b in bins]
+    shifted_bins = [b + shift_by for b in bins]
+    expected = {
+        "breakpoint": shifted_bins[1:],
+        "count": params["expected"],
+    }
+    if not include_breakpoint:
+        del expected["breakpoint"]
+
+    for col in df.columns:
+        result = (df[col] + shift_by).hist(
+            bins=shifted_bins,
+            include_breakpoint=include_breakpoint,
+        )
+        assert_equal_data(result, expected)
+
+    # missing/nan results
+    df = nw.from_native(
+        constructor_eager(
+            {
+                "has_nan": [float("nan"), *data["int"]],
+                "has_null": [None, *data["int"]],
+            }
+        )
+    )
+    bins = params["bins"]
     expected = {
         "breakpoint": bins[1:],
         "count": params["expected"],
@@ -119,17 +149,13 @@ def test_hist_bin(
     if not include_breakpoint:
         del expected["breakpoint"]
 
-    result = (df["int"] + shift_by).hist(
-        bins=bins,
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+    for col in df.columns:
+        result = df[col].hist(
+            bins=bins,
+            include_breakpoint=include_breakpoint,
+        )
 
-    result = (df["float"] + shift_by).hist(
-        bins=bins,
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+        assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("params", counts_and_expected)
@@ -146,44 +172,85 @@ def test_hist_count(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager(data))
 
-    bins = params["expected_bins"]
+    df = nw.from_native(constructor_eager(data)).with_columns(
+        float=nw.col("int").cast(nw.Float64),
+    )
+    bin_count = params["bin_count"]
+
+    expected_bins = params["expected_bins"]
     expected = {
-        "breakpoint": bins[1:],
+        "breakpoint": expected_bins[1:],
         "count": params["expected_count"],
     }
     if not include_breakpoint:
         del expected["breakpoint"]
 
-    result = df["int"].hist(
-        bin_count=params["bin_count"],
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+    # smoke tests
+    for col in df.columns:
+        result = df[col].hist(
+            bin_count=bin_count,
+            include_breakpoint=include_breakpoint,
+        )
+        assert_equal_data(result, expected)
 
-    result = df["float"].hist(
-        bin_count=params["bin_count"],
-        include_breakpoint=include_breakpoint,
-    )
-    assert_equal_data(result, expected)
+        # result size property
+        if bin_count < 2:
+            assert len(result) == 0
+        else:
+            assert result["count"].sum() == df[col].count()
 
-    shift_by = 10
-    bins = [b + shift_by for b in bins]
-    expected = {
-        "breakpoint": bins[1:],
-        "count": params["expected_count"],
+    # missing/nan results
+    df = nw.from_native(
+        constructor_eager(
+            {
+                "has_nan": [float("nan"), *data["int"]],
+                "has_null": [None, *data["int"]],
+            }
+        )
+    )
+
+    for col in df.columns:
+        result = df[col].hist(
+            bin_count=bin_count,
+            include_breakpoint=include_breakpoint,
+        )
+        assert_equal_data(result, expected)
+
+        # result size property
+        if bin_count < 2:
+            assert len(result) == 0
+        else:
+            assert (
+                result["count"].sum() == (~(df[col].is_nan() | df[col].is_null())).sum()
+            )
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+)
+def test_hist_count_no_spread(
+    constructor_eager: ConstructorEager,
+) -> None:
+    data = {
+        "all_zero": [0, 0, 0],
+        "all_non_zero": [5, 5, 5],
     }
-    result = (df["int"] + 10).hist(
-        bin_count=params["bin_count"],
-        include_breakpoint=True,
-    )
+    df = nw.from_native(constructor_eager(data))
+
+    result = df["all_zero"].hist(bin_count=4, include_breakpoint=True)
+    expected = {"breakpoint": [-0.25, 0.0, 0.25, 0.5], "count": [0, 3, 0, 0]}
     assert_equal_data(result, expected)
 
-    result = (df["float"] + 10).hist(
-        bin_count=params["bin_count"],
-        include_breakpoint=True,
-    )
+    result = df["all_non_zero"].hist(bin_count=4, include_breakpoint=True)
+    expected = {"breakpoint": [4.75, 5.0, 5.25, 5.5], "count": [0, 3, 0, 0]}
+    assert_equal_data(result, expected)
+
+    result = df["all_zero"].hist(bin_count=1, include_breakpoint=True)
+    expected = {
+        "breakpoint": [0.5],
+        "count": [3],
+    }
     assert_equal_data(result, expected)
 
 
@@ -204,6 +271,36 @@ def test_hist_bin_and_bin_count() -> None:
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+def test_hist_no_data(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"values": []})).select(
+        nw.col("values").cast(nw.Float64)
+    )["values"]
+    for include_breakpoint in [True, False]:
+        result = s.hist(bin_count=10, include_breakpoint=include_breakpoint)
+        assert len(result) == 10
+        assert result["count"].sum() == 0
+
+    for include_breakpoint in [True, False]:
+        result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
+        assert len(result) == 2
+        assert result["count"].sum() == 0
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+)
+def test_hist_small_bins(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
+    result = s["values"].hist(bins=None, bin_count=None)
+    assert len(result) == 10
+
+    with pytest.raises(ComputeError, match="can only provide one of"):
+        s["values"].hist(bins=[1, 3], bin_count=4)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+)
 def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"int": [0, 1, 2, 3, 4, 5, 6]}))
 
@@ -215,13 +312,26 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 
 
 @given(  # type: ignore[misc]
-    data=st.lists(st.floats(min_value=-1_000, max_value=1_000), min_size=1, max_size=100),
+    data=st.lists(
+        # Bug in Polars <= 1.21; computing histograms with NaN data and passed bins can be unreliable
+        #   this leads to flaky hypothesis testing https://github.com/pola-rs/polars/issues/21082
+        # min_value/max_value from PyArrows min/max boundaries
+        st.floats(
+            min_value=-9007199254740992,
+            max_value=9007199254740992,
+            allow_nan=False,
+            allow_infinity=False,
+        ),
+        min_size=0,
+        max_size=100,
+    ),
     bin_deltas=st.lists(
         st.floats(min_value=0.001, max_value=1_000, allow_nan=False), max_size=50
     ),
 )
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+    "ignore:invalid value encountered in cast:RuntimeWarning",
 )
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 15),
@@ -248,21 +358,26 @@ def test_hist_bin_hypotheis(
         bins=bins.to_list(),
         include_breakpoint=True,
     )
-    expected = (
-        pl.Series(data, dtype=pl.Float64).hist(
-            bins=pl.Series(bin_deltas, dtype=pl.Float64).cum_sum().to_list(),
-            include_breakpoint=True,
-            include_category=False,
-        )
-    ).to_dict(as_series=False)
+    expected_data = pl.Series(data, dtype=pl.Float64)
+    expected = expected_data.hist(
+        bins=bins.to_list(),
+        include_breakpoint=True,
+        include_category=False,
+    )
 
-    assert_equal_data(result, expected)
+    assert_equal_data(result, expected.to_dict(as_series=False))
 
 
 @given(  # type: ignore[misc]
     data=st.lists(
-        st.floats(min_value=-1_000, max_value=1_000, allow_subnormal=False),
-        min_size=1,
+        # min_value/max_value from PyArrows min/max boundaries
+        st.floats(
+            min_value=-9007199254740992,
+            max_value=9007199254740992,
+            allow_nan=False,
+            allow_infinity=False,
+        ),
+        min_size=0,
         max_size=100,
     ),
     bin_count=st.integers(min_value=0, max_value=1_000),
@@ -272,7 +387,8 @@ def test_hist_bin_hypotheis(
     reason="hist(bin_count=...) behavior significantly changed after this version",
 )
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+    "ignore:invalid value encountered in cast:RuntimeWarning",
 )
 @pytest.mark.slow
 def test_hist_count_hypothesis(
@@ -298,7 +414,8 @@ def test_hist_count_hypothesis(
             request.applymarker(pytest.mark.xfail)
         raise
 
-    expected = pl.Series(data, dtype=pl.Float64).hist(
+    expected_data = pl.Series(data, dtype=pl.Float64)
+    expected = expected_data.hist(
         bin_count=bin_count,
         include_breakpoint=True,
         include_category=False,
@@ -307,7 +424,9 @@ def test_hist_count_hypothesis(
     # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts
     #   for data with a wide range and a large number of passed bins
     #   https://github.com/pola-rs/polars/issues/20879
-    if expected["count"].sum() != len(data) and "polars" not in str(constructor_eager):
+    if expected["count"].sum() != expected_data.count() and "polars" not in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     assert_equal_data(result, expected.to_dict(as_series=False))

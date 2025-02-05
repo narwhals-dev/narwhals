@@ -1005,7 +1005,7 @@ class ArrowSeries(CompliantSeries):
         result = pc.if_else(null_mask, pa.scalar(None), rank)
         return self._from_native_series(result)
 
-    def hist(
+    def hist(  # noqa: PLR0915
         self: Self,
         bins: list[float | int] | None,
         *,
@@ -1024,12 +1024,17 @@ class ArrowSeries(CompliantSeries):
         ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
             d = pc.min_max(self._native_series)
             lower, upper = d["min"], d["max"]
+            pad_lowest_bin = False
             if lower == upper:
-                lower -= 0.001 * abs(lower) if lower != 0 else 0.001
-                upper += 0.001 * abs(upper) if upper != 0 else 0.001
+                range_ = pa.scalar(1.0)
+                width = pc.divide(range_, bin_count)
+                lower = pc.subtract(lower, 0.5)
+                upper = pc.add(upper, 0.5)
+            else:
+                pad_lowest_bin = True
+                range_ = pc.subtract(upper, lower)
+                width = pc.divide(range_.cast("float"), float(bin_count))
 
-            range_ = pc.subtract(upper, lower)
-            width = pc.divide(range_.cast("float"), float(bin_count))
             bin_proportions = pc.divide(pc.subtract(self._native_series, lower), width)
             bin_indices = pc.floor(bin_proportions)
 
@@ -1043,11 +1048,12 @@ class ArrowSeries(CompliantSeries):
             )
             counts = (  # count bin id occurrences
                 pa.Table.from_arrays(
-                    pc.value_counts(bin_indices)
-                    .cast(pa.struct({"values": pa.int64(), "counts": pa.int64()}))
-                    .flatten(),
+                    pc.value_counts(bin_indices).flatten(),
                     names=["values", "counts"],
                 )
+                # Null values are implicitly dropped in value_counts
+                .filter(~pc.field("values").is_nan())
+                .cast(pa.schema([("values", pa.int64()), ("counts", pa.int64())]))
                 .join(  # align bin ids to all possible bin ids (populate in missing bins)
                     pa.Table.from_arrays(
                         [np.arange(bin_count, dtype="int64")], ["values"]
@@ -1064,14 +1070,18 @@ class ArrowSeries(CompliantSeries):
             # extract left/right side of the intervals
             bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
             bin_right = pc.add(bin_left, width)
-            bin_left = pa.chunked_array(
-                [  # pad lowest bin by 1% of range
-                    [pc.subtract(bin_left[0], pc.multiply(range_.cast("float"), 0.001))],
-                    bin_left[1:],  # pyarrow==0.11.0 needs to infer
-                ]
-            )
-            counts = counts.column("counts")
-            return counts, bin_left, bin_right
+            if pad_lowest_bin:
+                bin_left = pa.chunked_array(
+                    [  # pad lowest bin by 1% of range
+                        [
+                            pc.subtract(
+                                bin_left[0], pc.multiply(range_.cast("float"), 0.001)
+                            )
+                        ],
+                        bin_left[1:],  # pyarrow==0.11.0 needs to infer
+                    ]
+                )
+            return counts.column("counts"), bin_left, bin_right
 
         def _hist_from_bins(
             bins: Sequence[int | float],
@@ -1086,8 +1096,14 @@ class ArrowSeries(CompliantSeries):
             bin_left = bins[:-1]
             return counts, bin_left, bin_right
 
+        counts: Sequence[int]
+        bin_left: Sequence[int | float]
+        bin_right: Sequence[int | float]
         if bins is not None:
-            counts, bin_left, bin_right = _hist_from_bins(bins)
+            if len(bins) < 2:
+                counts, bin_left, bin_right = [], [], []
+            else:
+                counts, bin_left, bin_right = _hist_from_bins(bins)
 
         elif bin_count is not None:
             if bin_count == 0:

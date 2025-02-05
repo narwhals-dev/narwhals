@@ -487,10 +487,7 @@ class PolarsSeries:
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        # polars<1.15 returned bins -inf to inf OR fails in these conditions
-        if (self._backend_version < (1, 15)) and (
-            (bins is not None and len(bins) == 0) or (bin_count == 0)
-        ):  # pragma: no cover
+        if (bins is not None and len(bins) <= 1) or (bin_count == 0):  # pragma: no cover
             data: list[pl.Series] = []
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
@@ -500,25 +497,60 @@ class PolarsSeries:
                 backend_version=self._backend_version,
                 version=self._version,
             )
+        elif (self._backend_version < (1, 15)) and self._native_series.count() < 1:
+            data_dict: dict[str, list[int | float] | pl.Series | pl.Expr]
+            if bins is not None:
+                data_dict = {
+                    "breakpoint": bins[1:],
+                    "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
+                }
+            elif bin_count is not None:
+                data_dict = {
+                    "breakpoint": pl.int_range(0, bin_count, eager=True) / bin_count,
+                    "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
+                }
 
+            if not include_breakpoint:
+                del data_dict["breakpoint"]
+
+            return PolarsDataFrame(
+                pl.DataFrame(data_dict),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        # polars <1.15 does not adjust the bins when they have equivalent min/max
         # polars <1.5 with bin_count=...
         # returns bins that range from -inf to +inf and has bin_count + 1 bins.
         #   for compat: convert `bin_count=` call to `bins=`
-        if (self._backend_version < (1, 5)) and (
-            bin_count is not None
+        if (
+            (self._backend_version < (1, 15))
+            and (bin_count is not None)
+            and (self._native_series.count() > 0)
         ):  # pragma: no cover
             lower = cast(Union[int, float], self._native_series.min())
             upper = cast(Union[int, float], self._native_series.max())
+            pad_lowest_bin = False
             if lower == upper:
-                lower -= 0.001 * abs(lower) if lower != 0 else 0.001
-                upper += 0.001 * abs(upper) if upper != 0 else 0.001
-            width = (upper - lower) / bin_count
+                width = 1 / bin_count
+                lower -= 0.5
+                upper += 0.5
+            else:
+                pad_lowest_bin = True
+                width = (upper - lower) / bin_count
 
             bins = (pl.int_range(0, bin_count + 1, eager=True) * width + lower).to_list()
-            bins[0] -= (upper - lower) * 0.001
+            if pad_lowest_bin:
+                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
             bin_count = None
 
-        df = self._native_series.hist(
+        # Polars inconsistently handles NaN values when computing histograms
+        #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
+        series = self._native_series
+        if self._backend_version < (1, 15) or bins is not None:
+            series = series.set(series.is_nan(), None)
+
+        df = series.hist(
             bins=bins,
             bin_count=bin_count,
             include_category=False,
