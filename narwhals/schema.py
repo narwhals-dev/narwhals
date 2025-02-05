@@ -132,12 +132,13 @@ class Schema(BaseSchema):
                 for name, dtype, backend in zip(self.keys(), self.values(), dtype_backend)
             }
 
-    def to_polars(self: Self) -> pl.Schema:
+    def to_polars(self: Self) -> pl.Schema | Any:
         import polars as pl  # ignore-banned-import
 
         from narwhals._polars.utils import narwhals_to_native_dtype
 
-        return pl.Schema(
+        it = (
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
+        return pl.Schema(it) if parse_version(pl.__version__) >= (1, 0, 0) else dict(it)
