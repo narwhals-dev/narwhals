@@ -99,6 +99,15 @@ class Schema(BaseSchema):
         return len(self)
 
     def to_arrow(self: Self) -> pa.Schema:
+        """Convert Schema to a pyarrow Schema.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
+            >>> schema.to_arrow()
+            a: int64
+            b: timestamp[ns]
+        """
         import pyarrow as pa  # ignore-banned-import
 
         from narwhals._arrow.utils import narwhals_to_native_dtype
@@ -111,6 +120,24 @@ class Schema(BaseSchema):
     def to_pandas(
         self: Self, *, dtype_backend: str | Iterable[str] | None = None
     ) -> dict[str, Any]:
+        """Convert Schema to an ordered mapping of column names to their pandas data type.
+
+        Arguments:
+            dtype_backend: Backend(s) used for the native types. When providing more than
+                one, the length of the iterable must be equal to the length of the schema.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
+            >>> schema.to_pandas()
+            {'a': 'int64', 'b': 'datetime64[ns]'}
+
+            >>> schema.to_pandas(dtype_backend="pyarrow-nullable")
+            {'a': 'Int64[pyarrow]', 'b': 'timestamp[ns][pyarrow]'}
+
+            >>> schema.to_pandas(dtype_backend=["pandas-nullable", "pyarrow-nullable"])
+            {'a': 'Int64', 'b': 'timestamp[ns][pyarrow]'}
+        """
         import pandas as pd  # ignore-banned-import
 
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
@@ -155,6 +182,17 @@ class Schema(BaseSchema):
             }
 
     def to_polars(self: Self) -> pl.Schema | Any:
+        """Convert Schema to a polars Schema.
+
+        Returns:
+            A polars schema or plain dict (prior to polars 1.0).
+
+        Examples:
+            >>> import narwhals as nw
+            >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
+            >>> schema.to_polars()  # doctest:+SKIP
+            Schema([('a', Int64), ('b', Datetime(time_unit='ns', time_zone=None))])
+        """
         import polars as pl  # ignore-banned-import
 
         from narwhals._polars.utils import narwhals_to_native_dtype
