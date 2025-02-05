@@ -101,6 +101,9 @@ class Schema(BaseSchema):
     def to_arrow(self: Self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
 
+        Returns:
+            A pyarrow Schema.
+
         Examples:
             >>> import narwhals as nw
             >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
@@ -125,6 +128,9 @@ class Schema(BaseSchema):
         Arguments:
             dtype_backend: Backend(s) used for the native types. When providing more than
                 one, the length of the iterable must be equal to the length of the schema.
+
+        Returns:
+            An ordered mapping of column names to their pandas data type.
 
         Examples:
             >>> import narwhals as nw
@@ -185,7 +191,7 @@ class Schema(BaseSchema):
         """Convert Schema to a polars Schema.
 
         Returns:
-            A polars schema or plain dict (prior to polars 1.0).
+            A polars Schema or plain dict (prior to polars 1.0).
 
         Examples:
             >>> import narwhals as nw
