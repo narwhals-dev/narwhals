@@ -99,7 +99,7 @@ class Schema(BaseSchema):
         return len(self)
 
     def to_arrow(self: Self) -> pa.Schema:
-        import pyarrow as pa
+        import pyarrow as pa  # ignore-banned-import
 
         from narwhals._arrow.utils import narwhals_to_native_dtype
 
@@ -111,7 +111,7 @@ class Schema(BaseSchema):
     def to_pandas(
         self: Self, *, dtype_backend: str | Iterable[str] | None = None
     ) -> dict[str, Any]:
-        import pandas as pd
+        import pandas as pd  # ignore-banned-import
 
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
 
@@ -133,7 +133,7 @@ class Schema(BaseSchema):
             }
 
     def to_polars(self: Self) -> pl.Schema:
-        import polars as pl
+        import polars as pl  # ignore-banned-import
 
         from narwhals._polars.utils import narwhals_to_native_dtype
 
