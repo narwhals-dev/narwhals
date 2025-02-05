@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
@@ -17,7 +18,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Sequence
 
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
@@ -384,7 +385,7 @@ def test_all_nulls_pandas() -> None:
     ],
 )
 def test_schema_to_pandas(
-    dtype_backend: str | Iterable[str] | None, expected: dict[str, Any]
+    dtype_backend: str | Sequence[str] | None, expected: dict[str, Any]
 ) -> None:
     schema = nw.Schema(
         {
@@ -396,3 +397,32 @@ def test_schema_to_pandas(
         }
     )
     assert schema.to_pandas(dtype_backend=dtype_backend) == expected
+
+
+def test_schema_to_pandas_strict_zip() -> None:
+    schema = nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Float64(),
+            "e": nw.Datetime("ns"),
+        }
+    )
+    dtype_backend = ["pandas-nullable", "pyarrow-nullable", "numpy"]
+    tup = (
+        "pandas-nullable",
+        "pyarrow-nullable",
+        "numpy",
+        "pandas-nullable",
+        "pyarrow-nullable",
+    )
+    suggestion = re.escape(f"(dtype_backend={tup})")
+    with pytest.raises(
+        ValueError,
+        match=re.compile(
+            rf".+3.+but.+schema contains.+5.+field.+Hint.+schema.to_pandas{suggestion}",
+            re.DOTALL,
+        ),
+    ):
+        schema.to_pandas(dtype_backend=dtype_backend)

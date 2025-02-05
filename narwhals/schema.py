@@ -127,9 +127,31 @@ class Schema(BaseSchema):
                 for name, dtype in self.items()
             }
         else:
+            backends = tuple(dtype_backend)
+            if len(backends) != len(self):
+                from itertools import chain
+                from itertools import islice
+                from itertools import repeat
+
+                n_user, n_actual = len(backends), len(self)
+                suggestion = tuple(
+                    islice(
+                        chain.from_iterable(islice(repeat(backends), n_actual)), n_actual
+                    )
+                )
+                msg = (
+                    f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
+                    "Hint: instead of\n"
+                    f"    schema.to_pandas(dtype_backend={backends})\n"
+                    "you may want to use\n"
+                    f"    schema.to_pandas(dtype_backend={backends[0]})\n"
+                    f"or\n"
+                    f"    schema.to_pandas(dtype_backend={suggestion})"
+                )
+                raise ValueError(msg)
             return {
                 name: to_native(dtype=dtype, dtype_backend=backend)
-                for name, dtype, backend in zip(self.keys(), self.values(), dtype_backend)
+                for name, dtype, backend in zip(self.keys(), self.values(), backends)
             }
 
     def to_polars(self: Self) -> pl.Schema | Any:
