@@ -16,7 +16,6 @@ from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_aggregates
 from narwhals._expression_parsing import operation_changes_length
 from narwhals._expression_parsing import operation_is_order_dependent
-from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
@@ -24,6 +23,7 @@ from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.schema import Schema
 from narwhals.translate import from_native
+from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
@@ -459,7 +459,6 @@ def _from_dict_impl(
     backend: ModuleType | Implementation | str | None = None,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
-    from narwhals.translate import to_native
 
     if not data:
         msg = "from_dict cannot be called with empty dictionary"
@@ -491,11 +490,13 @@ def _from_dict_impl(
     if eager_backend is Implementation.POLARS:
         schema_pl = Schema(schema).to_polars() if schema else None
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
-    elif eager_backend in (
+    elif eager_backend in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
-    ):
+    }:
+        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+
         aligned_data = {}
         left_most_series = None
         for key, native_series in data.items():
