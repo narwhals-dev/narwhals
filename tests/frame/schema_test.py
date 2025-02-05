@@ -17,6 +17,8 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
@@ -330,3 +332,67 @@ def test_all_nulls_pandas() -> None:
         nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw.Object
     )
+
+
+@pytest.mark.parametrize(
+    ("dtype_backend", "expected"),
+    [
+        (
+            None,
+            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[us]"},
+        ),
+        (
+            "numpy",
+            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[us]"},
+        ),
+        (
+            "pyarrow-nullable",
+            {
+                "a": "Int64[pyarrow]",
+                "b": "string[pyarrow]",
+                "c": "boolean[pyarrow]",
+                "d": "Float64[pyarrow]",
+                "e": "timestamp[us][pyarrow]",
+            },
+        ),
+        (
+            "pandas-nullable",
+            {
+                "a": "Int64",
+                "b": "string",
+                "c": "boolean",
+                "d": "Float64",
+                "e": "datetime64[us]",
+            },
+        ),
+        (
+            [
+                "pandas-nullable",
+                "pyarrow-nullable",
+                "numpy",
+                "pyarrow-nullable",
+                "pandas-nullable",
+            ],
+            {
+                "a": "Int64",
+                "b": "string[pyarrow]",
+                "c": "bool",
+                "d": "Float64[pyarrow]",
+                "e": "datetime64[us]",
+            },
+        ),
+    ],
+)
+def test_schema_to_pandas(
+    dtype_backend: str | Iterable[str] | None, expected: dict[str, Any]
+) -> None:
+    schema = nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Float64(),
+            "e": nw.Datetime("us"),
+        }
+    )
+    assert schema.to_pandas(dtype_backend=dtype_backend) == expected
