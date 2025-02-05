@@ -1516,7 +1516,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2    7   b
             2    3    8   c
 
-            Filter on multiple conditions with `&`
+            Filter on multiple conditions with implicit `&`
 
             >>> nw.from_native(df_native).filter(
             ...     nw.col("foo") < 3, nw.col("ham") == "a"
@@ -2768,18 +2768,63 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
-            >>> nw.from_native(lf_native).filter(nw.col("b") == 4)
-            ┌──────────────────┐
-            |Narwhals LazyFrame|
-            |------------------|
-            |┌───────┬───────┐ |
-            |│   a   │   b   │ |
-            |│ int32 │ int32 │ |
-            |├───────┼───────┤ |
-            |│     3 │     4 │ |
-            |└───────┴───────┘ |
-            └──────────────────┘
+            >>> df_native = duckdb.sql('''
+            ...     SELECT * FROM VALUES
+            ...         (1, 6, 'a'),
+            ...         (2, 7, 'b'),
+            ...         (3, 8, 'c')
+            ...     df(foo, bar, ham)
+            ... ''')
+
+            Filter on one condition
+
+            >>> nw.from_native(df_native).filter(nw.col("foo") > 1).to_native()
+            ┌───────┬───────┬─────────┐
+            │  foo  │  bar  │   ham   │
+            │ int32 │ int32 │ varchar │
+            ├───────┼───────┼─────────┤
+            │     2 │     7 │ b       │
+            │     3 │     8 │ c       │
+            └───────┴───────┴─────────┘
+            <BLANKLINE>
+
+            Filter on multiple conditions with implicit `&`
+
+            >>> nw.from_native(df_native).filter(
+            ...     nw.col("foo") < 3, nw.col("ham") == "a"
+            ... ).to_native()
+            ┌───────┬───────┬─────────┐
+            │  foo  │  bar  │   ham   │
+            │ int32 │ int32 │ varchar │
+            ├───────┼───────┼─────────┤
+            │     1 │     6 │ a       │
+            └───────┴───────┴─────────┘
+            <BLANKLINE>
+
+            Filter on multiple conditions with `|`
+
+            >>> nw.from_native(df_native).filter(
+            ...     (nw.col("foo") == 1) | (nw.col("ham") == "c")
+            ... ).to_native()
+            ┌───────┬───────┬─────────┐
+            │  foo  │  bar  │   ham   │
+            │ int32 │ int32 │ varchar │
+            ├───────┼───────┼─────────┤
+            │     1 │     6 │ a       │
+            │     3 │     8 │ c       │
+            └───────┴───────┴─────────┘
+            <BLANKLINE>
+
+            Filter using `**kwargs` syntax
+
+            >>> nw.from_native(df_native).filter(foo=2, ham="b").to_native()
+            ┌───────┬───────┬─────────┐
+            │  foo  │  bar  │   ham   │
+            │ int32 │ int32 │ varchar │
+            ├───────┼───────┼─────────┤
+            │     2 │     7 │ b       │
+            └───────┴───────┴─────────┘
+            <BLANKLINE>
         """
         if (
             len(predicates) == 1
@@ -2869,7 +2914,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     "SELECT * FROM VALUES (1, 6.0, 'a'), (2, 5.0, 'c'), (NULL, 4.0, 'b') df(a, b, c)"
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.sort(by="a")
+            >>> df.sort("a")
             ┌──────────────────────────────────┐
             |        Narwhals LazyFrame        |
             |----------------------------------|
