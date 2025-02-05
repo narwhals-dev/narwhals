@@ -1180,7 +1180,7 @@ def _parse_time_unit_and_time_zone(
     time_zone: str | timezone | Iterable[str | timezone | None] | None,
 ) -> tuple[set[str], set[str | None]]:
     time_units = (
-        {"ms", "us", "ns"}
+        {"ms", "us", "ns", "s"}
         if time_unit is None
         else {time_unit}
         if isinstance(time_unit, str)

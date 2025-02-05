@@ -500,8 +500,6 @@ def datetime(
         >>> from __future__ import annotations
         >>> from datetime import datetime, timezone
         >>> from zoneinfo import ZoneInfo
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
@@ -524,8 +522,6 @@ def datetime(
         ...     ],
         ...     "numeric": [3.14, 6.28],
         ... }
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
         >>> df_pa = pa.table(data)
 
         Let's define a dataframe-agnostic function to select datetime dtypes:
@@ -543,23 +539,6 @@ def datetime(
         ...     return df_nw.to_native()
 
         Select all datetime columns:
-
-        >>> pd.set_option("display.width", 0)
-        >>> agnostic_datetime_selector(df_pd)
-                             tstamp_berlin                       tstamp_utc                  tstamp
-        0 1999-07-21 05:20:16.987654+02:00 2023-04-10 12:14:16.999000+00:00 2000-11-20 18:12:16.600
-        1 2000-05-16 06:21:21.123465+02:00 2025-08-25 14:18:22.666000+00:00 2020-10-30 10:20:25.123
-
-        >>> agnostic_datetime_selector(df_pl)
-        shape: (2, 3)
-        ┌─────────────────────────────────┬─────────────────────────────┬─────────────────────────┐
-        │ tstamp_berlin                   ┆ tstamp_utc                  ┆ tstamp                  │
-        │ ---                             ┆ ---                         ┆ ---                     │
-        │ datetime[μs, Europe/Berlin]     ┆ datetime[μs, UTC]           ┆ datetime[μs]            │
-        ╞═════════════════════════════════╪═════════════════════════════╪═════════════════════════╡
-        │ 1999-07-21 05:20:16.987654 CES… ┆ 2023-04-10 12:14:16.999 UTC ┆ 2000-11-20 18:12:16.600 │
-        │ 2000-05-16 06:21:21.123465 CES… ┆ 2025-08-25 14:18:22.666 UTC ┆ 2020-10-30 10:20:25.123 │
-        └─────────────────────────────────┴─────────────────────────────┴─────────────────────────┘
 
         >>> agnostic_datetime_selector(df_pa)
         pyarrow.Table
@@ -584,22 +563,6 @@ def datetime(
         ...         .select(ncs.datetime(time_zone="*"))
         ...     )
         ...     return df_nw.to_native()
-
-        >>> agnostic_datetime_selector_any_tz(df_pd)
-                             tstamp_berlin                       tstamp_utc
-        0 1999-07-21 05:20:16.987654+02:00 2023-04-10 12:14:16.999000+00:00
-        1 2000-05-16 06:21:21.123465+02:00 2025-08-25 14:18:22.666000+00:00
-
-        >>> agnostic_datetime_selector_any_tz(df_pl)
-        shape: (2, 2)
-        ┌─────────────────────────────────┬─────────────────────────────┐
-        │ tstamp_berlin                   ┆ tstamp_utc                  │
-        │ ---                             ┆ ---                         │
-        │ datetime[μs, Europe/Berlin]     ┆ datetime[μs, UTC]           │
-        ╞═════════════════════════════════╪═════════════════════════════╡
-        │ 1999-07-21 05:20:16.987654 CES… ┆ 2023-04-10 12:14:16.999 UTC │
-        │ 2000-05-16 06:21:21.123465 CES… ┆ 2025-08-25 14:18:22.666 UTC │
-        └─────────────────────────────────┴─────────────────────────────┘
 
         >>> agnostic_datetime_selector_any_tz(df_pa)
         pyarrow.Table
