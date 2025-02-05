@@ -2415,7 +2415,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, null), (3, 4) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, NULL), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).drop_nulls()
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2866,7 +2866,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "SELECT * FROM VALUES (1, 6.0, 'a'), (2, 5.0, 'c'), (null, 4.0, 'b') df(a, b, c)"
+            ...     "SELECT * FROM VALUES (1, 6.0, 'a'), (2, 5.0, 'c'), (NULL, 4.0, 'b') df(a, b, c)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.sort(by="a")
