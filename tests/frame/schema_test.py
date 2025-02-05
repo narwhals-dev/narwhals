@@ -339,11 +339,11 @@ def test_all_nulls_pandas() -> None:
     [
         (
             None,
-            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[us]"},
+            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[ns]"},
         ),
         (
             "numpy",
-            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[us]"},
+            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[ns]"},
         ),
         (
             "pyarrow-nullable",
@@ -352,7 +352,7 @@ def test_all_nulls_pandas() -> None:
                 "b": "string[pyarrow]",
                 "c": "boolean[pyarrow]",
                 "d": "Float64[pyarrow]",
-                "e": "timestamp[us][pyarrow]",
+                "e": "timestamp[ns][pyarrow]",
             },
         ),
         (
@@ -362,7 +362,7 @@ def test_all_nulls_pandas() -> None:
                 "b": "string",
                 "c": "boolean",
                 "d": "Float64",
-                "e": "datetime64[us]",
+                "e": "datetime64[ns]",
             },
         ),
         (
@@ -378,7 +378,7 @@ def test_all_nulls_pandas() -> None:
                 "b": "string[pyarrow]",
                 "c": "bool",
                 "d": "Float64[pyarrow]",
-                "e": "datetime64[us]",
+                "e": "datetime64[ns]",
             },
         ),
     ],
@@ -392,7 +392,7 @@ def test_schema_to_pandas(
             "b": nw.String(),
             "c": nw.Boolean(),
             "d": nw.Float64(),
-            "e": nw.Datetime("us"),
+            "e": nw.Datetime("ns"),
         }
     )
     assert schema.to_pandas(dtype_backend=dtype_backend) == expected
