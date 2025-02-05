@@ -12,6 +12,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
@@ -74,7 +75,7 @@ def test_string_disguised_as_object() -> None:
 def test_actual_object(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -318,3 +319,14 @@ def test_nested_dtypes_dask() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
+
+
+def test_all_nulls_pandas() -> None:
+    assert (
+        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw_main.String
+    )
+    assert (
+        nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw.Object
+    )
