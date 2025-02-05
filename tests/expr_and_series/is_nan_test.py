@@ -123,11 +123,12 @@ def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    exc = NwInvalidOperationError
     if "polars" in str(constructor_eager):
         exc = PlInvalidOperationError
     elif "pyarrow_table" in str(constructor_eager):
         exc = ArrowNotImplementedError
+    else:
+        exc = NwInvalidOperationError
 
     with pytest.raises(exc):
         df["a"].is_nan()

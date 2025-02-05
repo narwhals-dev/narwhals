@@ -212,10 +212,20 @@ exclude_also = [
 strict = true
 
 [[tool.mypy.overrides]]
-# the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-  "pandas.*",
+  # TODO: enable step by step when it makes sense
+  # e.g. the pandas API is just too inconsistent for type hinting to be useful.
   "cudf.*",
+  "dask.*",
+  "dask_expr.*",
+  "duckdb.*",
+  "ibis.*",
   "modin.*",
+  "numpy.*",
+  "pandas.*",
+  "pyarrow.*",
+  "pyspark.*",
+  "sklearn.*",
+  "sqlframe.*",
 ]
 ignore_missing_imports = true

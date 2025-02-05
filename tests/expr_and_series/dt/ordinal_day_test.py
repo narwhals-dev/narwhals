@@ -12,7 +12,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 
-@given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))  # type: ignore[misc]
+@given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))
 @pytest.mark.skipif(
     PANDAS_VERSION < (2, 0, 0),
     reason="pyarrow dtype not available",

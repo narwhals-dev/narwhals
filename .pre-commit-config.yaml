@@ -17,8 +17,12 @@ repos:
   rev: 'v1.14.1'
   hooks:
     - id: mypy
-      additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']
+      additional_dependencies:
+      - "hypothesis"
+      - "polars"
+      - "pytest"
       files: ^(narwhals|tests)/
+      args: []
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.4.1'
   hooks:
