@@ -1016,7 +1016,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             A mapping from column name to values / Series.
 
         Examples:
-        >>> import pyarrow as pa
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pa.table({"A": [1, 2], "fruits": ["banana", "apple"]})
             >>> df = nw.from_native(df_native)
@@ -1510,19 +1510,22 @@ class DataFrame(BaseFrame[DataFrameT]):
             ... )
 
             Filter on one condition
+
             >>> nw.from_native(df_native).filter(nw.col("foo") > 1).to_native()
                foo  bar ham
             1    2    7   b
             2    3    8   c
 
             Filter on multiple conditions with `&`
+
             >>> nw.from_native(df_native).filter(
             ...     nw.col("foo") < 3, nw.col("ham") == "a"
             ... ).to_native()
                foo  bar ham
             0    1    6   a
 
-            # Filter on multiple conditions with `|`
+            Filter on multiple conditions with `|`
+
             >>> nw.from_native(df_native).filter(
             ...     (nw.col("foo") == 1) | (nw.col("ham") == "c")
             ... ).to_native()
@@ -1530,7 +1533,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             0    1    6   a
             2    3    8   c
 
-            # Filter using `**kwargs` syntax
+            Filter using `**kwargs` syntax
+
             >>> nw.from_native(df_native).filter(foo=2, ham="b").to_native()
                foo  bar ham
             1    2    7   b
@@ -1561,7 +1565,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     }
             ... )
 
-            # Group by one column and compute the sum of another column
+            Group by one column and compute the sum of another column
+
             >>> nw.from_native(df_native, eager_only=True).group_by("a").agg(
             ...     nw.col("b").sum()
             ... ).sort("a").to_native()
@@ -1570,7 +1575,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             1  b  5
             2  c  3
 
-            # Group by multiple columns and compute the max of another column
+            Group by multiple columns and compute the max of another column
+
             >>> (
             ...     nw.from_native(df_native, eager_only=True)
             ...     .group_by(["a", "b"])
@@ -2052,7 +2058,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"foo": [1, 2, 3], "bar": [19, 32, 4]})
-            >>> nw.from_native(df_native).to_sample(n=2)  # doctest:+SKIP
+            >>> nw.from_native(df_native).sample(n=2)  # doctest:+SKIP
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      foo  bar    |
+            |   2    3    4    |
+            |   1    2   32    |
+            └──────────────────┘
         """
         return self._from_compliant_dataframe(
             self._compliant_frame.sample(
@@ -2289,7 +2302,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from (values (1, 2), (3, 4)) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 2), (3, 4) df(a, b)")
             >>> lf = nw.from_native(lf_native)
             >>> lf
             ┌──────────────────┐
@@ -2338,7 +2351,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from (values (1, 2), (3, 4)) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 2), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).to_native()
             ┌───────┬───────┐
             │   a   │   b   │
@@ -2371,7 +2384,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from (values (1, 2), (3, 4)) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 2), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).pipe(lambda x: x.select("a")).to_native()
             ┌───────┐
             │   a   │
@@ -2402,9 +2415,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, null), (3, 4)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, null), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).drop_nulls()
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2453,9 +2464,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).schema
             Schema({'a': Int32, 'b': Decimal})
         """
@@ -2470,9 +2479,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).collect_schema()
             Schema({'a': Int32, 'b': Decimal})
         """
@@ -2488,9 +2495,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).columns
             ['a', 'b']
         """
@@ -2521,9 +2526,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).with_columns(c=nw.col("a") + 1)
             ┌────────────────────────────────┐
             |       Narwhals LazyFrame       |
@@ -2564,9 +2567,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).select("a", a_plus_1=nw.col("a") + 1)
             ┌────────────────────┐
             | Narwhals LazyFrame |
@@ -2596,9 +2597,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql(
-            ...     "select * from (values (1, 4.5), (3, 2.)) df(a, b)"
-            ... )
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
             >>> nw.from_native(lf_native).rename({"a": "c"})
             ┌────────────────────────┐
             |   Narwhals LazyFrame   |
@@ -2673,7 +2672,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from (values (1, 2), (3, 4)) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 2), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).drop("a").to_native()
             ┌───────┐
             │   b   │
@@ -2712,7 +2711,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from (values (1, 1), (3, 4)) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).unique("a").sort("a", descending=True)
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2769,7 +2768,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("select * from values (1, 1), (3, 4) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
             >>> nw.from_native(lf_native).filter(nw.col("b") == 4)
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2812,7 +2811,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "select * from values (1, 'a'), (2, 'b'), (3, 'a') df(a, b)"
+            ...     "SELECT * FROM VALUES (1, 'a'), (2, 'b'), (3, 'a') df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.group_by("b").agg(nw.col("a").sum()).sort("b").to_native()
@@ -2867,7 +2866,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "select * from (values (1, 6.0, 'a'), (2, 5.0, 'c'), (null, 4.0, 'b')) df(a, b, c)"
+            ...     "SELECT * FROM VALUES (1, 6.0, 'a'), (2, 5.0, 'c'), (null, 4.0, 'b') df(a, b, c)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.sort(by="a")
@@ -2920,10 +2919,10 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native1 = duckdb.sql(
-            ...     "select * from (values (1, 'a'), (2, 'b')) df(a, b)"
+            ...     "SELECT * FROM VALUES (1, 'a'), (2, 'b') df(a, b)"
             ... )
             >>> df_native2 = duckdb.sql(
-            ...     "select * from (values (1, 'x'), (3, 'y')) df(a, c)"
+            ...     "SELECT * FROM VALUES (1, 'x'), (3, 'y') df(a, c)"
             ... )
             >>> df1 = nw.from_native(df_native1)
             >>> df2 = nw.from_native(df_native2)
@@ -3097,7 +3096,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "select * from (values ('x', 1, 2), ('y', 3, 4), ('z', 5, 6)) df(a, b, c)"
+            ...     "SELECT * FROM VALUES ('x', 1, 2), ('y', 3, 4), ('z', 5, 6) df(a, b, c)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.unpivot(on=["b", "c"], index="a").sort("a", "variable").to_native()
@@ -3136,7 +3135,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> df_native = duckdb.sql(
-            ...     "select * from values ('x', [1, 2]), ('y', [3, 4]), ('z', [5, 6]) df(a, b)"
+            ...     "SELECT * FROM VALUES ('x', [1, 2]), ('y', [3, 4]), ('z', [5, 6]) df(a, b)"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.explode("b").to_native()
