@@ -151,48 +151,47 @@ jobs:
           cd scikit-lego
           pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
-  # temporarily un-enabled as it's been failing for some time due to unrelated reasons
-  # shiny:
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.12"]
-  #       os: [ubuntu-latest]
+  shiny:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
 
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Install uv
-  #       uses: astral-sh/setup-uv@v5
-  #       with:
-  #         enable-cache: "true"
-  #         cache-suffix: ${{ matrix.python-version }}
-  #         cache-dependency-glob: "pyproject.toml"
-  #     - name: clone-shiny
-  #       run: |
-  #         git clone https://github.com/posit-dev/py-shiny.git
-  #         cd py-shiny
-  #         git log
-  #     - name: install-basics
-  #       run: uv pip install --upgrade tox virtualenv setuptools --system
-  #     - name: install-shiny-dev
-  #       env:
-  #         UV_SYSTEM_PYTHON: 1
-  #       run: |
-  #         cd py-shiny
-  #         make narwhals-install-shiny
-  #     - name: install-narwhals-dev
-  #       run: |
-  #         uv pip uninstall narwhals --system
-  #         uv pip install -e . --system
-  #     - name: show-deps
-  #       run: uv pip freeze
-  #     - name: Run `make narwhals-test-integration`
-  #       run: |
-  #         cd py-shiny
-  #         make narwhals-test-integration
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-shiny
+        run: |
+          git clone https://github.com/posit-dev/py-shiny.git
+          cd py-shiny
+          git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools --system
+      - name: install-shiny-dev
+        env:
+          UV_SYSTEM_PYTHON: 1
+        run: |
+          cd py-shiny
+          make narwhals-install-shiny
+      - name: install-narwhals-dev
+        run: |
+          uv pip uninstall narwhals --system
+          uv pip install -e . --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run `make narwhals-test-integration`
+        run: |
+          cd py-shiny
+          make narwhals-test-integration
 
   tea-tasting:
     strategy:

@@ -113,6 +113,9 @@ before making any change.
 
 The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
 
+- Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
+  be of dtype `String`. Previously, it would have been inferred as `Object`.
+
 - Since Narwhals 1.23:
 
     - Passing an `ibis.Table` to `from_native` returns a `LazyFrame`. In
