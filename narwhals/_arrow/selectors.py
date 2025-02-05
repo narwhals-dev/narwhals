@@ -156,7 +156,7 @@ class ArrowSelectorNamespace:
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"dtypes": dtypes},
+            kwargs={},
         )
 
 
