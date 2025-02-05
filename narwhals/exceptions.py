@@ -6,6 +6,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
+class NarwhalsError(ValueError):
+    """Base class for all Narwhals exceptions."""
+
+
 class FormattedKeyError(KeyError):
     """KeyError with formatted error message.
 
@@ -22,7 +26,7 @@ class FormattedKeyError(KeyError):
         return self.message
 
 
-class ColumnNotFoundError(FormattedKeyError):
+class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
     """Exception raised when column name isn't present."""
 
     def __init__(self: Self, message: str) -> None:
@@ -40,19 +44,23 @@ class ColumnNotFoundError(FormattedKeyError):
         return ColumnNotFoundError(message)
 
 
-class ComputeError(Exception):
+class ComputeError(NarwhalsError):
     """Exception raised when the underlying computation could not be evaluated."""
 
 
-class ShapeError(Exception):
+class ShapeError(NarwhalsError):
     """Exception raised when trying to perform operations on data structures with incompatible shapes."""
 
 
-class InvalidOperationError(Exception):
+class DuplicateError(NarwhalsError):
+    """Exception when duplicate column names are encountered."""
+
+
+class InvalidOperationError(NarwhalsError):
     """Exception raised during invalid operations."""
 
 
-class InvalidIntoExprError(TypeError):
+class InvalidIntoExprError(TypeError, NarwhalsError):
     """Exception raised when object can't be converted to expression."""
 
     def __init__(self: Self, message: str) -> None:
@@ -75,7 +83,7 @@ class InvalidIntoExprError(TypeError):
         return InvalidIntoExprError(message)
 
 
-class AnonymousExprError(ValueError):  # pragma: no cover
+class AnonymousExprError(NarwhalsError):  # pragma: no cover
     """Exception raised when trying to perform operations on anonymous expressions."""
 
     def __init__(self: Self, message: str) -> None:
@@ -92,7 +100,7 @@ class AnonymousExprError(ValueError):  # pragma: no cover
         return AnonymousExprError(message)
 
 
-class OrderDependentExprError(ValueError):
+class OrderDependentExprError(NarwhalsError):
     """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
 
     def __init__(self: Self, message: str) -> None:
@@ -100,7 +108,7 @@ class OrderDependentExprError(ValueError):
         super().__init__(self.message)
 
 
-class LengthChangingExprError(ValueError):
+class LengthChangingExprError(NarwhalsError):
     """Exception raised when trying to use an expression which changes length with LazyFrames."""
 
     def __init__(self: Self, message: str) -> None:
@@ -108,7 +116,7 @@ class LengthChangingExprError(ValueError):
         super().__init__(self.message)
 
 
-class UnsupportedDTypeError(ValueError):
+class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
 

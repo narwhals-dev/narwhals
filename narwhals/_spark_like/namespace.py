@@ -119,7 +119,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def all_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
         return SparkLikeExpr(
@@ -135,7 +135,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def any_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
         return SparkLikeExpr(
@@ -151,13 +151,10 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def sum_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in exprs for c in _expr(df)]
-            return [
-                reduce(
-                    operator.add,
-                    (df._F.coalesce(col, df._F.lit(0)) for col in cols),
-                )
-            ]
+            cols = (
+                df._F.coalesce(col, df._F.lit(0)) for _expr in exprs for col in _expr(df)
+            )
+            return [reduce(operator.add, cols)]
 
         return SparkLikeExpr(
             call=func,
@@ -202,7 +199,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def max_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [df._F.greatest(*cols)]
 
         return SparkLikeExpr(
@@ -218,7 +215,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     def min_horizontal(self: Self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [df._F.least(*cols)]
 
         return SparkLikeExpr(
@@ -288,7 +285,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             null_mask = [df._F.isnull(s) for _expr in exprs for s in _expr(df)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 result = df._F.when(
                     ~null_mask_result,
                     reduce(

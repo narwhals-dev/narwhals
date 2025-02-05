@@ -78,6 +78,7 @@ from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
+from narwhals.utils import validate_native_namespace_and_backend
 from narwhals.utils import validate_strict_and_pass_though
 
 if TYPE_CHECKING:
@@ -167,20 +168,32 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self: Self,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
         might be triggered.
+
         If a library does not support lazy execution and `backend` is not specified,
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
 
         Arguments:
-            backend: The (lazy) implementation to convert to. If not specified, and the
+            backend: Which lazy backend collect to. This will be the underlying
+                backend for the resulting Narwhals LazyFrame. If not specified, and the
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
+                    or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
 
         Returns:
             A new LazyFrame.
@@ -278,13 +291,43 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             raise TypeError(msg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
-    def collect(self: Self) -> DataFrame[Any]:
+    def collect(
+        self: Self,
+        backend: ModuleType | Implementation | str | None = None,
+        **kwargs: Any,
+    ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
+
+        As each underlying lazyframe has different arguments to set when materializing
+        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
+        below for how to generalize the specification).
+
+        Arguments:
+            backend: specifies which eager backend collect to. This will be the underlying
+                backend for the resulting Narwhals DataFrame. If None, then the following
+                default conversions will be applied:
+
+                - `polars.LazyFrame` -> `polars.DataFrame`
+                - `dask.DataFrame` -> `pandas.DataFrame`
+                - `duckdb.PyRelation` -> `pyarrow.Table`
+                - `pyspark.DataFrame` -> `pyarrow.Table`
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
+                    or `POLARS`.
+                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
+                - Directly as a module `pandas`, `pyarrow` or `polars`.
+            kwargs: backend specific kwargs to pass along. To know more please check the
+                backend specific documentation:
+
+                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
+                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
 
         Returns:
             DataFrame
         """
-        return super().collect()  # type: ignore[return-value]
+        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API.
@@ -2154,6 +2197,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
+    backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -2168,17 +2212,33 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
+        backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.26.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
     """
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=False
+    )
     return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(
             data,
             schema,
-            native_namespace=native_namespace,
+            backend=backend,
             version=Version.V1,
         )
     )

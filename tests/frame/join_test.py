@@ -664,3 +664,27 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
         match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="antananarivo", by_right="bob", by="bob")  # type: ignore[arg-type]
+
+
+def test_join_duplicate_column_names(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor):
+        # https://github.com/pola-rs/polars/issues/21048
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # TODO(unassigned): cudf doesn't raise here for some reason,
+        # need to investigate.
+        request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor):
+        from pyspark.errors import AnalysisException
+
+        exception = AnalysisException
+    elif "modin" in str(constructor):
+        exception = NotImplementedError
+    else:
+        exception = nw.exceptions.DuplicateError
+    df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
+    dfn = nw.from_native(df)
+    with pytest.raises(exception):
+        dfn.join(dfn, on=["a"]).join(dfn, on=["a"])  # type: ignore[arg-type]

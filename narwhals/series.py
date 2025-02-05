@@ -327,7 +327,9 @@ class Series(Generic[IntoSeriesT]):
 
             >>> def agnostic_scatter(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     return df.with_columns(df["a"].scatter([0, 1], [999, 888])).to_native()
+            ...     return df.with_columns(
+            ...         df["a"].scatter([0, 1], [999, 888])
+            ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_scatter`:
@@ -2074,7 +2076,7 @@ class Series(Generic[IntoSeriesT]):
 
                 - if you need to alias an object and don't need the original
                   one around any more, just use `alias` without worrying about it.
-                - if you were expecting `alias` to copy data, then explicily call
+                - if you were expecting `alias` to copy data, then explicitly call
                   `.clone` before calling `alias`.
 
         Arguments:
@@ -2152,7 +2154,7 @@ class Series(Generic[IntoSeriesT]):
 
                 - if you need to rename an object and don't need the original
                   one around any more, just use `rename` without worrying about it.
-                - if you were expecting `rename` to copy data, then explicily call
+                - if you were expecting `rename` to copy data, then explicitly call
                   `.clone` before calling `rename`.
 
         Arguments:
@@ -2249,7 +2251,9 @@ class Series(Generic[IntoSeriesT]):
             >>> def agnostic_replace_strict(s_native: IntoSeriesT) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.replace_strict(
-            ...         [0, 1, 2, 3], ["zero", "one", "two", "three"], return_dtype=nw.String
+            ...         [0, 1, 2, 3],
+            ...         ["zero", "one", "two", "three"],
+            ...         return_dtype=nw.String,
             ...     ).to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -2571,7 +2575,9 @@ class Series(Generic[IntoSeriesT]):
 
             Using a strategy:
 
-            >>> def agnostic_fill_null_with_strategy(s_native: IntoSeriesT) -> IntoSeriesT:
+            >>> def agnostic_fill_null_with_strategy(
+            ...     s_native: IntoSeriesT,
+            ... ) -> IntoSeriesT:
             ...     s = nw.from_native(s_native, series_only=True)
             ...     return s.fill_null(strategy="forward", limit=1).to_native()
 
@@ -3577,7 +3583,9 @@ class Series(Generic[IntoSeriesT]):
             Let's define a dataframe-agnostic function:
 
             >>> def agnostic_zip_with(
-            ...     s1_native: IntoSeriesT, mask_native: IntoSeriesT, s2_native: IntoSeriesT
+            ...     s1_native: IntoSeriesT,
+            ...     mask_native: IntoSeriesT,
+            ...     s2_native: IntoSeriesT,
             ... ) -> IntoSeriesT:
             ...     s1 = nw.from_native(s1_native, series_only=True)
             ...     mask = nw.from_native(mask_native, series_only=True)

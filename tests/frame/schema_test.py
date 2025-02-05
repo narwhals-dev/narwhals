@@ -9,8 +9,10 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
@@ -73,7 +75,7 @@ def test_string_disguised_as_object() -> None:
 def test_actual_object(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -213,6 +215,31 @@ def test_from_non_hashable_column_name() -> None:
     assert df["pizza"].dtype == nw.Int64
 
 
+def test_validate_not_duplicated_columns_pandas_like() -> None:
+    df = pd.DataFrame([[1, 2], [4, 5]], columns=["a", "a"])
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(df, eager_only=True)
+
+
+def test_validate_not_duplicated_columns_arrow() -> None:
+    table = pa.Table.from_arrays([pa.array([1, 2]), pa.array([4, 5])], names=["a", "a"])
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(table, eager_only=True)
+
+
+def test_validate_not_duplicated_columns_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(rel, eager_only=False)
+
+
 @pytest.mark.skipif(
     PANDAS_VERSION < (2, 2, 0),
     reason="too old for pyarrow types",
@@ -292,3 +319,14 @@ def test_nested_dtypes_dask() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
+
+
+def test_all_nulls_pandas() -> None:
+    assert (
+        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw_main.String
+    )
+    assert (
+        nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw.Object
+    )
