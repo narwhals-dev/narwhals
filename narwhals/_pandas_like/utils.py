@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Version
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
