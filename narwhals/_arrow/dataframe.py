@@ -694,6 +694,16 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         from narwhals._arrow.series import ArrowSeries
 
         columns = self.columns
+        if (
+            len(columns) > 1
+            and pc.any(
+                [pc.any(pc.is_null(self._native_frame[col])).as_py() for col in columns]
+            ).as_py()
+        ):
+            # blocked on https://github.com/apache/arrow/issues/32204
+            msg = "DataFrame.is_duplicated with more than one column when nulls are present is not yet supported for PyArrow."
+            raise NotImplementedError(msg)
+
         index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         col_token = generate_temporary_column_name(
             n_bytes=8, columns=[*columns, index_token]
