@@ -764,23 +764,17 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
         native_frame = self._native_frame
         n_rows = len(self)
 
-        index_: list[str] = (
-            [] if index is None else [index] if isinstance(index, str) else index
-        )
+        index_: list[str] = [] if index is None else index
         on_: list[str] = (
-            [c for c in self.columns if c not in index_]
-            if on is None
-            else [on]
-            if isinstance(on, str)
-            else on
+            [c for c in self.columns if c not in index_] if on is None else on
         )
 
         promote_kwargs = (

@@ -328,11 +328,11 @@ class BaseFrame(Generic[_FrameT]):
         on: str | list[str] | None,
         *,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
+        on = [on] if isinstance(on, str) else on
+        index = [index] if isinstance(index, str) else index
 
         return self._from_compliant_dataframe(
             self._compliant_frame.unpivot(
@@ -2077,8 +2077,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
-        variable_name: str | None = None,
-        value_name: str | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
     ) -> Self:
         r"""Unpivot a DataFrame from wide to long format.
 
@@ -3109,8 +3109,8 @@ class LazyFrame(BaseFrame[FrameT]):
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
-        variable_name: str | None = None,
-        value_name: str | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
     ) -> Self:
         r"""Unpivot a DataFrame from wide to long format.
 
