@@ -3,6 +3,7 @@
 Thank you for your interest in contributing to Narwhals! Any kind of improvement is welcome!
 
 ## Local development vs Codespaces
+
 You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
 You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
 This way you can easily start to work from your browser without installing git and cloning the repo.
@@ -16,7 +17,7 @@ Open your terminal and run the following command:
 
 ```bash
 git --version
-``` 
+```
 
 If the output looks like `git version 2.34.1` and you have a personal account on GitHub - you're good to go to the next step.
 If the terminal output informs about `command not found` you need to [install git](https://docs.github.com/en/get-started/quickstart/set-up-git).
@@ -40,7 +41,7 @@ Open a terminal, choose the directory where you would like to have Narwhals repo
 
 ```bash
 git clone <url you just copied>
-``` 
+```
 
 for example:
 
@@ -54,22 +55,21 @@ You should then navigate to the folder you just created:
 cd narwhals-dev
 ```
 
-
 ### 4. Add the `upstream` remote and fetch from it
 
 ```bash
 git remote add upstream git@github.com:narwhals-dev/narwhals.git
 git fetch upstream
-``` 
+```
 
 Check to see the remote has been added with `git remote -v`, you should see something like this:
 
 ```bash
 git remote -v                                                          
-origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
-origin	git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
-upstream	git@github.com:narwhals-dev/narwhals.git (fetch)
-upstream	git@github.com:narwhals-dev/narwhals.git (push)
+origin   git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
+origin   git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
+upstream git@github.com:narwhals-dev/narwhals.git (fetch)
+upstream git@github.com:narwhals-dev/narwhals.git (push)
 ```
 
 where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
@@ -86,35 +86,47 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
 1. Make sure you have Python3.12 installed, create a virtual environment,
    and activate it. If you're new to this, here's one way that we recommend:
-   1. Install uv: https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started
+   1. Install uv (see [uv getting started](https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started))
       or make sure it is up-to-date with:
-      ```
+
+      ```terminal
       uv self update
       ```
+
    2. Install Python3.12:
-      ```
+
+      ```terminal
       uv python install 3.12
       ```
+
    3. Create a virtual environment:
-      ```
+
+      ```terminal
       uv venv -p 3.12 --seed
       ```
+
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
+
 2. Install Narwhals: `uv pip install -e ".[dev, core, docs]"`. This will include fast-ish core libraries.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dev, core, docs, dask, pyspark, modin]"`.
+
 3. Install a fork of griffe:
-   ```
+
+   ```terminal
    uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
    ```
-   This is hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+
+   This is hopefully temporary until [mkdocstrings#716](https://github.com/mkdocstrings/mkdocstrings/issues/716)
    is addressed.
 
 You should also install pre-commit:
-```
+
+```terminal
 uv pip install pre-commit
 pre-commit install
 ```
+
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
 #### Option 2: use python3-venv
@@ -165,41 +177,68 @@ run them by passing the `--runslow` flag to PyTest.
 To keep local development test times down, Dask and Modin are excluded from dev
 dependencies, and their tests only run in CI. If you install them with
 
-```
+```terminal
 uv pip install -U dask[dataframe] modin
 ```
+
 then their tests will run too.
 
 #### Testing cuDF
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
-### 8. Building docs
+### 8. Writing the doc(strings)
+
+If you are adding a new feature or changing an existing one, you should also update the documentation and the docstrings
+to reflect the changes.
+
+Writing the docstring in Narwhals is not an exact science, but we have some high level guidelines (if in doubt just ask us in the PR):
+
+- The examples should be clear and to the point.
+- The examples should import _one_ dataframe library, create a datafrane and exemplify the Narwhals functionality.
+- We strive for balancing the use of different backend across all our docstrings examples.
+- There are exceptions to the above rules!
+
+Here an example of a docstring:
+
+```python
+>>> import pyarrow as pa
+>>> import narwhals as nw
+>>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
+>>> df = nw.from_native(df_native)
+>>> df.estimated_size()
+32
+```
+
+Full discussion at [narwhals#1943](https://github.com/narwhals-dev/narwhals/issues/1943).
+
+### 9. Building the docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
 
-### 9. Pull requests
+### 10. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
 
 Please adhere to the following guidelines:
 
-1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).<br>
-    TLDR:
-    The PR title should start with any of these abbreviations: `build`, `chore`, `ci`, `depr`,
-    `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`. Add a `!`at the end, if it is a breaking change. For example `refactor!`.
-    <br>
+1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
+
+   **TLDR**: The PR title should start with any of these abbreviations:
+      `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
+      Add a `!`at the end, if it is a breaking change. For example `refactor!`.
+
 2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
-3. Please follow the instructions in the pull request form and submit. 
+3. Please follow the instructions in the pull request form and submit.
 
 ## Working with Codespaces
+
 Codespaces is a great way to work on Narwhals without the need of configuring your local development environment.
 Every GitHub.com user has a monthly quota of free use of GitHub Codespaces, and you can start working in a codespace without providing any payment details.
 You'll be informed per email if you'll be close to using 100% of included services.
 To learn more about it visit [GitHub Docs](https://docs.github.com/en/codespaces/overview)
-
 
 ### 1. Make sure you have GitHub account
 
@@ -210,15 +249,14 @@ If you're new to GitHub, you'll need to create an account on [GitHub.com](https:
 Go to the [main project page](https://github.com/narwhals-dev/narwhals).
 Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
 
-### 3. Create codespace 
+### 3. Create codespace
 
-Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories. 
+Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
 Click on the green `Code` button and navigate to the `Codespaces` tab.
 Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
-with the complete repository and git installed. 
-You can now proceed with the steps [4. Setting up your environment](#4-setting-up-your-environment) up to [8. Pull request](#8-pull-requests)
+with the complete repository and git installed.
+You can now proceed with the steps [5. Setting up your environment](#5-setting-up-your-environment) up to [10. Pull request](#10-pull-requests)
 listed above in [Working with local development environment](#working-with-local-development-environment).
-
 
 ## How it works
 
