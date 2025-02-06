@@ -475,9 +475,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "keys": keys},
         )
 
-    def is_duplicated(self: Self) -> Self:
-        return reuse_series_implementation(self, "is_duplicated")
-
     def is_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "is_unique")
 

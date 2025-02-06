@@ -690,7 +690,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
         return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
 
-    def is_duplicated(self: Self) -> ArrowSeries:
+    def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
@@ -700,23 +700,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             .group_by(self.columns)
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
-        return ~ArrowSeries(
+        return ArrowSeries(
             pc.and_(
                 pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
                 pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
             ),
-            name="",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def is_unique(self: Self) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
-        is_duplicated = self.is_duplicated()._native_series
-
-        return ArrowSeries(
-            pc.invert(is_duplicated),
             name="",
             backend_version=self._backend_version,
             version=self._version,

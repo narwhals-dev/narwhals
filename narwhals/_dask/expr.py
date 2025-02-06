@@ -622,18 +622,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func, "is_last_distinct", returns_scalar=self._returns_scalar
         )
 
-    def is_duplicated(self: Self) -> Self:
-        def func(_input: dx.Series) -> dx.Series:
-            _name = _input.name
-            return (
-                _input.to_frame()
-                .groupby(_name, dropna=False)
-                .transform("size", meta=(_name, int))
-                > 1
-            )
-
-        return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
-
     def is_unique(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
             _name = _input.name

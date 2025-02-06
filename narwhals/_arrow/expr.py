@@ -339,9 +339,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             self, "fill_null", value=value, strategy=strategy, limit=limit
         )
 
-    def is_duplicated(self: Self) -> Self:
-        return reuse_series_implementation(self, "is_duplicated")
-
     def is_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "is_unique")
 

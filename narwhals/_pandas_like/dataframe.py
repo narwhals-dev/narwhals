@@ -943,14 +943,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> PandasLikeSeries:
-        return PandasLikeSeries(
-            self._native_frame.duplicated(keep=False),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
     def is_empty(self: Self) -> bool:
         return self._native_frame.empty  # type: ignore[no-any-return]
 

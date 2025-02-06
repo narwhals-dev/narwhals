@@ -3114,7 +3114,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.is_duplicated())
+        return ~self.is_unique()
 
     def is_empty(self: Self) -> bool:
         r"""Check if the series is empty.

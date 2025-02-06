@@ -1725,12 +1725,7 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_duplicated(),
-            self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
-        )
+        return ~self.is_unique()
 
     def is_unique(self: Self) -> Self:
         r"""Return a boolean mask indicating unique values.

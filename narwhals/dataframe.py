@@ -1798,10 +1798,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  dtype: bool  |
             └───────────────┘
         """
-        return self._series(
-            self._compliant_frame.is_duplicated(),
-            level=self._level,
-        )
+        return ~self.is_unique()
 
     def is_empty(self: Self) -> bool:
         r"""Check if the dataframe is empty.

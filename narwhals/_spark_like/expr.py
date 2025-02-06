@@ -453,13 +453,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=self._expr_kind,
         )
 
-    def is_duplicated(self: Self) -> Self:
-        def _is_duplicated(_input: Column) -> Column:
-            # Create a window spec that treats each value separately.
-            return self._F.count("*").over(self._Window.partitionBy(_input)) > 1
-
-        return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
-
     def is_finite(self: Self) -> Self:
         def _is_finite(_input: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
