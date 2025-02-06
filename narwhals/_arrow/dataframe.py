@@ -522,14 +522,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.filter(mask_native), validate_column_names=False
         )
 
-    def null_count(self: Self) -> Self:
-        df = self._native_frame
-        names_and_values = zip(df.column_names, df.columns)
-
-        return self._from_native_frame(
-            pa.table({name: [col.null_count] for name, col in names_and_values})
-        )
-
     def head(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
@@ -636,9 +628,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def clone(self: Self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
         raise NotImplementedError(msg)
-
-    def is_empty(self: Self) -> bool:
-        return self.shape[0] == 0
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar

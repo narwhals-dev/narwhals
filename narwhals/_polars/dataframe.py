@@ -219,9 +219,6 @@ class PolarsDataFrame:
             version=self._version,
         )
 
-    def is_empty(self: Self) -> bool:
-        return len(self._native_frame) == 0
-
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns

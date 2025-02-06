@@ -943,24 +943,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
-    def is_empty(self: Self) -> bool:
-        return self._native_frame.empty  # type: ignore[no-any-return]
-
     def is_unique(self: Self) -> PandasLikeSeries:
         return PandasLikeSeries(
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-        )
-
-    def null_count(self: Self) -> PandasLikeDataFrame:
-        return PandasLikeDataFrame(
-            self._native_frame.isna().sum(axis=0).to_frame().transpose(),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=False,
         )
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:

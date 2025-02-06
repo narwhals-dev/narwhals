@@ -1813,7 +1813,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> nw.from_native(df_native).is_empty()
             False
         """
-        return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
+        return len(self) == 0
 
     def is_unique(self: Self) -> Series[Any]:
         r"""Get a mask of all unique rows in this DataFrame.
@@ -1867,7 +1867,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  bar: [[0]]      |
             └──────────────────┘
         """
-        return self._from_compliant_dataframe(self._compliant_frame.null_count())
+        plx = self._compliant_frame.__narwhals_namespace__()
+        result = self._compliant_frame.select(plx.all().null_count())
+        return self._from_compliant_dataframe(result)
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""Return the DataFrame as a scalar, or return the element at the given row/column.
