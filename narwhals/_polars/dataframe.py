@@ -331,10 +331,10 @@ class PolarsDataFrame:
 
     def pivot(
         self: Self,
-        on: str | list[str],
+        on: list[str],
         *,
-        index: str | list[str] | None,
-        values: str | list[str] | None,
+        index: list[str] | None,
+        values: list[str] | None,
         aggregate_function: Literal[
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]

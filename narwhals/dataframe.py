@@ -2001,6 +2001,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "You can safely remove this argument."
             )
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        on = [on] if isinstance(on, str) else on
+        values = [values] if isinstance(values, str) else values
+        index = [index] if isinstance(index, str) else index
 
         return self._from_compliant_dataframe(
             self._compliant_frame.pivot(
