@@ -207,6 +207,16 @@ class Implementation(Enum):
             import duckdb  # ignore-banned-import
 
             return duckdb  # type: ignore[no-any-return]
+
+        if self is Implementation.IBIS:  # pragma: no cover
+            import ibis  # ignore-banned-import
+
+            return ibis  # type: ignore[no-any-return]
+
+        if self is Implementation.SQLFRAME:  # pragma: no cover
+            import sqlframe  # ignore-banned-import
+
+            return sqlframe  # type: ignore[no-any-return]
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -1338,10 +1348,11 @@ def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
             if impl is Implementation.UNKNOWN:
                 continue
 
-            ns = impl.to_native_namespace()
-            if ns is None:
+            try:
+                ns = impl.to_native_namespace()
+            except ImportError:
                 continue
-            if native_namespace.__name__ in ns.__name__:
+            if native_namespace.__name__.casefold() in ns.__name__.casefold():
                 msg += f", did you mean {ns.__name__!r}?"
                 break
         raise ValueError(msg) from e

@@ -359,11 +359,6 @@ def test_has_operation_raises() -> None:
     with pytest.raises(ValueError, match="Unknown namespace"):
         nw.has_operation(math, nw.Expr.mean)
 
-    import math
-
-    with pytest.raises(ValueError, match="Unknown namespace"):
-        nw.has_operation(math, nw.Expr.mean)
-
 
 def test_has_operation_raises_friendly_message() -> None:
     pytest.importorskip("dask")
@@ -381,10 +376,13 @@ def test_implementation_roundtrip() -> None:
         if impl is Implementation.UNKNOWN:
             continue
 
-        ns = impl.to_native_namespace()
-        if ns is not None:
-            impl_ = Implementation.from_native_namespace(ns)
-            assert impl is impl_
+        try:
+            ns = impl.to_native_namespace()
+        except ImportError:
+            continue
+
+        impl_ = Implementation.from_native_namespace(ns)
+        assert impl is impl_
 
 
 def test_get_class_that_defines_method() -> None:
