@@ -861,15 +861,16 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         native_dtypes = self._native_frame.dtypes
+
+        if copy is None:
+            # pandas default differs from Polars, but cuDF default is True
+            copy = self._implementation is Implementation.CUDF
+
         if native_dtypes.isin(CLASSICAL_NUMPY_DTYPES).all():
             # Fast path, no conversions necessary.
             if dtype is not None:
                 return self._native_frame.to_numpy(dtype=dtype, copy=copy)
             return self._native_frame.to_numpy(copy=copy)
-
-        if copy is None:
-            # pandas default differs from Polars, but cuDF default is True
-            copy = self._implementation is Implementation.CUDF
 
         dtypes = import_dtypes_module(self._version)
 

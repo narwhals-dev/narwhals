@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
+
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -12,3 +16,18 @@ def test_is_duplicated(constructor_eager: ConstructorEager) -> None:
     result = nw.concat([df, df.head(1)]).is_duplicated()
     expected = {"is_duplicated": [True, False, False, True]}
     assert_equal_data({"is_duplicated": result}, expected)
+
+
+def test_is_duplicated_with_nulls(constructor_eager: ConstructorEager) -> None:
+    context = (
+        pytest.raises(NotImplementedError)
+        if "pyarrow_table" in str(constructor_eager)
+        else does_not_raise()
+    )
+    data = {"col1": [1, 2, 3], "col2": ["one", None, None]}
+    df_raw = constructor_eager(data)
+    df = nw.from_native(df_raw, eager_only=True)
+    with context:
+        result = df.is_duplicated()
+        expected = {"is_duplicated": [False, False, False]}
+        assert_equal_data({"is_duplicated": result}, expected)
