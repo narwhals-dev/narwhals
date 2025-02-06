@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
 
+    if sys.version_info >= (3, 13):
+        from typing import TypeIs
+    else:
+        from typing_extensions import TypeIs
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
     else:
@@ -105,6 +109,30 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def lit(
         self, value: Any, dtype: DType | None
     ) -> CompliantExpr[CompliantSeriesT_co]: ...
+
+
+class _NativeNamespace(Protocol):
+    def __native_namespace__(self) -> Any: ...
+
+
+def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+    return hasattr(obj, "__narwhals_dataframe__")
+
+
+def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+    return hasattr(obj, "__narwhals_lazyframe__")
+
+
+def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+    return hasattr(obj, "__narwhals_series__")
+
+
+def has_native_namespace(obj: Any) -> TypeIs[_NativeNamespace]:
+    return hasattr(obj, "__native_namespace__")
+
+
+def is_dataframe_like(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]

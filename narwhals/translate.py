@@ -364,6 +364,10 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import is_compliant_dataframe
+    from narwhals.typing import is_compliant_lazyframe
+    from narwhals.typing import is_compliant_series
+    from narwhals.typing import is_dataframe_like
     from narwhals.utils import Implementation
     from narwhals.utils import parse_version
 
@@ -407,7 +411,7 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # Extensions
-    elif hasattr(native_object, "__narwhals_dataframe__"):
+    elif is_compliant_dataframe(native_object):
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dataframe"
@@ -417,7 +421,7 @@ def _from_native_impl(  # noqa: PLR0915
             native_object.__narwhals_dataframe__(),
             level="full",
         )
-    elif hasattr(native_object, "__narwhals_lazyframe__"):
+    elif is_compliant_lazyframe(native_object):
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with lazyframe"
@@ -432,7 +436,7 @@ def _from_native_impl(  # noqa: PLR0915
             native_object.__narwhals_lazyframe__(),
             level="full",
         )
-    elif hasattr(native_object, "__narwhals_series__"):
+    elif is_compliant_series(native_object):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
@@ -772,7 +776,7 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # Interchange protocol
-    elif hasattr(native_object, "__dataframe__"):
+    elif is_dataframe_like(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
@@ -825,7 +829,9 @@ def get_native_namespace(
         >>> nw.get_native_namespace(df)
         <module 'polars'...>
     """
-    if hasattr(obj, "__native_namespace__"):
+    from narwhals.typing import has_native_namespace
+
+    if has_native_namespace(obj):
         return obj.__native_namespace__()
     if is_pandas_dataframe(obj) or is_pandas_series(obj):
         return get_pandas()
