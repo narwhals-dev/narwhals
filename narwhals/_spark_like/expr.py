@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -425,29 +424,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._from_call(
             _clip,
             "clip",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            expr_kind=self._expr_kind,
-        )
-
-    def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
-            if closed == "both":
-                return (_input >= lower_bound) & (_input <= upper_bound)
-            if closed == "none":
-                return (_input > lower_bound) & (_input < upper_bound)
-            if closed == "left":
-                return (_input >= lower_bound) & (_input < upper_bound)
-            return (_input > lower_bound) & (_input <= upper_bound)
-
-        return self._from_call(
-            _is_between,
-            "is_between",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
             expr_kind=self._expr_kind,

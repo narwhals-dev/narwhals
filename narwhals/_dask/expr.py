@@ -415,24 +415,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def is_between(
-        self: Self,
-        lower_bound: Self | Any,
-        upper_bound: Self | Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        closed_ = "neither" if closed == "none" else closed
-        return self._from_call(
-            lambda _input, lower_bound, upper_bound, closed: _input.between(
-                lower_bound, upper_bound, closed
-            ),
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            closed=closed_,
-            returns_scalar=self._returns_scalar,
-        )
-
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum(), "sum", returns_scalar=True)
 
