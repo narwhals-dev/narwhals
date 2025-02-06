@@ -304,14 +304,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
         original_alias = self._native_frame.alias
 
         if how == "cross":

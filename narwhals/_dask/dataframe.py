@@ -282,8 +282,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         if isinstance(left_on, str):

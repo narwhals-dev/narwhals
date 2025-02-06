@@ -325,8 +325,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         self_native = self._native_frame
