@@ -1603,7 +1603,7 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
+    narwhals_object: DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT] | Series,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
