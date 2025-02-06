@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -174,7 +175,7 @@ class PolarsNamespace:
 
                 result = pl.fold(  # type: ignore[assignment]
                     acc=init_value,
-                    function=lambda x, y: x + y,
+                    function=operator.add,
                     exprs=[s + v for s, v in zip(separators, values)],
                 )
 

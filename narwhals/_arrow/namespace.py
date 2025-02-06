@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -192,7 +193,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
-            return [reduce(lambda x, y: x & y, series)]
+            return [reduce(operator.and_, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -208,7 +209,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
-            return [reduce(lambda x, y: x | y, series)]
+            return [reduce(operator.or_, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -228,7 +229,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
                 for _expr in parsed_exprs
                 for s in _expr(df)
             )
-            return [reduce(lambda x, y: x + y, series)]
+            return [reduce(operator.add, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -254,9 +255,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
                 for _expr in parsed_exprs
                 for s in _expr(df)
             )
-            return [
-                reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
-            ]
+            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -275,7 +274,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             return [
                 ArrowSeries(
                     native_series=reduce(
-                        lambda x, y: pc.min_element_wise(x, y),
+                        pc.min_element_wise,
                         [s._native_series for s in series],
                         init_series._native_series,
                     ),
@@ -302,7 +301,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             return [
                 ArrowSeries(
                     native_series=reduce(
-                        lambda x, y: pc.max_element_wise(x, y),
+                        pc.max_element_wise,
                         [s._native_series for s in series],
                         init_series._native_series,
                     ),
@@ -343,7 +342,10 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             raise NotImplementedError
 
         return ArrowDataFrame(
-            result_table, backend_version=self._backend_version, version=self._version
+            result_table,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
         )
 
     @property

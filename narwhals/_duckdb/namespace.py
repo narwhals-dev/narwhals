@@ -94,7 +94,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             null_mask = [s.isnull() for _expr in exprs for s in _expr(df)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 cols_separated = [
                     y
                     for x in [
@@ -145,7 +145,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def all_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
         return DuckDBExpr(
@@ -160,7 +160,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def any_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
         return DuckDBExpr(
@@ -175,7 +175,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def max_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("greatest", *cols)]
 
         return DuckDBExpr(
@@ -190,7 +190,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def min_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("least", *cols)]
 
         return DuckDBExpr(
@@ -205,13 +205,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
 
     def sum_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
-            return [
-                reduce(
-                    operator.add,
-                    (CoalesceOperator(col, ConstantExpression(0)) for col in cols),
-                )
-            ]
+            cols = (
+                CoalesceOperator(col, ConstantExpression(0))
+                for _expr in exprs
+                for col in _expr(df)
+            )
+            return [reduce(operator.add, cols)]
 
         return DuckDBExpr(
             call=func,

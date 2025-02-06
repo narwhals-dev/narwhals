@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
@@ -179,8 +180,13 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(
-            self._native_series, self._version, self._implementation
+        native_dtype = self._native_series.dtype
+        return (
+            native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
+            if native_dtype != "object"
+            else object_native_to_narwhals_dtype(
+                self._native_series, self._version, self._implementation
+            )
         )
 
     def ewm_mean(
@@ -264,6 +270,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=False,
         )
 
     def to_list(self: Self) -> list[Any]:
@@ -480,51 +487,40 @@ class PandasLikeSeries(CompliantSeries):
     # Reductions
 
     def any(self: Self) -> bool:
-        ser = self._native_series
-        return ser.any()  # type: ignore[no-any-return]
+        return self._native_series.any()  # type: ignore[no-any-return]
 
     def all(self: Self) -> bool:
-        ser = self._native_series
-        return ser.all()  # type: ignore[no-any-return]
+        return self._native_series.all()  # type: ignore[no-any-return]
 
     def min(self: Self) -> Any:
-        ser = self._native_series
-        return ser.min()
+        return self._native_series.min()
 
     def max(self: Self) -> Any:
-        ser = self._native_series
-        return ser.max()
+        return self._native_series.max()
 
     def sum(self: Self) -> float:
-        ser = self._native_series
-        return ser.sum()  # type: ignore[no-any-return]
+        return self._native_series.sum()  # type: ignore[no-any-return]
 
     def count(self: Self) -> int:
-        ser = self._native_series
-        return ser.count()  # type: ignore[no-any-return]
+        return self._native_series.count()  # type: ignore[no-any-return]
 
     def mean(self: Self) -> float:
-        ser = self._native_series
-        return ser.mean()  # type: ignore[no-any-return]
+        return self._native_series.mean()  # type: ignore[no-any-return]
 
     def median(self: Self) -> float:
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        ser = self._native_series
-        return ser.median()  # type: ignore[no-any-return]
+        return self._native_series.median()  # type: ignore[no-any-return]
 
     def std(self: Self, *, ddof: int) -> float:
-        ser = self._native_series
-        return ser.std(ddof=ddof)  # type: ignore[no-any-return]
+        return self._native_series.std(ddof=ddof)  # type: ignore[no-any-return]
 
     def var(self: Self, *, ddof: int) -> float:
-        ser = self._native_series
-        return ser.var(ddof=ddof)  # type: ignore[no-any-return]
+        return self._native_series.var(ddof=ddof)  # type: ignore[no-any-return]
 
     def skew(self: Self) -> float | None:
-        ser = self._native_series
-        ser_not_null = ser.dropna()
+        ser_not_null = self._native_series.dropna()
         if len(ser_not_null) == 0:
             return None
         elif len(ser_not_null) == 1:
@@ -543,8 +539,7 @@ class PandasLikeSeries(CompliantSeries):
     # Transformations
 
     def is_null(self: Self) -> PandasLikeSeries:
-        ser = self._native_series
-        return self._from_native_series(ser.isna())
+        return self._from_native_series(self._native_series.isna())
 
     def is_nan(self: Self) -> PandasLikeSeries:
         ser = self._native_series
@@ -572,12 +567,10 @@ class PandasLikeSeries(CompliantSeries):
         return res_ser
 
     def drop_nulls(self: Self) -> PandasLikeSeries:
-        ser = self._native_series
-        return self._from_native_series(ser.dropna())
+        return self._from_native_series(self._native_series.dropna())
 
     def n_unique(self: Self) -> int:
-        ser = self._native_series
-        return ser.nunique(dropna=False)  # type: ignore[no-any-return]
+        return self._native_series.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
         self: Self,
@@ -587,9 +580,10 @@ class PandasLikeSeries(CompliantSeries):
         with_replacement: bool,
         seed: int | None,
     ) -> Self:
-        ser = self._native_series
         return self._from_native_series(
-            ser.sample(n=n, frac=fraction, replace=with_replacement, random_state=seed)
+            self._native_series.sample(
+                n=n, frac=fraction, replace=with_replacement, random_state=seed
+            )
         )
 
     def abs(self: Self) -> PandasLikeSeries:
@@ -657,18 +651,18 @@ class PandasLikeSeries(CompliantSeries):
         return result
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
-        ser = self._native_series
         na_position = "last" if nulls_last else "first"
         return self._from_native_series(
-            ser.sort_values(ascending=not descending, na_position=na_position)
+            self._native_series.sort_values(
+                ascending=not descending, na_position=na_position
+            )
         ).alias(self.name)
 
     def alias(self: Self, name: str) -> Self:
         if name != self.name:
-            ser = self._native_series
             return self._from_native_series(
                 rename(
-                    ser,
+                    self._native_series,
                     name,
                     implementation=self._implementation,
                     backend_version=self._backend_version,
@@ -736,26 +730,30 @@ class PandasLikeSeries(CompliantSeries):
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
-        res = self._native_series.duplicated(keep=False)
-        return self._from_native_series(res).alias(self.name)
+        return self._from_native_series(self._native_series.duplicated(keep=False)).alias(
+            self.name
+        )
 
     def is_empty(self: Self) -> bool:
         return self._native_series.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep=False)
-        return self._from_native_series(res).alias(self.name)
+        return self._from_native_series(
+            ~self._native_series.duplicated(keep=False)
+        ).alias(self.name)
 
     def null_count(self: Self) -> int:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep="first")
-        return self._from_native_series(res).alias(self.name)
+        return self._from_native_series(
+            ~self._native_series.duplicated(keep="first")
+        ).alias(self.name)
 
     def is_last_distinct(self: Self) -> Self:
-        res = ~self._native_series.duplicated(keep="last")
-        return self._from_native_series(res).alias(self.name)
+        return self._from_native_series(
+            ~self._native_series.duplicated(keep="last")
+        ).alias(self.name)
 
     def is_sorted(self: Self, *, descending: bool) -> bool:
         if not isinstance(descending, bool):
@@ -797,6 +795,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         )
 
     def quantile(
@@ -859,6 +858,7 @@ class PandasLikeSeries(CompliantSeries):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         )
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
