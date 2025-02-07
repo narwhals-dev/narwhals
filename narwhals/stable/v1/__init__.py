@@ -67,7 +67,6 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
-from narwhals.typing import IntoSeriesT as IntoSeriesT  # noqa: PLC0414
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import find_stacklevel
