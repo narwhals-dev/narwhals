@@ -308,7 +308,7 @@ jobs:
       - name: Run pytest on plotly express
         run: |
           cd plotly.py
-          pytest plotly/tests/test_optional/test_px
+          pytest tests/test_optional/test_px
 
   hierarchicalforecast:
     strategy:
