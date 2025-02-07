@@ -16,6 +16,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
+from narwhals.utils import is_compliant_series
 
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
@@ -132,11 +133,11 @@ def parse_into_expr(
     """
     if is_compliant_expr(into_expr):
         return into_expr
-    if hasattr(into_expr, "__narwhals_series__"):
+    if is_compliant_series(into_expr):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
     if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
-        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
+        series = namespace._create_compliant_series(into_expr)
+        return namespace._create_expr_from_series(series)
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
