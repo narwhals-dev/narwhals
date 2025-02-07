@@ -857,39 +857,22 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
 
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], slice]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, str]) -> Series[Any]: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, int]) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(  # type: ignore[overload-overlap]
+        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+    ) -> Series[Any]: ...
 
     @overload
-    def __getitem__(self: Self, item: Sequence[int]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: str) -> Series[Any]: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[str]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: slice) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
-
+    def __getitem__(
+        self: Self,
+        key: (
+            slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[
+                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+            ]
+        ),
+    ) -> Self: ...
     def __getitem__(
         self: Self,
         item: (
@@ -897,10 +880,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             | slice
             | Sequence[int]
             | Sequence[str]
-            | tuple[Sequence[int], str | int]
-            | tuple[slice, str | int]
-            | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
-            | tuple[slice, slice]
+            | tuple[slice | Sequence[int] | np.ndarray, int | str]
+            | tuple[
+                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+            ]
         ),
     ) -> Series[Any] | Self:
         """Extract column or slice of DataFrame.
