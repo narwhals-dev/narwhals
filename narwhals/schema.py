@@ -121,7 +121,7 @@ class Schema(BaseSchema):
         )
 
     def to_pandas(
-        self: Self, *, dtype_backend: str | Iterable[str] | None = None
+        self: Self, dtype_backend: str | Iterable[str] | None = None
     ) -> dict[str, Any]:
         """Convert Schema to an ordered mapping of column names to their pandas data type.
 
@@ -138,10 +138,10 @@ class Schema(BaseSchema):
             >>> schema.to_pandas()
             {'a': 'int64', 'b': 'datetime64[ns]'}
 
-            >>> schema.to_pandas(dtype_backend="pyarrow-nullable")
+            >>> schema.to_pandas("pyarrow-nullable")
             {'a': 'Int64[pyarrow]', 'b': 'timestamp[ns][pyarrow]'}
 
-            >>> schema.to_pandas(dtype_backend=["pandas-nullable", "pyarrow-nullable"])
+            >>> schema.to_pandas(["pandas-nullable", "pyarrow-nullable"])
             {'a': 'Int64', 'b': 'timestamp[ns][pyarrow]'}
         """
         import pandas as pd  # ignore-banned-import
@@ -175,11 +175,11 @@ class Schema(BaseSchema):
                 msg = (
                     f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
                     "Hint: instead of\n"
-                    f"    schema.to_pandas(dtype_backend={backends})\n"
+                    f"    schema.to_pandas({backends})\n"
                     "you may want to use\n"
-                    f"    schema.to_pandas(dtype_backend={backends[0]})\n"
+                    f"    schema.to_pandas({backends[0]})\n"
                     f"or\n"
-                    f"    schema.to_pandas(dtype_backend={suggestion})"
+                    f"    schema.to_pandas({suggestion})"
                 )
                 raise ValueError(msg)
             return {

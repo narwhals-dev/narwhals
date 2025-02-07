@@ -520,10 +520,8 @@ def _from_dict_impl(
             from narwhals._pandas_like.utils import get_dtype_backend
 
             pd_schema = Schema(schema).to_pandas(
-                dtype_backend=(
-                    get_dtype_backend(native_type, eager_backend)
-                    for native_type in native_frame.dtypes
-                )
+                get_dtype_backend(native_type, eager_backend)
+                for native_type in native_frame.dtypes
             )
             native_frame = native_frame.astype(pd_schema)
 

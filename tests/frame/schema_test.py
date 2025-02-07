@@ -396,7 +396,7 @@ def test_schema_to_pandas(
             "e": nw.Datetime("ns"),
         }
     )
-    assert schema.to_pandas(dtype_backend=dtype_backend) == expected
+    assert schema.to_pandas(dtype_backend) == expected
 
 
 def test_schema_to_pandas_strict_zip() -> None:
@@ -417,7 +417,7 @@ def test_schema_to_pandas_strict_zip() -> None:
         "pandas-nullable",
         "pyarrow-nullable",
     )
-    suggestion = re.escape(f"(dtype_backend={tup})")
+    suggestion = re.escape(f"({tup})")
     with pytest.raises(
         ValueError,
         match=re.compile(
@@ -425,4 +425,4 @@ def test_schema_to_pandas_strict_zip() -> None:
             re.DOTALL,
         ),
     ):
-        schema.to_pandas(dtype_backend=dtype_backend)
+        schema.to_pandas(dtype_backend)
