@@ -8,7 +8,11 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+import numpy as np
+
 from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import check_column_names_are_unique
@@ -16,6 +20,7 @@ from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -36,14 +41,12 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
@@ -51,6 +54,31 @@ if TYPE_CHECKING:
 
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
+
+CLASSICAL_NUMPY_DTYPES = frozenset(
+    [
+        np.dtype("float64"),
+        np.dtype("float32"),
+        np.dtype("int64"),
+        np.dtype("int32"),
+        np.dtype("int16"),
+        np.dtype("int8"),
+        np.dtype("uint64"),
+        np.dtype("uint32"),
+        np.dtype("uint16"),
+        np.dtype("uint8"),
+        np.dtype("bool"),
+        np.dtype("datetime64[s]"),
+        np.dtype("datetime64[ms]"),
+        np.dtype("datetime64[us]"),
+        np.dtype("datetime64[ns]"),
+        np.dtype("timedelta64[s]"),
+        np.dtype("timedelta64[ms]"),
+        np.dtype("timedelta64[us]"),
+        np.dtype("timedelta64[ns]"),
+        np.dtype("object"),
+    ]
+)
 
 
 class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
@@ -120,8 +148,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             self._native_frame[name],
             implementation=self._implementation,
@@ -179,8 +205,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
-            from narwhals._pandas_like.series import PandasLikeSeries
-
             return PandasLikeSeries(
                 self._native_frame[item],
                 implementation=self._implementation,
@@ -238,8 +262,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:
-            from narwhals._pandas_like.series import PandasLikeSeries
-
             if isinstance(item[1], str):
                 item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
                 native_series = self._native_frame.iloc[item]
@@ -344,8 +366,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
+        native_dtypes = self._native_frame.dtypes
         return {
             col: native_to_narwhals_dtype(
+                native_dtypes[col], self._version, self._implementation
+            )
+            if native_dtypes[col] != "object"
+            else object_native_to_narwhals_dtype(
                 self._native_frame[col], self._version, self._implementation
             )
             for col in self._native_frame.columns
@@ -820,8 +847,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.shape  # type: ignore[no-any-return]
 
     def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         if as_series:
             return {
                 col: PandasLikeSeries(
@@ -835,11 +860,17 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+        native_dtypes = self._native_frame.dtypes
 
         if copy is None:
             # pandas default differs from Polars, but cuDF default is True
             copy = self._implementation is Implementation.CUDF
+
+        if native_dtypes.isin(CLASSICAL_NUMPY_DTYPES).all():
+            # Fast path, no conversions necessary.
+            if dtype is not None:
+                return self._native_frame.to_numpy(dtype=dtype, copy=copy)
+            return self._native_frame.to_numpy(copy=copy)
 
         dtypes = import_dtypes_module(self._version)
 
@@ -865,7 +896,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for col_dtype in df.dtypes:
+        for col_dtype in native_dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np
 
@@ -913,8 +944,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
@@ -926,8 +955,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> PandasLikeSeries:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
         return PandasLikeSeries(
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,

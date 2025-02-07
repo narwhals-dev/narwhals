@@ -693,36 +693,22 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def is_duplicated(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        columns = self.columns
-        index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
-        col_token = generate_temporary_column_name(
-            n_bytes=8, columns=[*columns, index_token]
+        col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        row_index = pa.array(range(len(self)))
+        keep_idx = (
+            self._native_frame.append_column(col_token, row_index)
+            .group_by(self.columns)
+            .aggregate([(col_token, "min"), (col_token, "max")])
         )
-        df = self.with_row_index(index_token)._native_frame
-        row_count = (
-            df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
-            .group_by(columns)
-            .aggregate([(col_token, "sum")])
-        )
-        is_duplicated = pc.greater(
-            df.join(
-                row_count,
-                keys=columns,
-                right_keys=columns,
-                join_type="left outer",
-                use_threads=False,
-            )
-            .sort_by(index_token)
-            .column(f"{col_token}_sum"),
-            1,
-        )
-        res = ArrowSeries(
-            is_duplicated,
+        return ~ArrowSeries(
+            pc.and_(
+                pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+            ),
             name="",
             backend_version=self._backend_version,
             version=self._version,
         )
-        return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
 
     def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
