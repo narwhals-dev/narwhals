@@ -132,38 +132,21 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return LazyFrame
 
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], slice]) -> Self: ...
+    def __getitem__(  # type: ignore[overload-overlap]
+        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+    ) -> Series: ...
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[int]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: str) -> Series: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[str]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: slice) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
+    def __getitem__(
+        self: Self,
+        key: (
+            slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[
+                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+            ]
+        ),
+    ) -> Self: ...
 
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
