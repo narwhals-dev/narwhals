@@ -4,14 +4,24 @@ import os
 import re
 from enum import Enum
 from enum import auto
+from importlib import import_module
+from inspect import getmembers
+from inspect import getmodule
+from inspect import getmro
+from inspect import isclass
+from inspect import isfunction
+from inspect import ismethod
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Generic
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
+from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
@@ -23,6 +33,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -108,6 +119,7 @@ class Implementation(Enum):
             get_dask_dataframe(): Implementation.DASK,
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -195,6 +207,16 @@ class Implementation(Enum):
             import duckdb  # ignore-banned-import
 
             return duckdb  # type: ignore[no-any-return]
+
+        if self is Implementation.IBIS:  # pragma: no cover
+            import ibis  # ignore-banned-import
+
+            return ibis  # type: ignore[no-any-return]
+
+        if self is Implementation.SQLFRAME:  # pragma: no cover
+            import sqlframe  # ignore-banned-import
+
+            return sqlframe  # type: ignore[no-any-return]
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -361,6 +383,70 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.IBIS  # pragma: no cover
+
+
+T = TypeVar("T")
+Namespace = TypeVar("Namespace")
+
+
+class MetaProperty(Generic[T, Namespace]):
+    def __init__(
+        self, func: Callable[[T], Namespace], class_value: type[Namespace]
+    ) -> None:
+        self._class_value = class_value
+        self._inst_method = func
+
+    @overload
+    def __get__(self, instance: None, owner: type[T]) -> type[Namespace]: ...
+    @overload
+    def __get__(self, instance: T, owner: type[T]) -> Namespace: ...
+    def __get__(self, instance: T | None, owner: type[T]) -> Namespace | type[Namespace]:
+        if instance is None:
+            return self._class_value
+        return self._inst_method(instance)
+
+
+def metaproperty(
+    returns: type[Namespace],
+) -> Callable[[Callable[[T], Namespace]], Namespace]:  # TODO(Unassigned): Fix typing
+    """Property decorator that changes the returned value when accessing from the class.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        metaproperty descriptor.
+
+    Arguments:
+        returns: The object to return upon class attribute accession.
+
+    Returns:
+        A decorator that applies the custom metaproperty behavior.
+
+    Examples:
+        >>> from narwhals.utils import metaproperty
+        >>> class T:
+        ...     @property
+        ...     def f(self):
+        ...         return 5
+        ...
+        ...     @metaproperty(str)
+        ...     def g(self):
+        ...         return 5
+
+        >>> t = T()
+        >>> assert t.f == t.g  # 5
+        >>> assert isinstance(T.f, property)
+        >>> assert T.g is str
+
+    """
+
+    def wrapper(
+        func: Callable[[T], Namespace],
+    ) -> Namespace:  # TODO(Unassigned): Fix typing
+        return MetaProperty(func, returns)  # type: ignore[return-value]
+
+    return wrapper
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
@@ -1170,3 +1256,159 @@ def check_column_names_are_unique(columns: list[str]) -> None:
         msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+def get_class_that_defines_method(method: Callable[..., Any]) -> type:
+    """Returns the class from a given unbound function or method.
+
+    https://stackoverflow.com/questions/3589311/get-defining-class-of-unbound-method-object-in-python-3/25959545#25959545
+
+    Returns:
+        type
+    """
+    if ismethod(method):
+        return next(
+            cls
+            for cls in getmro(method.__self__.__class__)
+            if method.__name__ in cls.__dict__
+        )
+
+    elif isfunction(method):
+        maybe_cls = getattr(
+            getmodule(method),
+            method.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
+        )
+        if isclass(maybe_cls):
+            return maybe_cls
+
+    msg = f"Unable to parse the owners type of {method}"
+    raise TypeError(msg)
+
+
+def has_operation(native_namespace: ModuleType, operation: Any) -> bool:
+    """Indicate whether a provided operation is available within a native namespace.
+
+    Arguments:
+        native_namespace: module to check against, any
+        operation: an unbound narwhals function, reached from the class implementation.
+
+    Returns:
+        boolean indicating whether the provided operation is a
+
+    Raises:
+        ValueError: `native_namespace` could not be mapped to a narwhals implementation.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+
+        >>> nw.has_operation(pd, nw.Expr.mean)
+        True
+
+        >>> nw.has_operation(pd, nw.Expr.dt.date)
+        True
+
+        >>> nw.has_operation(pd, nw.Series.mean)
+        True
+
+        >>> nw.has_operation(pd, nw.Series.dt.date)
+        True
+
+        >>> nw.has_operation(pd, nw.DataFrame.join_asof)
+        True
+
+        >>> import duckdb
+        >>> nw.has_operation(duckdb, nw.Expr.mean)
+        True
+
+        >>> nw.has_operation(duckdb, nw.Series.mean)
+        False
+
+    """
+    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation is Implementation.POLARS:
+        return True
+
+    nw_cls = get_class_that_defines_method(operation)
+    backend_mapping = {
+        Implementation.PANDAS: "_pandas_like",
+        Implementation.MODIN: "_pandas_like",
+        Implementation.CUDF: "_pandas_like",
+        Implementation.PYARROW: "_arrow",
+        Implementation.PYSPARK: "_spark_like",
+        Implementation.DASK: "_dask",
+        Implementation.DUCKDB: "_duckdb",
+        Implementation.IBIS: "_ibis",
+    }
+    try:
+        backend = backend_mapping[implementation]
+    except KeyError as e:
+        msg = f"Unknown namespace {native_namespace.__name__!r}"
+        for impl in Implementation:
+            if impl is Implementation.UNKNOWN:
+                continue
+
+            try:
+                ns = impl.to_native_namespace()
+            except ImportError:
+                continue
+            if native_namespace.__name__.casefold() in ns.__name__.casefold():
+                msg += f", did you mean {ns.__name__!r}?"
+                break
+        raise ValueError(msg) from e
+
+    _, _, module_name = nw_cls.__module__.partition(".")
+    try:
+        module_ = import_module(f"narwhals.{backend}.{module_name}")
+    except ModuleNotFoundError:  # pragma: no cover
+        return False
+
+    classes_ = getmembers(
+        module_,
+        predicate=lambda c: (
+            isclass(c)
+            and c.__name__.endswith(nw_cls.__name__)
+            and not c.__name__.startswith("Compliant")  # Exclude protocols
+            and not c.__name__.startswith("DuckDBInterchange")
+        ),
+    )
+    if not classes_:
+        return False
+    cls = classes_[0][-1]
+    if hasattr(cls, operation.__name__):
+        return is_implemented(getattr(cls, operation.__name__))
+    return False
+
+
+def is_implemented(func: Callable[..., Any]) -> bool:
+    from ast import Call
+    from ast import Name
+    from ast import NodeVisitor
+    from ast import Raise
+    from ast import Return
+    from ast import parse
+    from inspect import getsource
+    from textwrap import dedent
+
+    class NotImplementedVisitor(NodeVisitor):
+        def __init__(self) -> None:
+            self.has_notimplemented = False
+            self.has_return = False
+            super().__init__()
+
+        def visit_Return(self, node: Return) -> None:  # noqa: N802
+            self.has_return = True
+
+        def visit_Raise(self, node: Raise) -> None:  # noqa: N802
+            if (
+                isinstance(node.exc, Call) and node.exc.func.id == "NotImplementedError"  # type: ignore[attr-defined]
+            ) or (isinstance(node.exc, Name) and node.exc.id == "NotImplementedError"):
+                self.has_notimplemented = True
+
+    source = dedent(getsource(func))
+    tree = parse(source)
+
+    v = NotImplementedVisitor()
+    v.visit(tree)
+
+    return v.has_return or not v.has_notimplemented

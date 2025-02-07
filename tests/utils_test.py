@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import re
 import string
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Generator
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -16,6 +20,7 @@ from pandas.testing import assert_series_equal
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import check_column_exists
+from narwhals.utils import get_class_that_defines_method
 from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
@@ -297,3 +302,141 @@ def test_check_column_exists() -> None:
         match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
     ):
         check_column_exists(columns, subset)
+
+
+def test_has_operation() -> None:
+    # smoke tests
+    has_operation = nw.has_operation
+    assert has_operation(pl, nw.Expr.mean)
+    assert has_operation(pd, nw.Expr.mean)
+    assert has_operation(pd, nw.Expr.str.to_uppercase)
+    assert has_operation(pd, nw.Expr.dt.date)
+    assert has_operation(pd, nw.Series.mean)
+    assert has_operation(pd, nw.Series.str.to_uppercase)
+    assert has_operation(pd, nw.Series.dt.date)
+    assert has_operation(pd, nw.DataFrame.select)
+    assert not has_operation(pd, nw.LazyFrame.select)  # pandas does not have LazyFrame
+
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.expr_dt import PandasLikeExprDateTimeNamespace
+    from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
+    from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
+
+    @contextmanager
+    def out_attribute(unbound_method: Callable[..., Any]) -> Generator[None, None, None]:
+        cls = get_class_that_defines_method(unbound_method)
+        delattr(cls, unbound_method.__name__)
+        try:
+            yield
+        finally:
+            setattr(cls, unbound_method.__name__, unbound_method)
+
+    # re-run smoke tests after explicitly removing methods
+    with out_attribute(PandasLikeExpr.mean):
+        assert not has_operation(pd, nw.Expr.mean)
+    with out_attribute(PandasLikeExprStringNamespace.to_uppercase):
+        assert not has_operation(pd, nw.Expr.str.to_uppercase)
+    with out_attribute(PandasLikeExprDateTimeNamespace.date):
+        assert not has_operation(pd, nw.Expr.dt.date)
+
+    with out_attribute(PandasLikeSeries.mean):
+        assert not has_operation(pd, nw.Series.mean)
+    with out_attribute(PandasLikeSeriesStringNamespace.to_uppercase):
+        assert not has_operation(pd, nw.Series.str.to_uppercase)
+    with out_attribute(PandasLikeSeriesDateTimeNamespace.date):
+        assert not has_operation(pd, nw.Series.dt.date)
+
+    with out_attribute(PandasLikeDataFrame.select):
+        assert not has_operation(pd, nw.DataFrame.select)
+
+
+def test_has_operation_raises() -> None:
+    import math
+
+    with pytest.raises(ValueError, match="Unknown namespace"):
+        nw.has_operation(math, nw.Expr.mean)
+
+
+def test_has_operation_raises_friendly_message() -> None:
+    pytest.importorskip("dask")
+    import dask
+    import dask.dataframe
+
+    with pytest.raises(ValueError, match="Unknown namespace .* did you mean"):
+        nw.has_operation(dask, nw.Expr.mean)
+
+
+def test_implementation_roundtrip() -> None:
+    from narwhals.utils import Implementation
+
+    for impl in Implementation:
+        if impl is Implementation.UNKNOWN:
+            continue
+
+        try:
+            ns = impl.to_native_namespace()
+        except ImportError:
+            continue
+
+        impl_ = Implementation.from_native_namespace(ns)
+        assert impl is impl_
+
+
+def test_get_class_that_defines_method() -> None:
+    import narwhals as nw
+    from narwhals.utils import get_class_that_defines_method
+
+    assert get_class_that_defines_method(nw.Series.mean) is nw.Series
+    assert get_class_that_defines_method(nw.Expr.mean) is nw.Expr
+    assert get_class_that_defines_method(nw.col("a").mean) is nw.Expr
+
+    def g() -> None:  # pragma: no cover
+        pass
+
+    with pytest.raises(TypeError, match="Unable to parse the owners"):
+        get_class_that_defines_method(g)
+
+    with pytest.raises(TypeError, match="Unable to parse the owners"):
+        get_class_that_defines_method(abs)
+
+
+def test_is_implemented() -> None:
+    from narwhals.utils import is_implemented
+
+    def f() -> None:  # pragma: no cover
+        pass
+
+    assert is_implemented(f)
+
+    def g() -> int:  # pragma: no cover
+        return 5
+
+    assert is_implemented(g)
+
+    # known limitation
+    def h() -> None:  # pragma: no cover
+        raise NotImplementedError
+        return 5
+
+    assert is_implemented(h)
+
+    def i() -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    assert not is_implemented(i)
+
+    def j() -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    assert not is_implemented(j)
+
+    def k() -> None:  # pragma: no cover
+        try:
+            raise NotImplementedError  # noqa: TRY301
+        except NotImplementedError:  # noqa: TRY203
+            raise
+
+    assert not is_implemented(k)
