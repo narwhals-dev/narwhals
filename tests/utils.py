@@ -55,7 +55,7 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 def _to_comparable_list(column_values: Any) -> Any:
     if isinstance(column_values, nw.Series) and isinstance(
         column_values.to_native(), pa.Array
-    ):
+    ):  # pragma: no cover
         # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
         msg = "Did not expect to see Arrow Array here"
         raise TypeError(msg)
