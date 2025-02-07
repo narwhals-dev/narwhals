@@ -225,6 +225,9 @@ class BaseFrame(Generic[_FrameT]):
         suffix: str = "_right",
     ) -> Self:
         _supported_joins = ("inner", "left", "cross", "anti", "semi")
+        on = [on] if isinstance(on, str) else on
+        left_on = [left_on] if isinstance(left_on, str) else left_on
+        right_on = [right_on] if isinstance(right_on, str) else right_on
 
         if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
@@ -328,11 +331,11 @@ class BaseFrame(Generic[_FrameT]):
         on: str | list[str] | None,
         *,
         index: str | list[str] | None,
-        variable_name: str | None,
-        value_name: str | None,
+        variable_name: str,
+        value_name: str,
     ) -> Self:
-        variable_name = variable_name if variable_name is not None else "variable"
-        value_name = value_name if value_name is not None else "value"
+        on = [on] if isinstance(on, str) else on
+        index = [index] if isinstance(index, str) else index
 
         return self._from_compliant_dataframe(
             self._compliant_frame.unpivot(
@@ -1781,10 +1784,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  dtype: bool  |
             └───────────────┘
         """
-        return self._series(
-            self._compliant_frame.is_duplicated(),
-            level=self._level,
-        )
+        return ~self.is_unique()
 
     def is_empty(self: Self) -> bool:
         r"""Check if the dataframe is empty.
@@ -1799,7 +1799,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> nw.from_native(df_native).is_empty()
             False
         """
-        return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
+        return len(self) == 0
 
     def is_unique(self: Self) -> Series[Any]:
         r"""Get a mask of all unique rows in this DataFrame.
@@ -1853,7 +1853,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  bar: [[0]]      |
             └──────────────────┘
         """
-        return self._from_compliant_dataframe(self._compliant_frame.null_count())
+        plx = self._compliant_frame.__narwhals_namespace__()
+        result = self._compliant_frame.select(plx.all().null_count())
+        return self._from_compliant_dataframe(result)
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""Return the DataFrame as a scalar, or return the element at the given row/column.
@@ -1982,6 +1984,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "You can safely remove this argument."
             )
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+        on = [on] if isinstance(on, str) else on
+        values = [values] if isinstance(values, str) else values
+        index = [index] if isinstance(index, str) else index
 
         return self._from_compliant_dataframe(
             self._compliant_frame.pivot(
@@ -2061,8 +2066,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
-        variable_name: str | None = None,
-        value_name: str | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
     ) -> Self:
         r"""Unpivot a DataFrame from wide to long format.
 
@@ -3093,8 +3098,8 @@ class LazyFrame(BaseFrame[FrameT]):
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
-        variable_name: str | None = None,
-        value_name: str | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
     ) -> Self:
         r"""Unpivot a DataFrame from wide to long format.
 
