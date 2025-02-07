@@ -150,7 +150,7 @@ class Schema(BaseSchema):
 
         to_native = partial(
             narwhals_to_native_dtype,
-            implementation=Implementation.from_native_namespace(pd),
+            implementation=Implementation.PANDAS,
             backend_version=parse_version(pd.__version__),
             version=self._version,
         )
