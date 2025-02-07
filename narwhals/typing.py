@@ -11,23 +11,18 @@ from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
-    import sys
-
-    from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
+    from types import ModuleType
 
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
+    from narwhals.utils import Implementation
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -108,7 +103,7 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
 
 
 class SupportsNativeNamespace(Protocol):
-    def __native_namespace__(self) -> Any: ...
+    def __native_namespace__(self) -> ModuleType: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
