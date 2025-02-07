@@ -80,7 +80,7 @@ repos:
         files: ^\.github/workflows/
       - id: mypy
         name: mypy
-        entry: mypy
+        entry: ./.venv/bin/mypy
         files: ^(narwhals|tests)/
         language: system
         types: [python]
