@@ -299,6 +299,7 @@ jobs:
         run: |
           cd plotly.py
           uv pip install -r test_requirements/requirements_312_optional.txt --system
+          uv pip install -e . --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -308,7 +309,7 @@ jobs:
       - name: Run pytest on plotly express
         run: |
           cd plotly.py
-          pytest plotly/tests/test_optional/test_px
+          pytest tests/test_optional/test_px
 
   hierarchicalforecast:
     strategy:

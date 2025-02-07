@@ -67,7 +67,6 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
-from narwhals.typing import IntoSeriesT
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import find_stacklevel
@@ -90,6 +89,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrame
     from narwhals.typing import IntoSeries
 
 T = TypeVar("T")
@@ -132,38 +132,21 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return LazyFrame
 
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], slice]) -> Self: ...
+    def __getitem__(  # type: ignore[overload-overlap]
+        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+    ) -> Series: ...
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[int]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, Sequence[str]]) -> Self: ...
-    @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[int]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: str) -> Series: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[str]) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: slice) -> Self: ...
-
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
+    def __getitem__(
+        self: Self,
+        key: (
+            slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[
+                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+            ]
+        ),
+    ) -> Self: ...
 
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
@@ -1124,7 +1107,7 @@ def _stableify(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     strict: Literal[False],
     eager_only: Literal[False] = ...,
@@ -1136,7 +1119,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
@@ -1196,7 +1179,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeries,
     *,
     strict: Literal[False],
     eager_only: Literal[False] = ...,
@@ -1208,7 +1191,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT,
+    native_object: IntoSeries,
     *,
     strict: Literal[False],
     eager_only: Literal[False] = ...,
@@ -1268,7 +1251,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrame | IntoSeries,
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[False] = ...,
@@ -1280,7 +1263,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
+    native_object: IntoSeries | Any,  # remain `Any` for downstream compatibility
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[False] = ...,
@@ -1304,7 +1287,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
@@ -1316,7 +1299,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[True],
@@ -1376,7 +1359,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
@@ -1388,7 +1371,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT,
+    native_object: IntoSeries,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
@@ -1448,7 +1431,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrame | IntoSeries,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
@@ -1460,7 +1443,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT,
+    native_object: IntoSeries,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
@@ -1496,7 +1479,7 @@ def from_native(
 
 
 def from_native(
-    native_object: IntoFrameT | IntoSeries | T,
+    native_object: IntoFrameT | IntoFrame | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,

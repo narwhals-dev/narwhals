@@ -261,20 +261,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        return reuse_series_implementation(
-            self,
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            closed=closed,
-        )
-
     def is_null(self: Self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
@@ -474,9 +460,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             version=self._version,
             kwargs={**self._kwargs, "keys": keys},
         )
-
-    def is_duplicated(self: Self) -> Self:
-        return reuse_series_implementation(self, "is_duplicated")
 
     def is_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "is_unique")

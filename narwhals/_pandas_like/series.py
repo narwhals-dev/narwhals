@@ -729,11 +729,6 @@ class PandasLikeSeries(CompliantSeries):
         raise AssertionError(msg)
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> Self:
-        return self._from_native_series(self._native_series.duplicated(keep=False)).alias(
-            self.name
-        )
-
     def is_empty(self: Self) -> bool:
         return self._native_series.empty  # type: ignore[no-any-return]
 
