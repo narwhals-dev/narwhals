@@ -47,8 +47,10 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
+    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
@@ -1188,6 +1190,12 @@ def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
 
 def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
     return hasattr(obj, "__narwhals_series__")
+
+
+def is_compliant_expr(
+    obj: CompliantExpr[CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantSeriesT_co]]:
+    return hasattr(obj, "__narwhals_expr__")
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
