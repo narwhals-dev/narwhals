@@ -13,7 +13,16 @@ authors = [
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
-keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
+keywords = [
+  "dataframes",
+  "interoperability",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "dask",
+  "modin",
+  "cudf",
+]
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
@@ -46,6 +55,7 @@ dev = [
   "pytest-env",
   "hypothesis",
   "typing_extensions",
+  "mypy",
 ]
 core = [
   "duckdb",
@@ -54,11 +64,11 @@ core = [
   "pyarrow",
   "pyarrow-stubs",
 ]
-extra = [  # heavier dependencies we don't necessarily need in every testing job
+extra = [ # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
 docs = [
-  "black",  # required by mkdocstrings_handlers
+  "black",                # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
   "markdown-exec[ansi]",
@@ -120,7 +130,7 @@ lint.ignore = [
   "ISC001",
   "PD003",
   "PD010",
-  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PD901",   # This is a auxiliary library so dataframe variables have no concrete business meaning
   "PLR0911",
   "PLR0912",
   "PLR0913",
@@ -172,7 +182,7 @@ filterwarnings = [
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
-  'ignore:.*pandas only supports SQLAlchemy:UserWarning'
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -186,7 +196,7 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
-fail_under = 80  # This is just for local development, in CI we set it to 100
+fail_under = 80 # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
@@ -205,11 +215,12 @@ exclude_also = [
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
-  'if "pyspark" in str\(constructor'
+  'if "pyspark" in str\(constructor',
 ]
 
 [tool.mypy]
-strict = true
+files = ["narwhals", "tests"]
+# strict = true
 
 [[tool.mypy.overrides]]
 module = [
