@@ -197,7 +197,7 @@ class Schema(BaseSchema):
             >>> import narwhals as nw
             >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
             >>> schema.to_polars()
-            Schema([('a', Int64), ('b', Datetime(time_unit='ns', time_zone=None))])
+            Schema({'a': Int64, 'b': Datetime(time_unit='ns', time_zone=None)})
         """
         import polars as pl  # ignore-banned-import
 
