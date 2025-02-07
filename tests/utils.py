@@ -10,7 +10,9 @@ from typing import Iterator
 from typing import Sequence
 
 import pandas as pd
+import pyarrow as pa
 
+import narwhals as nw
 from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
@@ -51,6 +53,12 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 
 
 def _to_comparable_list(column_values: Any) -> Any:
+    if isinstance(column_values, nw.Series) and isinstance(
+        column_values.to_native(), pa.Array
+    ):
+        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+        msg = "Did not expect to see Arrow Array here"
+        raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF
