@@ -364,11 +364,11 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import is_compliant_dataframe
-    from narwhals.typing import is_compliant_lazyframe
-    from narwhals.typing import is_compliant_series
-    from narwhals.typing import is_dataframe_like
     from narwhals.utils import Implementation
+    from narwhals.utils import is_compliant_dataframe
+    from narwhals.utils import is_compliant_lazyframe
+    from narwhals.utils import is_compliant_series
+    from narwhals.utils import is_dataframe_like
     from narwhals.utils import parse_version
 
     # Early returns
@@ -829,7 +829,7 @@ def get_native_namespace(
         >>> nw.get_native_namespace(df)
         <module 'polars'...>
     """
-    from narwhals.typing import has_native_namespace
+    from narwhals.utils import has_native_namespace
 
     if has_native_namespace(obj):
         return obj.__native_namespace__()
