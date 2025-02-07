@@ -690,9 +690,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
         return ArrowSeries(
-            pc.and_(
-                pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
-                pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+            pa.chunked_array(
+                pc.and_(
+                    pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                    pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+                )
             ),
             name="",
             backend_version=self._backend_version,
