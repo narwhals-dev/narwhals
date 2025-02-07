@@ -1202,5 +1202,5 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
     return hasattr(obj, "__native_namespace__")
 
 
-def is_dataframe_like(obj: Any) -> TypeIs[DataFrameLike]:
+def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")

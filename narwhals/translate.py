@@ -365,10 +365,10 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.utils import Implementation
+    from narwhals.utils import _supports_dataframe_interchange
     from narwhals.utils import is_compliant_dataframe
     from narwhals.utils import is_compliant_lazyframe
     from narwhals.utils import is_compliant_series
-    from narwhals.utils import is_dataframe_like
     from narwhals.utils import parse_version
 
     # Early returns
@@ -776,7 +776,7 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # Interchange protocol
-    elif is_dataframe_like(native_object):
+    elif _supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
