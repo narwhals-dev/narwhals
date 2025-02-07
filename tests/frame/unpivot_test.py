@@ -57,8 +57,8 @@ def test_unpivot_on(
 )
 def test_unpivot_var_value_names(
     constructor: Constructor,
-    variable_name: str | None,
-    value_name: str | None,
+    variable_name: str,
+    value_name: str,
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
