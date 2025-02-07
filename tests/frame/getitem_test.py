@@ -141,7 +141,7 @@ def test_slice_int_rows_str_columns(constructor_eager: ConstructorEager) -> None
         (slice(2, None), None, {"a": [3], "b": [6], "c": [9], "d": [2]}),
         (slice("a", "b"), None, {"a": [1, 2, 3], "b": [4, 5, 6]}),
         ((0, 1), slice(None), {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
-        ((0, 1), None, {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        ([0, 1], slice(None), {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
         (
             [0, 1],
             ["a", "b", "c", "d"],
