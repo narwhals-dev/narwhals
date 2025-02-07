@@ -219,9 +219,6 @@ class PolarsDataFrame:
             version=self._version,
         )
 
-    def is_empty(self: Self) -> bool:
-        return len(self._native_frame) == 0
-
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
@@ -312,8 +309,8 @@ class PolarsDataFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -334,10 +331,10 @@ class PolarsDataFrame:
 
     def pivot(
         self: Self,
-        on: str | list[str],
+        on: list[str],
         *,
-        index: str | list[str] | None,
-        values: str | list[str] | None,
+        index: list[str] | None,
+        values: list[str] | None,
         aggregate_function: Literal[
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]
@@ -510,8 +507,8 @@ class PolarsLazyFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

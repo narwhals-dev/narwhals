@@ -325,8 +325,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         self_native = self._native_frame
@@ -409,8 +409,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

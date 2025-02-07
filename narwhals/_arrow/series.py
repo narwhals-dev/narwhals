@@ -640,9 +640,6 @@ class ArrowSeries(CompliantSeries):
 
         return pl.from_arrow(self._native_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> ArrowSeries:
-        return self.to_frame().is_duplicated().alias(self.name)
-
     def is_unique(self: Self) -> ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
 

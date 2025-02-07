@@ -286,20 +286,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def is_nan(self: Self) -> Self:
         return reuse_series_implementation(self, "is_nan")
 
-    def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        return reuse_series_implementation(
-            self,
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            closed=closed,
-        )
-
     def head(self: Self, n: int) -> Self:
         return reuse_series_implementation(self, "head", n=n)
 
@@ -338,9 +324,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         return reuse_series_implementation(
             self, "fill_null", value=value, strategy=strategy, limit=limit
         )
-
-    def is_duplicated(self: Self) -> Self:
-        return reuse_series_implementation(self, "is_duplicated")
 
     def is_unique(self: Self) -> Self:
         return reuse_series_implementation(self, "is_unique")
