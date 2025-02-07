@@ -107,7 +107,7 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     ) -> CompliantExpr[CompliantSeriesT_co]: ...
 
 
-class _NativeNamespace(Protocol):  # noqa: PYI046
+class SupportsNativeNamespace(Protocol):
     def __native_namespace__(self) -> Any: ...
 
 

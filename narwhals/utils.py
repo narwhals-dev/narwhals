@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
-    from narwhals.typing import _NativeNamespace
+    from narwhals.typing import SupportsNativeNamespace
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1190,7 +1190,7 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
     return hasattr(obj, "__narwhals_series__")
 
 
-def has_native_namespace(obj: Any) -> TypeIs[_NativeNamespace]:
+def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
     return hasattr(obj, "__native_namespace__")
 
 
