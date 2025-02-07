@@ -286,10 +286,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
         if how == "cross":
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
