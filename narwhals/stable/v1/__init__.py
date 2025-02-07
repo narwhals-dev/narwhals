@@ -133,13 +133,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, item: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
     ) -> Series: ...
     @overload
     def __getitem__(
         self: Self,
         item: (
             slice
+            | np.ndarray
             | Sequence[int]
             | Sequence[str]
             | tuple[

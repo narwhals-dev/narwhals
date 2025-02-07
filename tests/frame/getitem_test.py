@@ -55,7 +55,7 @@ def test_slice_lazy_fails() -> None:
 
 
 def test_slice_int(constructor_eager: ConstructorEager) -> None:
-    result = nw.from_native(constructor_eager(data), eager_only=True)[1]  # type: ignore[call-overload]
+    result = nw.from_native(constructor_eager(data), eager_only=True)[1]
     assert_equal_data(result, {"a": [2], "b": [12]})
 
 
@@ -63,7 +63,7 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
     with pytest.raises(TypeError, match="Expected str or slice, got:"):
-        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload]
+        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]
 
 
 def test_gather(constructor_eager: ConstructorEager) -> None:
