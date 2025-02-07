@@ -16,18 +16,19 @@ from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_aggregates
 from narwhals._expression_parsing import operation_changes_length
 from narwhals._expression_parsing import operation_is_order_dependent
-from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.translate import from_native
+from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
+from narwhals.utils import validate_native_namespace_and_backend
 
 # Missing type parameters for generic type "DataFrame"
 # However, trying to provide one results in mypy still complaining...
@@ -360,7 +361,7 @@ def _new_series_impl(
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:  # pragma: no cover
-        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
@@ -377,6 +378,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
+    backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -391,8 +393,21 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
+        backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.26.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -403,22 +418,20 @@ def from_dict(
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> from narwhals.typing import IntoFrameT
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
-        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
+        Let's create a new dataframe and specify the backend argument.
 
-        >>> def agnostic_from_dict(df_native: IntoFrameT) -> IntoFrameT:
-        ...     new_data = {"c": [5, 2], "d": [1, 4]}
-        ...     native_namespace = nw.get_native_namespace(df_native)
-        ...     return nw.from_dict(new_data, native_namespace=native_namespace).to_native()
+        >>> def agnostic_from_dict(backend: str) -> IntoFrameT:
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     return nw.from_dict(data, backend=backend).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
-        >>> agnostic_from_dict(pd.DataFrame(data))
+        >>> agnostic_from_dict(backend="pandas")
            c  d
         0  5  1
         1  2  4
-        >>> agnostic_from_dict(pl.DataFrame(data))
+        >>> agnostic_from_dict(backend="polars")
         shape: (2, 2)
         ┌─────┬─────┐
         │ c   ┆ d   │
@@ -428,7 +441,7 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-        >>> agnostic_from_dict(pa.table(data))
+        >>> agnostic_from_dict(backend="pyarrow")
         pyarrow.Table
         c: int64
         d: int64
@@ -436,10 +449,13 @@ def from_dict(
         c: [[5,2]]
         d: [[1,4]]
     """
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
+    )
     return _from_dict_impl(
         data,
         schema,
-        native_namespace=native_namespace,
+        backend=backend,
         version=Version.MAIN,
     )
 
@@ -448,27 +464,39 @@ def _from_dict_impl(  # noqa: PLR0915
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
+    backend: ModuleType | Implementation | str | None = None,
     version: Version,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
-    from narwhals.translate import to_native
 
     if not data:
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
-    if native_namespace is None:
+    if backend is None:
         for val in data.values():
             if isinstance(val, Series):
                 native_namespace = val.__native_namespace__()
                 break
         else:
-            msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
+            msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
         data = {key: to_native(value, pass_through=True) for key, value in data.items()}
-    implementation = Implementation.from_native_namespace(native_namespace)
+        eager_backend = Implementation.from_native_namespace(native_namespace)
+    else:
+        eager_backend = Implementation.from_backend(backend)
+        native_namespace = eager_backend.to_native_namespace()
 
-    if implementation is Implementation.POLARS:
+    supported_eager_backends = (
+        Implementation.POLARS,
+        Implementation.PANDAS,
+        Implementation.PYARROW,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    )
+    if eager_backend is not None and eager_backend not in supported_eager_backends:
+        msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
+        raise ValueError(msg)
+    if eager_backend is Implementation.POLARS:
         if schema:
             from narwhals._polars.utils import (
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
@@ -485,11 +513,13 @@ def _from_dict_impl(  # noqa: PLR0915
             schema_pl = None
 
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
-    elif implementation in {
+    elif eager_backend in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
     }:
+        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+
         aligned_data = {}
         left_most_series = None
         for key, native_series in data.items():
@@ -519,8 +549,8 @@ def _from_dict_impl(  # noqa: PLR0915
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
                     dtype=schema[name],
-                    dtype_backend=get_dtype_backend(native_type, implementation),
-                    implementation=implementation,
+                    dtype_backend=get_dtype_backend(native_type, eager_backend),
+                    implementation=eager_backend,
                     backend_version=backend_version,
                     version=version,
                 )
@@ -528,7 +558,7 @@ def _from_dict_impl(  # noqa: PLR0915
             }
             native_frame = native_frame.astype(schema)
 
-    elif implementation is Implementation.PYARROW:
+    elif eager_backend is Implementation.PYARROW:
         if schema:
             from narwhals._arrow.utils import (
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
@@ -589,7 +619,9 @@ def from_numpy(
         ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
         ...     df = nw.from_native(df_native)
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
+        ...     return nw.from_numpy(
+        ...         new_data, native_namespace=native_namespace
+        ...     ).to_native()
 
         Let's see what happens when passing pandas, Polars or PyArrow input:
 
@@ -1040,7 +1072,9 @@ def read_csv(
         Let's create an agnostic function that reads a csv file with a specified native namespace:
 
         >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
-        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.read_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing pandas, Polars or PyArrow namespaces:
 
@@ -1126,7 +1160,9 @@ def scan_csv(
         Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
 
         >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
+        ...     return nw.scan_csv(
+        ...         "file.csv", native_namespace=native_namespace
+        ...     ).to_native()
 
         Then we can read the file by passing, for example, Polars or Dask namespaces:
 

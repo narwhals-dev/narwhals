@@ -22,9 +22,9 @@ class ArrowExprNameNamespace:
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
         return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: function(str(name)),
+            name_mapping_func=function,
             alias_output_names=lambda output_names: [
-                function(str(name)) for name in output_names
+                function(name) for name in output_names
             ],
         )
 
@@ -46,17 +46,17 @@ class ArrowExprNameNamespace:
 
     def to_lowercase(self: Self) -> ArrowExpr:
         return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: str(name).lower(),
+            name_mapping_func=str.lower,
             alias_output_names=lambda output_names: [
-                str(name).lower() for name in output_names
+                name.lower() for name in output_names
             ],
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
         return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: str(name).upper(),
+            name_mapping_func=str.upper,
             alias_output_names=lambda output_names: [
-                str(name).upper() for name in output_names
+                name.upper() for name in output_names
             ],
         )
 

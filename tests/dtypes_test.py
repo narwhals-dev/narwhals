@@ -244,3 +244,57 @@ def test_decimal() -> None:
     assert result["a"] == nw.Decimal
     result = nw.from_native(df.to_arrow()).schema
     assert result["a"] == nw.Decimal
+
+
+def test_dtype_is_x() -> None:
+    dtypes = (
+        nw.Array,
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Enum,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.List,
+        nw.Object,
+        nw.String,
+        nw.Struct,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+    )
+
+    is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}
+    is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
+    is_float = {nw.Float32, nw.Float64}
+    is_decimal = {nw.Decimal}
+    is_temporal = {nw.Datetime, nw.Date, nw.Duration}
+    is_nested = {nw.Array, nw.List, nw.Struct}
+
+    for dtype in dtypes:
+        assert dtype.is_numeric() == (
+            dtype
+            in is_signed_integer.union(is_unsigned_integer)
+            .union(is_float)
+            .union(is_decimal)
+        )
+        assert dtype.is_integer() == (
+            dtype in is_signed_integer.union(is_unsigned_integer)
+        )
+        assert dtype.is_signed_integer() == (dtype in is_signed_integer)
+        assert dtype.is_unsigned_integer() == (dtype in is_unsigned_integer)
+        assert dtype.is_float() == (dtype in is_float)
+        assert dtype.is_decimal() == (dtype in is_decimal)
+        assert dtype.is_temporal() == (dtype in is_temporal)
+        assert dtype.is_nested() == (dtype in is_nested)
