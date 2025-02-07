@@ -203,8 +203,12 @@ class Schema(BaseSchema):
 
         from narwhals._polars.utils import narwhals_to_native_dtype
 
-        it = (
+        schema = (
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        return pl.Schema(it) if parse_version(pl.__version__) >= (1, 0, 0) else dict(it)
+        return (
+            pl.Schema(schema)
+            if parse_version(pl.__version__) >= (1, 0, 0)
+            else dict(schema)
+        )
