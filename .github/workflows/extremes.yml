@@ -182,7 +182,6 @@ jobs:
           echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
           echo "$DEPS" | grep 'dask.*@'
-          echo "$DEPS" | grep 'duckdb.*dev'
       - name: Run pytest
         run: |
           pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow \
