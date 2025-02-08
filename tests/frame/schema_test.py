@@ -410,7 +410,7 @@ def test_schema_to_pandas_strict_zip() -> None:
     tup = (
         "numpy_nullable",
         "pyarrow",
-        "numpy",
+        None,
         "numpy_nullable",
         "pyarrow",
     )
