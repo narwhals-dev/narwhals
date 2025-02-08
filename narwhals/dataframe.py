@@ -861,16 +861,19 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
     ) -> Series[Any]: ...
 
     @overload
     def __getitem__(
         self: Self,
-        key: (
-            slice
+        item: (
+            int
+            | slice
             | Sequence[int]
             | Sequence[str]
+            | np.ndarray
             | tuple[
                 slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
             ]
@@ -880,9 +883,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         item: (
             str
+            | int
             | slice
             | Sequence[int]
             | Sequence[str]
+            | np.ndarray
             | tuple[slice | Sequence[int] | np.ndarray, int | str]
             | tuple[
                 slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
