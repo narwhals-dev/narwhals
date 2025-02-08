@@ -29,4 +29,6 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: make typing
+        run: |
+          which mypy
+          make typing
