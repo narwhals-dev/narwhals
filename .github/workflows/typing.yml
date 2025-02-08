@@ -25,7 +25,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Create venv
         run: |
-         uv -m venv .venv
+         uv venv .venv
           source .venv/bin/activate
       - name: install-reqs
         # Python3.8 is technically at end-of-life, so we don't test everything
