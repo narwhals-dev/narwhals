@@ -1067,6 +1067,8 @@ class Schema(NwSchema):
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
     """
 
+    _version = Version.V1
+
 
 @overload
 def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
@@ -2186,12 +2188,7 @@ def from_dict(
         backend, native_namespace, emit_deprecation_warning=False
     )
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(
-            data,
-            schema,
-            backend=backend,
-            version=Version.V1,
-        )
+        _from_dict_impl(data, schema, backend=backend)
     )
 
 
