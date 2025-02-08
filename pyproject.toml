@@ -53,7 +53,8 @@ core = [
   "pandas",
   "polars",
   "pyarrow",
-  "pyarrow-stubs",
+  #TODO: reintroduce when fixing #1961
+  # "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
