@@ -21,6 +21,7 @@ from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
+from narwhals.schema import Schema
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
@@ -343,10 +343,12 @@ def _new_series_impl(
             )
 
             backend_version = parse_version(native_namespace.__version__)
-            dtype = pandas_like_narwhals_to_native_dtype(
+            pd_dtype = pandas_like_narwhals_to_native_dtype(
                 dtype, None, implementation, backend_version, version
             )
-        native_series = native_namespace.Series(values, name=name, dtype=dtype)
+            native_series = native_namespace.Series(values, name=name, dtype=pd_dtype)
+        else:
+            native_series = native_namespace.Series(values, name=name)
 
     elif implementation is Implementation.PYARROW:
         if dtype:
@@ -449,20 +451,14 @@ def from_dict(
     backend = validate_native_namespace_and_backend(
         backend, native_namespace, emit_deprecation_warning=True
     )
-    return _from_dict_impl(
-        data,
-        schema,
-        backend=backend,
-        version=Version.MAIN,
-    )
+    return _from_dict_impl(data, schema, backend=backend)
 
 
-def _from_dict_impl(  # noqa: PLR0915
+def _from_dict_impl(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
 
@@ -494,18 +490,7 @@ def _from_dict_impl(  # noqa: PLR0915
         msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
         raise ValueError(msg)
     if eager_backend is Implementation.POLARS:
-        if schema:
-            from narwhals._polars.utils import (
-                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
-            )
-
-            schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, version=version)
-                for name, dtype in schema.items()
-            }
-        else:
-            schema_pl = None
-
+        schema_pl = Schema(schema).to_polars() if schema else None
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif eager_backend in {
         Implementation.PANDAS,
@@ -535,36 +520,16 @@ def _from_dict_impl(  # noqa: PLR0915
 
         if schema:
             from narwhals._pandas_like.utils import get_dtype_backend
-            from narwhals._pandas_like.utils import (
-                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
-            )
 
-            backend_version = parse_version(native_namespace.__version__)
-            schema = {
-                name: pandas_like_narwhals_to_native_dtype(
-                    dtype=schema[name],
-                    dtype_backend=get_dtype_backend(native_type, eager_backend),
-                    implementation=eager_backend,
-                    backend_version=backend_version,
-                    version=version,
-                )
-                for name, native_type in native_frame.dtypes.items()
-            }
-            native_frame = native_frame.astype(schema)
+            pd_schema = Schema(schema).to_pandas(
+                get_dtype_backend(native_type, eager_backend)
+                for native_type in native_frame.dtypes
+            )
+            native_frame = native_frame.astype(pd_schema)
 
     elif eager_backend is Implementation.PYARROW:
-        if schema:
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-            )
-
-            schema = native_namespace.schema(
-                [
-                    (name, arrow_narwhals_to_native_dtype(dtype, version))
-                    for name, dtype in schema.items()
-                ]
-            )
-        native_frame = native_namespace.table(data, schema=schema)
+        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        native_frame = native_namespace.table(data, schema=pa_schema)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -772,7 +737,7 @@ def _from_numpy_impl(
             )
 
             backend_version = parse_version(native_namespace.__version__)
-            schema = {
+            pd_schema = {
                 name: pandas_like_narwhals_to_native_dtype(
                     dtype=schema[name],
                     dtype_backend=get_dtype_backend(native_type, implementation),
@@ -783,7 +748,7 @@ def _from_numpy_impl(
                 for name, native_type in schema.items()
             }
             native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
-                schema
+                pd_schema
             )
         elif isinstance(schema, list):
             native_frame = native_namespace.DataFrame(data, columns=schema)
