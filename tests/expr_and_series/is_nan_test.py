@@ -104,11 +104,12 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor(data))
 
-    exc = NwInvalidOperationError
     if "polars" in str(constructor):
         exc = PlInvalidOperationError
     elif "pyarrow_table" in str(constructor):
         exc = ArrowNotImplementedError
+    else:
+        exc = NwInvalidOperationError
 
     with pytest.raises(exc):
         df.select(nw.col("a").is_nan()).lazy().collect()
