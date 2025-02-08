@@ -420,6 +420,7 @@ jobs:
         run: |
           git clone https://github.com/akmalsoliev/Validoopsie.git --depth=1 validoopsie
           cd validoopsie
+          git log
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
