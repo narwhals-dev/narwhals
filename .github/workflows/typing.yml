@@ -12,8 +12,6 @@ jobs:
         python-version: ["3.11"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      FORCE_COLOR: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,5 +35,8 @@ jobs:
           uv pip freeze
       - name: Run mypy
         run: |
+          echo "$FORCE_COLOR"
           source .venv/bin/activate
           make typing
+        env:
+          FORCE_COLOR: "1"
