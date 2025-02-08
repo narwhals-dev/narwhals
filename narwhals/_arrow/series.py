@@ -531,7 +531,10 @@ class ArrowSeries(CompliantSeries):
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count, backend_version=self._backend_version, version=self._version
+            val_count,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
@@ -621,7 +624,10 @@ class ArrowSeries(CompliantSeries):
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
         return ArrowDataFrame(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=False,
         )
 
     def to_pandas(self: Self) -> pd.Series:
@@ -633,9 +639,6 @@ class ArrowSeries(CompliantSeries):
         import polars as pl  # ignore-banned-import
 
         return pl.from_arrow(self._native_series)  # type: ignore[return-value]
-
-    def is_duplicated(self: Self) -> ArrowSeries:
-        return self.to_frame().is_duplicated().alias(self.name)
 
     def is_unique(self: Self) -> ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
@@ -745,6 +748,7 @@ class ArrowSeries(CompliantSeries):
             pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         ).simple_select(*output_order)
 
     def quantile(

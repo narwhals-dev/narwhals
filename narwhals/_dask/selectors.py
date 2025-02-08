@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
 from narwhals._dask.expr import DaskExpr
@@ -28,20 +29,20 @@ class DaskSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
                 df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
             ]
 
-        def evalute_output_names(df: DaskLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DaskLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return DaskSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
@@ -55,14 +56,14 @@ class DaskSelectorNamespace:
                 df._native_frame[col] for col in df.columns if re.search(pattern, col)
             ]
 
-        def evalute_output_names(df: DaskLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DaskLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return DaskSelector(
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
@@ -73,7 +74,7 @@ class DaskSelectorNamespace:
     def numeric(self: Self) -> DaskSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
-            [
+            {
                 dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
@@ -86,20 +87,20 @@ class DaskSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            },
         )
 
     def categorical(self: Self) -> DaskSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype({dtypes.Categorical})
 
     def string(self: Self) -> DaskSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype({dtypes.String})
 
     def boolean(self: Self) -> DaskSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype({dtypes.Boolean})
 
     def all(self: Self) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -120,11 +121,7 @@ class DaskSelectorNamespace:
 
 class DaskSelector(DaskExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return (
-            f"DaskSelector("
-            f"depth={self._depth}, "
-            f"function_name={self._function_name})"
-        )
+        return f"DaskSelector(depth={self._depth}, function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DaskExpr:
         return DaskExpr(

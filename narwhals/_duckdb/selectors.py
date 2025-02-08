@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 
 from duckdb import ColumnExpression
@@ -27,19 +28,19 @@ class DuckDBSelectorNamespace:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DuckDBSelector:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> DuckDBSelector:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [
                 ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
             ]
 
-        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return DuckDBSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -52,13 +53,13 @@ class DuckDBSelectorNamespace:
                 ColumnExpression(col) for col in df.columns if re.search(pattern, col)
             ]
 
-        def evalute_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return DuckDBSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -68,7 +69,7 @@ class DuckDBSelectorNamespace:
     def numeric(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
-            [
+            {
                 dtypes.Int128,
                 dtypes.Int64,
                 dtypes.Int32,
@@ -81,20 +82,20 @@ class DuckDBSelectorNamespace:
                 dtypes.UInt8,
                 dtypes.Float64,
                 dtypes.Float32,
-            ],
+            },
         )
 
     def categorical(self: Self) -> DuckDBSelector:  # pragma: no cover
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype({dtypes.Categorical})
 
     def string(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype({dtypes.String})
 
     def boolean(self: Self) -> DuckDBSelector:
         dtypes = import_dtypes_module(self._version)
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype({dtypes.Boolean})
 
     def all(self: Self) -> DuckDBSelector:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -113,7 +114,7 @@ class DuckDBSelectorNamespace:
 
 class DuckDBSelector(DuckDBExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"DuckDBSelector(" f"function_name={self._function_name})"
+        return f"DuckDBSelector(function_name={self._function_name})"
 
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(

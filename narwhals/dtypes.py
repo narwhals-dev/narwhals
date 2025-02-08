@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import timezone
+from itertools import starmap
 from typing import TYPE_CHECKING
 from typing import Mapping
 
@@ -32,6 +33,34 @@ class DType:
     def is_numeric(cls: type[Self]) -> bool:
         return issubclass(cls, NumericType)
 
+    @classmethod
+    def is_integer(cls: type[Self]) -> bool:
+        return issubclass(cls, IntegerType)
+
+    @classmethod
+    def is_signed_integer(cls: type[Self]) -> bool:
+        return issubclass(cls, SignedIntegerType)
+
+    @classmethod
+    def is_unsigned_integer(cls: type[Self]) -> bool:
+        return issubclass(cls, UnsignedIntegerType)
+
+    @classmethod
+    def is_float(cls: type[Self]) -> bool:
+        return issubclass(cls, FloatType)
+
+    @classmethod
+    def is_decimal(cls: type[Self]) -> bool:
+        return issubclass(cls, Decimal)
+
+    @classmethod
+    def is_temporal(cls: type[Self]) -> bool:
+        return issubclass(cls, TemporalType)
+
+    @classmethod
+    def is_nested(cls: type[Self]) -> bool:
+        return issubclass(cls, NestedType)
+
     def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
@@ -41,10 +70,32 @@ class DType:
         return hash(self.__class__)
 
 
-class NumericType(DType): ...
+class NumericType(DType):
+    """Base class for numeric data types."""
 
 
-class TemporalType(DType): ...
+class IntegerType(NumericType):
+    """Base class for integer data types."""
+
+
+class SignedIntegerType(IntegerType):
+    """Base class for signed integer data types."""
+
+
+class UnsignedIntegerType(IntegerType):
+    """Base class for unsigned integer data types."""
+
+
+class FloatType(NumericType):
+    """Base class for float data types."""
+
+
+class TemporalType(DType):
+    """Base class for temporal data types."""
+
+
+class NestedType(DType):
+    """Base class for nested data types."""
 
 
 class Decimal(NumericType):
@@ -59,11 +110,11 @@ class Decimal(NumericType):
     """
 
 
-class Int128(NumericType):
+class Int128(SignedIntegerType):
     """128-bit signed integer type."""
 
 
-class Int64(NumericType):
+class Int64(SignedIntegerType):
     """64-bit signed integer type.
 
     Examples:
@@ -85,7 +136,7 @@ class Int64(NumericType):
     """
 
 
-class Int32(NumericType):
+class Int32(SignedIntegerType):
     """32-bit signed integer type.
 
     Examples:
@@ -111,7 +162,7 @@ class Int32(NumericType):
     """
 
 
-class Int16(NumericType):
+class Int16(SignedIntegerType):
     """16-bit signed integer type.
 
     Examples:
@@ -137,7 +188,7 @@ class Int16(NumericType):
     """
 
 
-class Int8(NumericType):
+class Int8(SignedIntegerType):
     """8-bit signed integer type.
 
     Examples:
@@ -163,11 +214,11 @@ class Int8(NumericType):
     """
 
 
-class UInt128(NumericType):
+class UInt128(UnsignedIntegerType):
     """128-bit unsigned integer type."""
 
 
-class UInt64(NumericType):
+class UInt64(UnsignedIntegerType):
     """64-bit unsigned integer type.
 
     Examples:
@@ -193,7 +244,7 @@ class UInt64(NumericType):
     """
 
 
-class UInt32(NumericType):
+class UInt32(UnsignedIntegerType):
     """32-bit unsigned integer type.
 
     Examples:
@@ -219,7 +270,7 @@ class UInt32(NumericType):
     """
 
 
-class UInt16(NumericType):
+class UInt16(UnsignedIntegerType):
     """16-bit unsigned integer type.
 
     Examples:
@@ -245,7 +296,7 @@ class UInt16(NumericType):
     """
 
 
-class UInt8(NumericType):
+class UInt8(UnsignedIntegerType):
     """8-bit unsigned integer type.
 
     Examples:
@@ -271,7 +322,7 @@ class UInt8(NumericType):
     """
 
 
-class Float64(NumericType):
+class Float64(FloatType):
     """64-bit floating point type.
 
     Examples:
@@ -293,7 +344,7 @@ class Float64(NumericType):
     """
 
 
-class Float32(NumericType):
+class Float32(FloatType):
     """32-bit floating point type.
 
     Examples:
@@ -421,7 +472,9 @@ class Datetime(TemporalType):
         ...     .astype("datetime64[ms, Africa/Accra]")
         ... )
         >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ...     pl.Series(data)
+        ...     .cast(pl.Datetime("ms"))
+        ...     .dt.replace_time_zone("Africa/Accra")
         ... )
         >>> ser_pa = pc.assume_timezone(
         ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
@@ -592,7 +645,7 @@ class Field:
         return f"{class_name}({self.name!r}, {self.dtype})"
 
 
-class Struct(DType):
+class Struct(NestedType):
     """Struct composite type.
 
     Arguments:
@@ -619,7 +672,7 @@ class Struct(DType):
         self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
-            self.fields = [Field(name, dtype) for name, dtype in fields.items()]
+            self.fields = list(starmap(Field, fields.items()))
         else:
             self.fields = list(fields)
 
@@ -659,7 +712,7 @@ class Struct(DType):
         return OrderedDict(self)
 
 
-class List(DType):
+class List(NestedType):
     """Variable length list type.
 
     Examples:
@@ -706,7 +759,7 @@ class List(DType):
         return f"{class_name}({self.inner!r})"
 
 
-class Array(DType):
+class Array(NestedType):
     """Fixed length list type.
 
     Arguments:

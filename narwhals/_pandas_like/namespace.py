@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -202,7 +203,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 for _expr in parsed_exprs
                 for s in _expr(df)
             )
-            return [reduce(lambda x, y: x + y, series)]
+            return [reduce(operator.add, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -218,7 +219,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
-            return [reduce(lambda x, y: x & y, series)]
+            return [reduce(operator.and_, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -234,7 +235,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
-            return [reduce(lambda x, y: x | y, series)]
+            return [reduce(operator.or_, series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -255,9 +256,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 for s in _expr(df)
             )
             non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr(df))
-            return [
-                reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
-            ]
+            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -337,6 +336,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         if how == "vertical":
             return PandasLikeDataFrame(
@@ -348,6 +348,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
 
         if how == "diagonal":
@@ -360,6 +361,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         raise NotImplementedError
 
@@ -391,7 +393,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 result = reduce(lambda x, y: x + separator + y, series).zip_with(
                     ~null_mask_result, None
                 )
@@ -410,7 +412,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    lambda x, y: x + y,
+                    operator.add,
                     (s + v for s, v in zip(separators, values)),
                     init_value,
                 )

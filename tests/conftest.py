@@ -210,7 +210,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
     # We've reported several bugs to sqlframe - once they address
     # them, we can start testing them as part of our CI.
-    # "sqlframe": pyspark_lazy_constructor,  # noqa: ERA001
+    # "sqlframe": sqlframe_pyspark_lazy_constructor,  # noqa: ERA001
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -264,7 +264,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         if (
-            any(x in str(metafunc.module) for x in ("unpivot", "from_dict", "from_numpy"))
+            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])

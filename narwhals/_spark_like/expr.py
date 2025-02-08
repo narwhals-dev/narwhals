@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
+from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import ExprKind
@@ -429,36 +429,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=self._expr_kind,
         )
 
-    def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
-            if closed == "both":
-                return (_input >= lower_bound) & (_input <= upper_bound)
-            if closed == "none":
-                return (_input > lower_bound) & (_input < upper_bound)
-            if closed == "left":
-                return (_input >= lower_bound) & (_input < upper_bound)
-            return (_input > lower_bound) & (_input <= upper_bound)
-
-        return self._from_call(
-            _is_between,
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            expr_kind=self._expr_kind,
-        )
-
-    def is_duplicated(self: Self) -> Self:
-        def _is_duplicated(_input: Column) -> Column:
-            # Create a window spec that treats each value separately.
-            return self._F.count("*").over(self._Window.partitionBy(_input)) > 1
-
-        return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
-
     def is_finite(self: Self) -> Self:
         def _is_finite(_input: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
@@ -556,3 +526,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     @property
     def dt(self: Self) -> SparkLikeExprDateTimeNamespace:
         return SparkLikeExprDateTimeNamespace(self)
+
+    @property
+    def list(self: Self) -> SparkLikeExprListNamespace:
+        return SparkLikeExprListNamespace(self)

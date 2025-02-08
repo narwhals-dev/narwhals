@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
+from contextlib import suppress
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,8 +11,12 @@ from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
+import pandas as pd
+
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -22,10 +27,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
-    import pandas as pd
 
 
 PANDAS_LIKE_IMPLEMENTATION = {
@@ -447,69 +450,65 @@ def non_object_native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def native_to_narwhals_dtype(
-    native_column: Any, version: Version, implementation: Implementation
+def object_native_to_narwhals_dtype(
+    series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
-    dtype = str(native_column.dtype)
-
     dtypes = import_dtypes_module(version)
+    if implementation is Implementation.CUDF:  # pragma: no cover
+        # Per conversations with their maintainers, they don't support arbitrary
+        # objects, so we can just return String.
+        return dtypes.String()
 
-    if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+    # Arbitrary limit of 100 elements to use to sniff dtype.
+    inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)
+    if inferred_dtype == "string":
+        return dtypes.String()
+    if inferred_dtype == "empty" and version is not Version.V1:
+        # Default to String for empty Series.
+        return dtypes.String()
+    elif inferred_dtype == "empty":
+        # But preserve returning Object in V1.
+        return dtypes.Object()
+    return dtypes.Object()
+
+
+def native_to_narwhals_dtype(
+    native_dtype: Any, version: Version, implementation: Implementation
+) -> DType:
+    str_dtype = str(native_dtype)
+
+    if str_dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         from narwhals._arrow.utils import (
             native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
         )
 
-        native_dtype = native_column.dtype
         if hasattr(native_dtype, "to_arrow"):  # pragma: no cover
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
-    if dtype != "object":
-        return non_object_native_to_narwhals_dtype(dtype, version, implementation)
-    if implementation is Implementation.DASK:
-        # Dask columns are lazy, so we can't inspect values.
-        # The most useful assumption is probably String
+    if str_dtype != "object":
+        return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
+    elif implementation is Implementation.DASK:
+        # Per conversations with their maintainers, they don't support arbitrary
+        # objects, so we can just return String.
+        dtypes = import_dtypes_module(version)
         return dtypes.String()
-    if implementation is Implementation.PANDAS:  # pragma: no cover
-        # This is the most efficient implementation for pandas,
-        # and doesn't require the interchange protocol
-        import pandas as pd
-
-        dtype = pd.api.types.infer_dtype(native_column, skipna=True)
-        if dtype == "string":
-            return dtypes.String()
-        return dtypes.Object()
-    else:  # pragma: no cover
-        df = native_column.to_frame()
-        if hasattr(df, "__dataframe__"):
-            from narwhals._interchange.dataframe import (
-                map_interchange_dtype_to_narwhals_dtype,
-            )
-
-            try:
-                return map_interchange_dtype_to_narwhals_dtype(
-                    df.__dataframe__().get_column(0).dtype, version
-                )
-            except Exception:  # noqa: BLE001, S110
-                pass
-        # The most useful assumption is probably String
-        return dtypes.String()
-    return dtypes.Unknown()  # pragma: no cover
+    msg = (
+        "Unreachable code, object dtype should be handled separately"  # pragma: no cover
+    )
+    raise AssertionError(msg)
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
-    if implementation in [Implementation.PANDAS, Implementation.MODIN]:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
         import pandas as pd
 
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
-        try:
+        with suppress(AttributeError):
             if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
                 return "pandas-nullable"
-        except AttributeError:  # pragma: no cover
-            # defensive check for old pandas versions
-            pass
         return "numpy"
     else:  # pragma: no cover
         return "numpy"
@@ -835,6 +834,8 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
+    if len(column_names) == df.shape[1] and all(column_names == df.columns):  # type: ignore[attr-defined]
+        return df
     if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
@@ -890,3 +891,22 @@ def pivot_table(
             observed=True,
         )
     return result
+
+
+def check_column_names_are_unique(columns: pd.Index) -> None:
+    try:
+        len_unique_columns = len(columns.drop_duplicates())
+    except Exception:  # noqa: BLE001  # pragma: no cover
+        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
+        raise ValueError(msg) from None
+
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        msg = ""
+        for key, value in counter.items():
+            if value > 1:
+                msg += f"\n- '{key}' {value} times"
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)
