@@ -35,8 +35,7 @@ jobs:
           uv pip freeze
       - name: Run mypy
         run: |
-          echo "$FORCE_COLOR"
           source .venv/bin/activate
-          make typing
+          mypy
         env:
           FORCE_COLOR: "1"
