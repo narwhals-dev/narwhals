@@ -347,7 +347,8 @@ def _new_series_impl(
                 dtype, None, implementation, backend_version, version
             )
             native_series = native_namespace.Series(values, name=name, dtype=pd_dtype)
-        native_series = native_namespace.Series(values, name=name)
+        else:
+            native_series = native_namespace.Series(values, name=name)
 
     elif implementation is Implementation.PYARROW:
         if dtype:
