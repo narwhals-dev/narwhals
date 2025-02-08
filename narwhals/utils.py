@@ -42,14 +42,22 @@ if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import Self
     from typing_extensions import TypeGuard
+    from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import CompliantSeries
+    from narwhals.typing import CompliantSeriesT_co
+    from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
+    from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
 
     FrameOrSeriesT = TypeVar(
@@ -1210,3 +1218,29 @@ def dtype_matches_time_unit_and_time_zone(
             or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
         )
     )
+
+
+def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+    return hasattr(obj, "__narwhals_dataframe__")
+
+
+def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+    return hasattr(obj, "__narwhals_lazyframe__")
+
+
+def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+    return hasattr(obj, "__narwhals_series__")
+
+
+def is_compliant_expr(
+    obj: CompliantExpr[CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantSeriesT_co]]:
+    return hasattr(obj, "__narwhals_expr__")
+
+
+def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
+    return hasattr(obj, "__native_namespace__")
+
+
+def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")
