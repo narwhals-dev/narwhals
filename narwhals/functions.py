@@ -202,24 +202,20 @@ def new_series(
         A new Series
 
     Examples:
-        >>> import pyarrow as pa
+        >>> import pandas as pd
         >>> import narwhals as nw
         >>>
         >>> values = [4, 1, 2, 3]
-        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, native_namespace=pa)
-        ┌───────────────────────────────────────────────────┐
-        |                  Narwhals Series                  |
-        |---------------------------------------------------|
-        |<pyarrow.lib.ChunkedArray object at 0x7f151327c220>|
-        |[                                                  |
-        |  [                                                |
-        |    4,                                             |
-        |    1,                                             |
-        |    2,                                             |
-        |    3                                              |
-        |  ]                                                |
-        |]                                                  |
-        └───────────────────────────────────────────────────┘
+        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, native_namespace=pd)
+        ┌─────────────────────┐
+        |   Narwhals Series   |
+        |---------------------|
+        |0    4               |
+        |1    1               |
+        |2    2               |
+        |3    3               |
+        |Name: a, dtype: int32|
+        └─────────────────────┘
     """
     return _new_series_impl(
         name,
