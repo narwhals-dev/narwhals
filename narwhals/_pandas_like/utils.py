@@ -507,15 +507,13 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
 
     Matches pandas' `dtype_backend` argument in `convert_dtypes`.
     """
-    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
-        import pandas as pd
-
-        if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
-            return "pyarrow"
-
-        with suppress(AttributeError):
-            if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
-                return "numpy_nullable"
+    if implementation is Implementation.CUDF:
+        return None
+    if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
+        return "pyarrow"
+    with suppress(AttributeError):
+        if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
+            return "numpy_nullable"
     return None
 
 

@@ -205,6 +205,6 @@ class Schema(BaseSchema):
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        if parse_version(pl.__version__) >= (1, 0, 0):
-            return pl.Schema(schema)
-        return dict(schema)  # type: ignore[return-value]
+        if parse_version(pl.__version__) < (1, 0, 0):  # pragma: no cover
+            return dict(schema)  # type: ignore[return-value]
+        return pl.Schema(schema)
