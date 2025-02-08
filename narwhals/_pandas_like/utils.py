@@ -23,7 +23,6 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-
     from pandas._typing import Dtype as PandasDtype
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -820,7 +819,7 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
 
 def select_columns_by_name(
     df: T,
-    column_names: Sequence[str] | Sequence[int],
+    column_names: Sequence[str],
     backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> T:
