@@ -13,12 +13,6 @@ repos:
     - id: ruff
       alias: check-docstrings
       entry: python utils/check_docstrings.py
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v1.14.1'
-  hooks:
-    - id: mypy
-      additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']
-      files: ^(narwhals|tests)/
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.4.1'
   hooks:
@@ -84,6 +78,13 @@ repos:
       entry: pull_request_target
       language: pygrep
       files: ^\.github/workflows/
+    - id: mypy
+      name: mypy
+      entry: make typing
+      files: ^(narwhals|tests)/
+      language: system
+      types: [python]
+      require_serial: true
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:
