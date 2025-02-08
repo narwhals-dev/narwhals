@@ -35,5 +35,6 @@ jobs:
           uv pip freeze
       - name: Run pytest
         run: |
+          source .venv/bin/activate
           which mypy
           make typing
