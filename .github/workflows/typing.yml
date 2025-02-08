@@ -26,9 +26,10 @@ jobs:
       - name: Create venv
         run: uv venv .venv
       - name: install-reqs
+        # TODO: add more dependencies/backends incrementally
         run: |
           source .venv/bin/activate
-          uv pip install -e ".[dev, core]"
+          uv pip install -e ".[dev]" polars
       - name: show-deps
         run: |
           source .venv/bin/activate
