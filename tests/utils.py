@@ -96,11 +96,13 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
-        kwargs = {
-            Implementation.POLARS: (
-                {"engine": "gpu"} if os.environ.get("NARWHALS_POLARS_GPU", False) else {}
-            )  # pragma: no cover
-        }
+        kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
+
+        if os.environ.get("NARWHALS_POLARS_GPU", False):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": "gpu"})
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", False):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"new_streaming": True})
+
         result = result.collect(**kwargs.get(result.implementation, {}))
 
     if hasattr(result, "columns"):
