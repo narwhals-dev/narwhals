@@ -1286,12 +1286,21 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
+
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            lb = extract_compliant(plx, lower_bound, parse_column_name_as_expr=True)
+            ub = extract_compliant(plx, upper_bound, parse_column_name_as_expr=True)
+            expr = self._to_compliant_expr(plx)
+            if closed == "left":
+                return (expr >= lb) & (expr < ub)  # type: ignore[no-any-return]
+            elif closed == "right":
+                return (expr > lb) & (expr <= ub)  # type: ignore[no-any-return]
+            elif closed == "none":
+                return (expr > lb) & (expr < ub)  # type: ignore[no-any-return]
+            return (expr >= lb) & (expr <= ub)  # type: ignore[no-any-return]
+
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_between(
-                extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
-                extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
-                closed,
-            ),
+            func,
             is_order_dependent=operation_is_order_dependent(
                 self, lower_bound, upper_bound
             ),
@@ -1725,12 +1734,7 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_duplicated(),
-            self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
-        )
+        return ~self.is_unique()
 
     def is_unique(self: Self) -> Self:
         r"""Return a boolean mask indicating unique values.
