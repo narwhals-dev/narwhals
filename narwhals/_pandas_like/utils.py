@@ -23,7 +23,6 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    import numpy as np
 
     from pandas._typing import Dtype as PandasDtype
 

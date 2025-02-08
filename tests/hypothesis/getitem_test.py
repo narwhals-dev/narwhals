@@ -102,7 +102,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
         ),
         st.slices(TEST_DATA_NUM_ROWS),
         arrays(
-            dtype=st.sampled_from([np.int8, np.int16, np.int32, np.int64]), # type: ignore[arg-type]
+            dtype=st.sampled_from([np.int8, np.int16, np.int32, np.int64]),  # type: ignore[arg-type]
             shape=st.integers(min_value=0, max_value=10),
             elements=st.integers(
                 min_value=0,  # pyarrow does not support negative indexing

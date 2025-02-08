@@ -54,7 +54,7 @@ class DuckDBExprStringNamespace:
                 _input,
                 ConstantExpression(offset + 1)
                 if offset >= 0
-                else FunctionExpression("length", _input) + offset + 1, # type: ignore[operator]
+                else FunctionExpression("length", _input) + offset + 1,  # type: ignore[operator]
                 FunctionExpression("length", _input)
                 if length is None
                 else ConstantExpression(length) + offset,  # type: ignore[operator]
