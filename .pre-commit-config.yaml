@@ -1,5 +1,6 @@
 ci:
   autoupdate_schedule: monthly
+  skip: [mypy]
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
