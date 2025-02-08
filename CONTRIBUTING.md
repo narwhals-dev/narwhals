@@ -195,7 +195,7 @@ to reflect the changes.
 Writing the docstring in Narwhals is not an exact science, but we have some high level guidelines (if in doubt just ask us in the PR):
 
 - The examples should be clear and to the point.
-- The examples should import _one_ dataframe library, create a datafrane and exemplify the Narwhals functionality.
+- The examples should import _one_ dataframe library, create a dataframe and exemplify the Narwhals functionality.
 - We strive for balancing the use of different backend across all our docstrings examples.
 - There are exceptions to the above rules!
 
