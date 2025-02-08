@@ -12,6 +12,8 @@ jobs:
         python-version: ["3.11"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      MYPY_FORCE_COLOR: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
