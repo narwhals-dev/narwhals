@@ -219,7 +219,7 @@ class Series(Generic[IntoSeriesT]):
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa.__version__) < (16, 0):  # pragma: no cover
+        if parse_version(pa) < (16, 0):  # pragma: no cover
             msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
         ca = pa.chunked_array([self.to_arrow()])  # type: ignore[call-overload, unused-ignore]
