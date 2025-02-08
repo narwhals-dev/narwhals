@@ -63,7 +63,7 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
     with pytest.raises(TypeError, match="Expected str or slice, got:"):
-        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]
+        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload]
 
 
 def test_gather(constructor_eager: ConstructorEager) -> None:
