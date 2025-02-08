@@ -33,8 +33,7 @@ jobs:
         run: |
           source .venv/bin/activate
           uv pip freeze
-      - name: Run pytest
+      - name: Run mypy
         run: |
           source .venv/bin/activate
-          which mypy
           make typing
