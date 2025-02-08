@@ -60,7 +60,7 @@ class DuckDBExprDateTimeNamespace:
     def millisecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("millisecond", _input)
-            - FunctionExpression("second", _input) * 1_000,
+            - FunctionExpression("second", _input) * 1_000,  # type: ignore[operator]
             "millisecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
@@ -68,7 +68,7 @@ class DuckDBExprDateTimeNamespace:
     def microsecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("microsecond", _input)
-            - FunctionExpression("second", _input) * 1_000_000,
+            - FunctionExpression("second", _input) * 1_000_000,  # type: ignore[operator]
             "microsecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
@@ -76,7 +76,7 @@ class DuckDBExprDateTimeNamespace:
     def nanosecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("nanosecond", _input)
-            - FunctionExpression("second", _input) * 1_000_000_000,
+            - FunctionExpression("second", _input) * 1_000_000_000,  # type: ignore[operator]
             "nanosecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
@@ -123,7 +123,7 @@ class DuckDBExprDateTimeNamespace:
     def total_seconds(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: 60
-            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)  # type: ignore[operator]
             + FunctionExpression("datepart", ConstantExpression("second"), _input),
             "total_seconds",
             expr_kind=self._compliant_expr._expr_kind,
@@ -132,7 +132,7 @@ class DuckDBExprDateTimeNamespace:
     def total_milliseconds(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: 60_000
-            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)  # type: ignore[operator]
             + FunctionExpression("datepart", ConstantExpression("millisecond"), _input),
             "total_milliseconds",
             expr_kind=self._compliant_expr._expr_kind,
@@ -141,7 +141,7 @@ class DuckDBExprDateTimeNamespace:
     def total_microseconds(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: 60_000_000
-            * FunctionExpression("datepart", ConstantExpression("minute"), _input)
+            * FunctionExpression("datepart", ConstantExpression("minute"), _input)  # type: ignore[operator]
             + FunctionExpression("datepart", ConstantExpression("microsecond"), _input),
             "total_microseconds",
             expr_kind=self._compliant_expr._expr_kind,

@@ -111,7 +111,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series._implementation  # type: ignore[no-any-return]
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        return self._compliant_series.__array__(dtype=dtype, copy=copy)
+        return self._compliant_series.__array__(dtype=dtype, copy=copy)  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...

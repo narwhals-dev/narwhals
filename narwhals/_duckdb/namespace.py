@@ -15,6 +15,8 @@ from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
 from duckdb import ConstantExpression
 from duckdb import FunctionExpression
+from duckdb.typing import BIGINT
+from duckdb.typing import VARCHAR
 
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
@@ -98,9 +100,9 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                 cols_separated = [
                     y
                     for x in [
-                        (col.cast("string"),)
+                        (col.cast(VARCHAR),)
                         if i == len(cols) - 1
-                        else (col.cast("string"), ConstantExpression(separator))
+                        else (col.cast(VARCHAR), ConstantExpression(separator))
                         for i, col in enumerate(cols)
                     ]
                     for y in x
@@ -111,7 +113,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                 )
             else:
                 init_value, *values = [
-                    CaseExpression(~nm, col.cast("string")).otherwise(
+                    CaseExpression(~nm, col.cast(VARCHAR)).otherwise(
                         ConstantExpression("")
                     )
                     for col, nm in zip(cols, null_mask)
@@ -231,7 +233,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
                         operator.add,
                         (CoalesceOperator(col, ConstantExpression(0)) for col in cols),
                     )
-                    / reduce(operator.add, (col.isnotnull().cast("int") for col in cols))
+                    / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
                 )
             ]
 
@@ -273,7 +275,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):
             if dtype is not None:
                 return [
                     ConstantExpression(value).cast(
-                        narwhals_to_native_dtype(dtype, version=self._version)
+                        narwhals_to_native_dtype(dtype, version=self._version)  # type: ignore[arg-type]
                     )
                 ]
             return [ConstantExpression(value)]

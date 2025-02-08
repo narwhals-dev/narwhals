@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -28,6 +29,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     result = df.lazy()
     assert isinstance(result, nw_v1.LazyFrame)
 
+    expected_cls: Any
     if "polars" in str(constructor_eager):
         expected_cls = pl.LazyFrame
     elif "pandas" in str(constructor_eager):

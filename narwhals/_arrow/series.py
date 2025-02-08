@@ -339,7 +339,7 @@ class ArrowSeries(CompliantSeries):
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
-        mask = np.zeros(self.len(), dtype=bool)
+        mask: np.ndarray = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
         if isinstance(values, self.__class__):
             ser, values = broadcast_and_extract_native(
@@ -726,7 +726,7 @@ class ArrowSeries(CompliantSeries):
         name = self._name
         da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
+        columns: np.ndarray = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
         null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
         cols = [

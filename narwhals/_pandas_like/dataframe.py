@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
-CLASSICAL_NUMPY_DTYPES = frozenset(
+CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype] = frozenset(
     [
         np.dtype("float64"),
         np.dtype("float32"),
