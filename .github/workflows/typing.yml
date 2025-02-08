@@ -36,6 +36,4 @@ jobs:
       - name: Run mypy
         run: |
           source .venv/bin/activate
-          mypy
-        env:
-          FORCE_COLOR: "1"
+          make typing
