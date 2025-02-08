@@ -356,8 +356,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         how_to_join_map = {
@@ -522,14 +522,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.filter(mask_native), validate_column_names=False
         )
 
-    def null_count(self: Self) -> Self:
-        df = self._native_frame
-        names_and_values = zip(df.column_names, df.columns)
-
-        return self._from_native_frame(
-            pa.table({name: [col.null_count] for name, col in names_and_values})
-        )
-
     def head(self: Self, n: int) -> Self:
         df = self._native_frame
         if n >= 0:
@@ -637,9 +629,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         msg = "clone is not yet supported on PyArrow tables"
         raise NotImplementedError(msg)
 
-    def is_empty(self: Self) -> bool:
-        return self.shape[0] == 0
-
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar
 
@@ -690,47 +679,23 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
         return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
 
-    def is_duplicated(self: Self) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
-        columns = self.columns
-        index_token = generate_temporary_column_name(n_bytes=8, columns=columns)
-        col_token = generate_temporary_column_name(
-            n_bytes=8, columns=[*columns, index_token]
-        )
-        df = self.with_row_index(index_token)._native_frame
-        row_count = (
-            df.append_column(col_token, pa.repeat(pa.scalar(1), len(self)))
-            .group_by(columns)
-            .aggregate([(col_token, "sum")])
-        )
-        is_duplicated = pc.greater(
-            df.join(
-                row_count,
-                keys=columns,
-                right_keys=columns,
-                join_type="left outer",
-                use_threads=False,
-            )
-            .sort_by(index_token)
-            .column(f"{col_token}_sum"),
-            1,
-        )
-        res = ArrowSeries(
-            is_duplicated,
-            name="",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-        return res.fill_null(res.null_count() > 1, strategy=None, limit=None)
-
     def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        is_duplicated = self.is_duplicated()._native_series
-
+        col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        row_index = pa.array(range(len(self)))
+        keep_idx = (
+            self._native_frame.append_column(col_token, row_index)
+            .group_by(self.columns)
+            .aggregate([(col_token, "min"), (col_token, "max")])
+        )
         return ArrowSeries(
-            pc.invert(is_duplicated),
+            pa.chunked_array(
+                pc.and_(
+                    pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                    pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+                )
+            ),
             name="",
             backend_version=self._backend_version,
             version=self._version,
@@ -801,23 +766,17 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
         native_frame = self._native_frame
         n_rows = len(self)
 
-        index_: list[str] = (
-            [] if index is None else [index] if isinstance(index, str) else index
-        )
+        index_: list[str] = [] if index is None else index
         on_: list[str] = (
-            [c for c in self.columns if c not in index_]
-            if on is None
-            else [on]
-            if isinstance(on, str)
-            else on
+            [c for c in self.columns if c not in index_] if on is None else on
         )
 
         promote_kwargs = (

@@ -415,24 +415,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=self._returns_scalar,
         )
 
-    def is_between(
-        self: Self,
-        lower_bound: Self | Any,
-        upper_bound: Self | Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        closed_ = "neither" if closed == "none" else closed
-        return self._from_call(
-            lambda _input, lower_bound, upper_bound, closed: _input.between(
-                lower_bound, upper_bound, closed
-            ),
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            closed=closed_,
-            returns_scalar=self._returns_scalar,
-        )
-
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum(), "sum", returns_scalar=True)
 
@@ -621,18 +603,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(
             func, "is_last_distinct", returns_scalar=self._returns_scalar
         )
-
-    def is_duplicated(self: Self) -> Self:
-        def func(_input: dx.Series) -> dx.Series:
-            _name = _input.name
-            return (
-                _input.to_frame()
-                .groupby(_name, dropna=False)
-                .transform("size", meta=(_name, int))
-                > 1
-            )
-
-        return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
 
     def is_unique(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:

@@ -1079,7 +1079,7 @@ def validate_native_namespace_and_backend(
     if native_namespace is not None and backend is None:  # pragma: no cover
         if emit_deprecation_warning:
             msg = (
-                "`native_namespace` is deprecated, please use `pass_through` instead.\n\n"
+                "`native_namespace` is deprecated, please use `backend` instead.\n\n"
                 "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
                 "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
             )
