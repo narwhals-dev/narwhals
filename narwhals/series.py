@@ -72,7 +72,7 @@ class Series(Generic[IntoSeriesT]):
         *,
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
-        self._level = level
+        self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(series, "__narwhals_series__"):
             self._compliant_series = series.__narwhals_series__()
         else:  # pragma: no cover
@@ -3114,7 +3114,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.is_duplicated())
+        return ~self.is_unique()
 
     def is_empty(self: Self) -> bool:
         r"""Check if the series is empty.

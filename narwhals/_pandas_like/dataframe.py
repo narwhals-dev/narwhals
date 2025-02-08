@@ -611,14 +611,10 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
         if how == "cross":
             if (
                 self._implementation is Implementation.MODIN
@@ -943,32 +939,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> PandasLikeSeries:
-        return PandasLikeSeries(
-            self._native_frame.duplicated(keep=False),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def is_empty(self: Self) -> bool:
-        return self._native_frame.empty  # type: ignore[no-any-return]
-
     def is_unique(self: Self) -> PandasLikeSeries:
         return PandasLikeSeries(
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-        )
-
-    def null_count(self: Self) -> PandasLikeDataFrame:
-        return PandasLikeDataFrame(
-            self._native_frame.isna().sum(axis=0).to_frame().transpose(),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=False,
         )
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
@@ -1001,10 +977,10 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def pivot(
         self: Self,
-        on: str | list[str],
+        on: list[str],
         *,
-        index: str | list[str] | None,
-        values: str | list[str] | None,
+        index: list[str] | None,
+        values: list[str] | None,
         aggregate_function: Any | None,
         sort_columns: bool,
         separator: str,
@@ -1020,14 +996,6 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         from itertools import product
 
         frame = self._native_frame
-
-        if isinstance(on, str):
-            on = [on]
-
-        if isinstance(values, str):
-            values = [values]
-        if isinstance(index, str):
-            index = [index]
 
         if index is None:
             index = [c for c in self.columns if c not in {*on, *values}]  # type: ignore[misc]
@@ -1115,8 +1083,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
