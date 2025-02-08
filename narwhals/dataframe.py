@@ -72,9 +72,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _from_compliant_dataframe(self: Self, df: Any) -> Self:
         # construct, preserving properties
-        return self.__class__(  # type: ignore[call-arg]
-            df, level=self._level
-        )
+        return self.__class__(df, level=self._level)  # type: ignore[call-arg]
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr

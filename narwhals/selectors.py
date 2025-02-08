@@ -498,12 +498,13 @@ def datetime(
 
     Examples:
         >>> from __future__ import annotations
+        >>>
         >>> from datetime import datetime, timezone
         >>> from zoneinfo import ZoneInfo
+        >>>
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> berlin_tz = ZoneInfo("Europe/Berlin")
         >>> utc_tz = timezone.utc
@@ -522,25 +523,16 @@ def datetime(
         ...     ],
         ...     "numeric": [3.14, 6.28],
         ... }
-        >>> df_pa = pa.table(data)
+        >>> df_native = pa.table(data)
+        >>> df_nw = nw.from_native(df_native).with_columns(
+        ...     tstamp_berlin=nw.col("tstamp_berlin").cast(
+        ...         nw.Datetime(time_zone="Europe/Berlin")
+        ...     )
+        ... )
 
         Let's define a dataframe-agnostic function to select datetime dtypes:
 
-        >>> def agnostic_datetime_selector(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df_nw = (
-        ...         nw.from_native(df_native)
-        ...         .with_columns(
-        ...             tstamp_berlin=nw.col("tstamp_berlin").cast(
-        ...                 nw.Datetime(time_zone="Europe/Berlin")
-        ...             )
-        ...         )
-        ...         .select(ncs.datetime())
-        ...     )
-        ...     return df_nw.to_native()
-
-        Select all datetime columns:
-
-        >>> agnostic_datetime_selector(df_pa)
+        >>> df_nw.select(ncs.datetime()).to_native()
         pyarrow.Table
         tstamp_berlin: timestamp[us, tz=Europe/Berlin]
         tstamp_utc: timestamp[us, tz=UTC]
@@ -552,19 +544,7 @@ def datetime(
 
         Select all datetime columns that have any time_zone specification:
 
-        >>> def agnostic_datetime_selector_any_tz(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df_nw = (
-        ...         nw.from_native(df_native)
-        ...         .with_columns(
-        ...             tstamp_berlin=nw.col("tstamp_berlin").cast(
-        ...                 nw.Datetime(time_zone="Europe/Berlin")
-        ...             )
-        ...         )
-        ...         .select(ncs.datetime(time_zone="*"))
-        ...     )
-        ...     return df_nw.to_native()
-
-        >>> agnostic_datetime_selector_any_tz(df_pa)
+        >>> df_nw.select(ncs.datetime(time_zone="*")).to_native()
         pyarrow.Table
         tstamp_berlin: timestamp[us, tz=Europe/Berlin]
         tstamp_utc: timestamp[us, tz=UTC]

@@ -243,6 +243,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",

@@ -188,10 +188,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     ).collect_schema().names() == ["ts_ms", "ts_us", "ts_utc"]
 
 
-def test_datetime_spark_and_duckdb(constructor: Constructor) -> None:
-    if not ("pyspark" in str(constructor) or "duckdb" in str(constructor)):
-        pytest.skip()
-
+def test_datetime_no_tz(constructor: Constructor) -> None:
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
 
