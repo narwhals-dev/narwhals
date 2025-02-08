@@ -11,6 +11,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Mapping
+from typing import cast
 
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -205,6 +206,6 @@ class Schema(BaseSchema):
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        if parse_version(pl.__version__) < (1, 0, 0):  # pragma: no cover
-            return dict(schema)  # type: ignore[return-value]
-        return pl.Schema(schema)
+        if parse_version(pl.__version__) >= (1, 0, 0):  # pragma: no cover
+            return pl.Schema(schema)
+        return cast("pl.Schema", dict(schema))
