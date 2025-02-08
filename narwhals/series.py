@@ -72,7 +72,7 @@ class Series(Generic[IntoSeriesT]):
         *,
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
-        self._level = level
+        self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(series, "__narwhals_series__"):
             self._compliant_series = series.__narwhals_series__()
         else:  # pragma: no cover
