@@ -1,61 +1,67 @@
 ci:
   autoupdate_schedule: monthly
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: "v0.9.4"
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: 'v0.9.4'
+  hooks:
+    # Run the formatter.
+    - id: ruff-format
+    # Run the linter.
+    - id: ruff
+      args: [--fix]
+    - id: ruff
+      alias: check-docstrings
+      entry: python utils/check_docstrings.py
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: 'v1.14.1'
+  hooks:
+    - id: mypy
+      additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']
+      files: ^(narwhals|tests)/
+- repo: https://github.com/codespell-project/codespell
+  rev: 'v2.4.1'
+  hooks:
+    - id: codespell
+      files: \.(py|rst|md)$
+      args: [--ignore-words-list=ser]
+      exclude: ^docs/api-completeness.md$
+-   repo: https://github.com/pycqa/flake8
+    rev: '7.1.1'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
     hooks:
-      # Run the formatter.
-      - id: ruff-format
-      # Run the linter.
-      - id: ruff
-        args: [--fix]
-      - id: ruff
-        alias: check-docstrings
-        entry: python utils/check_docstrings.py
-  - repo: https://github.com/codespell-project/codespell
-    rev: "v2.4.1"
-    hooks:
-      - id: codespell
-        files: \.(py|rst|md)$
-        args: [--ignore-words-list=ser]
-        exclude: ^docs/api-completeness.md$
-  - repo: https://github.com/pycqa/flake8
-    rev: "7.1.1" # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
-    hooks:
-      - id: flake8
+    -   id: flake8
         additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
         entry: flake8 --select DAR --ignore DAR101,DAR402,DAR401
         exclude: |
-          (?x)^(
-              tests/.*|
-              # TODO: gradually enable
-              narwhals/series\.py|
-              # TODO: gradually enable
-              narwhals/dataframe\.py|
-              # TODO: gradually enable
-              narwhals/dependencies\.py|
-              # private, so less urgent to document too well
-              narwhals/_.*|
-              ^utils/.*
-          )$
-  - repo: local
-    hooks:
-      - id: check-api-reference
-        name: check-api-reference
-        pass_filenames: false
-        entry: python -m utils.check_api_reference
-        language: python
-        additional_dependencies: [polars]
-      - id: imports-are-banned
-        name: import are banned (use `get_pandas` instead of `import pandas`)
-        entry: python utils/import_check.py
-        language: python
-        files: ^narwhals/
-        exclude: ^narwhals/dependencies\.py
-      - id: dtypes-import
-        name: don't import from narwhals.dtypes (use `import_dtypes_module` instead)
-        entry: |
+            (?x)^(
+                tests/.*|
+                # TODO: gradually enable
+                narwhals/series\.py|
+                # TODO: gradually enable
+                narwhals/dataframe\.py|
+                # TODO: gradually enable
+                narwhals/dependencies\.py|
+                # private, so less urgent to document too well
+                narwhals/_.*|
+                ^utils/.*
+            )$
+- repo: local
+  hooks:
+    - id: check-api-reference
+      name: check-api-reference
+      pass_filenames: false
+      entry: python -m utils.check_api_reference
+      language: python
+      additional_dependencies: [polars]
+    - id: imports-are-banned
+      name: import are banned (use `get_pandas` instead of `import pandas`)
+      entry: python utils/import_check.py
+      language: python
+      files: ^narwhals/
+      exclude: ^narwhals/dependencies\.py
+    - id: dtypes-import
+      name: don't import from narwhals.dtypes (use `import_dtypes_module` instead)
+      entry: |
           (?x)
             import\ narwhals.dtypes|
             from\ narwhals\ import\ dtypes|
@@ -63,40 +69,33 @@ repos:
             import\ narwhals.stable.v1.dtypes|
             from\ narwhals.stable.v1\ import\ dtypes|
             from\ narwhals.stable.v1.dtypes\ import
-        language: pygrep
-        files: ^narwhals/
-        exclude: |
-          (?x)
-            ^(
-              narwhals/utils\.py|
-              narwhals/stable/v1/_dtypes.py|
-              narwhals/.*__init__.py|
-              narwhals/.*typing\.py
-            )
-      - id: pull-request-target
-        name: don't use `pull_request_target`
-        entry: pull_request_target
-        language: pygrep
-        files: ^\.github/workflows/
-      - id: mypy
-        name: mypy
-        entry: ./.venv/bin/mypy
-        files: ^(narwhals|tests)/
-        language: system
-        types: [python]
-        require_serial: true
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: "1.19.1" # replace with latest tag on GitHub
-    hooks:
-      - id: blacken-docs
-        args: [--skip-errors]
-        additional_dependencies:
-          - black==22.12.0
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      - id: name-tests-test
-        exclude: ^tests/utils\.py
-      - id: no-commit-to-branch
-      - id: end-of-file-fixer
-        exclude: .svg$
+      language: pygrep
+      files: ^narwhals/
+      exclude: |
+        (?x)
+          ^(
+            narwhals/utils\.py|
+            narwhals/stable/v1/_dtypes.py|
+            narwhals/.*__init__.py|
+            narwhals/.*typing\.py
+          )
+    - id: pull-request-target
+      name: don't use `pull_request_target`
+      entry: pull_request_target
+      language: pygrep
+      files: ^\.github/workflows/
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: "1.19.1"  # replace with latest tag on GitHub
+  hooks:
+  -   id: blacken-docs
+      args: [--skip-errors]
+      additional_dependencies:
+      - black==22.12.0
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  -   id: name-tests-test
+      exclude: ^tests/utils\.py
+  -   id: no-commit-to-branch
+  -   id: end-of-file-fixer
+      exclude: .svg$
