@@ -140,7 +140,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(
         self: Self,
         item: (
-            slice
+            int
+            | slice
             | np.ndarray
             | Sequence[int]
             | Sequence[str]

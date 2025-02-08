@@ -869,7 +869,8 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __getitem__(
         self: Self,
         item: (
-            slice
+            int
+            | slice
             | Sequence[int]
             | Sequence[str]
             | np.ndarray
@@ -882,6 +883,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         item: (
             str
+            | int
             | slice
             | Sequence[int]
             | Sequence[str]
