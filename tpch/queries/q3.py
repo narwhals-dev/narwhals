@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 import narwhals as nw
 
-if TYPE_CHECKING:
-    from narwhals.typing import FrameT
 
-
-@nw.narwhalify
 def query(
-    customer_ds: FrameT,
-    line_item_ds: FrameT,
-    orders_ds: FrameT,
-) -> FrameT:
+    customer_ds: nw.LazyFrame,
+    line_item_ds: nw.LazyFrame,
+    orders_ds: nw.LazyFrame,
+) -> nw.LazyFrame:
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 

@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 import narwhals as nw
 
-if TYPE_CHECKING:
-    from narwhals.typing import FrameT
 
-
-@nw.narwhalify
-def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
+def query(line_item_ds: nw.LazyFrame, part_ds: nw.LazyFrame) -> nw.LazyFrame:
     var1 = datetime(1995, 9, 1)
     var2 = datetime(1995, 10, 1)
 
@@ -26,7 +21,7 @@ def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
                 .sum()
                 / (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).sum()
             )
-            .round(2)
+            # .round(2)
             .alias("promo_revenue")
         )
     )

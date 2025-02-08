@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import narwhals as nw
 
-if TYPE_CHECKING:
-    from narwhals.typing import FrameT
 
-
-@nw.narwhalify
-def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
+def query(lineitem_ds: nw.LazyFrame, part_ds: nw.LazyFrame) -> nw.LazyFrame:
     return (
         part_ds.join(lineitem_ds, left_on="p_partkey", right_on="l_partkey")
         .filter(nw.col("l_shipmode").is_in(["AIR", "AIR REG"]))
