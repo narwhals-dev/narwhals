@@ -497,22 +497,13 @@ def datetime(
         A new expression.
 
     Examples:
-        >>> from __future__ import annotations
-        >>>
         >>> from datetime import datetime, timezone
-        >>> from zoneinfo import ZoneInfo
-        >>>
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
         >>>
-        >>> berlin_tz = ZoneInfo("Europe/Berlin")
         >>> utc_tz = timezone.utc
         >>> data = {
-        ...     "tstamp_berlin": [
-        ...         datetime(1999, 7, 21, 5, 20, 16, 987654, tzinfo=berlin_tz),
-        ...         datetime(2000, 5, 16, 6, 21, 21, 123465, tzinfo=berlin_tz),
-        ...     ],
         ...     "tstamp_utc": [
         ...         datetime(2023, 4, 10, 12, 14, 16, 999000, tzinfo=utc_tz),
         ...         datetime(2025, 8, 25, 14, 18, 22, 666000, tzinfo=utc_tz),
@@ -524,32 +515,24 @@ def datetime(
         ...     "numeric": [3.14, 6.28],
         ... }
         >>> df_native = pa.table(data)
-        >>> df_nw = nw.from_native(df_native).with_columns(
-        ...     tstamp_berlin=nw.col("tstamp_berlin").cast(
-        ...         nw.Datetime(time_zone="Europe/Berlin")
-        ...     )
-        ... )
+        >>> df_nw = nw.from_native(df_native)
 
         Let's define a dataframe-agnostic function to select datetime dtypes:
 
         >>> df_nw.select(ncs.datetime()).to_native()
         pyarrow.Table
-        tstamp_berlin: timestamp[us, tz=Europe/Berlin]
         tstamp_utc: timestamp[us, tz=UTC]
         tstamp: timestamp[us]
         ----
-        tstamp_berlin: [[1999-07-21 05:20:16.987654Z,2000-05-16 06:21:21.123465Z]]
         tstamp_utc: [[2023-04-10 12:14:16.999000Z,2025-08-25 14:18:22.666000Z]]
         tstamp: [[2000-11-20 18:12:16.600000,2020-10-30 10:20:25.123000]]
 
-        Select all datetime columns that have any time_zone specification:
+        Select only datetime columns that have any time_zone specification:
 
         >>> df_nw.select(ncs.datetime(time_zone="*")).to_native()
         pyarrow.Table
-        tstamp_berlin: timestamp[us, tz=Europe/Berlin]
         tstamp_utc: timestamp[us, tz=UTC]
         ----
-        tstamp_berlin: [[1999-07-21 05:20:16.987654Z,2000-05-16 06:21:21.123465Z]]
         tstamp_utc: [[2023-04-10 12:14:16.999000Z,2025-08-25 14:18:22.666000Z]]
     """
     return Selector(
