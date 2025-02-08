@@ -41,10 +41,12 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.series import Series
+    from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
@@ -351,13 +353,14 @@ def _new_series_impl(
             native_series = native_namespace.Series(values, name=name)
 
     elif implementation is Implementation.PYARROW:
+        pa_dtype: pa.DataType | None = None
         if dtype:
             from narwhals._arrow.utils import (
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
-        native_series = native_namespace.chunked_array([values], type=dtype)
+            pa_dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
+        native_series = native_namespace.chunked_array([values], type=pa_dtype)
 
     elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
@@ -521,10 +524,11 @@ def _from_dict_impl(
         if schema:
             from narwhals._pandas_like.utils import get_dtype_backend
 
-            pd_schema = Schema(schema).to_pandas(
+            it: Iterable[DTypeBackend] = (
                 get_dtype_backend(native_type, eager_backend)
                 for native_type in native_frame.dtypes
             )
+            pd_schema = Schema(schema).to_pandas(it)
             native_frame = native_frame.astype(pd_schema)
 
     elif eager_backend is Implementation.PYARROW:
