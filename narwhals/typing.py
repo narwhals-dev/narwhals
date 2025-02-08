@@ -5,7 +5,6 @@ from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import Literal
-from typing import Optional
 from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
@@ -245,7 +244,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
-DTypeBackend: TypeAlias = Optional[Literal["pyarrow", "numpy_nullable"]]
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",

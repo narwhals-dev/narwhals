@@ -185,7 +185,7 @@ class Schema(BaseSchema):
                 for name, dtype, backend in zip(self.keys(), self.values(), backends)
             }
 
-    def to_polars(self: Self) -> pl.Schema | Any:
+    def to_polars(self: Self) -> pl.Schema:
         """Convert Schema to a polars Schema.
 
         Returns:
@@ -205,8 +205,6 @@ class Schema(BaseSchema):
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        return (
-            pl.Schema(schema)
-            if parse_version(pl.__version__) >= (1, 0, 0)
-            else dict(schema)
-        )
+        if parse_version(pl.__version__) >= (1, 0, 0):
+            return pl.Schema(schema)
+        return dict(schema)  # type: ignore[return-value]
