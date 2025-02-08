@@ -343,10 +343,11 @@ def _new_series_impl(
             )
 
             backend_version = parse_version(native_namespace.__version__)
-            dtype = pandas_like_narwhals_to_native_dtype(
+            pd_dtype = pandas_like_narwhals_to_native_dtype(
                 dtype, None, implementation, backend_version, version
             )
-        native_series = native_namespace.Series(values, name=name, dtype=dtype)
+            native_series = native_namespace.Series(values, name=name, dtype=pd_dtype)
+        native_series = native_namespace.Series(values, name=name)
 
     elif implementation is Implementation.PYARROW:
         if dtype:
@@ -735,7 +736,7 @@ def _from_numpy_impl(
             )
 
             backend_version = parse_version(native_namespace.__version__)
-            schema = {
+            pd_schema = {
                 name: pandas_like_narwhals_to_native_dtype(
                     dtype=schema[name],
                     dtype_backend=get_dtype_backend(native_type, implementation),
@@ -746,7 +747,7 @@ def _from_numpy_impl(
                 for name, native_type in schema.items()
             }
             native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
-                schema
+                pd_schema
             )
         elif isinstance(schema, list):
             native_frame = native_namespace.DataFrame(data, columns=schema)

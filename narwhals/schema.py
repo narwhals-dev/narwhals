@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypeBackend
 
     BaseSchema = OrderedDict[str, DType]
 else:
@@ -121,7 +122,7 @@ class Schema(BaseSchema):
         )
 
     def to_pandas(
-        self: Self, dtype_backend: str | Iterable[str] | None = None
+        self: Self, dtype_backend: DTypeBackend | Iterable[DTypeBackend] = None
     ) -> dict[str, Any]:
         """Convert Schema to an ordered mapping of column names to their pandas data type.
 
@@ -138,17 +139,14 @@ class Schema(BaseSchema):
             >>> schema.to_pandas()
             {'a': 'int64', 'b': 'datetime64[ns]'}
 
-            >>> schema.to_pandas("pyarrow-nullable")
+            >>> schema.to_pandas("pyarrow")
             {'a': 'Int64[pyarrow]', 'b': 'timestamp[ns][pyarrow]'}
-
-            >>> schema.to_pandas(["pandas-nullable", "pyarrow-nullable"])
-            {'a': 'Int64', 'b': 'timestamp[ns][pyarrow]'}
         """
         import pandas as pd  # ignore-banned-import
 
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
 
-        to_native = partial(
+        to_native_dtype = partial(
             narwhals_to_native_dtype,
             implementation=Implementation.PANDAS,
             backend_version=parse_version(pd.__version__),
@@ -156,7 +154,7 @@ class Schema(BaseSchema):
         )
         if dtype_backend is None or isinstance(dtype_backend, str):
             return {
-                name: to_native(dtype=dtype, dtype_backend=dtype_backend)
+                name: to_native_dtype(dtype=dtype, dtype_backend=dtype_backend)
                 for name, dtype in self.items()
             }
         else:
@@ -183,7 +181,7 @@ class Schema(BaseSchema):
                 )
                 raise ValueError(msg)
             return {
-                name: to_native(dtype=dtype, dtype_backend=backend)
+                name: to_native_dtype(dtype=dtype, dtype_backend=backend)
                 for name, dtype, backend in zip(self.keys(), self.values(), backends)
             }
 

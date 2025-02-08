@@ -20,6 +20,7 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals.typing import DTypeBackend
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
@@ -343,11 +344,7 @@ def test_all_nulls_pandas() -> None:
             {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[ns]"},
         ),
         (
-            "numpy",
-            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[ns]"},
-        ),
-        (
-            "pyarrow-nullable",
+            "pyarrow",
             {
                 "a": "Int64[pyarrow]",
                 "b": "string[pyarrow]",
@@ -357,7 +354,7 @@ def test_all_nulls_pandas() -> None:
             },
         ),
         (
-            "pandas-nullable",
+            "numpy_nullable",
             {
                 "a": "Int64",
                 "b": "string",
@@ -368,11 +365,11 @@ def test_all_nulls_pandas() -> None:
         ),
         (
             [
-                "pandas-nullable",
-                "pyarrow-nullable",
-                "numpy",
-                "pyarrow-nullable",
-                "pandas-nullable",
+                "numpy_nullable",
+                "pyarrow",
+                None,
+                "pyarrow",
+                "numpy_nullable",
             ],
             {
                 "a": "Int64",
@@ -385,7 +382,7 @@ def test_all_nulls_pandas() -> None:
     ],
 )
 def test_schema_to_pandas(
-    dtype_backend: str | Sequence[str] | None, expected: dict[str, Any]
+    dtype_backend: DTypeBackend | Sequence[DTypeBackend] | None, expected: dict[str, Any]
 ) -> None:
     schema = nw.Schema(
         {
@@ -409,13 +406,13 @@ def test_schema_to_pandas_strict_zip() -> None:
             "e": nw.Datetime("ns"),
         }
     )
-    dtype_backend = ["pandas-nullable", "pyarrow-nullable", "numpy"]
+    dtype_backend: list[DTypeBackend] = ["numpy_nullable", "pyarrow", None]
     tup = (
-        "pandas-nullable",
-        "pyarrow-nullable",
+        "numpy_nullable",
+        "pyarrow",
         "numpy",
-        "pandas-nullable",
-        "pyarrow-nullable",
+        "numpy_nullable",
+        "pyarrow",
     )
     suggestion = re.escape(f"({tup})")
     with pytest.raises(
@@ -426,3 +423,10 @@ def test_schema_to_pandas_strict_zip() -> None:
         ),
     ):
         schema.to_pandas(dtype_backend)
+
+
+def test_schema_to_pandas_invalid() -> None:
+    schema = nw.Schema({"a": nw.Int64()})
+    msg = "Expected one of {None, 'pyarrow', 'numpy_nullable'}, got: 'cabbage'"
+    with pytest.raises(ValueError, match=msg):
+        schema.to_pandas("cabbage")  # type: ignore[arg-type]

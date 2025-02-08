@@ -241,14 +241,14 @@ class PandasLikeSeries(CompliantSeries):
         dtype_backend = get_dtype_backend(
             dtype=ser.dtype, implementation=self._implementation
         )
-        dtype = narwhals_to_native_dtype(
+        pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=dtype_backend,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
-        return self._from_native_series(ser.astype(dtype))
+        return self._from_native_series(ser.astype(pd_dtype))
 
     def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
