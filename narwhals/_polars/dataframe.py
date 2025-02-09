@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals._polars.group_by import PolarsGroupBy
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -122,7 +122,7 @@ class PolarsDataFrame:
 
     def __array__(
         self: Self, dtype: Any | None = None, copy: bool | None = None
-    ) -> np.ndarray:
+    ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
             raise NotImplementedError(msg)
@@ -223,9 +223,6 @@ class PolarsDataFrame:
             version=self._version,
         )
 
-    def is_empty(self: Self) -> bool:
-        return len(self._native_frame) == 0
-
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
@@ -257,8 +254,9 @@ class PolarsDataFrame:
             df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
                 df=duckdb.table("df"),
-                backend_version=parse_version(duckdb.__version__),
+                backend_version=parse_version(duckdb),
                 version=self._version,
+                validate_column_names=False,
             )
         elif backend is Implementation.DASK:
             import dask  # ignore-banned-import
@@ -268,8 +266,9 @@ class PolarsDataFrame:
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
-                backend_version=parse_version(dask.__version__),
+                backend_version=parse_version(dask),
                 version=self._version,
+                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -314,8 +313,8 @@ class PolarsDataFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -336,10 +335,10 @@ class PolarsDataFrame:
 
     def pivot(
         self: Self,
-        on: str | list[str],
+        on: list[str],
         *,
-        index: str | list[str] | None,
-        values: str | list[str] | None,
+        index: list[str] | None,
+        values: list[str] | None,
         aggregate_function: Literal[
             "min", "max", "first", "last", "sum", "mean", "median", "len"
         ]
@@ -480,8 +479,9 @@ class PolarsLazyFrame:
             return PandasLikeDataFrame(
                 result.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
+                validate_column_names=False,
             )
 
         if backend is Implementation.PYARROW:
@@ -491,8 +491,9 @@ class PolarsLazyFrame:
 
             return ArrowDataFrame(
                 result.to_arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
+                validate_column_names=False,
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
@@ -515,8 +516,8 @@ class PolarsLazyFrame:
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

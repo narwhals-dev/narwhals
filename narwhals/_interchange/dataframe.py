@@ -115,7 +115,7 @@ class InterchangeFrame:
     def to_pandas(self: Self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 
-        if parse_version(pd.__version__) >= parse_version("1.5.0"):
+        if parse_version(pd) >= (1, 5, 0):
             return pd.api.interchange.from_dataframe(self._interchange_frame)
         else:  # pragma: no cover
             msg = (

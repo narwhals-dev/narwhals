@@ -30,7 +30,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
@@ -38,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
 
 
@@ -357,10 +357,10 @@ class ArrowSeries(CompliantSeries):
     def to_list(self: Self) -> list[Any]:
         return self._native_series.to_pylist()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self) -> np.ndarray:
+    def to_numpy(self: Self) -> _1DArray:
         return self._native_series.to_numpy()
 
     def alias(self: Self, name: str) -> Self:
@@ -531,7 +531,10 @@ class ArrowSeries(CompliantSeries):
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count, backend_version=self._backend_version, version=self._version
+            val_count,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
@@ -621,7 +624,10 @@ class ArrowSeries(CompliantSeries):
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
         return ArrowDataFrame(
-            df, backend_version=self._backend_version, version=self._version
+            df,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=False,
         )
 
     def to_pandas(self: Self) -> pd.Series:
@@ -633,9 +639,6 @@ class ArrowSeries(CompliantSeries):
         import polars as pl  # ignore-banned-import
 
         return pl.from_arrow(self._native_series)  # type: ignore[return-value]
-
-    def is_duplicated(self: Self) -> ArrowSeries:
-        return self.to_frame().is_duplicated().alias(self.name)
 
     def is_unique(self: Self) -> ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
@@ -745,6 +748,7 @@ class ArrowSeries(CompliantSeries):
             pa.Table.from_arrays(columns, names=cols),
             backend_version=self._backend_version,
             version=self._version,
+            validate_column_names=True,
         ).simple_select(*output_order)
 
     def quantile(

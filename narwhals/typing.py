@@ -11,23 +11,19 @@ from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
-    import sys
+    from types import ModuleType
 
-    from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
+    import numpy as np
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
+    from narwhals.utils import Implementation
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -105,6 +101,10 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def lit(
         self, value: Any, dtype: DType | None
     ) -> CompliantExpr[CompliantSeriesT_co]: ...
+
+
+class SupportsNativeNamespace(Protocol):
+    def __native_namespace__(self) -> ModuleType: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -244,6 +244,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",
@@ -256,6 +257,14 @@ SizeUnit: TypeAlias = Literal[
     "gigabytes",
     "terabytes",
 ]
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 
 
 class DTypes:

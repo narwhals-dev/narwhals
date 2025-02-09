@@ -12,3 +12,12 @@ def test_is_duplicated(constructor_eager: ConstructorEager) -> None:
     result = nw.concat([df, df.head(1)]).is_duplicated()
     expected = {"is_duplicated": [True, False, False, True]}
     assert_equal_data({"is_duplicated": result}, expected)
+
+
+def test_is_duplicated_with_nulls(constructor_eager: ConstructorEager) -> None:
+    data = {"col1": [1, 2, 3], "col2": ["one", None, None]}
+    df_raw = constructor_eager(data)
+    df = nw.from_native(df_raw, eager_only=True)
+    result = df.is_duplicated()
+    expected = {"is_duplicated": [False, False, False]}
+    assert_equal_data({"is_duplicated": result}, expected)

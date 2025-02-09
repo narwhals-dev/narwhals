@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
+    from narwhals.typing import TimeUnit
 
 
 class DaskExprDateTimeNamespace:
@@ -110,7 +110,7 @@ class DaskExprDateTimeNamespace:
 
     def to_string(self: Self, format: str) -> DaskExpr:  # noqa: A002
         return self._compliant_expr._from_call(
-            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),
+            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),  # noqa: A006
             "strftime",
             format=format,
             returns_scalar=self._compliant_expr._returns_scalar,
@@ -131,7 +131,7 @@ class DaskExprDateTimeNamespace:
     def convert_time_zone(self: Self, time_zone: str) -> DaskExpr:
         def func(s: dx.Series, time_zone: str) -> dx.Series:
             dtype = native_to_narwhals_dtype(
-                s, self._compliant_expr._version, Implementation.DASK
+                s.dtype, self._compliant_expr._version, Implementation.DASK
             )
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
@@ -145,10 +145,10 @@ class DaskExprDateTimeNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> DaskExpr:
-        def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"]) -> dx.Series:
+    def timestamp(self: Self, time_unit: TimeUnit) -> DaskExpr:
+        def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
             dtype = native_to_narwhals_dtype(
-                s, self._compliant_expr._version, Implementation.DASK
+                s.dtype, self._compliant_expr._version, Implementation.DASK
             )
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()

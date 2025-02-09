@@ -180,7 +180,9 @@ class ExprStringNamespace(Generic[ExprT]):
 
             >>> def agnostic_str_replace_all(df_native: IntoFrameT) -> IntoFrameT:
             ...     df = nw.from_native(df_native)
-            ...     df = df.with_columns(replaced=nw.col("foo").str.replace_all("abc", ""))
+            ...     df = df.with_columns(
+            ...         replaced=nw.col("foo").str.replace_all("abc", "")
+            ...     )
             ...     return df.to_native()
 
             We can then pass any supported library such as pandas, Polars, or
@@ -429,7 +431,9 @@ class ExprStringNamespace(Generic[ExprT]):
             ...     df = nw.from_native(df_native)
             ...     return df.with_columns(
             ...         default_match=nw.col("pets").str.contains("parrot|Dove"),
-            ...         case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove"),
+            ...         case_insensitive_match=nw.col("pets").str.contains(
+            ...             "(?i)parrot|Dove"
+            ...         ),
             ...         literal_match=nw.col("pets").str.contains(
             ...             "parrot|Dove", literal=True
             ...         ),

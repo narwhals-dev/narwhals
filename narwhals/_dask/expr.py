@@ -319,7 +319,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         from narwhals.exceptions import InvalidOperationError
 
         def func(s: dx.Series) -> dx.Series:
-            dtype = native_to_narwhals_dtype(s, self._version, Implementation.DASK)
+            dtype = native_to_narwhals_dtype(s.dtype, self._version, Implementation.DASK)
             if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
@@ -412,24 +412,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(
             lambda _input: _input.cumprod(),
             "cum_prod",
-            returns_scalar=self._returns_scalar,
-        )
-
-    def is_between(
-        self: Self,
-        lower_bound: Self | Any,
-        upper_bound: Self | Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        closed_ = "neither" if closed == "none" else closed
-        return self._from_call(
-            lambda _input, lower_bound, upper_bound, closed: _input.between(
-                lower_bound, upper_bound, closed
-            ),
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            closed=closed_,
             returns_scalar=self._returns_scalar,
         )
 
@@ -553,7 +535,9 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def is_nan(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
-            dtype = native_to_narwhals_dtype(_input, self._version, self._implementation)
+            dtype = native_to_narwhals_dtype(
+                _input.dtype, self._version, self._implementation
+            )
             if dtype.is_numeric():
                 return _input != _input  # noqa: PLR0124
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
@@ -619,18 +603,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(
             func, "is_last_distinct", returns_scalar=self._returns_scalar
         )
-
-    def is_duplicated(self: Self) -> Self:
-        def func(_input: dx.Series) -> dx.Series:
-            _name = _input.name
-            return (
-                _input.to_frame()
-                .groupby(_name, dropna=False)
-                .transform("size", meta=(_name, int))
-                > 1
-            )
-
-        return self._from_call(func, "is_duplicated", returns_scalar=self._returns_scalar)
 
     def is_unique(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
@@ -709,7 +681,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         import dask.array as da
 
         return self._from_call(
-            lambda _input: da.isfinite(_input),
+            da.isfinite,
             "is_finite",
             returns_scalar=self._returns_scalar,
         )

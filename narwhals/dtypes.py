@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import timezone
+from itertools import starmap
 from typing import TYPE_CHECKING
 from typing import Mapping
 
@@ -9,10 +10,11 @@ from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Iterator
-    from typing import Literal
     from typing import Sequence
 
     from typing_extensions import Self
+
+    from narwhals.typing import TimeUnit
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -471,7 +473,9 @@ class Datetime(TemporalType):
         ...     .astype("datetime64[ms, Africa/Accra]")
         ... )
         >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
+        ...     pl.Series(data)
+        ...     .cast(pl.Datetime("ms"))
+        ...     .dt.replace_time_zone("Africa/Accra")
         ... )
         >>> ser_pa = pc.assume_timezone(
         ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
@@ -487,7 +491,7 @@ class Datetime(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
@@ -550,7 +554,7 @@ class Duration(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
     ) -> None:
         if time_unit not in ("s", "ms", "us", "ns"):
             msg = (
@@ -669,7 +673,7 @@ class Struct(NestedType):
         self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
-            self.fields = [Field(name, dtype) for name, dtype in fields.items()]
+            self.fields = list(starmap(Field, fields.items()))
         else:
             self.fields = list(fields)
 

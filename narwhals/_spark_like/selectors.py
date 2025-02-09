@@ -9,14 +9,19 @@ from typing import Sequence
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import ExprKind
 from narwhals.utils import Implementation
+from narwhals.utils import _parse_time_unit_and_time_zone
+from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    from datetime import timezone
+
     from pyspark.sql import Column
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
 
@@ -36,13 +41,13 @@ class SparkLikeSelectorNamespace:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col) for col in df.columns if df.schema[col] in dtypes]
 
-        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
         return SparkLikeSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -54,13 +59,13 @@ class SparkLikeSelectorNamespace:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col) for col in df.columns if re.search(pattern, col)]
 
-        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
         return SparkLikeSelector(
             func,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
@@ -114,10 +119,55 @@ class SparkLikeSelectorNamespace:
             implementation=self._implementation,
         )
 
+    def datetime(
+        self: Self,
+        time_unit: TimeUnit | Iterable[TimeUnit] | None,
+        time_zone: str | timezone | Iterable[str | timezone | None] | None,
+    ) -> SparkLikeSelector:
+        dtypes = import_dtypes_module(version=self._version)
+        time_units, time_zones = _parse_time_unit_and_time_zone(
+            time_unit=time_unit, time_zone=time_zone
+        )
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [
+                df._F.col(col)
+                for col in df.columns
+                if dtype_matches_time_unit_and_time_zone(
+                    dtype=df.schema[col],
+                    dtypes=dtypes,
+                    time_units=time_units,
+                    time_zones=time_zones,
+                )
+            ]
+
+        def evalute_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+            return [
+                col
+                for col in df.columns
+                if dtype_matches_time_unit_and_time_zone(
+                    dtype=df.schema[col],
+                    dtypes=dtypes,
+                    time_units=time_units,
+                    time_zones=time_zones,
+                )
+            ]
+
+        return SparkLikeSelector(
+            func,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            expr_kind=ExprKind.TRANSFORM,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
 
 class SparkLikeSelector(SparkLikeExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"SparkLikeSelector(" f"function_name={self._function_name})"
+        return f"SparkLikeSelector(function_name={self._function_name})"
 
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(

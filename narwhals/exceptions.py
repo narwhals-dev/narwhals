@@ -48,6 +48,10 @@ class ShapeError(NarwhalsError):
     """Exception raised when trying to perform operations on data structures with incompatible shapes."""
 
 
+class DuplicateError(NarwhalsError):
+    """Exception when duplicate column names are encountered."""
+
+
 class InvalidOperationError(NarwhalsError):
     """Exception raised during invalid operations."""
 

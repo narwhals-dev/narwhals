@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -13,6 +12,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.typing import TimeUnit
 
 
 class ArrowSeriesDateTimeNamespace:
@@ -49,7 +49,7 @@ class ArrowSeriesDateTimeNamespace:
 
         return self._compliant_series._from_native_series(result)
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> ArrowSeries:
+    def timestamp(self: Self, time_unit: TimeUnit) -> ArrowSeries:
         s = self._compliant_series._native_series
         dtype = self._compliant_series.dtype
         dtypes = import_dtypes_module(self._compliant_series._version)
