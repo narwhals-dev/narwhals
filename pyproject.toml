@@ -46,7 +46,7 @@ dev = [
   "pytest-env",
   "hypothesis",
   "typing_extensions",
-  "mypy",
+  "mypy~=1.15.0",
 ]
 core = [
   "duckdb",
