@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import numpy as np
@@ -196,7 +197,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         ),
     ) -> PandasLikeSeries | Self:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
         if isinstance(item, str):
             return PandasLikeSeries(
@@ -216,11 +217,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 return self._from_native_frame(
                     self._native_frame.__class__(), validate_column_names=False
                 )
-            if all(isinstance(x, int) for x in item[1]):
+            if all(isinstance(x, int) for x in item[1]):  # type: ignore[var-annotated]
                 return self._from_native_frame(
                     self._native_frame.iloc[item], validate_column_names=False
                 )
-            if all(isinstance(x, str) for x in item[1]):
+            if all(isinstance(x, str) for x in item[1]):  # type: ignore[var-annotated]
                 indexer = (
                     item[0],
                     self._native_frame.columns.get_indexer(item[1]),
@@ -257,7 +258,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
+                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # pyright: ignore[reportAssignmentType]
                 native_series = self._native_frame.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
@@ -277,7 +278,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 return self._from_native_frame(
                     select_columns_by_name(
                         self._native_frame,
-                        item,
+                        cast("Sequence[str] | _1DArray", item),
                         self._backend_version,
                         self._implementation,
                     ),
