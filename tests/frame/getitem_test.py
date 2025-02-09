@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -53,7 +55,7 @@ def test_slice_lazy_fails() -> None:
 
 
 def test_slice_int(constructor_eager: ConstructorEager) -> None:
-    result = nw.from_native(constructor_eager(data), eager_only=True)[1]  # type: ignore[call-overload]
+    result = nw.from_native(constructor_eager(data), eager_only=True)[1]
     assert_equal_data(result, {"a": [2], "b": [12]})
 
 
@@ -61,7 +63,7 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
     with pytest.raises(TypeError, match="Expected str or slice, got:"):
-        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload]
+        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload, unused-ignore]
 
 
 def test_gather(constructor_eager: ConstructorEager) -> None:
@@ -117,73 +119,45 @@ def test_slice_int_rows_str_columns(constructor_eager: ConstructorEager) -> None
     assert_equal_data(result, expected)
 
 
-def test_slice_slice_columns(constructor_eager: ConstructorEager) -> None:  # noqa: PLR0915
+@pytest.mark.parametrize(
+    ("row_selector", "col_selector", "expected"),
+    [
+        ([0, 1], slice("b", "c"), {"b": [4, 5], "c": [7, 8]}),
+        ([0, 1], slice(None, "c"), {"a": [1, 2], "b": [4, 5], "c": [7, 8]}),
+        ([0, 1], slice("a", "d", 2), {"a": [1, 2], "c": [7, 8]}),
+        ([0, 1], slice("b", None), {"b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        ([0, 1], slice(1, 3), {"b": [4, 5], "c": [7, 8]}),
+        ([0, 1], slice(None, 3), {"a": [1, 2], "b": [4, 5], "c": [7, 8]}),
+        ([0, 1], slice(0, 4, 2), {"a": [1, 2], "c": [7, 8]}),
+        ([0, 1], slice(1, None), {"b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        (slice(None), ["b", "d"], {"b": [4, 5, 6], "d": [1, 4, 2]}),
+        (slice(None), [0, 2], {"a": [1, 2, 3], "c": [7, 8, 9]}),
+        (slice(None, 2), [0, 2], {"a": [1, 2], "c": [7, 8]}),
+        (slice(None, 2), ["a", "c"], {"a": [1, 2], "c": [7, 8]}),
+        (slice(1, None), [0, 2], {"a": [2, 3], "c": [8, 9]}),
+        (slice(1, None), ["a", "c"], {"a": [2, 3], "c": [8, 9]}),
+        (["b", "c"], None, {"b": [4, 5, 6], "c": [7, 8, 9]}),
+        (slice(None, 2), None, {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        (slice(2, None), None, {"a": [3], "b": [6], "c": [9], "d": [2]}),
+        (slice("a", "b"), None, {"a": [1, 2, 3], "b": [4, 5, 6]}),
+        ((0, 1), slice(None), {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        ([0, 1], slice(None), {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}),
+        (
+            [0, 1],
+            ["a", "b", "c", "d"],
+            {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]},
+        ),
+    ],
+)
+def test_slice_slice_columns(
+    constructor_eager: ConstructorEager,
+    row_selector: Any,
+    col_selector: Any,
+    expected: dict[str, list[Any]],
+) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df[[0, 1], "b":"c"]  # type: ignore[misc]
-    expected = {"b": [4, 5], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], :"c"]  # type: ignore[misc]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], "a":"d":2]  # type: ignore[misc]
-    expected = {"a": [1, 2], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], "b":]  # type: ignore[misc]
-    expected = {"b": [4, 5], "c": [7, 8], "d": [1, 4]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], 1:3]
-    expected = {"b": [4, 5], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], :3]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], 0:4:2]
-    expected = {"a": [1, 2], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], 1:]
-    expected = {"b": [4, 5], "c": [7, 8], "d": [1, 4]}
-    assert_equal_data(result, expected)
-    result = df[:, ["b", "d"]]
-    expected = {"b": [4, 5, 6], "d": [1, 4, 2]}
-    assert_equal_data(result, expected)
-    result = df[:, [0, 2]]
-    expected = {"a": [1, 2, 3], "c": [7, 8, 9]}
-    assert_equal_data(result, expected)
-    result = df[:2, [0, 2]]
-    expected = {"a": [1, 2], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[:2, ["a", "c"]]
-    expected = {"a": [1, 2], "c": [7, 8]}
-    assert_equal_data(result, expected)
-    result = df[1:, [0, 2]]
-    expected = {"a": [2, 3], "c": [8, 9]}
-    assert_equal_data(result, expected)
-    result = df[1:, ["a", "c"]]
-    expected = {"a": [2, 3], "c": [8, 9]}
-    assert_equal_data(result, expected)
-    result = df[["b", "c"]]
-    expected = {"b": [4, 5, 6], "c": [7, 8, 9]}
-    assert_equal_data(result, expected)
-    result = df[:2]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
-    assert_equal_data(result, expected)
-    result = df[2:]
-    expected = {"a": [3], "b": [6], "c": [9], "d": [2]}
-    assert_equal_data(result, expected)
-    # mypy says "Slice index must be an integer", but we do in fact support
-    # using string slices
-    result = df["a":"b"]  # type: ignore[misc]
-    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    assert_equal_data(result, expected)
-    result = df[(0, 1), :]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], :]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
-    assert_equal_data(result, expected)
-    result = df[[0, 1], df.columns]
-    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    result = df[row_selector] if col_selector is None else df[row_selector, col_selector]
     assert_equal_data(result, expected)
 
 

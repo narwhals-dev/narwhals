@@ -22,14 +22,11 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
     dtype: DType | None,
     expected_lit: list[Any],
 ) -> None:
-    if "pyspark" in str(constructor) and dtype is not None:
-        request.applymarker(pytest.mark.xfail)
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
@@ -43,7 +40,7 @@ def test_lit(
 
 
 def test_lit_error(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     with pytest.raises(
@@ -83,34 +80,21 @@ def test_lit_out_name(constructor: Constructor) -> None:
         ("right_scalar", nw.col("a") + 1, [2, 4, 3]),
         ("left_scalar_with_agg", 1 + nw.col("a").mean(), [3]),
         ("right_scalar_with_agg", nw.col("a").mean() - 1, [1]),
+        ("lit_compare", nw.col("a") == nw.lit(3), [False, True, False]),
     ],
 )
-def test_lit_operation(
+def test_lit_operation_in_select(
     constructor: Constructor,
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and col_name in (
-        "left_scalar_with_agg",
-        "left_lit_with_agg",
-        "right_lit",
-        "right_lit_with_agg",
-    ):
-        request.applymarker(pytest.mark.xfail)
     if (
         "dask" in str(constructor)
         and col_name in ("left_lit", "left_scalar")
         and DASK_VERSION < (2024, 10)
     ):
-        request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and col_name in {
-        "left_lit_with_agg",
-        "left_scalar_with_agg",
-        "right_lit_with_agg",
-        "right_lit",
-    }:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2]}
@@ -121,9 +105,30 @@ def test_lit_operation(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("col_name", "expr", "expected_result"),
+    [
+        ("lit_and_scalar", (nw.lit(2) + 1), [3, 3, 3]),
+        ("scalar_and_lit", (1 + nw.lit(2)), [3, 3, 3]),
+    ],
+)
+def test_lit_operation_in_with_columns(
+    constructor: Constructor,
+    col_name: str,
+    expr: nw.Expr,
+    expected_result: list[int],
+) -> None:
+    data = {"a": [1, 3, 2]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw).lazy()
+    result = df.with_columns(expr.alias(col_name))
+    expected = {"a": data["a"], col_name: expected_result}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
+    if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11637
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1]}))

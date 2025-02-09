@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Generic
 from typing import Literal
 from typing import Protocol
@@ -10,23 +11,19 @@ from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
-    import sys
+    from types import ModuleType
 
-    from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
+    import numpy as np
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
+    from narwhals.utils import Implementation
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -54,11 +51,17 @@ class CompliantSeries(Protocol):
 class CompliantDataFrame(Protocol):
     def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantDataFrame: ...  # `select` where all args are column names
 
 
 class CompliantLazyFrame(Protocol):
     def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> CompliantLazyFrame: ...  # `select` where all args are column names
 
 
 CompliantSeriesT_co = TypeVar(
@@ -69,11 +72,12 @@ CompliantSeriesT_co = TypeVar(
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
-    _output_names: list[str] | None
-    _root_names: list[str] | None
+    _evaluate_output_names: Callable[
+        [CompliantDataFrame | CompliantLazyFrame], Sequence[str]
+    ]
+    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
     _depth: int
     _function_name: str
-    _kwargs: dict[str, Any]
 
     def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
     def __narwhals_expr__(self) -> None: ...
@@ -97,6 +101,10 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def lit(
         self, value: Any, dtype: DType | None
     ) -> CompliantExpr[CompliantSeriesT_co]: ...
+
+
+class SupportsNativeNamespace(Protocol):
+    def __native_namespace__(self) -> ModuleType: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -236,6 +244,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",
@@ -248,6 +257,14 @@ SizeUnit: TypeAlias = Literal[
     "gigabytes",
     "terabytes",
 ]
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 
 
 class DTypes:
@@ -277,6 +294,14 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+
+
+if TYPE_CHECKING:
+    # This one needs to be in TYPE_CHECKING to pass on 3.9,
+    # and can only be defined after CompliantExpr has been defined
+    IntoCompliantExpr: TypeAlias = (
+        CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co
+    )
 
 
 __all__ = [

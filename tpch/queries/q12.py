@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(line_item_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var1 = "MAIL"
     var2 = "SHIP"

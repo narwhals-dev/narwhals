@@ -65,7 +65,12 @@ jobs:
       matrix:
         python-version: ["3.11", "3.13"]
         os: [ubuntu-latest]
+        include:
+          - python-version: "3.11"
+            polars_streaming: true
     runs-on: ${{ matrix.os }}
+    env:
+      NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,4 +100,4 @@ jobs:
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: pytest narwhals --doctest-modules
+        run: pytest narwhals/*.py --doctest-modules

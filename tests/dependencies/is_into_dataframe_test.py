@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class DictDataFrame:
-    def __init__(self, data: dict[str, list[Any]]) -> None:
+    def __init__(self: Self, data: dict[str, list[Any]]) -> None:
         self._data = data
 
     def __len__(self) -> int:  # pragma: no cover

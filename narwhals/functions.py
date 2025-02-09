@@ -13,17 +13,24 @@ from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import extract_compliant
-from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+from narwhals._expression_parsing import operation_aggregates
+from narwhals._expression_parsing import operation_changes_length
+from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_2d
+from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
+from narwhals.schema import Schema
 from narwhals.translate import from_native
+from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
+from narwhals.utils import validate_native_namespace_and_backend
 
 # Missing type parameters for generic type "DataFrame"
 # However, trying to provide one results in mypy still complaining...
@@ -34,15 +41,17 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
+    import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import _2DArray
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -102,117 +111,62 @@ def concat(
 
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
-        >>> data_2 = {"a": [5, 2], "b": [1, 4]}
 
-        >>> df_pd_1 = pd.DataFrame(data_1)
-        >>> df_pd_2 = pd.DataFrame(data_2)
-        >>> df_pl_1 = pl.DataFrame(data_1)
-        >>> df_pl_2 = pl.DataFrame(data_2)
+        Let's look at one case a for vertical concatenation (pandas backed):
 
-        Let's define a dataframe-agnostic function:
+        >>> df_pd_1 = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        >>> df_pd_2 = nw.from_native(pd.DataFrame({"a": [5, 2], "b": [1, 4]}))
+        >>> nw.concat([df_pd_1, df_pd_2], how="vertical")
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        a  b      |
+        |     0  1  4      |
+        |     1  2  5      |
+        |     2  3  6      |
+        |     0  5  1      |
+        |     1  2  4      |
+        └──────────────────┘
 
-        >>> @nw.narwhalify
-        ... def agnostic_vertical_concat(df1, df2):
-        ...     return nw.concat([df1, df2], how="vertical")
+        Let's look at one case a for horizontal concatenation (polars backed):
 
-        >>> agnostic_vertical_concat(df_pd_1, df_pd_2)
-           a  b
-        0  1  4
-        1  2  5
-        2  3  6
-        0  5  1
-        1  2  4
-        >>> agnostic_vertical_concat(df_pl_1, df_pl_2)
-        shape: (5, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 4   │
-        │ 2   ┆ 5   │
-        │ 3   ┆ 6   │
-        │ 5   ┆ 1   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+        >>> df_pl_1 = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        >>> df_pl_2 = nw.from_native(pl.DataFrame({"c": [5, 2], "d": [1, 4]}))
+        >>> nw.concat([df_pl_1, df_pl_2], how="horizontal")
+        ┌───────────────────────────┐
+        |    Narwhals DataFrame     |
+        |---------------------------|
+        |shape: (3, 4)              |
+        |┌─────┬─────┬──────┬──────┐|
+        |│ a   ┆ b   ┆ c    ┆ d    │|
+        |│ --- ┆ --- ┆ ---  ┆ ---  │|
+        |│ i64 ┆ i64 ┆ i64  ┆ i64  │|
+        |╞═════╪═════╪══════╪══════╡|
+        |│ 1   ┆ 4   ┆ 5    ┆ 1    │|
+        |│ 2   ┆ 5   ┆ 2    ┆ 4    │|
+        |│ 3   ┆ 6   ┆ null ┆ null │|
+        |└─────┴─────┴──────┴──────┘|
+        └───────────────────────────┘
 
-        Let's look at case a for horizontal concatenation:
+        Let's look at one case a for diagonal concatenation (pyarrow backed):
 
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
-        >>> data_2 = {"c": [5, 2], "d": [1, 4]}
-
-        >>> df_pd_1 = pd.DataFrame(data_1)
-        >>> df_pd_2 = pd.DataFrame(data_2)
-        >>> df_pl_1 = pl.DataFrame(data_1)
-        >>> df_pl_2 = pl.DataFrame(data_2)
-
-        Defining a dataframe-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def agnostic_horizontal_concat(df1, df2):
-        ...     return nw.concat([df1, df2], how="horizontal")
-
-        >>> agnostic_horizontal_concat(df_pd_1, df_pd_2)
-           a  b    c    d
-        0  1  4  5.0  1.0
-        1  2  5  2.0  4.0
-        2  3  6  NaN  NaN
-
-        >>> agnostic_horizontal_concat(df_pl_1, df_pl_2)
-        shape: (3, 4)
-        ┌─────┬─────┬──────┬──────┐
-        │ a   ┆ b   ┆ c    ┆ d    │
-        │ --- ┆ --- ┆ ---  ┆ ---  │
-        │ i64 ┆ i64 ┆ i64  ┆ i64  │
-        ╞═════╪═════╪══════╪══════╡
-        │ 1   ┆ 4   ┆ 5    ┆ 1    │
-        │ 2   ┆ 5   ┆ 2    ┆ 4    │
-        │ 3   ┆ 6   ┆ null ┆ null │
-        └─────┴─────┴──────┴──────┘
-
-        Let's look at case a for diagonal concatenation:
-
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> data_1 = {"a": [1, 2], "b": [3.5, 4.5]}
-        >>> data_2 = {"a": [3, 4], "z": ["x", "y"]}
-
-        >>> df_pd_1 = pd.DataFrame(data_1)
-        >>> df_pd_2 = pd.DataFrame(data_2)
-        >>> df_pl_1 = pl.DataFrame(data_1)
-        >>> df_pl_2 = pl.DataFrame(data_2)
-
-        Defining a dataframe-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def agnostic_diagonal_concat(df1, df2):
-        ...     return nw.concat([df1, df2], how="diagonal")
-
-        >>> agnostic_diagonal_concat(df_pd_1, df_pd_2)
-           a    b    z
-        0  1  3.5  NaN
-        1  2  4.5  NaN
-        0  3  NaN    x
-        1  4  NaN    y
-
-        >>> agnostic_diagonal_concat(df_pl_1, df_pl_2)
-        shape: (4, 3)
-        ┌─────┬──────┬──────┐
-        │ a   ┆ b    ┆ z    │
-        │ --- ┆ ---  ┆ ---  │
-        │ i64 ┆ f64  ┆ str  │
-        ╞═════╪══════╪══════╡
-        │ 1   ┆ 3.5  ┆ null │
-        │ 2   ┆ 4.5  ┆ null │
-        │ 3   ┆ null ┆ x    │
-        │ 4   ┆ null ┆ y    │
-        └─────┴──────┴──────┘
+        >>> df_pa_1 = nw.from_native(pa.table({"a": [1, 2], "b": [3.5, 4.5]}))
+        >>> df_pa_2 = nw.from_native(pa.table({"a": [3, 4], "z": ["x", "y"]}))
+        >>> nw.concat([df_pa_1, df_pa_2], how="diagonal")
+        ┌──────────────────────────┐
+        |    Narwhals DataFrame    |
+        |--------------------------|
+        |pyarrow.Table             |
+        |a: int64                  |
+        |b: double                 |
+        |z: string                 |
+        |----                      |
+        |a: [[1,2],[3,4]]          |
+        |b: [[3.5,4.5],[null,null]]|
+        |z: [[null,null],["x","y"]]|
+        └──────────────────────────┘
     """
     if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
         msg = "Only vertical, horizontal and diagonal concatenations are supported."
@@ -250,51 +204,19 @@ def new_series(
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT, IntoSeriesT
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-
-        Let's define a dataframe-agnostic function:
-
-        >>> def agnostic_new_series(df_native: IntoFrameT) -> IntoSeriesT:
-        ...     values = [4, 1, 2, 3]
-        ...     native_namespace = nw.get_native_namespace(df_native)
-        ...     return nw.new_series(
-        ...         name="a",
-        ...         values=values,
-        ...         dtype=nw.Int32,
-        ...         native_namespace=native_namespace,
-        ...     ).to_native()
-
-        We can then pass any supported eager library, such as pandas / Polars / PyArrow:
-
-        >>> agnostic_new_series(pd.DataFrame(data))
-        0    4
-        1    1
-        2    2
-        3    3
-        Name: a, dtype: int32
-        >>> agnostic_new_series(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
-        shape: (4,)
-        Series: 'a' [i32]
-        [
-           4
-           1
-           2
-           3
-        ]
-        >>> agnostic_new_series(pa.table(data))
-        <pyarrow.lib.ChunkedArray object at ...>
-        [
-          [
-            4,
-            1,
-            2,
-            3
-          ]
-        ]
+        >>>
+        >>> values = [4, 1, 2, 3]
+        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, native_namespace=pd)
+        ┌─────────────────────┐
+        |   Narwhals Series   |
+        |---------------------|
+        |0    4               |
+        |1    1               |
+        |2    2               |
+        |3    3               |
+        |Name: a, dtype: int32|
+        └─────────────────────┘
     """
     return _new_series_impl(
         name,
@@ -326,33 +248,32 @@ def _new_series_impl(
             dtype_pl = None
 
         native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
+    elif implementation.is_pandas_like():
         if dtype:
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            backend_version = parse_version(native_namespace.__version__)
-            dtype = pandas_like_narwhals_to_native_dtype(
+            backend_version = parse_version(native_namespace)
+            pd_dtype = pandas_like_narwhals_to_native_dtype(
                 dtype, None, implementation, backend_version, version
             )
-        native_series = native_namespace.Series(values, name=name, dtype=dtype)
+            native_series = native_namespace.Series(values, name=name, dtype=pd_dtype)
+        else:
+            native_series = native_namespace.Series(values, name=name)
 
     elif implementation is Implementation.PYARROW:
+        pa_dtype: pa.DataType | None = None
         if dtype:
             from narwhals._arrow.utils import (
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
-        native_series = native_namespace.chunked_array([values], type=dtype)
+            pa_dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
+        native_series = native_namespace.chunked_array([values], type=pa_dtype)
 
-    elif implementation is Implementation.DASK:
-        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+    elif implementation is Implementation.DASK:  # pragma: no cover
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
@@ -369,6 +290,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
+    backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -383,102 +305,85 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
+        backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
+
+                `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.26.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-
-        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
-
-        >>> def agnostic_from_dict(df_native: IntoFrameT) -> IntoFrameT:
-        ...     new_data = {"c": [5, 2], "d": [1, 4]}
-        ...     native_namespace = nw.get_native_namespace(df_native)
-        ...     return nw.from_dict(new_data, native_namespace=native_namespace).to_native()
-
-        Let's see what happens when passing pandas, Polars or PyArrow input:
-
-        >>> agnostic_from_dict(pd.DataFrame(data))
-           c  d
-        0  5  1
-        1  2  4
-        >>> agnostic_from_dict(pl.DataFrame(data))
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ c   ┆ d   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 5   ┆ 1   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
-        >>> agnostic_from_dict(pa.table(data))
-        pyarrow.Table
-        c: int64
-        d: int64
-        ----
-        c: [[5,2]]
-        d: [[1,4]]
+        >>> data = {"c": [5, 2], "d": [1, 4]}
+        >>> nw.from_dict(data, backend="pandas")
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        c  d      |
+        |     0  5  1      |
+        |     1  2  4      |
+        └──────────────────┘
     """
-    return _from_dict_impl(
-        data,
-        schema,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
     )
+    return _from_dict_impl(data, schema, backend=backend)
 
 
 def _from_dict_impl(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
-    version: Version,
+    backend: ModuleType | Implementation | str | None = None,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
-    from narwhals.translate import to_native
 
     if not data:
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
-    if native_namespace is None:
+    if backend is None:
         for val in data.values():
             if isinstance(val, Series):
                 native_namespace = val.__native_namespace__()
                 break
         else:
-            msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
+            msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
         data = {key: to_native(value, pass_through=True) for key, value in data.items()}
-    implementation = Implementation.from_native_namespace(native_namespace)
+        eager_backend = Implementation.from_native_namespace(native_namespace)
+    else:
+        eager_backend = Implementation.from_backend(backend)
+        native_namespace = eager_backend.to_native_namespace()
 
-    if implementation is Implementation.POLARS:
-        if schema:
-            from narwhals._polars.utils import (
-                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
-            )
-
-            schema_pl = {
-                name: polars_narwhals_to_native_dtype(dtype, version=version)
-                for name, dtype in schema.items()
-            }
-        else:
-            schema_pl = None
-
-        native_frame = native_namespace.from_dict(data, schema=schema_pl)
-    elif implementation in {
+    supported_eager_backends = (
+        Implementation.POLARS,
         Implementation.PANDAS,
+        Implementation.PYARROW,
         Implementation.MODIN,
         Implementation.CUDF,
-    }:
+    )
+    if eager_backend is not None and eager_backend not in supported_eager_backends:
+        msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
+        raise ValueError(msg)
+    if eager_backend is Implementation.POLARS:
+        schema_pl = Schema(schema).to_polars() if schema else None
+        native_frame = native_namespace.from_dict(data, schema=schema_pl)
+    elif eager_backend.is_pandas_like():
+        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+
         aligned_data = {}
         left_most_series = None
         for key, native_series in data.items():
@@ -499,32 +404,18 @@ def _from_dict_impl(
         native_frame = native_namespace.DataFrame.from_dict(aligned_data)
 
         if schema:
-            from narwhals._pandas_like.utils import (
-                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
-            )
+            from narwhals._pandas_like.utils import get_dtype_backend
 
-            backend_version = parse_version(native_namespace.__version__)
-            schema = {
-                name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
-                )
-                for name, native_type in native_frame.dtypes.items()
-            }
-            native_frame = native_frame.astype(schema)
-
-    elif implementation is Implementation.PYARROW:
-        if schema:
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            it: Iterable[DTypeBackend] = (
+                get_dtype_backend(native_type, eager_backend)
+                for native_type in native_frame.dtypes
             )
+            pd_schema = Schema(schema).to_pandas(it)
+            native_frame = native_frame.astype(pd_schema)
 
-            schema = native_namespace.schema(
-                [
-                    (name, arrow_narwhals_to_native_dtype(dtype, version))
-                    for name, dtype in schema.items()
-                ]
-            )
-        native_frame = native_namespace.table(data, schema=schema)
+    elif eager_backend is Implementation.PYARROW:
+        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        native_frame = native_namespace.table(data, schema=pa_schema)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -537,7 +428,7 @@ def _from_dict_impl(
 
 
 def from_numpy(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
@@ -559,121 +450,25 @@ def from_numpy(
         A new DataFrame.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
+        >>> import numpy as np
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> import numpy as np
-        >>> from narwhals.typing import IntoFrameT
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-
-        Let's create a new dataframe of the same class as the dataframe we started with, from a NumPy ndarray of new data:
-
-        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
-        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
-        ...     df = nw.from_native(df_native)
-        ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(new_data, native_namespace=native_namespace).to_native()
-
-        Let's see what happens when passing pandas, Polars or PyArrow input:
-
-        >>> agnostic_from_numpy(pd.DataFrame(data))
-           column_0  column_1  column_2
-        0         5         2         1
-        1         1         4         3
-        >>> agnostic_from_numpy(pl.DataFrame(data))
-        shape: (2, 3)
-        ┌──────────┬──────────┬──────────┐
-        │ column_0 ┆ column_1 ┆ column_2 │
-        │ ---      ┆ ---      ┆ ---      │
-        │ i64      ┆ i64      ┆ i64      │
-        ╞══════════╪══════════╪══════════╡
-        │ 5        ┆ 2        ┆ 1        │
-        │ 1        ┆ 4        ┆ 3        │
-        └──────────┴──────────┴──────────┘
-        >>> agnostic_from_numpy(pa.table(data))
-        pyarrow.Table
-        column_0: int64
-        column_1: int64
-        column_2: int64
-        ----
-        column_0: [[5,1]]
-        column_1: [[2,4]]
-        column_2: [[1,3]]
-
-        Let's specify the column names:
-
-        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
-        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
-        ...     schema = ["c", "d", "e"]
-        ...     df = nw.from_native(df_native)
-        ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(
-        ...         new_data, native_namespace=native_namespace, schema=schema
-        ...     ).to_native()
-
-        Let's see the modified outputs:
-
-        >>> agnostic_from_numpy(pd.DataFrame(data))
-           c  d  e
-        0  5  2  1
-        1  1  4  3
-        >>> agnostic_from_numpy(pl.DataFrame(data))
-        shape: (2, 3)
-        ┌─────┬─────┬─────┐
-        │ c   ┆ d   ┆ e   │
-        │ --- ┆ --- ┆ --- │
-        │ i64 ┆ i64 ┆ i64 │
-        ╞═════╪═════╪═════╡
-        │ 5   ┆ 2   ┆ 1   │
-        │ 1   ┆ 4   ┆ 3   │
-        └─────┴─────┴─────┘
-        >>> agnostic_from_numpy(pa.table(data))
-        pyarrow.Table
-        c: int64
-        d: int64
-        e: int64
-        ----
-        c: [[5,1]]
-        d: [[2,4]]
-        e: [[1,3]]
-
-        Let's modify the function so that it specifies the schema:
-
-        >>> def agnostic_from_numpy(df_native: IntoFrameT) -> IntoFrameT:
-        ...     new_data = np.array([[5, 2, 1], [1, 4, 3]])
-        ...     schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
-        ...     df = nw.from_native(df_native)
-        ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_numpy(
-        ...         new_data, native_namespace=native_namespace, schema=schema
-        ...     ).to_native()
-
-        Let's see the outputs:
-
-        >>> agnostic_from_numpy(pd.DataFrame(data))
-           c    d  e
-        0  5  2.0  1
-        1  1  4.0  3
-        >>> agnostic_from_numpy(pl.DataFrame(data))
-        shape: (2, 3)
-        ┌─────┬─────┬─────┐
-        │ c   ┆ d   ┆ e   │
-        │ --- ┆ --- ┆ --- │
-        │ i16 ┆ f32 ┆ i8  │
-        ╞═════╪═════╪═════╡
-        │ 5   ┆ 2.0 ┆ 1   │
-        │ 1   ┆ 4.0 ┆ 3   │
-        └─────┴─────┴─────┘
-        >>> agnostic_from_numpy(pa.table(data))
-        pyarrow.Table
-        c: int16
-        d: float
-        e: int8
-        ----
-        c: [[5,1]]
-        d: [[2,4]]
-        e: [[1,3]]
+        >>>
+        >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
+        >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+        >>> nw.from_numpy(arr, schema=schema, native_namespace=pa)
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  pyarrow.Table   |
+        |  c: int16        |
+        |  d: float        |
+        |  e: int8         |
+        |  ----            |
+        |  c: [[5,1]]      |
+        |  d: [[2,4]]      |
+        |  e: [[1,3]]      |
+        └──────────────────┘
     """
     return _from_numpy_impl(
         data,
@@ -684,7 +479,7 @@ def from_numpy(
 
 
 def _from_numpy_impl(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
@@ -692,7 +487,7 @@ def _from_numpy_impl(
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
-    if data.ndim != 2:
+    if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
@@ -718,25 +513,26 @@ def _from_numpy_impl(
             raise TypeError(msg)
         native_frame = native_namespace.from_numpy(data, schema=schema)
 
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
+    elif implementation.is_pandas_like():
         if isinstance(schema, (dict, Schema)):
+            from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            backend_version = parse_version(native_namespace.__version__)
-            schema = {
+            backend_version = parse_version(native_namespace)
+            pd_schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, backend_version, version
+                    dtype=schema[name],
+                    dtype_backend=get_dtype_backend(native_type, implementation),
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
                 )
                 for name, native_type in schema.items()
             }
             native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
-                schema
+                pd_schema
             )
         elif isinstance(schema, list):
             native_frame = native_namespace.DataFrame(data, columns=schema)
@@ -805,43 +601,30 @@ def from_arrow(
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-
-        Let's define a dataframe-agnostic function which creates a PyArrow
-        Table.
-
-        >>> def agnostic_to_arrow(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return nw.from_arrow(df, native_namespace=pa).to_native()
-
-        Let's see what happens when passing pandas / Polars input:
-
-        >>> agnostic_to_arrow(pd.DataFrame(data))
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[1,2,3]]
-        b: [[4,5,6]]
-        >>> agnostic_to_arrow(pl.DataFrame(data))
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[1,2,3]]
-        b: [[4,5,6]]
+        >>>
+        >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
+        >>> nw.from_arrow(df_native, native_namespace=pl)
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (2, 2)   |
+        |  ┌─────┬─────┐   |
+        |  │ a   ┆ b   │   |
+        |  │ --- ┆ --- │   |
+        |  │ i64 ┆ f64 │   |
+        |  ╞═════╪═════╡   |
+        |  │ 1   ┆ 4.2 │   |
+        |  │ 2   ┆ 5.1 │   |
+        |  └─────┴─────┘   |
+        └──────────────────┘
     """
     if not hasattr(native_frame, "__arrow_c_stream__"):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
 
-    if implementation is Implementation.POLARS and parse_version(
-        native_namespace.__version__
-    ) >= (1, 3):
+    if implementation.is_polars() and parse_version(native_namespace) >= (1, 3):
         native_frame = native_namespace.DataFrame(native_frame)
     elif implementation in {
         Implementation.PANDAS,
@@ -856,7 +639,7 @@ def from_arrow(
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+        if parse_version(pa) < (14, 0):  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from None
 
@@ -921,23 +704,13 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    deps = (
-        "pandas",
-        "polars",
-        "cudf",
-        "modin",
-        "pyarrow",
-        "numpy",
-    )
-
-    from . import __version__
-
-    deps_info = {
-        "narwhals": __version__,
-    }
-
     from importlib.metadata import PackageNotFoundError
     from importlib.metadata import version
+
+    from narwhals import __version__
+
+    deps = ("pandas", "polars", "cudf", "modin", "pyarrow", "numpy")
+    deps_info = {"narwhals": __version__}
 
     for modname in deps:
         try:
@@ -1005,42 +778,16 @@ def read_csv(
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoDataFrame
-        >>> from types import ModuleType
-
-        Let's create an agnostic function that reads a csv file with a specified native namespace:
-
-        >>> def agnostic_read_csv(native_namespace: ModuleType) -> IntoDataFrame:
-        ...     return nw.read_csv("file.csv", native_namespace=native_namespace).to_native()
-
-        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
-
-        >>> agnostic_read_csv(native_namespace=pd)  # doctest:+SKIP
-           a  b
-        0  1  4
-        1  2  5
-        2  3  6
-        >>> agnostic_read_csv(native_namespace=pl)  # doctest:+SKIP
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 4   │
-        │ 2   ┆ 5   │
-        │ 3   ┆ 6   │
-        └─────┴─────┘
-        >>> agnostic_read_csv(native_namespace=pa)  # doctest:+SKIP
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[1,2,3]]
-        b: [[4,5,6]]
+        >>>
+        >>> nw.read_csv("file.csv", native_namespace=pd)  # doctest:+SKIP
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        a   b     |
+        |     0  1   4     |
+        |     1  2   5     |
+        └──────────────────┘
     """
     return _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
 
@@ -1090,36 +837,18 @@ def scan_csv(
         LazyFrame.
 
     Examples:
-        >>> import dask.dataframe as dd
-        >>> import polars as pl
-        >>> import pyarrow as pa
+        >>> import duckdb
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrame
-        >>> from types import ModuleType
-
-        Let's create an agnostic function that lazily reads a csv file with a specified native namespace:
-
-        >>> def agnostic_scan_csv(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_csv("file.csv", native_namespace=native_namespace).to_native()
-
-        Then we can read the file by passing, for example, Polars or Dask namespaces:
-
-        >>> agnostic_scan_csv(native_namespace=pl).collect()  # doctest:+SKIP
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 4   │
-        │ 2   ┆ 5   │
-        │ 3   ┆ 6   │
-        └─────┴─────┘
-        >>> agnostic_scan_csv(native_namespace=dd).compute()  # doctest:+SKIP
-           a  b
-        0  1  4
-        1  2  5
-        2  3  6
+        >>>
+        >>> nw.scan_csv("file.csv", native_namespace=duckdb).to_native()  # doctest:+SKIP
+        ┌─────────┬───────┐
+        │    a    │   b   │
+        │ varchar │ int32 │
+        ├─────────┼───────┤
+        │ x       │     1 │
+        │ y       │     2 │
+        │ z       │     3 │
+        └─────────┴───────┘
     """
     return _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
 
@@ -1172,45 +901,20 @@ def read_parquet(
         DataFrame.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoDataFrame
-        >>> from types import ModuleType
-
-        Let's create an agnostic function that reads a parquet file with a specified native namespace:
-
-        >>> def agnostic_read_parquet(native_namespace: ModuleType) -> IntoDataFrame:
-        ...     return nw.read_parquet(
-        ...         "file.parquet", native_namespace=native_namespace
-        ...     ).to_native()
-
-        Then we can read the file by passing pandas, Polars or PyArrow namespaces:
-
-        >>> agnostic_read_parquet(native_namespace=pd)  # doctest:+SKIP
-           a  b
-        0  1  4
-        1  2  5
-        2  3  6
-        >>> agnostic_read_parquet(native_namespace=pl)  # doctest:+SKIP
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 4   │
-        │ 2   ┆ 5   │
-        │ 3   ┆ 6   │
-        └─────┴─────┘
-        >>> agnostic_read_parquet(native_namespace=pa)  # doctest:+SKIP
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[1,2,3]]
-        b: [[4,5,6]]
+        >>>
+        >>> nw.read_parquet("file.parquet", native_namespace=pa)  # doctest:+SKIP
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |pyarrow.Table     |
+        |a: int64          |
+        |c: double         |
+        |----              |
+        |a: [[1,2]]        |
+        |c: [[0.2,0.1]]    |
+        └──────────────────┘
     """
     return _read_parquet_impl(source, native_namespace=native_namespace, **kwargs)
 
@@ -1262,37 +966,18 @@ def scan_parquet(
 
     Examples:
         >>> import dask.dataframe as dd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrame
-        >>> from types import ModuleType
-
-        Let's create an agnostic function that lazily reads a parquet file with a specified native namespace:
-
-        >>> def agnostic_scan_parquet(native_namespace: ModuleType) -> IntoFrame:
-        ...     return nw.scan_parquet(
-        ...         "file.parquet", native_namespace=native_namespace
-        ...     ).to_native()
-
-        Then we can read the file by passing, for example, Polars or Dask namespaces:
-
-        >>> agnostic_scan_parquet(native_namespace=pl).collect()  # doctest:+SKIP
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 4   │
-        │ 2   ┆ 5   │
-        │ 3   ┆ 6   │
-        └─────┴─────┘
-        >>> agnostic_scan_parquet(native_namespace=dd).compute()  # doctest:+SKIP
-           a  b
-        0  1  4
-        1  2  5
-        2  3  6
+        >>>
+        >>> nw.scan_parquet(
+        ...     "file.parquet", native_namespace=dd
+        ... ).collect()  # doctest:+SKIP
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        a   b     |
+        |     0  1   4     |
+        |     1  2   5     |
+        └──────────────────┘
     """
     return _scan_parquet_impl(source, native_namespace=native_namespace, **kwargs)
 
@@ -1336,53 +1021,30 @@ def col(*names: str | Iterable[str]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_col(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.col("a") * nw.col("b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_col`:
-
-        >>> agnostic_col(df_pd)
-           a
-        0  3
-        1  8
-
-        >>> agnostic_col(df_pl)
-        shape: (2, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 3   │
-        │ 8   │
-        └─────┘
-
-        >>> agnostic_col(df_pa)
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[3,8]]
+        >>> df_native = pl.DataFrame({"a": [1, 2], "b": [3, 4], "c": ["x", "z"]})
+        >>> nw.from_native(df_native).select(nw.col("a", "b") * nw.col("b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (2, 2)   |
+        |  ┌─────┬─────┐   |
+        |  │ a   ┆ b   │   |
+        |  │ --- ┆ --- │   |
+        |  │ i64 ┆ i64 │   |
+        |  ╞═════╪═════╡   |
+        |  │ 3   ┆ 9   │   |
+        |  │ 8   ┆ 16  │   |
+        |  └─────┴─────┘   |
+        └──────────────────┘
     """
 
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1399,52 +1061,27 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_nth(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.nth(0) * 2).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_nth`:
-
-        >>> agnostic_nth(df_pd)
-           a
-        0  2
-        1  4
-
-        >>> agnostic_nth(df_pl)
-        shape: (2, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 2   │
-        │ 4   │
-        └─────┘
-
-        >>> agnostic_nth(df_pa)
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[2,4]]
+        >>> df_native = pa.table({"a": [1, 2], "b": [3, 4], "c": [0.123, 3.14]})
+        >>> nw.from_native(df_native).select(nw.nth(0, 2) * 2)
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |pyarrow.Table     |
+        |a: int64          |
+        |c: double         |
+        |----              |
+        |a: [[2,4]]        |
+        |c: [[0.246,6.28]] |
+        └──────────────────┘
     """
 
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1455,53 +1092,25 @@ def all_() -> Expr:
         A new expression.
 
     Examples:
-        >>> import polars as pl
         >>> import pandas as pd
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        Let's define a dataframe-agnostic function:
-
-        >>> def agnostic_all(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.all() * 2).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_all`:
-
-        >>> agnostic_all(df_pd)
-           a   b
-        0  2   8
-        1  4  10
-        2  6  12
-
-        >>> agnostic_all(df_pl)
-        shape: (3, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 2   ┆ 8   │
-        │ 4   ┆ 10  │
-        │ 6   ┆ 12  │
-        └─────┴─────┘
-
-        >>> agnostic_all(df_pa)
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[2,4,6]]
-        b: [[8,10,12]]
+        >>> df_native = pd.DataFrame({"a": [1, 2], "b": [3.14, 0.123]})
+        >>> nw.from_native(df_native).select(nw.all() * 2)
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |      a      b    |
+        |   0  2  6.280    |
+        |   1  4  0.246    |
+        └──────────────────┘
     """
-    return Expr(lambda plx: plx.all())
+    return Expr(
+        lambda plx: plx.all(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1513,48 +1122,28 @@ def len_() -> Expr:
 
     Examples:
         >>> import polars as pl
-        >>> import pandas as pd
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2], "b": [5, 10]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        Let's define a dataframe-agnostic function:
-
-        >>> def agnostic_len(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.len()).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_len`:
-
-        >>> agnostic_len(df_pd)
-           len
-        0    2
-        >>> agnostic_len(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ len │
-        │ --- │
-        │ u32 │
-        ╞═════╡
-        │ 2   │
-        └─────┘
-        >>> agnostic_len(df_pa)
-        pyarrow.Table
-        len: int64
-        ----
-        len: [[2]]
+        >>> df_native = pl.DataFrame({"a": [1, 2], "b": [5, None]})
+        >>> nw.from_native(df_native).select(nw.len())
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (1, 1)   |
+        |  ┌─────┐         |
+        |  │ len │         |
+        |  │ --- │         |
+        |  │ u32 │         |
+        |  ╞═════╡         |
+        |  │ 2   │         |
+        |  └─────┘         |
+        └──────────────────┘
     """
 
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func)
+    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=True)
 
 
 def sum(*columns: str) -> Expr:
@@ -1571,46 +1160,23 @@ def sum(*columns: str) -> Expr:
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_sum(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.sum("a")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_sum`:
-
-        >>> agnostic_sum(df_pd)
-           a
-        0  3
-
-        >>> agnostic_sum(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 3   │
-        └─────┘
-
-        >>> agnostic_sum(df_pa)
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[3]]
+        >>> df_native = pd.DataFrame({"a": [1, 2], "b": [-1.4, 6.2]})
+        >>> nw.from_native(df_native).select(nw.sum("a", "b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |       a    b     |
+        |    0  3  4.8     |
+        └──────────────────┘
     """
-    return Expr(lambda plx: plx.col(*columns).sum())
+    return Expr(
+        lambda plx: plx.col(*columns).sum(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def mean(*columns: str) -> Expr:
@@ -1626,47 +1192,28 @@ def mean(*columns: str) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 8, 3]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe agnostic function:
-
-        >>> def agnostic_mean(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.mean("a")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_mean`:
-
-        >>> agnostic_mean(df_pd)
-             a
-        0  4.0
-
-        >>> agnostic_mean(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ f64 │
-        ╞═════╡
-        │ 4.0 │
-        └─────┘
-
-        >>> agnostic_mean(df_pa)
-        pyarrow.Table
-        a: double
-        ----
-        a: [[4]]
+        >>> df_native = pa.table({"a": [1, 8, 3], "b": [3.14, 6.28, 42.1]})
+        >>> nw.from_native(df_native).select(nw.mean("a", "b"))
+        ┌─────────────────────────┐
+        |   Narwhals DataFrame    |
+        |-------------------------|
+        |pyarrow.Table            |
+        |a: double                |
+        |b: double                |
+        |----                     |
+        |a: [[4]]                 |
+        |b: [[17.173333333333336]]|
+        └─────────────────────────┘
     """
-    return Expr(lambda plx: plx.col(*columns).mean())
+    return Expr(
+        lambda plx: plx.col(*columns).mean(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def median(*columns: str) -> Expr:
@@ -1684,47 +1231,30 @@ def median(*columns: str) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [4, 5, 2]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        Let's define a dataframe agnostic function:
-
-        >>> def agnostic_median(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.median("a")).to_native()
-
-        We can then pass any supported library such as pandas, Polars, or
-        PyArrow to `agnostic_median`:
-
-        >>> agnostic_median(df_pd)
-             a
-        0  4.0
-
-        >>> agnostic_median(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ f64 │
-        ╞═════╡
-        │ 4.0 │
-        └─────┘
-
-        >>> agnostic_median(df_pa)
-        pyarrow.Table
-        a: double
-        ----
-        a: [[4]]
+        >>> df_native = pl.DataFrame({"a": [4, 5, 2]})
+        >>> nw.from_native(df_native).select(nw.median("a"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (1, 1)   |
+        |  ┌─────┐         |
+        |  │ a   │         |
+        |  │ --- │         |
+        |  │ f64 │         |
+        |  ╞═════╡         |
+        |  │ 4.0 │         |
+        |  └─────┘         |
+        └──────────────────┘
     """
-    return Expr(lambda plx: plx.col(*columns).median())
+    return Expr(
+        lambda plx: plx.col(*columns).median(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def min(*columns: str) -> Expr:
@@ -1740,47 +1270,28 @@ def min(*columns: str) -> Expr:
         A new expression.
 
     Examples:
-        >>> import polars as pl
-        >>> import pandas as pd
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2], "b": [5, 10]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        Let's define a dataframe-agnostic function:
-
-        >>> def agnostic_min(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.min("b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_min`:
-
-        >>> agnostic_min(df_pd)
-           b
-        0  5
-
-        >>> agnostic_min(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ b   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 5   │
-        └─────┘
-
-        >>> agnostic_min(df_pa)
-        pyarrow.Table
-        b: int64
-        ----
-        b: [[5]]
+        >>> df_native = pa.table({"a": [1, 2], "b": [5, 10]})
+        >>> nw.from_native(df_native).select(nw.min("a", "b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  pyarrow.Table   |
+        |  a: int64        |
+        |  b: int64        |
+        |  ----            |
+        |  a: [[1]]        |
+        |  b: [[5]]        |
+        └──────────────────┘
     """
-    return Expr(lambda plx: plx.col(*columns).min())
+    return Expr(
+        lambda plx: plx.col(*columns).min(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def max(*columns: str) -> Expr:
@@ -1796,47 +1307,24 @@ def max(*columns: str) -> Expr:
         A new expression.
 
     Examples:
-        >>> import polars as pl
         >>> import pandas as pd
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2], "b": [5, 10]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        Let's define a dataframe-agnostic function:
-
-        >>> def agnostic_max(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.max("a")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_max`:
-
-        >>> agnostic_max(df_pd)
-           a
-        0  2
-
-        >>> agnostic_max(df_pl)
-        shape: (1, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 2   │
-        └─────┘
-
-        >>> agnostic_max(df_pa)
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[2]]
+        >>> df_native = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> nw.from_native(df_native).select(nw.max("a", "b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        a   b     |
+        |     0  2  10     |
+        └──────────────────┘
     """
-    return Expr(lambda plx: plx.col(*columns).max())
+    return Expr(
+        lambda plx: plx.col(*columns).max(),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1853,56 +1341,40 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_sum_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.sum_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to `agnostic_sum_horizontal`:
-
-        >>> agnostic_sum_horizontal(df_pd)
-              a
-        0   6.0
-        1  12.0
-        2   3.0
-
-        >>> agnostic_sum_horizontal(df_pl)
-        shape: (3, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 6   │
-        │ 12  │
-        │ 3   │
-        └─────┘
-
-        >>> agnostic_sum_horizontal(df_pa)
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[6,12,3]]
+        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, None]})
+        >>> nw.from_native(df_native).with_columns(sum=nw.sum_horizontal("a", "b"))
+        ┌────────────────────┐
+        | Narwhals DataFrame |
+        |--------------------|
+        |shape: (3, 3)       |
+        |┌─────┬──────┬─────┐|
+        |│ a   ┆ b    ┆ sum │|
+        |│ --- ┆ ---  ┆ --- │|
+        |│ i64 ┆ i64  ┆ i64 │|
+        |╞═════╪══════╪═════╡|
+        |│ 1   ┆ 5    ┆ 6   │|
+        |│ 2   ┆ 10   ┆ 12  │|
+        |│ 3   ┆ null ┆ 3   │|
+        |└─────┴──────┴─────┘|
+        └────────────────────┘
     """
     if not exprs:
         msg = "At least one expression must be passed to `sum_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.sum_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -1920,59 +1392,38 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
-
-        We define a dataframe-agnostic function that computes the horizontal min of "a"
-        and "b" columns:
-
-        >>> def agnostic_min_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.min_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_min_horizontal`:
-
-        >>> agnostic_min_horizontal(pd.DataFrame(data))
-             a
-        0  1.0
-        1  5.0
-        2  3.0
-
-        >>> agnostic_min_horizontal(pl.DataFrame(data))
-        shape: (3, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 1   │
-        │ 5   │
-        │ 3   │
-        └─────┘
-
-        >>> agnostic_min_horizontal(pa.table(data))
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[1,5,3]]
+        >>> df_native = pa.table({"a": [1, 8, 3], "b": [4, 5, None]})
+        >>> nw.from_native(df_native).with_columns(h_min=nw.min_horizontal("a", "b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        | pyarrow.Table    |
+        | a: int64         |
+        | b: int64         |
+        | h_min: int64     |
+        | ----             |
+        | a: [[1,8,3]]     |
+        | b: [[4,5,null]]  |
+        | h_min: [[1,5,3]] |
+        └──────────────────┘
     """
     if not exprs:
         msg = "At least one expression must be passed to `min_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.min_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -1990,86 +1441,82 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
-
-        We define a dataframe-agnostic function that computes the horizontal max of "a"
-        and "b" columns:
-
-        >>> def agnostic_max_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.max_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_max_horizontal`:
-
-        >>> agnostic_max_horizontal(pd.DataFrame(data))
-             a
-        0  4.0
-        1  8.0
-        2  3.0
-
-        >>> agnostic_max_horizontal(pl.DataFrame(data))
-        shape: (3, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 4   │
-        │ 8   │
-        │ 3   │
-        └─────┘
-
-        >>> agnostic_max_horizontal(pa.table(data))
-        pyarrow.Table
-        a: int64
-        ----
-        a: [[4,8,3]]
+        >>> df_native = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, None]})
+        >>> nw.from_native(df_native).with_columns(h_max=nw.max_horizontal("a", "b"))
+        ┌──────────────────────┐
+        |  Narwhals DataFrame  |
+        |----------------------|
+        |shape: (3, 3)         |
+        |┌─────┬──────┬───────┐|
+        |│ a   ┆ b    ┆ h_max │|
+        |│ --- ┆ ---  ┆ ---   │|
+        |│ i64 ┆ i64  ┆ i64   │|
+        |╞═════╪══════╪═══════╡|
+        |│ 1   ┆ 4    ┆ 4     │|
+        |│ 8   ┆ 5    ┆ 8     │|
+        |│ 3   ┆ null ┆ 3     │|
+        |└─────┴──────┴───────┘|
+        └──────────────────────┘
     """
     if not exprs:
         msg = "At least one expression must be passed to `max_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.max_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
 class When:
-    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
         if not self._predicates:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
+        if any(
+            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
+            for x in self._predicates
+        ):
+            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
+            raise ShapeError(msg)
 
-    def _extract_predicates(self, plx: Any) -> Any:
-        return [extract_compliant(plx, v) for v in self._predicates]
+    def _extract_predicates(self: Self, plx: Any) -> Any:
+        return [
+            extract_compliant(plx, v, parse_column_name_as_expr=True)
+            for v in self._predicates
+        ]
 
-    def then(self, value: Any) -> Then:
+    def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
-                extract_compliant(plx, value)
-            )
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
+            ),
+            is_order_dependent=operation_is_order_dependent(*self._predicates, value),
+            changes_length=operation_changes_length(*self._predicates, value),
+            aggregates=operation_aggregates(*self._predicates, value),
         )
 
 
 class Then(Expr):
-    def otherwise(self, value: Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         return Expr(
             lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value)
-            )
+                extract_compliant(plx, value, parse_column_name_as_expr=True)
+            ),
+            is_order_dependent=operation_is_order_dependent(self, value),
+            changes_length=operation_changes_length(self, value),
+            aggregates=operation_aggregates(self, value),
         )
 
 
@@ -2096,54 +1543,21 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> data = {"a": [1, 2, 3], "b": [5, 10, 15]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_when_then_otherwise(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.with_columns(
-        ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
-        ...     ).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_when_then_otherwise`:
-
-        >>> agnostic_when_then_otherwise(df_pd)
-           a   b  a_when
-        0  1   5       5
-        1  2  10       5
-        2  3  15       6
-
-        >>> agnostic_when_then_otherwise(df_pl)
-        shape: (3, 3)
-        ┌─────┬─────┬────────┐
-        │ a   ┆ b   ┆ a_when │
-        │ --- ┆ --- ┆ ---    │
-        │ i64 ┆ i64 ┆ i32    │
-        ╞═════╪═════╪════════╡
-        │ 1   ┆ 5   ┆ 5      │
-        │ 2   ┆ 10  ┆ 5      │
-        │ 3   ┆ 15  ┆ 6      │
-        └─────┴─────┴────────┘
-
-        >>> agnostic_when_then_otherwise(df_pa)
-        pyarrow.Table
-        a: int64
-        b: int64
-        a_when: int64
-        ----
-        a: [[1,2,3]]
-        b: [[5,10,15]]
-        a_when: [[5,5,6]]
+        >>> df_native = pd.DataFrame(data)
+        >>> nw.from_native(df_native).with_columns(
+        ...     nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ... )
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |    a   b  a_when |
+        | 0  1   5       5 |
+        | 1  2  10       5 |
+        | 2  3  15       6 |
+        └──────────────────┘
     """
     return When(*predicates)
 
@@ -2159,70 +1573,43 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
         ... }
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
-        >>> df_pa = pa.table(data)
+        >>> df_native = pa.table(data)
+        >>> nw.from_native(df_native).select("a", "b", all=nw.all_horizontal("a", "b"))
+        ┌─────────────────────────────────────────┐
+        |           Narwhals DataFrame            |
+        |-----------------------------------------|
+        |pyarrow.Table                            |
+        |a: bool                                  |
+        |b: bool                                  |
+        |all: bool                                |
+        |----                                     |
+        |a: [[false,false,true,true,false,null]]  |
+        |b: [[false,true,true,null,null,null]]    |
+        |all: [[false,false,true,null,false,null]]|
+        └─────────────────────────────────────────┘
 
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_all_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_all_horizontal`:
-
-        >>> agnostic_all_horizontal(df_pd)
-               a      b    all
-        0  False  False  False
-        1  False   True  False
-        2   True   True   True
-        3   True   <NA>   <NA>
-        4  False   <NA>  False
-        5   <NA>   <NA>   <NA>
-
-        >>> agnostic_all_horizontal(df_pl)
-        shape: (6, 3)
-        ┌───────┬───────┬───────┐
-        │ a     ┆ b     ┆ all   │
-        │ ---   ┆ ---   ┆ ---   │
-        │ bool  ┆ bool  ┆ bool  │
-        ╞═══════╪═══════╪═══════╡
-        │ false ┆ false ┆ false │
-        │ false ┆ true  ┆ false │
-        │ true  ┆ true  ┆ true  │
-        │ true  ┆ null  ┆ null  │
-        │ false ┆ null  ┆ false │
-        │ null  ┆ null  ┆ null  │
-        └───────┴───────┴───────┘
-
-        >>> agnostic_all_horizontal(df_pa)
-        pyarrow.Table
-        a: bool
-        b: bool
-        all: bool
-        ----
-        a: [[false,false,true,true,false,null]]
-        b: [[false,true,true,null,null,null]]
-        all: [[false,false,true,null,false,null]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.all_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2239,48 +1626,17 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
-        >>> data = {"a": [1, 2]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_lit(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.with_columns(nw.lit(3)).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_lit`:
-
-        >>> agnostic_lit(df_pd)
-           a  literal
-        0  1        3
-        1  2        3
-
-        >>> agnostic_lit(df_pl)
-        shape: (2, 2)
-        ┌─────┬─────────┐
-        │ a   ┆ literal │
-        │ --- ┆ ---     │
-        │ i64 ┆ i32     │
-        ╞═════╪═════════╡
-        │ 1   ┆ 3       │
-        │ 2   ┆ 3       │
-        └─────┴─────────┘
-
-        >>> agnostic_lit(df_pa)
-        pyarrow.Table
-        a: int64
-        literal: int64
-        ----
-        a: [[1,2]]
-        literal: [[3,3]]
+        >>> df_native = pd.DataFrame({"a": [1, 2]})
+        >>> nw.from_native(df_native).with_columns(nw.lit(3))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |     a  literal   |
+        |  0  1        3   |
+        |  1  2        3   |
+        └──────────────────┘
     """
     if is_numpy_array(value):
         msg = (
@@ -2293,7 +1649,12 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(lambda plx: plx.lit(value, dtype))
+    return Expr(
+        lambda plx: plx.lit(value, dtype),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=True,
+    )
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -2307,70 +1668,47 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
         ...     "b": [False, True, True, None, None, None],
         ... }
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
-        >>> df_pa = pa.table(data)
-
-        We define a dataframe-agnostic function:
-
-        >>> def agnostic_any_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select("a", "b", any=nw.any_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_any_horizontal`:
-
-        >>> agnostic_any_horizontal(df_pd)
-               a      b    any
-        0  False  False  False
-        1  False   True   True
-        2   True   True   True
-        3   True   <NA>   True
-        4  False   <NA>   <NA>
-        5   <NA>   <NA>   <NA>
-
-        >>> agnostic_any_horizontal(df_pl)
-        shape: (6, 3)
-        ┌───────┬───────┬───────┐
-        │ a     ┆ b     ┆ any   │
-        │ ---   ┆ ---   ┆ ---   │
-        │ bool  ┆ bool  ┆ bool  │
-        ╞═══════╪═══════╪═══════╡
-        │ false ┆ false ┆ false │
-        │ false ┆ true  ┆ true  │
-        │ true  ┆ true  ┆ true  │
-        │ true  ┆ null  ┆ true  │
-        │ false ┆ null  ┆ null  │
-        │ null  ┆ null  ┆ null  │
-        └───────┴───────┴───────┘
-
-        >>> agnostic_any_horizontal(df_pa)
-        pyarrow.Table
-        a: bool
-        b: bool
-        any: bool
-        ----
-        a: [[false,false,true,true,false,null]]
-        b: [[false,true,true,null,null,null]]
-        any: [[false,true,true,true,null,null]]
+        >>> df_native = pl.DataFrame(data)
+        >>> nw.from_native(df_native).select("a", "b", any=nw.any_horizontal("a", "b"))
+        ┌─────────────────────────┐
+        |   Narwhals DataFrame    |
+        |-------------------------|
+        |shape: (6, 3)            |
+        |┌───────┬───────┬───────┐|
+        |│ a     ┆ b     ┆ any   │|
+        |│ ---   ┆ ---   ┆ ---   │|
+        |│ bool  ┆ bool  ┆ bool  │|
+        |╞═══════╪═══════╪═══════╡|
+        |│ false ┆ false ┆ false │|
+        |│ false ┆ true  ┆ true  │|
+        |│ true  ┆ true  ┆ true  │|
+        |│ true  ┆ null  ┆ true  │|
+        |│ false ┆ null  ┆ null  │|
+        |│ null  ┆ null  ┆ null  │|
+        |└───────┴───────┴───────┘|
+        └─────────────────────────┘
     """
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.any_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2385,62 +1723,43 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
 
     Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> data = {
         ...     "a": [1, 8, 3],
         ...     "b": [4, 5, None],
         ...     "c": ["x", "y", "z"],
         ... }
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pa = pa.table(data)
+        >>> df_native = pa.table(data)
 
         We define a dataframe-agnostic function that computes the horizontal mean of "a"
         and "b" columns:
 
-        >>> def agnostic_mean_horizontal(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(nw.mean_horizontal("a", "b")).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow to
-        `agnostic_mean_horizontal`:
-
-        >>> agnostic_mean_horizontal(df_pd)
-             a
-        0  2.5
-        1  6.5
-        2  3.0
-
-        >>> agnostic_mean_horizontal(df_pl)
-        shape: (3, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ f64 │
-        ╞═════╡
-        │ 2.5 │
-        │ 6.5 │
-        │ 3.0 │
-        └─────┘
-
-        >>> agnostic_mean_horizontal(df_pa)
-        pyarrow.Table
-        a: double
-        ----
-        a: [[2.5,6.5,3]]
+        >>> nw.from_native(df_native).select(nw.mean_horizontal("a", "b"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        | pyarrow.Table    |
+        | a: double        |
+        | ----             |
+        | a: [[2.5,6.5,3]] |
+        └──────────────────┘
     """
     if not exprs:
         msg = "At least one expression must be passed to `mean_horizontal`"
         raise ValueError(msg)
+    flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: plx.mean_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
+            *(
+                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                for v in flat_exprs
+            )
+        ),
+        is_order_dependent=operation_is_order_dependent(*flat_exprs),
+        changes_length=operation_changes_length(*flat_exprs),
+        aggregates=operation_aggregates(*flat_exprs),
     )
 
 
@@ -2468,23 +1787,16 @@ def concat_str(
 
     Examples:
         >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> from narwhals.typing import IntoFrameT
         >>>
         >>> data = {
         ...     "a": [1, 2, 3],
         ...     "b": ["dogs", "cats", None],
         ...     "c": ["play", "swim", "walk"],
         ... }
-
-        We define a dataframe-agnostic function that computes the horizontal string
-        concatenation of different columns
-
-        >>> def agnostic_concat_str(df_native: IntoFrameT) -> IntoFrameT:
-        ...     df = nw.from_native(df_native)
-        ...     return df.select(
+        >>> df_native = pd.DataFrame(data)
+        >>> (
+        ...     nw.from_native(df_native).select(
         ...         nw.concat_str(
         ...             [
         ...                 nw.col("a") * 2,
@@ -2493,40 +1805,25 @@ def concat_str(
         ...             ],
         ...             separator=" ",
         ...         ).alias("full_sentence")
-        ...     ).to_native()
-
-        We can pass any supported library such as Pandas, Polars, or PyArrow
-        to `agnostic_concat_str`:
-
-        >>> agnostic_concat_str(pd.DataFrame(data))
-          full_sentence
-        0   2 dogs play
-        1   4 cats swim
-        2          None
-
-        >>> agnostic_concat_str(pl.DataFrame(data))
-        shape: (3, 1)
-        ┌───────────────┐
-        │ full_sentence │
-        │ ---           │
-        │ str           │
-        ╞═══════════════╡
-        │ 2 dogs play   │
-        │ 4 cats swim   │
-        │ null          │
-        └───────────────┘
-
-        >>> agnostic_concat_str(pa.table(data))
-        pyarrow.Table
-        full_sentence: string
-        ----
-        full_sentence: [["2 dogs play","4 cats swim",null]]
+        ...     )
+        ... )
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |   full_sentence  |
+        | 0   2 dogs play  |
+        | 1   4 cats swim  |
+        | 2          None  |
+        └──────────────────┘
     """
+    exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            [extract_compliant(plx, v) for v in flatten([exprs])],
-            *[extract_compliant(plx, v) for v in more_exprs],
+            *(extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs),
             separator=separator,
             ignore_nulls=ignore_nulls,
-        )
+        ),
+        is_order_dependent=operation_is_order_dependent(*exprs),
+        changes_length=operation_changes_length(*exprs),
+        aggregates=operation_aggregates(*exprs),
     )

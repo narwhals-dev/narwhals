@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import timezone
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -17,9 +18,7 @@ if TYPE_CHECKING:
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_to_datetime(constructor: Constructor) -> None:
     if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -50,22 +49,25 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize(
-    ("data", "expected", "expected_cudf"),
+    ("data", "expected", "expected_cudf", "expected_pyspark"),
     [
         (
             {"a": ["2020-01-01T12:34:56"]},
             "2020-01-01 12:34:56",
             "2020-01-01T12:34:56.000000000",
+            "2020-01-01 12:34:56+00:00",
         ),
         (
             {"a": ["2020-01-01T12:34"]},
             "2020-01-01 12:34:00",
             "2020-01-01T12:34:00.000000000",
+            "2020-01-01 12:34:00+00:00",
         ),
         (
             {"a": ["20240101123456"]},
             "2024-01-01 12:34:56",
             "2024-01-01T12:34:56.000000000",
+            "2024-01-01 12:34:56+00:00",
         ),
     ],
 )
@@ -75,13 +77,20 @@ def test_to_datetime_infer_fmt(
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
+    expected_pyspark: str,
 ) -> None:
-    if "polars" in str(constructor) and str(data["a"][0]).isdigit():
+    if (
+        ("polars" in str(constructor) and str(data["a"][0]).isdigit())
+        or "duckdb" in str(constructor)
+        or ("pyspark" in str(constructor) and data["a"][0] == "20240101123456")
+    ):
         request.applymarker(pytest.mark.xfail)
+
     if "cudf" in str(constructor):
         expected = expected_cudf
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+    elif "pyspark" in str(constructor):
+        expected = expected_pyspark
+
     result = (
         nw.from_native(constructor(data))
         .lazy()
@@ -133,10 +142,17 @@ def test_to_datetime_series_infer_fmt(
 def test_to_datetime_infer_fmt_from_date(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
-    expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
+    if "pyspark" in str(constructor):
+        expected = [
+            datetime(2020, 1, 1, tzinfo=timezone.utc),
+            datetime(2020, 1, 2, tzinfo=timezone.utc),
+            None,
+        ]
+    else:
+        expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (
         nw.from_native(constructor(data)).lazy().select(nw.col("z").str.to_datetime())
     )

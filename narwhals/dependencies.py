@@ -9,6 +9,7 @@ from typing import Any
 
 if TYPE_CHECKING:
     import numpy as np
+    import sqlframe
 
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
@@ -23,11 +24,16 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import IntoSeries
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
+    from narwhals.typing import _NDArray
+    from narwhals.typing import _ShapeT
 
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
@@ -92,7 +98,7 @@ def get_ibis() -> Any:
     return sys.modules.get("ibis", None)
 
 
-def get_dask_expr() -> Any:
+def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
     return sys.modules.get("dask_expr", None)
 
@@ -105,6 +111,11 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
+
+
+def get_sqlframe() -> Any:
+    """Get sqlframe module (if already imported - else return None)."""
+    return sys.modules.get("sqlframe", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
@@ -218,9 +229,27 @@ def is_pyspark_dataframe(df: Any) -> TypeGuard[pyspark_sql.DataFrame]:
     )
 
 
-def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
+def is_sqlframe_dataframe(df: Any) -> TypeGuard[sqlframe.base.dataframe.BaseDataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    return bool(
+        (sqlframe := get_sqlframe()) is not None
+        and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
+    )
+
+
+def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:
     """Check whether `arr` is a NumPy Array without importing NumPy."""
     return (np := get_numpy()) is not None and isinstance(arr, np.ndarray)
+
+
+def is_numpy_array_1d(arr: Any) -> TypeIs[_1DArray]:
+    """Check whether `arr` is a 1D NumPy Array without importing NumPy."""
+    return is_numpy_array(arr) and arr.ndim == 1
+
+
+def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
+    """Check whether `arr` is a 2D NumPy Array without importing NumPy."""
+    return is_numpy_array(arr) and arr.ndim == 2
 
 
 def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:

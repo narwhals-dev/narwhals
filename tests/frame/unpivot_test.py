@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -37,14 +38,10 @@ expected_b_c = {
     [("b", expected_b_only), (["b", "c"], expected_b_c), (None, expected_b_c)],
 )
 def test_unpivot_on(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
     on: str | list[str] | None,
     expected: dict[str, list[float]],
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=on, index=["a"]).sort("variable", "a")
     assert_equal_data(result, expected)
@@ -59,28 +56,26 @@ def test_unpivot_on(
     ],
 )
 def test_unpivot_var_value_names(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
-    variable_name: str | None,
-    value_name: str | None,
+    variable_name: str,
+    value_name: str,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
-    result = df.unpivot(
-        on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
+    context = (
+        pytest.raises(NotImplementedError)
+        if ("duckdb" in str(constructor) and any([variable_name == "", value_name == ""]))
+        else does_not_raise()
     )
 
-    assert result.collect_schema().names()[-2:] == [variable_name, value_name]
+    with context:
+        df = nw.from_native(constructor(data))
+        result = df.unpivot(
+            on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
+        )
+
+        assert result.collect_schema().names()[-2:] == [variable_name, value_name]
 
 
-def test_unpivot_default_var_value_names(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=["b", "c"], index=["a"])
 
@@ -102,10 +97,8 @@ def test_unpivot_mixed_types(
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:
-    if (
-        "cudf" in str(constructor)
-        or "pyspark" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0))
+    if "cudf" in str(constructor) or (
+        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
     ):
         request.applymarker(pytest.mark.xfail)
 

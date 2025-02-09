@@ -4,24 +4,28 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import cast
 from typing import overload
+
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    import numpy as np
-    import pyarrow as pa
+    from typing import TypeVar
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+
+    _T = TypeVar("_T")
 
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
-    import pyarrow as pa
-
     dtypes = import_dtypes_module(version)
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -84,8 +88,6 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
-    import pyarrow as pa
-
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -167,8 +169,6 @@ def broadcast_and_extract_native(
     from narwhals._arrow.series import ArrowSeries
 
     if rhs is None:
-        import pyarrow as pa
-
         return lhs._native_series, pa.scalar(None, type=lhs._native_series.type)
 
     # If `rhs` is the output of an expression evaluation, then it is
@@ -196,7 +196,6 @@ def broadcast_and_extract_native(
         if len(lhs) == 1:
             # broadcast
             import numpy as np  # ignore-banned-import
-            import pyarrow as pa
 
             fill_value = lhs[0]
             if backend_version < (13,) and hasattr(fill_value, "as_py"):
@@ -214,8 +213,10 @@ def broadcast_and_extract_native(
     return lhs._native_series, rhs
 
 
-def validate_dataframe_comparand(
-    length: int, other: Any, backend_version: tuple[int, ...]
+def broadcast_and_extract_dataframe_comparand(
+    length: int,
+    other: Any,
+    backend_version: tuple[int, ...],
 ) -> Any:
     """Validate RHS of binary operation.
 
@@ -225,14 +226,15 @@ def validate_dataframe_comparand(
     from narwhals._arrow.series import ArrowSeries
 
     if isinstance(other, ArrowSeries):
-        if len(other) == 1:
+        len_other = len(other)
+        if len_other == 1:
             import numpy as np  # ignore-banned-import
-            import pyarrow as pa
 
             value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
+
         return other._native_series
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
@@ -249,8 +251,6 @@ def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
 
     Should be in namespace.
     """
-    import pyarrow as pa
-
     names = [name for df in dfs for name in df.column_names]
 
     if len(set(names)) < len(names):  # pragma: no cover
@@ -277,8 +277,6 @@ def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
             )
             raise TypeError(msg)
 
-    import pyarrow as pa
-
     return pa.concat_tables(dfs)
 
 
@@ -287,8 +285,6 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 
     Should be in namespace.
     """
-    import pyarrow as pa
-
     kwargs = (
         {"promote": True}
         if backend_version < (14, 0, 0)
@@ -300,9 +296,6 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    import pyarrow as pa
-    import pyarrow.compute as pc
-
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
 
@@ -341,9 +334,6 @@ def cast_for_truediv(
 ) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    import pyarrow as pa
-    import pyarrow.compute as pc
-
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
@@ -364,8 +354,6 @@ def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
     if fast_path:
         return [s._native_series for s in series]
 
-    import pyarrow as pa
-
     is_max_length_gt_1 = max_length > 1
     reshaped = []
     for s, length in zip(series, lengths):
@@ -382,22 +370,10 @@ def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
 
 
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> np.ndarray: ...
-
-
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: int) -> int: ...
-
-
-@overload
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: Sequence[int]
-) -> Sequence[int]: ...
-
-
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: slice | int | Sequence[int]
-) -> np.ndarray | int | Sequence[int]:
+def convert_slice_to_nparray(num_rows: int, rows_slice: _T) -> _T: ...
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice | _T) -> _AnyDArray | _T:
     if isinstance(rows_slice, slice):
         import numpy as np  # ignore-banned-import
 
@@ -406,14 +382,16 @@ def convert_slice_to_nparray(
         return rows_slice
 
 
-def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+def select_rows(
+    table: pa.Table, rows: slice | int | Sequence[int] | _AnyDArray
+) -> pa.Table:
     if isinstance(rows, slice) and rows == slice(None):
         selected_rows = table
     elif isinstance(rows, Sequence) and not rows:
         selected_rows = table.slice(0, 0)
     else:
         range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
-        selected_rows = table.take(range_)
+        selected_rows = table.take(cast("list[int]", range_))
     return selected_rows
 
 
@@ -453,9 +431,6 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 def parse_datetime_format(arr: pa.StringArray) -> str:
     """Try to infer datetime format from StringArray."""
-    import pyarrow as pa
-    import pyarrow.compute as pc
-
     matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
         pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
     )
@@ -491,8 +466,6 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
 
 
 def _parse_date_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc
-
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
@@ -513,8 +486,6 @@ def _parse_date_format(arr: pa.Array) -> str:
 
 
 def _parse_time_format(arr: pa.Array) -> str:
-    import pyarrow.compute as pc
-
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
@@ -535,7 +506,7 @@ def pad_series(
     Returns:
         A tuple containing the padded ArrowSeries and the offset value.
     """
-    import pyarrow as pa  # ignore-banned-import
+    # ignore-banned-import
 
     if center:
         offset_left = window_size // 2
