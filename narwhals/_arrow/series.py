@@ -355,7 +355,7 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def to_list(self: Self) -> list[Any]:
-        return self._native_series.to_pylist()  # type: ignore[no-any-return]
+        return self._native_series.to_pylist()
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
