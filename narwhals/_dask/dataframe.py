@@ -106,7 +106,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             return PandasLikeDataFrame(
                 result,
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -118,7 +118,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
             return PolarsDataFrame(
                 pl.from_pandas(result),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -129,7 +129,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
             return ArrowDataFrame(
                 pa.Table.from_pandas(result),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
