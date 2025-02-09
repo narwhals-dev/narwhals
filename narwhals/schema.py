@@ -150,7 +150,7 @@ class Schema(BaseSchema):
         to_native_dtype = partial(
             narwhals_to_native_dtype,
             implementation=Implementation.PANDAS,
-            backend_version=parse_version(pd.__version__),
+            backend_version=parse_version(pd),
             version=self._version,
         )
         if dtype_backend is None or isinstance(dtype_backend, str):
@@ -206,6 +206,6 @@ class Schema(BaseSchema):
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
-        if parse_version(pl.__version__) >= (1, 0, 0):
+        if parse_version(pl) >= (1, 0, 0):
             return pl.Schema(schema)
         return cast("pl.Schema", dict(schema))  # pragma: no cover

@@ -253,7 +253,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            backend_version = parse_version(native_namespace.__version__)
+            backend_version = parse_version(native_namespace)
             pd_dtype = pandas_like_narwhals_to_native_dtype(
                 dtype, None, implementation, backend_version, version
             )
@@ -519,7 +519,7 @@ def _from_numpy_impl(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            backend_version = parse_version(native_namespace.__version__)
+            backend_version = parse_version(native_namespace)
             pd_schema = {
                 name: pandas_like_narwhals_to_native_dtype(
                     dtype=schema[name],
@@ -623,9 +623,7 @@ def from_arrow(
         raise TypeError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
 
-    if implementation is Implementation.POLARS and parse_version(
-        native_namespace.__version__
-    ) >= (1, 3):
+    if implementation.is_polars() and parse_version(native_namespace) >= (1, 3):
         native_frame = native_namespace.DataFrame(native_frame)
     elif implementation in {
         Implementation.PANDAS,
@@ -640,7 +638,7 @@ def from_arrow(
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+        if parse_version(pa) < (14, 0):  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from None
 
