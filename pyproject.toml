@@ -37,16 +37,22 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
-dev = [
+tests = [
   "covdefaults",
-  "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
+]
+typing = [
   "typing_extensions",
   "mypy~=1.15.0",
+]
+dev = [
+  "pre-commit",
+  "narwhals[tests]",
+  "narwhals[typing]",
 ]
 core = [
   "duckdb",
