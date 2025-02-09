@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
+    from narwhals.typing import _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -819,7 +820,7 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
 
 def select_columns_by_name(
     df: T,
-    column_names: Sequence[str],
+    column_names: Sequence[str] | _1DArray,
     backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> T:
