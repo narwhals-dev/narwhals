@@ -44,6 +44,7 @@ tests = [
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
+  "typing_extensions",
 ]
 typing = [
   "typing_extensions",
