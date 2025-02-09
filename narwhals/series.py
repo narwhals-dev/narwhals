@@ -24,7 +24,6 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
 
 
@@ -110,8 +110,8 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series._implementation  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        return self._compliant_series.__array__(dtype=dtype, copy=copy)  # type: ignore[no-any-return]
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
+        return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
@@ -1387,7 +1387,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.n_unique()  # type: ignore[no-any-return]
 
-    def to_numpy(self: Self) -> np.ndarray:
+    def to_numpy(self: Self) -> _1DArray:
         """Convert to numpy.
 
         Returns:
