@@ -16,6 +16,7 @@ from warnings import warn
 
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -51,6 +51,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import SizeUnit
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
 
     PS = ParamSpec("PS")
 
@@ -477,7 +479,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __len__(self: Self) -> int:
         return self._compliant_frame.__len__()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
@@ -770,7 +772,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         self._compliant_frame.write_parquet(file)
 
-    def to_numpy(self: Self) -> np.ndarray:
+    def to_numpy(self: Self) -> _2DArray:
         """Convert this DataFrame to a NumPy ndarray.
 
         Returns:
@@ -860,7 +862,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
+        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
 
     @overload
@@ -871,9 +873,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             | slice
             | Sequence[int]
             | Sequence[str]
-            | np.ndarray
+            | _1DArray
             | tuple[
-                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
             ]
         ),
     ) -> Self: ...
@@ -885,10 +887,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             | slice
             | Sequence[int]
             | Sequence[str]
-            | np.ndarray
-            | tuple[slice | Sequence[int] | np.ndarray, int | str]
+            | _1DArray
+            | tuple[slice | Sequence[int] | _1DArray, int | str]
             | tuple[
-                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
             ]
         ),
     ) -> Series[Any] | Self:
@@ -971,7 +973,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         elif (
             is_sequence_but_not_str(item)
             or isinstance(item, slice)
-            or (is_numpy_array(item) and item.ndim == 1)
+            or (is_numpy_array_1d(item))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 

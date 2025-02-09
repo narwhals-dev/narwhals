@@ -40,7 +40,6 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -51,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import _2DArray
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -546,7 +546,7 @@ def _from_dict_impl(
 
 
 def from_numpy(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
@@ -695,7 +695,7 @@ def from_numpy(
 
 
 def _from_numpy_impl(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
