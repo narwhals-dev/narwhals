@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Generic
-from typing import Literal
 from typing import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.expr import Expr
+    from narwhals.typing import TimeUnit
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -1409,7 +1409,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             aggregates=self._expr._aggregates,
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
+    def timestamp(self: Self, time_unit: TimeUnit = "us") -> ExprT:
         """Return a timestamp in the given time unit.
 
         Arguments:

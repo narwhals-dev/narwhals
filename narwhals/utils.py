@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import timezone
 from enum import Enum
 from enum import auto
 from secrets import token_hex
@@ -41,11 +42,11 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from typing_extensions import Self
-    from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
@@ -57,10 +58,12 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
+    from narwhals.typing import TimeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _T = TypeVar("_T")
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -1001,7 +1004,7 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
+def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
@@ -1187,6 +1190,43 @@ def check_column_names_are_unique(columns: list[str]) -> None:
         msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+def _parse_time_unit_and_time_zone(
+    time_unit: TimeUnit | Iterable[TimeUnit] | None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None,
+) -> tuple[set[str], set[str | None]]:
+    time_units = (
+        {"ms", "us", "ns", "s"}
+        if time_unit is None
+        else {time_unit}
+        if isinstance(time_unit, str)
+        else set(time_unit)
+    )
+    time_zones: set[str | None] = (
+        {None}
+        if time_zone is None
+        else {str(time_zone)}
+        if isinstance(time_zone, (str, timezone))
+        else {str(tz) if tz is not None else None for tz in time_zone}
+    )
+    return time_units, time_zones
+
+
+def dtype_matches_time_unit_and_time_zone(
+    dtype: DType,
+    dtypes: DTypes,
+    time_units: set[str],
+    time_zones: set[str | None],
+) -> bool:
+    return (
+        (dtype == dtypes.Datetime)
+        and (dtype.time_unit in time_units)  # type: ignore[attr-defined]
+        and (
+            dtype.time_zone in time_zones  # type: ignore[attr-defined]
+            or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
+        )
+    )
 
 
 def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:

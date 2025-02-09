@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import pyarrow as pa
@@ -17,7 +18,7 @@ from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
@@ -34,10 +35,14 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
+    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
+        Indices,
+    )
+    from pyarrow._stubs_typing import Order  # pyright: ignore[reportMissingModuleSource]
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
@@ -45,7 +50,21 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
+
+    JoinType: TypeAlias = Literal[
+        "left semi",
+        "right semi",
+        "left anti",
+        "right anti",
+        "inner",
+        "left outer",
+        "right outer",
+        "full outer",
+    ]
+    PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -161,38 +180,44 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> _2DArray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
-    def __getitem__(self: Self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
-
+    def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
+        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
+    ) -> ArrowSeries: ...
     @overload
-    def __getitem__(self: Self, item: Sequence[int]) -> ArrowDataFrame: ...
-
-    @overload
-    def __getitem__(self: Self, item: str) -> ArrowSeries: ...
-
-    @overload
-    def __getitem__(self: Self, item: slice) -> ArrowDataFrame: ...
-
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
-
+    def __getitem__(
+        self: Self,
+        item: (
+            int
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | _1DArray
+            | tuple[
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
+            ]
+        ),
+    ) -> Self: ...
     def __getitem__(
         self: Self,
         item: (
             str
+            | int
             | slice
             | Sequence[int]
             | Sequence[str]
-            | tuple[Sequence[int], str | int]
-            | tuple[slice, str | int]
-            | tuple[slice, slice]
+            | _1DArray
+            | tuple[slice | Sequence[int] | _1DArray, int | str]
+            | tuple[
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
+            ]
         ),
-    ) -> ArrowSeries | ArrowDataFrame:
+    ) -> ArrowSeries | Self:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -207,28 +232,30 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             isinstance(item, tuple)
             and len(item) == 2
             and is_sequence_but_not_str(item[1])
+            and not isinstance(item[0], str)
         ):
             if len(item[1]) == 0:
                 # Return empty dataframe
                 return self._from_native_frame(self._native_frame.slice(0, 0).select([]))
             selected_rows = select_rows(self._native_frame, item[0])
-            return self._from_native_frame(selected_rows.select(item[1]))
+            return self._from_native_frame(selected_rows.select(cast("Indices", item[1])))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
                 columns = self.columns
+                indices = cast("Indices", item[0])
                 if item[1] == slice(None):
                     if isinstance(item[0], Sequence) and len(item[0]) == 0:
                         return self._from_native_frame(self._native_frame.slice(0, 0))
-                    return self._from_native_frame(self._native_frame.take(item[0]))
+                    return self._from_native_frame(self._native_frame.take(indices))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
-                        self._native_frame.take(item[0]).select(columns[start:stop:step])
+                        self._native_frame.take(indices).select(columns[start:stop:step])
                     )
                 if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
                     return self._from_native_frame(
-                        self._native_frame.take(item[0]).select(
+                        self._native_frame.take(indices).select(
                             columns[item[1].start : item[1].stop : item[1].step]
                         )
                     )
@@ -237,7 +264,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
-            col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            col_name = (
+                item[1]
+                if isinstance(item[1], str)
+                else self.columns[cast("int", item[1])]
+            )
             if isinstance(item[0], str):  # pragma: no cover
                 msg = "Can not slice with tuple with the first element as a str"
                 raise TypeError(msg)
@@ -270,16 +301,18 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             stop = item.stop if item.stop is not None else len(self._native_frame)
             return self._from_native_frame(self._native_frame.slice(start, stop - start))
 
-        elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
+        elif isinstance(item, Sequence) or is_numpy_array_1d(item):
             if (
                 isinstance(item, Sequence)
                 and all(isinstance(x, str) for x in item)
                 and len(item) > 0
             ):
-                return self._from_native_frame(self._native_frame.select(item))
+                return self._from_native_frame(
+                    self._native_frame.select(cast("Indices", item))
+                )
             if isinstance(item, Sequence) and len(item) == 0:
                 return self._from_native_frame(self._native_frame.slice(0, 0))
-            return self._from_native_frame(self._native_frame.take(item))
+            return self._from_native_frame(self._native_frame.take(cast("Indices", item)))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -360,7 +393,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        how_to_join_map = {
+        how_to_join_map: dict[str, JoinType] = {
             "anti": "left anti",
             "semi": "left semi",
             "inner": "inner",
@@ -388,7 +421,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
-                keys=left_on,
+                keys=left_on or [],
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
@@ -434,8 +467,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         df = self._native_frame
 
         if isinstance(descending, bool):
-            order = "descending" if descending else "ascending"
-            sorting = [(key, order) for key in by]
+            order: Order = "descending" if descending else "ascending"
+            sorting: list[tuple[str, Order]] = [(key, order) for key in by]
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
@@ -457,10 +490,11 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         return pl.from_arrow(self._native_frame)  # type: ignore[return-value]
 
-    def to_numpy(self: Self) -> np.ndarray:
+    def to_numpy(self: Self) -> _2DArray:
         import numpy as np  # ignore-banned-import
 
-        return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
+        arr: Any = np.column_stack([col.to_numpy() for col in self._native_frame.columns])
+        return arr
 
     @overload
     def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, ArrowSeries]: ...
@@ -730,7 +764,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                pc.take(df, keep_idx), validate_column_names=False
+                pc.take(df, keep_idx),  # type: ignore[call-overload, unused-ignore]
+                validate_column_names=False,
             )
 
         keep_idx = self.simple_select(*subset).is_unique()
@@ -763,7 +798,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
-        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)
+        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)  # type: ignore[call-overload, unused-ignore]
 
     def unpivot(
         self: Self,
@@ -780,21 +815,25 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             [c for c in self.columns if c not in index_] if on is None else on
         )
 
-        promote_kwargs = (
+        promote_kwargs: dict[Literal["promote_options"], PromoteOptions] = (
             {"promote_options": "permissive"}
             if self._backend_version >= (14, 0, 0)
             else {}
         )
+        names = [*index_, variable_name, value_name]
         return self._from_native_frame(
             pa.concat_tables(
                 [
                     pa.Table.from_arrays(
                         [
-                            *[native_frame.column(idx_col) for idx_col in index_],
-                            pa.array([on_col] * n_rows, pa.string()),
+                            *(native_frame.column(idx_col) for idx_col in index_),
+                            cast(
+                                "pa.ChunkedArray",
+                                pa.array([on_col] * n_rows, pa.string()),
+                            ),
                             native_frame.column(on_col),
                         ],
-                        names=[*index_, variable_name, value_name],
+                        names=names,
                     )
                     for on_col in on_
                 ],
