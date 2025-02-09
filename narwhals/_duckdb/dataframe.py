@@ -251,7 +251,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
