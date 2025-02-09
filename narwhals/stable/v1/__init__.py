@@ -83,7 +83,6 @@ from narwhals.utils import validate_strict_and_pass_though
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -91,6 +90,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoSeries
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
 
 T = TypeVar("T")
 
@@ -134,7 +135,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
+        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series: ...
     @overload
     def __getitem__(
@@ -142,11 +143,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         item: (
             int
             | slice
-            | np.ndarray
+            | _1DArray
             | Sequence[int]
             | Sequence[str]
             | tuple[
-                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
             ]
         ),
     ) -> Self: ...
@@ -2193,7 +2194,7 @@ def from_dict(
 
 
 def from_numpy(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,

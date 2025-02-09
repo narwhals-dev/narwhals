@@ -19,6 +19,7 @@ from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.schema import Schema
@@ -40,7 +41,6 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import _2DArray
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -427,7 +428,7 @@ def _from_dict_impl(
 
 
 def from_numpy(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
@@ -478,7 +479,7 @@ def from_numpy(
 
 
 def _from_numpy_impl(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,
@@ -486,7 +487,7 @@ def _from_numpy_impl(
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
-    if data.ndim != 2:
+    if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
