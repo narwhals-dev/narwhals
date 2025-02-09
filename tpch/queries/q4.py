@@ -9,11 +9,7 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
-def query(
-    line_item_ds: FrameT,
-    orders_ds: FrameT,
-) -> FrameT:
+def query(line_item_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 

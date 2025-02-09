@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
     var1 = datetime(1995, 9, 1)
     var2 = datetime(1995, 10, 1)
@@ -26,7 +25,7 @@ def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
                 .sum()
                 / (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).sum()
             )
-            .round(2)
+            # .round(2)
             .alias("promo_revenue")
         )
     )
