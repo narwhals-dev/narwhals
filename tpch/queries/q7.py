@@ -16,8 +16,8 @@ def query(
     orders_ds: FrameT,
     supplier_ds: FrameT,
 ) -> FrameT:
-    n1 = (nation_ds).filter(nw.col("n_name") == "FRANCE")
-    n2 = (nation_ds).filter(nw.col("n_name") == "GERMANY")
+    n1 = nation_ds.filter(nw.col("n_name") == "FRANCE")
+    n2 = nation_ds.filter(nw.col("n_name") == "GERMANY")
 
     var_1 = datetime(1995, 1, 1)
     var_2 = datetime(1996, 12, 31)
