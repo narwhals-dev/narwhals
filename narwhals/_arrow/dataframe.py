@@ -763,7 +763,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                pc.take(df, keep_idx),  # type: ignore  # noqa: PGH003
+                pc.take(df, keep_idx),  # type: ignore[call-overload, unused-ignore]
                 validate_column_names=False,
             )
 
@@ -797,7 +797,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
-        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)  # type: ignore  # noqa: PGH003
+        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)  # type: ignore[call-overload, unused-ignore]
 
     def unpivot(
         self: Self,
