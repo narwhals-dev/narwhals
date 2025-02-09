@@ -7,7 +7,6 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
+    from narwhals.typing import TimeUnit
     from narwhals.typing import _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
@@ -439,13 +439,13 @@ def non_object_native_to_narwhals_dtype(
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
-        dt_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
+        dt_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
     if (match_ := PATTERN_PD_DURATION.match(dtype)) or (
         match_ := PATTERN_PA_DURATION.match(dtype)
     ):
-        du_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
+        du_time_unit: TimeUnit = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
