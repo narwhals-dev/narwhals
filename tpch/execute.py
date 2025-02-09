@@ -9,6 +9,7 @@ import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+from polars.testing import assert_frame_equal
 
 import narwhals as nw
 
@@ -32,12 +33,6 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "pyarrow": (pa, {}),
     "duckdb": (duckdb, {}),
     "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-}
-
-BACKEND_COLLECT_FUNC_MAP = {
-    "polars[lazy]": lambda x: x.collect(),
-    "duckdb": lambda x: x.pl(),
-    "dask": lambda x: x.compute(),
 }
 
 DUCKDB_SKIPS = ["q15"]
@@ -94,21 +89,29 @@ def execute_query(query_id: str) -> None:
     query_module = import_module(f"tpch.queries.{query_id}")
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
+    expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
+
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
         if backend == "duckdb" and query_id in DUCKDB_SKIPS:
             print(f"\nSkipping {query_id} for DuckDB")  # noqa: T201
             continue
 
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result = query_module.query(
-            *(
-                nw.scan_parquet(str(path), native_namespace=native_namespace, **kwargs)
-                for path in data_paths
+        result: pl.DataFrame = (
+            query_module.query(
+                *(
+                    nw.scan_parquet(
+                        str(path), native_namespace=native_namespace, **kwargs
+                    )
+                    for path in data_paths
+                )
             )
+            .lazy()
+            .collect(backend=nw.Implementation.POLARS)
+            .to_native()
         )
-        if collect_func := BACKEND_COLLECT_FUNC_MAP.get(backend):
-            result = collect_func(result)
-        print(result)  # noqa: T201
+
+        assert_frame_equal(expected, result, check_dtypes=False)
 
 
 def main() -> None:

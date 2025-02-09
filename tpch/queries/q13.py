@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var1 = "special"
     var2 = "requests"
