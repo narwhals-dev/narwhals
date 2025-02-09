@@ -3,7 +3,7 @@ name: Min, old, and nightly versions
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev/cast_dtypes]
 
 jobs:
   minimum_versions:
