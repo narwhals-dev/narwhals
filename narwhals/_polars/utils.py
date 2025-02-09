@@ -153,11 +153,14 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
     import polars as pl
 
     dtypes = import_dtypes_module(version)
-
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:
         return pl.Float32()
+    # if dtype == getattr(pl, "Int128", None):  # type: ignore[operator]  # pragma: no cover
+    if dtype == dtypes.Int128 and getattr(pl, "Int128", None) is not None:
+        # Not available for Polars pre 1.8.0
+        return pl.Int128()  # type: ignore[no-any-return]
     if dtype == dtypes.Int64:
         return pl.Int64()
     if dtype == dtypes.Int32:
@@ -187,6 +190,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
         raise NotImplementedError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.Decimal:
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
         dt_time_unit: Literal["ms", "us", "ns"] = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
@@ -209,6 +215,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
     if dtype == dtypes.Array:  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
         raise NotImplementedError(msg)
+
     return pl.Unknown()  # pragma: no cover
 
 

@@ -87,6 +87,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     import pyarrow as pa
 
     dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
