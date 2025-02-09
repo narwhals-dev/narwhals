@@ -7,14 +7,19 @@ from typing import Iterable
 from typing import Sequence
 
 from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals.utils import _parse_time_unit_and_time_zone
+from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    from datetime import timezone
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -109,6 +114,52 @@ class PandasSelectorNamespace:
             depth=0,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs={},
+        )
+
+    def datetime(
+        self: Self,
+        time_unit: TimeUnit | Iterable[TimeUnit] | None,
+        time_zone: str | timezone | Iterable[str | timezone | None] | None,
+    ) -> PandasSelector:
+        dtypes = import_dtypes_module(version=self._version)
+        time_units, time_zones = _parse_time_unit_and_time_zone(
+            time_unit=time_unit, time_zone=time_zone
+        )
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            return [
+                df[col]
+                for col in df.columns
+                if dtype_matches_time_unit_and_time_zone(
+                    dtype=df.schema[col],
+                    dtypes=dtypes,
+                    time_units=time_units,
+                    time_zones=time_zones,
+                )
+            ]
+
+        def evalute_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+            return [
+                col
+                for col in df.columns
+                if dtype_matches_time_unit_and_time_zone(
+                    dtype=df.schema[col],
+                    dtypes=dtypes,
+                    time_units=time_units,
+                    time_zones=time_zones,
+                )
+            ]
+
+        return PandasSelector(
+            func,
+            depth=0,
+            function_name="selector",
+            evaluate_output_names=evalute_output_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,

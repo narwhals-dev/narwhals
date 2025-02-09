@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import timezone
 from enum import Enum
 from enum import auto
 from secrets import token_hex
@@ -37,21 +38,35 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Protocol
 
     import pandas as pd
     from typing_extensions import Self
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.series import Series
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import CompliantSeries
+    from narwhals.typing import CompliantSeriesT_co
+    from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
+    from narwhals.typing import SupportsNativeNamespace
+    from narwhals.typing import TimeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _T = TypeVar("_T")
+
+    class _SupportsVersion(Protocol):
+        __version__: str
 
 
 class Version(Enum):
@@ -442,11 +457,11 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def parse_version(version: str) -> tuple[int, ...]:
+def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
     Arguments:
-        version: Version string to parse.
+        version: Version string, or object with one, to parse.
 
     Returns:
         Parsed version number.
@@ -454,8 +469,9 @@ def parse_version(version: str) -> tuple[int, ...]:
     # lifted from Polars
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
     # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
-    version = re.sub(r"(\D?dev.*$)", "", version)
-    return tuple(int(re.sub(r"\D", "", v)) for v in version.split("."))
+    version_str = version if isinstance(version, str) else version.__version__
+    version_str = re.sub(r"(\D?dev.*$)", "", version_str)
+    return tuple(int(re.sub(r"\D", "", v)) for v in version_str.split("."))
 
 
 def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:
@@ -758,12 +774,16 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
     return obj_any  # type: ignore[no-any-return]
 
 
+def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
+    return isinstance(obj, native_namespace.RangeIndex)
+
+
 def _has_default_index(
     native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
 ) -> bool:
     index = native_frame_or_series.index
     return (
-        isinstance(index, native_namespace.RangeIndex)
+        _is_range_index(index, native_namespace)
         and index.start == 0
         and index.stop == len(index)
         and index.step == 1
@@ -984,7 +1004,7 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
+def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
@@ -1170,3 +1190,66 @@ def check_column_names_are_unique(columns: list[str]) -> None:
         msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+def _parse_time_unit_and_time_zone(
+    time_unit: TimeUnit | Iterable[TimeUnit] | None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None,
+) -> tuple[set[str], set[str | None]]:
+    time_units = (
+        {"ms", "us", "ns", "s"}
+        if time_unit is None
+        else {time_unit}
+        if isinstance(time_unit, str)
+        else set(time_unit)
+    )
+    time_zones: set[str | None] = (
+        {None}
+        if time_zone is None
+        else {str(time_zone)}
+        if isinstance(time_zone, (str, timezone))
+        else {str(tz) if tz is not None else None for tz in time_zone}
+    )
+    return time_units, time_zones
+
+
+def dtype_matches_time_unit_and_time_zone(
+    dtype: DType,
+    dtypes: DTypes,
+    time_units: set[str],
+    time_zones: set[str | None],
+) -> bool:
+    return (
+        (dtype == dtypes.Datetime)
+        and (dtype.time_unit in time_units)  # type: ignore[attr-defined]
+        and (
+            dtype.time_zone in time_zones  # type: ignore[attr-defined]
+            or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
+        )
+    )
+
+
+def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+    return hasattr(obj, "__narwhals_dataframe__")
+
+
+def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+    return hasattr(obj, "__narwhals_lazyframe__")
+
+
+def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+    return hasattr(obj, "__narwhals_series__")
+
+
+def is_compliant_expr(
+    obj: CompliantExpr[CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantSeriesT_co]]:
+    return hasattr(obj, "__narwhals_expr__")
+
+
+def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
+    return hasattr(obj, "__native_namespace__")
+
+
+def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")

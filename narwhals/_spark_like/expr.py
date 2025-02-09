@@ -350,7 +350,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _median(_input: Column) -> Column:
             import pyspark  # ignore-banned-import
 
-            if parse_version(pyspark.__version__) < (3, 4):
+            if parse_version(pyspark) < (3, 4):
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
@@ -377,12 +377,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(
-            _std,
-            ddof=ddof,
-            np_version=parse_version(np.__version__),
-            functions=self._F,
-        )
+        func = partial(_std, ddof=ddof, np_version=parse_version(np), functions=self._F)
 
         return self._from_call(func, "std", expr_kind=ExprKind.AGGREGATION)
 
@@ -393,12 +388,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(
-            _var,
-            ddof=ddof,
-            np_version=parse_version(np.__version__),
-            functions=self._F,
-        )
+        func = partial(_var, ddof=ddof, np_version=parse_version(np), functions=self._F)
 
         return self._from_call(func, "var", expr_kind=ExprKind.AGGREGATION)
 

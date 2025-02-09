@@ -31,7 +31,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -241,14 +241,14 @@ class PandasLikeSeries(CompliantSeries):
         dtype_backend = get_dtype_backend(
             dtype=ser.dtype, implementation=self._implementation
         )
-        dtype = narwhals_to_native_dtype(
+        pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=dtype_backend,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
-        return self._from_native_series(ser.astype(dtype))
+        return self._from_native_series(ser.astype(pd_dtype))
 
     def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
@@ -670,13 +670,13 @@ class PandasLikeSeries(CompliantSeries):
             )
         return self
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> _1DArray:
         # pandas used to always return object dtype for nullable dtypes.
         # So, we intercept __array__ and pass to `to_numpy` ourselves to make
         # sure an appropriate numpy dtype is returned.
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF

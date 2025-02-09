@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals._polars.group_by import PolarsGroupBy
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -117,7 +117,7 @@ class PolarsDataFrame:
 
     def __array__(
         self: Self, dtype: Any | None = None, copy: bool | None = None
-    ) -> np.ndarray:
+    ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
             raise NotImplementedError(msg)
@@ -247,7 +247,7 @@ class PolarsDataFrame:
             df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
                 df=duckdb.table("df"),
-                backend_version=parse_version(duckdb.__version__),
+                backend_version=parse_version(duckdb),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -259,7 +259,7 @@ class PolarsDataFrame:
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
-                backend_version=parse_version(dask.__version__),
+                backend_version=parse_version(dask),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -467,7 +467,7 @@ class PolarsLazyFrame:
             return PandasLikeDataFrame(
                 result.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -479,7 +479,7 @@ class PolarsLazyFrame:
 
             return ArrowDataFrame(
                 result.to_arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )

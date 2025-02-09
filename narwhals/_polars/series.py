@@ -18,11 +18,11 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -145,7 +145,7 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)

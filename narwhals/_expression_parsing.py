@@ -9,13 +9,14 @@ from typing import Callable
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
-from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.utils import Implementation
+from narwhals.utils import is_compliant_expr
+from narwhals.utils import is_compliant_series
 
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
@@ -82,14 +83,21 @@ def evaluate_into_exprs(
     return series
 
 
+@overload
+def maybe_evaluate_expr(
+    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co]
+) -> Sequence[CompliantSeriesT_co]: ...
+
+
+@overload
+def maybe_evaluate_expr(df: CompliantDataFrame, expr: T) -> T: ...
+
+
 def maybe_evaluate_expr(
     df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
 ) -> Sequence[CompliantSeriesT_co] | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    if hasattr(expr, "__narwhals_expr__"):
-        compliant_expr = cast("CompliantExpr[Any]", expr)
-        return compliant_expr(df)
-    return expr
+    return expr(df) if is_compliant_expr(expr) else expr
 
 
 def parse_into_exprs(
@@ -123,13 +131,13 @@ def parse_into_expr(
     - if it's a string, then convert it to an expression
     - else, raise
     """
-    if hasattr(into_expr, "__narwhals_expr__"):
-        return into_expr  # type: ignore[return-value]
-    if hasattr(into_expr, "__narwhals_series__"):
+    if is_compliant_expr(into_expr):
+        return into_expr
+    if is_compliant_series(into_expr):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
     if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)  # type: ignore[attr-defined]
-        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return, attr-defined]
+        series = namespace._create_compliant_series(into_expr)
+        return namespace._create_expr_from_series(series)
     raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
@@ -177,7 +185,7 @@ def reuse_series_implementation(
     plx = expr.__narwhals_namespace__()
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
-        _kwargs = {  # type: ignore[var-annotated]
+        _kwargs = {
             arg_name: maybe_evaluate_expr(df, arg_value)
             for arg_name, arg_value in expressifiable_args.items()
         }
@@ -284,7 +292,7 @@ def combine_evaluate_output_names(
     def evaluate_output_names(
         df: CompliantDataFrame | CompliantLazyFrame,
     ) -> Sequence[str]:
-        if not hasattr(exprs[0], "__narwhals_expr__"):  # pragma: no cover
+        if not is_compliant_expr(exprs[0]):  # pragma: no cover
             msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
             raise AssertionError(msg)
         return exprs[0]._evaluate_output_names(df)[:1]

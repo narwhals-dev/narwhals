@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 
@@ -9,6 +8,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals.typing import TimeUnit
 
 
 class ArrowExprDateTimeNamespace:
@@ -30,7 +30,7 @@ class ArrowExprDateTimeNamespace:
             self._compliant_expr, "dt", "convert_time_zone", time_zone=time_zone
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> ArrowExpr:
+    def timestamp(self: Self, time_unit: TimeUnit) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._compliant_expr, "dt", "timestamp", time_unit=time_unit
         )

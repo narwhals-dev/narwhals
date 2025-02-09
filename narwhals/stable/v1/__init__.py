@@ -83,7 +83,6 @@ from narwhals.utils import validate_strict_and_pass_though
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -91,6 +90,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoSeries
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
 
 T = TypeVar("T")
 
@@ -133,17 +134,20 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series: ...
     @overload
     def __getitem__(
         self: Self,
-        key: (
-            slice
+        item: (
+            int
+            | slice
+            | _1DArray
             | Sequence[int]
             | Sequence[str]
             | tuple[
-                slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
             ]
         ),
     ) -> Self: ...
@@ -1063,6 +1067,8 @@ class Schema(NwSchema):
             The schema definition given by column names and their associated.
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
     """
+
+    _version = Version.V1
 
 
 @overload
@@ -2183,17 +2189,12 @@ def from_dict(
         backend, native_namespace, emit_deprecation_warning=False
     )
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(
-            data,
-            schema,
-            backend=backend,
-            version=Version.V1,
-        )
+        _from_dict_impl(data, schema, backend=backend)
     )
 
 
 def from_numpy(
-    data: np.ndarray,
+    data: _2DArray,
     schema: dict[str, DType] | Schema | list[str] | None = None,
     *,
     native_namespace: ModuleType,

@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import numpy as np
@@ -24,7 +25,7 @@ from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -50,6 +51,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
 from narwhals.typing import CompliantDataFrame
@@ -155,39 +158,29 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, item: tuple[Sequence[int], str | int]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> PandasLikeSeries: ...
 
     @overload
-    def __getitem__(self: Self, item: Sequence[int]) -> PandasLikeDataFrame: ...
-
-    @overload
-    def __getitem__(self: Self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(self: Self, item: Sequence[str]) -> PandasLikeDataFrame: ...
-
-    @overload
-    def __getitem__(self: Self, item: slice) -> PandasLikeDataFrame: ...
-
-    @overload
-    def __getitem__(self: Self, item: tuple[slice, slice]) -> Self: ...
-
-    @overload
     def __getitem__(
-        self: Self, item: tuple[Sequence[int], Sequence[int] | slice]
-    ) -> PandasLikeDataFrame: ...
-
-    @overload
-    def __getitem__(
-        self: Self, item: tuple[slice, Sequence[int]]
-    ) -> PandasLikeDataFrame: ...
-
+        self: Self,
+        item: (
+            int
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | _1DArray
+            | tuple[
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
+            ]
+        ),
+    ) -> Self: ...
     def __getitem__(
         self: Self,
         item: (
@@ -196,13 +189,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             | slice
             | Sequence[int]
             | Sequence[str]
-            | tuple[Sequence[int], str | int]
-            | tuple[slice | Sequence[int], Sequence[int] | slice]
-            | tuple[slice, slice]
+            | _1DArray
+            | tuple[slice | Sequence[int] | _1DArray, int | str]
+            | tuple[
+                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
+            ]
         ),
-    ) -> PandasLikeSeries | PandasLikeDataFrame:
+    ) -> PandasLikeSeries | Self:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
         if isinstance(item, str):
             return PandasLikeSeries(
@@ -222,11 +217,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 return self._from_native_frame(
                     self._native_frame.__class__(), validate_column_names=False
                 )
-            if all(isinstance(x, int) for x in item[1]):
+            if all(isinstance(x, int) for x in item[1]):  # type: ignore[var-annotated]
                 return self._from_native_frame(
                     self._native_frame.iloc[item], validate_column_names=False
                 )
-            if all(isinstance(x, str) for x in item[1]):
+            if all(isinstance(x, str) for x in item[1]):  # type: ignore[var-annotated]
                 indexer = (
                     item[0],
                     self._native_frame.columns.get_indexer(item[1]),
@@ -263,7 +258,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
+                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # pyright: ignore[reportAssignmentType]
                 native_series = self._native_frame.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
@@ -278,12 +273,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 version=self._version,
             )
 
-        elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
+        elif is_sequence_but_not_str(item) or is_numpy_array_1d(item):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
                 return self._from_native_frame(
                     select_columns_by_name(
                         self._native_frame,
-                        item,
+                        cast("Sequence[str] | _1DArray", item),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -565,7 +560,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return PandasLikeDataFrame(
                 self.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -577,7 +572,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return ArrowDataFrame(
                 native_dataframe=self.to_arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -589,7 +584,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsDataFrame(
                 df=self.to_polars(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -810,7 +805,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return DuckDBLazyFrame(
                 df=duckdb.table("pandas_df"),
-                backend_version=parse_version(duckdb.__version__),
+                backend_version=parse_version(duckdb),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -821,7 +816,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsLazyFrame(
                 df=pl.from_pandas(pandas_df).lazy(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
         elif backend is Implementation.DASK:
@@ -832,7 +827,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(pandas_df),
-                backend_version=parse_version(dask.__version__),
+                backend_version=parse_version(dask),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -855,7 +850,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
         native_dtypes = self._native_frame.dtypes
 
         if copy is None:
@@ -896,12 +891,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np
 
-                return np.hstack(
+                arr: Any = np.hstack(
                     [
                         self[col].to_numpy(copy=copy, dtype=None)[:, None]
                         for col in self.columns
                     ]
                 )
+                return arr
         return df.to_numpy(copy=copy)
 
     def to_pandas(self: Self) -> pd.DataFrame:

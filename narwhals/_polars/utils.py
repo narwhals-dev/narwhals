@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 from typing import TypeVar
 from typing import overload
 
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -111,11 +111,11 @@ def native_to_narwhals_dtype(
     if dtype == pl.Date:
         return dtypes.Date()
     if dtype == pl.Datetime:
-        dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        dt_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
         return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
     if dtype == pl.Duration:
-        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
         return dtypes.Struct(
@@ -181,12 +181,12 @@ def narwhals_to_native_dtype(
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
-        dt_time_unit: Literal["ms", "us", "ns"] = getattr(dtype, "time_unit", "us")
+        dt_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)
+        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
-        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
-        return pl.Duration(time_unit=du_time_unit)
+        du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
+        return pl.Duration(time_unit=du_time_unit)  # type: ignore[arg-type]
     if dtype == dtypes.List:
         return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
     if dtype == dtypes.Struct:

@@ -17,6 +17,8 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - IntoFrameT
         - IntoSeries
         - IntoSeriesT
+        - SizeUnit
+        - TimeUnit
       show_source: false
       show_bases: false
 

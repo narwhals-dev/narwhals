@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     return (
         part_ds.join(lineitem_ds, left_on="p_partkey", right_on="l_partkey")
