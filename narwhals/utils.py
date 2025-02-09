@@ -38,6 +38,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Protocol
 
     import pandas as pd
     from typing_extensions import Self
@@ -63,6 +64,9 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+
+    class _SupportsVersion(Protocol):
+        __version__: str
 
 
 class Version(Enum):
@@ -453,11 +457,11 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def parse_version(version: str) -> tuple[int, ...]:
+def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
     Arguments:
-        version: Version string to parse.
+        version: Version string, or object with one, to parse.
 
     Returns:
         Parsed version number.
@@ -465,8 +469,9 @@ def parse_version(version: str) -> tuple[int, ...]:
     # lifted from Polars
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
     # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
-    version = re.sub(r"(\D?dev.*$)", "", version)
-    return tuple(int(re.sub(r"\D", "", v)) for v in version.split("."))
+    version_str = version if isinstance(version, str) else version.__version__
+    version_str = re.sub(r"(\D?dev.*$)", "", version_str)
+    return tuple(int(re.sub(r"\D", "", v)) for v in version_str.split("."))
 
 
 def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:

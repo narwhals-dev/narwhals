@@ -516,9 +516,6 @@ def datetime(
         ... }
         >>> df_native = pa.table(data)
         >>> df_nw = nw.from_native(df_native)
-
-        Let's define a dataframe-agnostic function to select datetime dtypes:
-
         >>> df_nw.select(ncs.datetime()).to_native()
         pyarrow.Table
         tstamp_utc: timestamp[us, tz=UTC]

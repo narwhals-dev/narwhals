@@ -399,7 +399,7 @@ def _from_native_impl(  # noqa: PLR0915
             raise TypeError(msg)
         import sqlframe._version
 
-        backend_version = parse_version(sqlframe._version.__version__)
+        backend_version = parse_version(sqlframe._version)
         return LazyFrame(
             SparkLikeLazyFrame(
                 native_object,
@@ -459,9 +459,7 @@ def _from_native_impl(  # noqa: PLR0915
         pl = get_polars()
         return DataFrame(
             PolarsDataFrame(
-                native_object,
-                backend_version=parse_version(pl.__version__),
-                version=version,
+                native_object, backend_version=parse_version(pl), version=version
             ),
             level="full",
         )
@@ -481,9 +479,7 @@ def _from_native_impl(  # noqa: PLR0915
         pl = get_polars()
         return LazyFrame(
             PolarsLazyFrame(
-                native_object,
-                backend_version=parse_version(pl.__version__),
-                version=version,
+                native_object, backend_version=parse_version(pl), version=version
             ),
             level="lazy",
         )
@@ -498,9 +494,7 @@ def _from_native_impl(  # noqa: PLR0915
             return native_object
         return Series(
             PolarsSeries(
-                native_object,
-                backend_version=parse_version(pl.__version__),
-                version=version,
+                native_object, backend_version=parse_version(pl), version=version
             ),
             level="full",
         )
@@ -518,7 +512,7 @@ def _from_native_impl(  # noqa: PLR0915
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 implementation=Implementation.PANDAS,
                 version=version,
                 validate_column_names=True,
@@ -538,7 +532,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeSeries(
                 native_object,
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=version,
             ),
             level="full",
@@ -558,7 +552,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeDataFrame(
                 native_object,
                 implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd.__version__),
+                backend_version=parse_version(mpd),
                 version=version,
                 validate_column_names=True,
             ),
@@ -577,7 +571,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeSeries(
                 native_object,
                 implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd.__version__),
+                backend_version=parse_version(mpd),
                 version=version,
             ),
             level="full",
@@ -597,7 +591,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeDataFrame(
                 native_object,
                 implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf.__version__),
+                backend_version=parse_version(cudf),
                 version=version,
                 validate_column_names=True,
             ),
@@ -616,7 +610,7 @@ def _from_native_impl(  # noqa: PLR0915
             PandasLikeSeries(
                 native_object,
                 implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf.__version__),
+                backend_version=parse_version(cudf),
                 version=version,
             ),
             level="full",
@@ -635,7 +629,7 @@ def _from_native_impl(  # noqa: PLR0915
         return DataFrame(
             ArrowDataFrame(
                 native_object,
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=version,
                 validate_column_names=True,
             ),
@@ -652,10 +646,7 @@ def _from_native_impl(  # noqa: PLR0915
             return native_object
         return Series(
             ArrowSeries(
-                native_object,
-                backend_version=parse_version(pa.__version__),
-                name="",
-                version=version,
+                native_object, backend_version=parse_version(pa), name="", version=version
             ),
             level="full",
         )
@@ -675,14 +666,14 @@ def _from_native_impl(  # noqa: PLR0915
                 raise TypeError(msg)
             return native_object
         if (
-            parse_version(get_dask().__version__) < (2025, 1) and get_dask_expr() is None
+            parse_version(get_dask()) <= (2024, 12, 1) and get_dask_expr() is None
         ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(
             DaskLazyFrame(
                 native_object,
-                backend_version=parse_version(get_dask().__version__),
+                backend_version=parse_version(get_dask()),
                 version=version,
                 validate_column_names=True,
             ),
@@ -704,7 +695,7 @@ def _from_native_impl(  # noqa: PLR0915
             raise TypeError(msg)
         import duckdb  # ignore-banned-import
 
-        backend_version = parse_version(duckdb.__version__)
+        backend_version = parse_version(duckdb)
         if version is Version.V1:
             return DataFrame(
                 DuckDBLazyFrame(
@@ -739,7 +730,7 @@ def _from_native_impl(  # noqa: PLR0915
             return native_object
         import ibis  # ignore-banned-import
 
-        backend_version = parse_version(ibis.__version__)
+        backend_version = parse_version(ibis)
         if version is Version.V1:
             return DataFrame(
                 IbisLazyFrame(
@@ -767,7 +758,7 @@ def _from_native_impl(  # noqa: PLR0915
         return LazyFrame(
             SparkLikeLazyFrame(
                 native_object,
-                backend_version=parse_version(get_pyspark().__version__),
+                backend_version=parse_version(get_pyspark()),
                 version=version,
                 implementation=Implementation.PYSPARK,
             ),
