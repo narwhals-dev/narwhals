@@ -13,6 +13,7 @@ from typing import Union
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import numpy as np
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -258,6 +259,12 @@ SizeUnit: TypeAlias = Literal[
 ]
 
 TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 
 
 class DTypes:

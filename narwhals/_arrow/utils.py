@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import pyarrow as pa
@@ -13,11 +14,14 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    import numpy as np
+    from typing import TypeVar
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+
+    _T = TypeVar("_T")
 
 
 @lru_cache(maxsize=16)
@@ -363,22 +367,10 @@ def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
 
 
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> np.ndarray: ...
-
-
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: int) -> int: ...
-
-
-@overload
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: Sequence[int]
-) -> Sequence[int]: ...
-
-
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: slice | int | Sequence[int]
-) -> np.ndarray | int | Sequence[int]:
+def convert_slice_to_nparray(num_rows: int, rows_slice: _T) -> _T: ...
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice | _T) -> _AnyDArray | _T:
     if isinstance(rows_slice, slice):
         import numpy as np  # ignore-banned-import
 
@@ -387,14 +379,16 @@ def convert_slice_to_nparray(
         return rows_slice
 
 
-def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+def select_rows(
+    table: pa.Table, rows: slice | int | Sequence[int] | _AnyDArray
+) -> pa.Table:
     if isinstance(rows, slice) and rows == slice(None):
         selected_rows = table
     elif isinstance(rows, Sequence) and not rows:
         selected_rows = table.slice(0, 0)
     else:
         range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
-        selected_rows = table.take(range_)
+        selected_rows = table.take(cast("list[int]", range_))
     return selected_rows
 
 
