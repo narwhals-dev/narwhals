@@ -3,7 +3,7 @@ name: PyTest
 on:
   pull_request:
   push:
-    branches: [main, dev/cast_dtypes]
+    branches: [main]
 
 jobs:
   pytest-38:
