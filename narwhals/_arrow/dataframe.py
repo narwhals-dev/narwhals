@@ -171,6 +171,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
+        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
+    ) -> ArrowSeries: ...
+    @overload
+    def __getitem__(
         self: Self,
         item: (
             int
@@ -183,10 +187,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             ]
         ),
     ) -> Self: ...
-    @overload
-    def __getitem__(
-        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
-    ) -> ArrowSeries: ...
     def __getitem__(
         self: Self,
         item: (
