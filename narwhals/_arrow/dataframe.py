@@ -170,7 +170,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
-    def __getitem__(  # type: ignore[overload-overlap]
+    def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
         self: Self,
         item: (
             int
