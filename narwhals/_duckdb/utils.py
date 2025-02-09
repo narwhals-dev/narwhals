@@ -192,11 +192,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)  # type: ignore[union-attr]
-        while isinstance(dtype.inner, dtypes.Array):  # type: ignore[union-attr]
-            dtype = dtype.inner  # type: ignore[union-attr]
-        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
-        return f"{inner}{duckdb_shape_fmt}"
+        shape: tuple[int] = dtype.shape  # type: ignore[union-attr]
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
+        inner_dtype = dtype
+        for _ in shape:
+            inner_dtype = inner_dtype.inner  # type: ignore[union-attr]
+        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
+        return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

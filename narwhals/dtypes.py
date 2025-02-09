@@ -765,7 +765,7 @@ class Array(NestedType):
 
     Arguments:
         inner: The datatype of the values within each array.
-        shape: the length of each array.
+        shape: The shape of the arrays.
 
     Examples:
         >>> import pandas as pd
@@ -840,12 +840,12 @@ class Array(NestedType):
 
     def __repr__(self) -> str:
         # Get leaf type
-        dtype = self.inner
-        while isinstance(dtype, Array):
-            dtype = dtype.inner
+        dtype_ = self
+        for _ in self.shape:
+            dtype_ = dtype_.inner  # type: ignore[assignment]
 
         class_name = self.__class__.__name__
-        return f"{class_name}({dtype!r}, shape={self.shape})"
+        return f"{class_name}({dtype_!r}, shape={self.shape})"
 
 
 class Date(TemporalType):
