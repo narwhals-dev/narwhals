@@ -147,7 +147,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "DOUBLE"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "DOUBLE"
+        return "FLOAT"
+    if isinstance_or_issubclass(dtype, dtypes.Int128):
+        return "INT128"
     if isinstance_or_issubclass(dtype, dtypes.Int64):
         return "BIGINT"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
