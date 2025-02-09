@@ -133,13 +133,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
     ) -> Series: ...
     @overload
     def __getitem__(
         self: Self,
-        key: (
-            slice
+        item: (
+            int
+            | slice
+            | np.ndarray
             | Sequence[int]
             | Sequence[str]
             | tuple[
@@ -1063,6 +1066,8 @@ class Schema(NwSchema):
             The schema definition given by column names and their associated.
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
     """
+
+    _version = Version.V1
 
 
 @overload
@@ -2183,12 +2188,7 @@ def from_dict(
         backend, native_namespace, emit_deprecation_warning=False
     )
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(
-            data,
-            schema,
-            backend=backend,
-            version=Version.V1,
-        )
+        _from_dict_impl(data, schema, backend=backend)
     )
 
 

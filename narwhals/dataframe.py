@@ -72,9 +72,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _from_compliant_dataframe(self: Self, df: Any) -> Self:
         # construct, preserving properties
-        return self.__class__(  # type: ignore[call-arg]
-            df, level=self._level
-        )
+        return self.__class__(df, level=self._level)  # type: ignore[call-arg]
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -502,7 +500,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+        if parse_version(pa) < (14, 0):  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
@@ -861,16 +859,19 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self, key: str | tuple[slice | Sequence[int] | np.ndarray, int | str]
+        self: Self,
+        item: str | tuple[slice | Sequence[int] | np.ndarray, int | str],
     ) -> Series[Any]: ...
 
     @overload
     def __getitem__(
         self: Self,
-        key: (
-            slice
+        item: (
+            int
+            | slice
             | Sequence[int]
             | Sequence[str]
+            | np.ndarray
             | tuple[
                 slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
             ]
@@ -880,9 +881,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         item: (
             str
+            | int
             | slice
             | Sequence[int]
             | Sequence[str]
+            | np.ndarray
             | tuple[slice | Sequence[int] | np.ndarray, int | str]
             | tuple[
                 slice | Sequence[int] | np.ndarray, slice | Sequence[int] | Sequence[str]
