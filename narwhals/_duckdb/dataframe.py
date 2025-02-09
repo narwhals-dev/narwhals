@@ -100,7 +100,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
             return ArrowDataFrame(
                 native_dataframe=self._native_frame.arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -113,7 +113,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             return PandasLikeDataFrame(
                 native_dataframe=self._native_frame.df(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -125,7 +125,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
             return PolarsDataFrame(
                 df=self._native_frame.pl(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -257,7 +257,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
-        if parse_version(pd.__version__) >= parse_version("1.0.0"):
+        if parse_version(pd) >= (1, 0, 0):
             return self._native_frame.df()
         else:  # pragma: no cover
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"

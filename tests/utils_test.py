@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import string
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import hypothesis.strategies as st
@@ -23,6 +24,12 @@ from tests.utils import get_module_version_as_tuple
 if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoSeriesT
+    from narwhals.utils import _SupportsVersion
+
+
+@dataclass
+class DummyModule:
+    __version__: str
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -283,9 +290,12 @@ def test_generate_temporary_column_name_raise() -> None:
         ("2020.1.2", (2020, 1, 2)),
         ("2020.1.2-dev123", (2020, 1, 2)),
         ("3.0.0.dev0+618.gb552dc95c9", (3, 0, 0)),
+        (DummyModule("2020.1.2-dev123"), (2020, 1, 2)),
     ],
 )
-def test_parse_version(version: str, expected: tuple[int, ...]) -> None:
+def test_parse_version(
+    version: str | _SupportsVersion, expected: tuple[int, ...]
+) -> None:
     assert parse_version(version) == expected
 
 
