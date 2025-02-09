@@ -40,7 +40,9 @@ if TYPE_CHECKING:
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Indices,
     )
+    from pyarrow._stubs_typing import Order  # pyright: ignore[reportMissingModuleSource]
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
@@ -51,6 +53,18 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+
+    JoinType: TypeAlias = Literal[
+        "left semi",
+        "right semi",
+        "left anti",
+        "right anti",
+        "inner",
+        "left outer",
+        "right outer",
+        "full outer",
+    ]
+    PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -379,7 +393,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        how_to_join_map = {
+        how_to_join_map: dict[str, JoinType] = {
             "anti": "left anti",
             "semi": "left semi",
             "inner": "inner",
@@ -407,7 +421,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
-                keys=left_on,
+                keys=left_on or [],
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
@@ -453,8 +467,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         df = self._native_frame
 
         if isinstance(descending, bool):
-            order = "descending" if descending else "ascending"
-            sorting = [(key, order) for key in by]
+            order: Order = "descending" if descending else "ascending"
+            sorting: list[tuple[str, Order]] = [(key, order) for key in by]
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
@@ -749,7 +763,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                pc.take(df, keep_idx), validate_column_names=False
+                pc.take(df, keep_idx),  # type: ignore[call-overload, unused-ignore]
+                validate_column_names=False,
             )
 
         keep_idx = self.simple_select(*subset).is_unique()
@@ -782,7 +797,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
-        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)
+        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)  # type: ignore[call-overload, unused-ignore]
 
     def unpivot(
         self: Self,
@@ -799,21 +814,25 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             [c for c in self.columns if c not in index_] if on is None else on
         )
 
-        promote_kwargs = (
+        promote_kwargs: dict[Literal["promote_options"], PromoteOptions] = (
             {"promote_options": "permissive"}
             if self._backend_version >= (14, 0, 0)
             else {}
         )
+        names = [*index_, variable_name, value_name]
         return self._from_native_frame(
             pa.concat_tables(
                 [
                     pa.Table.from_arrays(
                         [
-                            *[native_frame.column(idx_col) for idx_col in index_],
-                            pa.array([on_col] * n_rows, pa.string()),
+                            *(native_frame.column(idx_col) for idx_col in index_),
+                            cast(
+                                "pa.ChunkedArray",
+                                pa.array([on_col] * n_rows, pa.string()),
+                            ),
                             native_frame.column(on_col),
                         ],
-                        names=[*index_, variable_name, value_name],
+                        names=names,
                     )
                     for on_col in on_
                 ],
