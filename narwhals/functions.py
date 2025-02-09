@@ -19,6 +19,7 @@ from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.schema import Schema
@@ -486,7 +487,7 @@ def _from_numpy_impl(
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
-    if data.ndim != 2:
+    if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
