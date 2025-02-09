@@ -103,6 +103,15 @@ class PolarsDataFrame:
         # scalar
         return obj
 
+    def __len__(self) -> int:
+        return len(self._native_frame)
+
+    def head(self, n: int) -> Self:
+        return self._from_native_frame(self._native_frame.head(n))
+
+    def tail(self, n: int) -> Self:
+        return self._from_native_frame(self._native_frame.tail(n))
+
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             import polars as pl
