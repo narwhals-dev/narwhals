@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from typing_extensions import Self
-    from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
@@ -60,6 +59,7 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _T = TypeVar("_T")
 
 
 class Version(Enum):
@@ -996,7 +996,7 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
+def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
