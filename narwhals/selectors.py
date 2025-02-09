@@ -9,9 +9,12 @@ from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
+    from datetime import timezone
+
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
 
 
 class Selector(Expr):
@@ -474,11 +477,75 @@ def all() -> Selector:
     )
 
 
+def datetime(
+    time_unit: TimeUnit | Iterable[TimeUnit] | None = None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None = ("*", None),
+) -> Selector:
+    """Select all datetime columns, optionally filtering by time unit/zone.
+
+    Arguments:
+        time_unit: One (or more) of the allowed timeunit precision strings, "ms", "us",
+            "ns" and "s". Omit to select columns with any valid timeunit.
+        time_zone: Specify which timezone(s) to select:
+
+            * One or more timezone strings, as defined in zoneinfo (to see valid options
+                run `import zoneinfo; zoneinfo.available_timezones()` for a full list).
+            * Set `None` to select Datetime columns that do not have a timezone.
+            * Set `"*"` to select Datetime columns that have *any* timezone.
+
+    Returns:
+        A new expression.
+
+    Examples:
+        >>> from datetime import datetime, timezone
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>>
+        >>> utc_tz = timezone.utc
+        >>> data = {
+        ...     "tstamp_utc": [
+        ...         datetime(2023, 4, 10, 12, 14, 16, 999000, tzinfo=utc_tz),
+        ...         datetime(2025, 8, 25, 14, 18, 22, 666000, tzinfo=utc_tz),
+        ...     ],
+        ...     "tstamp": [
+        ...         datetime(2000, 11, 20, 18, 12, 16, 600000),
+        ...         datetime(2020, 10, 30, 10, 20, 25, 123000),
+        ...     ],
+        ...     "numeric": [3.14, 6.28],
+        ... }
+        >>> df_native = pa.table(data)
+        >>> df_nw = nw.from_native(df_native)
+        >>> df_nw.select(ncs.datetime()).to_native()
+        pyarrow.Table
+        tstamp_utc: timestamp[us, tz=UTC]
+        tstamp: timestamp[us]
+        ----
+        tstamp_utc: [[2023-04-10 12:14:16.999000Z,2025-08-25 14:18:22.666000Z]]
+        tstamp: [[2000-11-20 18:12:16.600000,2020-10-30 10:20:25.123000]]
+
+        Select only datetime columns that have any time_zone specification:
+
+        >>> df_nw.select(ncs.datetime(time_zone="*")).to_native()
+        pyarrow.Table
+        tstamp_utc: timestamp[us, tz=UTC]
+        ----
+        tstamp_utc: [[2023-04-10 12:14:16.999000Z,2025-08-25 14:18:22.666000Z]]
+    """
+    return Selector(
+        lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
+        is_order_dependent=False,
+        changes_length=False,
+        aggregates=False,
+    )
+
+
 __all__ = [
     "all",
     "boolean",
     "by_dtype",
     "categorical",
+    "datetime",
     "matches",
     "numeric",
     "string",

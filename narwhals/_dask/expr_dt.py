@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
+    from narwhals.typing import TimeUnit
 
 
 class DaskExprDateTimeNamespace:
@@ -145,8 +145,8 @@ class DaskExprDateTimeNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> DaskExpr:
-        def func(s: dx.Series, time_unit: Literal["ns", "us", "ms"]) -> dx.Series:
+    def timestamp(self: Self, time_unit: TimeUnit) -> DaskExpr:
+        def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self._compliant_expr._version, Implementation.DASK
             )

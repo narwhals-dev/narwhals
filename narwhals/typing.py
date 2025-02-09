@@ -258,6 +258,8 @@ SizeUnit: TypeAlias = Literal[
     "terabytes",
 ]
 
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
