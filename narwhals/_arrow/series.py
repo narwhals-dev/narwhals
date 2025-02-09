@@ -440,9 +440,6 @@ class ArrowSeries(CompliantSeries):
             raise AssertionError
         return self._from_native_series(res)
 
-    def is_empty(self: Self) -> bool:
-        return len(self) == 0
-
     def is_null(self: Self) -> Self:
         ser = self._native_series
         return self._from_native_series(ser.is_null())
@@ -1035,10 +1032,6 @@ class ArrowSeries(CompliantSeries):
 
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
-
-    @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self._native_series),)
 
     @property
     def dt(self: Self) -> ArrowSeriesDateTimeNamespace:

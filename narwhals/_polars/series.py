@@ -106,10 +106,6 @@ class PolarsSeries:
         return len(self._native_series)
 
     @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self),)
-
-    @property
     def name(self: Self) -> str:
         return self._native_series.name
 

@@ -168,15 +168,11 @@ class PandasLikeSeries(CompliantSeries):
         )
 
     def __len__(self: Self) -> int:
-        return self.shape[0]
+        return len(self._native_series)
 
     @property
     def name(self: Self) -> str:
         return self._name  # type: ignore[no-any-return]
-
-    @property
-    def shape(self: Self) -> tuple[int]:
-        return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
     def dtype(self: Self) -> DType:
@@ -729,9 +725,6 @@ class PandasLikeSeries(CompliantSeries):
         raise AssertionError(msg)
 
     # --- descriptive ---
-    def is_empty(self: Self) -> bool:
-        return self._native_series.empty  # type: ignore[no-any-return]
-
     def is_unique(self: Self) -> Self:
         return self._from_native_series(
             ~self._native_series.duplicated(keep=False)
