@@ -196,9 +196,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series([1, 2])
-            >>> nw.from_native(
-            ...     s_native, series_only=True
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i64]
             [
@@ -299,9 +298,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s_native = pl.Series([1, 2, 3])
-            >>> nw.from_native(s_native, series_only=True).pipe(
-            ...     lambda x: x + 2
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.pipe(lambda x: x + 2).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -789,9 +787,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pa.chunked_array([[1, 2, 3]])
-            >>> nw.from_native(s_native, series_only=True).is_in(
-            ...     [3, 2, 8]
-            ... ).to_native()  # doctest: +ELLIPSIS
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.is_in([3, 2, 8]).to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -918,7 +915,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series([2, 4, 4, 6])
-            >>> nw.from_native(s_native, series_only=True).unique(
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.unique(
             ...     maintain_order=True
             ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
@@ -1029,7 +1027,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series([1, 2, 3, 4])
-            >>> nw.from_native(s_native, series_only=True).sample(
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sample(
             ...     fraction=1.0, with_replacement=True
             ... ).to_native()  # doctest: +SKIP
             shape: (4,)
@@ -1123,9 +1122,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series("foo", [1, 2, 3])
-            >>> nw.from_native(s_native, series_only=True).rename(
-            ...     "bar"
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.rename("bar").to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: 'bar' [i64]
             [
@@ -1202,9 +1200,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series([5, None, 1, 2])
-            >>> nw.from_native(s_native, series_only=True).sort(
-            ...     descending=True
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sort(descending=True).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
@@ -1353,9 +1350,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pa.chunked_array([[1, 2, 3, 4, 5]])
-            >>> nw.from_native(s_native, series_only=True).is_between(
-            ...     2, 4, "right"
-            ... ).to_native()  # doctest: +ELLIPSIS
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.is_between(2, 4, "right").to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -1930,9 +1926,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pa.chunked_array([list(range(10))])
-            >>> nw.from_native(s_native, series_only=True).tail(
-            ...     3
-            ... ).to_native()  # doctest: +ELLIPSIS
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.tail(3).to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -1966,9 +1961,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import narwhals as nw
             >>>
             >>> s_native = pl.Series([1.12345, 2.56789, 3.901234])
-            >>> nw.from_native(s_native, series_only=True).round(
-            ...     1
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.round(1).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [f64]
             [
