@@ -258,8 +258,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # pyright: ignore[reportAssignmentType]
-                native_series = self._native_frame.iloc[item]
+                index = (item[0], self._native_frame.columns.get_loc(item[1]))
+                native_series = self._native_frame.iloc[index]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
             else:  # pragma: no cover

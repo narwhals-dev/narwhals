@@ -159,7 +159,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         ):
             return self._from_native_frame(
                 self._native_frame.aggregate(
-                    [val.alias(col) for col, val in new_columns_map.items()]
+                    [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
                 ),
                 validate_column_names=False,
             )
