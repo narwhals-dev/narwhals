@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
-def query(
-    part_ds: nw.LazyFrame, partsupp_ds: nw.LazyFrame, supplier_ds: nw.LazyFrame
-) -> nw.LazyFrame:
+
+def query(part_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = "Brand#45"
 
     supplier = supplier_ds.filter(

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
-def query(customer_ds: nw.LazyFrame, orders_ds: nw.LazyFrame) -> nw.LazyFrame:
+
+def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var1 = "special"
     var2 = "requests"
 

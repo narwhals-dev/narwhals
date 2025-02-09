@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
 
 def query(
-    lineitem: nw.LazyFrame,
-    nation: nw.LazyFrame,
-    orders: nw.LazyFrame,
-    supplier: nw.LazyFrame,
-) -> nw.LazyFrame:
+    lineitem: FrameT,
+    nation: FrameT,
+    orders: FrameT,
+    supplier: FrameT,
+) -> FrameT:
     var1 = "SAUDI ARABIA"
 
     q1 = (

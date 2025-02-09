@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
+
 
 def query(
-    nation_ds: nw.LazyFrame,
-    customer_ds: nw.LazyFrame,
-    line_item_ds: nw.LazyFrame,
-    orders_ds: nw.LazyFrame,
-    supplier_ds: nw.LazyFrame,
-) -> nw.LazyFrame:
+    nation_ds: FrameT,
+    customer_ds: FrameT,
+    line_item_ds: FrameT,
+    orders_ds: FrameT,
+    supplier_ds: FrameT,
+) -> FrameT:
     n1 = (nation_ds).filter(nw.col("n_name") == "FRANCE")
     n2 = (nation_ds).filter(nw.col("n_name") == "GERMANY")
 

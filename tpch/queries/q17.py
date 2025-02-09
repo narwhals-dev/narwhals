@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
-def query(lineitem_ds: nw.LazyFrame, part_ds: nw.LazyFrame) -> nw.LazyFrame:
+
+def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     var1 = "Brand#23"
     var2 = "MED BOX"
 

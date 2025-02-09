@@ -106,6 +106,7 @@ def execute_query(query_id: str) -> None:
                     for path in data_paths
                 )
             )
+            .lazy()
             .collect(backend=nw.Implementation.POLARS)
             .to_native()
         )

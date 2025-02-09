@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
 
 def query(
-    region_ds: nw.LazyFrame,
-    nation_ds: nw.LazyFrame,
-    supplier_ds: nw.LazyFrame,
-    part_ds: nw.LazyFrame,
-    part_supp_ds: nw.LazyFrame,
-) -> nw.LazyFrame:
+    region_ds: FrameT,
+    nation_ds: FrameT,
+    supplier_ds: FrameT,
+    part_ds: FrameT,
+    part_supp_ds: FrameT,
+) -> FrameT:
     var_1 = 15
     var_2 = "BRASS"
     var_3 = "EUROPE"

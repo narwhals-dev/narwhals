@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
-def query(lineitem: nw.LazyFrame) -> nw.LazyFrame:
+
+def query(lineitem: FrameT) -> FrameT:
     var_1 = datetime(1998, 9, 2)
     return (
         lineitem.filter(nw.col("l_shipdate") <= var_1)

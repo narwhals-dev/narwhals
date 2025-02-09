@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
 
 def query(
-    part_ds: nw.LazyFrame,
-    partsupp_ds: nw.LazyFrame,
-    nation_ds: nw.LazyFrame,
-    lineitem_ds: nw.LazyFrame,
-    orders_ds: nw.LazyFrame,
-    supplier_ds: nw.LazyFrame,
-) -> nw.LazyFrame:
+    part_ds: FrameT,
+    partsupp_ds: FrameT,
+    nation_ds: FrameT,
+    lineitem_ds: FrameT,
+    orders_ds: FrameT,
+    supplier_ds: FrameT,
+) -> FrameT:
     return (
         part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
