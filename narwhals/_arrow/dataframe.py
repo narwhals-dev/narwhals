@@ -37,7 +37,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from pyarrow._stubs_typing import Indices  # type: ignore  # noqa: PGH003
+    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
+        Indices,
+    )
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -168,12 +170,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
-    def __getitem__(
-        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
-    ) -> ArrowSeries: ...  # type: ignore[overload-overlap]
-
-    @overload
-    def __getitem__(
+    def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
         item: (
             int
@@ -186,6 +183,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             ]
         ),
     ) -> Self: ...
+    @overload
+    def __getitem__(
+        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
+    ) -> ArrowSeries: ...
     def __getitem__(
         self: Self,
         item: (
@@ -202,7 +203,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         ),
     ) -> ArrowSeries | Self:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
