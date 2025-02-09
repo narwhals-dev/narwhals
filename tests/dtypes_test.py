@@ -273,44 +273,27 @@ def test_huge_int_to_native() -> None:
     assert type_a_unit == "UHUGEINT"
 
 
-def test_cast_decimal_to_native() -> None:
+@pytest.mark.parametrize("library", ["pandas", "duckdb", "polars", "pyarrow"])
+def test_cast_decimal_to_native(
+    library: Literal["pandas", "duckdb", "polars", "pyarrow"],
+) -> None:
     duckdb = pytest.importorskip("duckdb")
     data = {"a": [1, 2, 3]}
-    df = pl.DataFrame(data)
-
+    if library == "polars":
+        df = pl.DataFrame(data)
+    elif library == "duckdb":
+        df = pl.DataFrame(data)
+        df = duckdb.sql("""
+            select cast(a as INT1) as a
+            from df
+                         """)
+    elif library == "pandas":
+        df = pd.DataFrame(data)
+    elif library == "pyarrow":
+        df = pa.Table.from_arrays(
+            [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
+        )
     with pytest.raises(
         NotImplementedError, match="Casting to Decimal is not supported yet."
     ):
         (nw.from_native(df).with_columns(a=nw.col("a").cast(nw.Decimal())).to_native())
-    rel = duckdb.sql("""
-        select cast(a as INT1) as a
-        from df
-                     """)
-    with pytest.raises(
-        NotImplementedError, match="Casting to Decimal is not supported yet."
-    ):
-        (
-            nw.from_native(rel)
-            .with_columns(
-                a_decimal=nw.col("a").cast(nw.Decimal()),
-            )
-            .to_native()
-        )
-    df_pa = pa.Table.from_arrays(
-        [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
-    )
-    with pytest.raises(
-        NotImplementedError, match="Casting to Decimal is not supported yet."
-    ):
-        (
-            nw.from_native(df_pa)
-            .with_columns(
-                a=nw.col("a").cast(nw.Decimal()),
-            )
-            .to_native()
-        )
-    df_pd = pd.DataFrame(data)
-    with pytest.raises(
-        NotImplementedError, match="Casting to Decimal is not supported yet."
-    ):
-        (nw.from_native(df_pd).with_columns(a=nw.col("a").cast(nw.Decimal())).to_native())
