@@ -559,7 +559,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return PandasLikeDataFrame(
                 self.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -571,7 +571,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return ArrowDataFrame(
                 native_dataframe=self.to_arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -583,7 +583,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsDataFrame(
                 df=self.to_polars(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -804,7 +804,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return DuckDBLazyFrame(
                 df=duckdb.table("pandas_df"),
-                backend_version=parse_version(duckdb.__version__),
+                backend_version=parse_version(duckdb),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -815,7 +815,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsLazyFrame(
                 df=pl.from_pandas(pandas_df).lazy(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
         elif backend is Implementation.DASK:
@@ -826,7 +826,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(pandas_df),
-                backend_version=parse_version(dask.__version__),
+                backend_version=parse_version(dask),
                 version=self._version,
                 validate_column_names=False,
             )

@@ -574,7 +574,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
                 df=duckdb.table("df"),
-                backend_version=parse_version(duckdb.__version__),
+                backend_version=parse_version(duckdb),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -585,7 +585,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsLazyFrame(
                 df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
         elif backend is Implementation.DASK:
@@ -596,7 +596,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
-                backend_version=parse_version(dask.__version__),
+                backend_version=parse_version(dask),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -625,7 +625,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return PandasLikeDataFrame(
                 native_dataframe=self._native_frame.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -637,7 +637,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return PolarsDataFrame(
                 df=pl.from_arrow(self._native_frame),  # type: ignore[arg-type]
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
