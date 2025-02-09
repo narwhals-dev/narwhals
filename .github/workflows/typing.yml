@@ -29,7 +29,7 @@ jobs:
         # TODO: add more dependencies/backends incrementally
         run: |
           source .venv/bin/activate
-          uv pip install -e ".[typing, core]"
+          uv pip install -e ".[tests, typing, core]"
       - name: show-deps
         run: |
           source .venv/bin/activate
