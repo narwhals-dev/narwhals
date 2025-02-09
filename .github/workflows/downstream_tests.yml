@@ -34,7 +34,7 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          uv pip install -e ".[tests, all]" --system
+          uv pip install -e ".[dev, all]" --system
           # temporary pin to get ci green
           uv pip install "numpy<2.2" --system
       - name: install-narwhals-dev
@@ -83,7 +83,7 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
-          uv pip install -e ".[tests]"
+          uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
         run: |
@@ -258,7 +258,7 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
-          uv pip install -e ".[tests]" --system
+          uv pip install -e ".[dev]" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -339,7 +339,7 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          uv pip install --system ".[tests]"
+          uv pip install --system ".[dev]"
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -421,7 +421,7 @@ jobs:
       - name: install-deps
         run: |
           cd pointblank
-          uv pip install --system ".[tests]"
+          uv pip install --system ".[dev]"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" --system    
       - name: install-narwhals-dev
         run: |
