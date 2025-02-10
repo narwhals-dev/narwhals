@@ -9,6 +9,7 @@ from typing import overload
 
 import polars as pl
 
+from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -20,11 +21,11 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -79,8 +80,6 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        import polars as pl
-
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
         if isinstance(series, pl.DataFrame):
@@ -108,10 +107,6 @@ class PolarsSeries:
         return len(self._native_series)
 
     @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self),)
-
-    @property
     def name(self: Self) -> str:
         return self._native_series.name
 
@@ -132,7 +127,7 @@ class PolarsSeries:
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
@@ -140,7 +135,7 @@ class PolarsSeries:
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version)
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )
@@ -149,7 +144,7 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
@@ -227,14 +222,15 @@ class PolarsSeries:
 
     def is_nan(self: Self) -> Self:
         native = self._native_series
-
+        try:
+            native_is_nan = native.is_nan()
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
         if self._backend_version < (1, 18):  # pragma: no cover
             return self._from_native_series(
-                pl.select(pl.when(native.is_not_null()).then(native.is_nan()))[
-                    native.name
-                ]
+                pl.select(pl.when(native.is_not_null()).then(native_is_nan))[native.name]
             )
-        return self._from_native_series(native.is_nan())
+        return self._from_native_series(native_is_nan)
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -246,8 +242,6 @@ class PolarsSeries:
         return self._native_series.median()
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
-        import polars as pl
-
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (0, 20, 15):
@@ -296,8 +290,6 @@ class PolarsSeries:
             **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_series(
                 pl.select(
                     pl.when(~native_series.is_null()).then(native_result).otherwise(None)
@@ -407,8 +399,6 @@ class PolarsSeries:
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                import polars as pl
-
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
         else:
@@ -435,8 +425,6 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):
-            import polars as pl
-
             value_name_ = name or ("proportion" if normalize else "count")
 
             result = self._native_series.value_counts(sort=sort, parallel=parallel)
@@ -468,15 +456,10 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     def __contains__(self: Self, other: Any) -> bool:
-        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-
         try:
             return self._native_series.__contains__(other)
-        except PlInvalidOperationError as exc:
-            from narwhals.exceptions import InvalidOperationError
-
-            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
-            raise InvalidOperationError(msg) from exc
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
 
     def hist(
         self: Self,
@@ -642,15 +625,11 @@ class PolarsSeriesListNamespace:
         native_result = native_series.list.len()
 
         if self._series._backend_version < (1, 16):  # pragma: no cover
-            import polars as pl
-
             native_result = pl.select(
                 pl.when(~native_series.is_null()).then(native_result).otherwise(None)
             )[native_series.name].cast(pl.UInt32())
 
         elif self._series._backend_version < (1, 17):  # pragma: no cover
-            import polars as pl
-
             native_result = native_series.cast(pl.UInt32())
 
         return self._series._from_native_series(native_result)

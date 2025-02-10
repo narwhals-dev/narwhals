@@ -31,7 +31,6 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import numpy as np
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
 
 
@@ -358,10 +358,10 @@ class ArrowSeries(CompliantSeries):
     def to_list(self: Self) -> list[Any]:
         return self._native_series.to_pylist()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self) -> np.ndarray:
+    def to_numpy(self: Self) -> _1DArray:
         return self._native_series.to_numpy()
 
     def alias(self: Self, name: str) -> Self:
@@ -440,9 +440,6 @@ class ArrowSeries(CompliantSeries):
         else:  # pragma: no cover
             raise AssertionError
         return self._from_native_series(res)
-
-    def is_empty(self: Self) -> bool:
-        return len(self) == 0
 
     def is_null(self: Self) -> Self:
         ser = self._native_series
@@ -640,9 +637,6 @@ class ArrowSeries(CompliantSeries):
         import polars as pl  # ignore-banned-import
 
         return pl.from_arrow(self._native_series)  # type: ignore[return-value]
-
-    def is_duplicated(self: Self) -> ArrowSeries:
-        return self.to_frame().is_duplicated().alias(self.name)
 
     def is_unique(self: Self) -> ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
@@ -1162,10 +1156,6 @@ class ArrowSeries(CompliantSeries):
 
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
-
-    @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self._native_series),)
 
     @property
     def dt(self: Self) -> ArrowSeriesDateTimeNamespace:

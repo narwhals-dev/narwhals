@@ -125,7 +125,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return PandasLikeDataFrame(
                 native_dataframe=self._native_frame.toPandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -159,7 +159,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     raise
             return ArrowDataFrame(
                 native_pyarrow_frame,
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -174,7 +174,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 df=pl.from_arrow(  # type: ignore[arg-type]
                     pa.Table.from_batches(self._native_frame._collect_as_arrow())
                 ),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -325,8 +325,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         self_native = self._native_frame
@@ -409,8 +409,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

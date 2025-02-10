@@ -13,7 +13,7 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyspark.types as pyspark_types
+    import pyspark.sql.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -58,7 +58,8 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.ByteType):
         return dtypes.Int8()
     if isinstance(
-        dtype, (spark_types.StringType, spark_types.VarcharType, spark_types.CharType)
+        dtype,
+        (spark_types.StringType, spark_types.VarcharType, spark_types.CharType),
     ):
         return dtypes.String()
     if isinstance(dtype, spark_types.BooleanType):
@@ -123,8 +124,13 @@ def narwhals_to_native_dtype(
         msg = "Converting to Struct dtype is not supported yet"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(
+            dtype.inner,  # type: ignore[union-attr]
+            version=version,
+            spark_types=spark_types,
+        )
+        return spark_types.ArrayType(elementType=inner)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.UInt64, dtypes.UInt32, dtypes.UInt16, dtypes.UInt8)
     ):  # pragma: no cover

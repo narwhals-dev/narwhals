@@ -106,7 +106,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             return PandasLikeDataFrame(
                 result,
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -118,7 +118,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
             return PolarsDataFrame(
                 pl.from_pandas(result),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -129,7 +129,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
             return ArrowDataFrame(
                 pa.Table.from_pandas(result),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -282,14 +282,10 @@ class DaskLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
         if how == "cross":
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
@@ -446,8 +442,8 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

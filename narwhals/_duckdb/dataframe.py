@@ -100,7 +100,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
             return ArrowDataFrame(
                 native_dataframe=self._native_frame.arrow(),
-                backend_version=parse_version(pa.__version__),
+                backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -113,7 +113,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             return PandasLikeDataFrame(
                 native_dataframe=self._native_frame.df(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd.__version__),
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
             )
@@ -125,7 +125,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
             return PolarsDataFrame(
                 df=self._native_frame.pl(),
-                backend_version=parse_version(pl.__version__),
+                backend_version=parse_version(pl),
                 version=self._version,
             )
 
@@ -257,7 +257,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
-        if parse_version(pd.__version__) >= parse_version("1.0.0"):
+        if parse_version(pd) >= (1, 0, 0):
             return self._native_frame.df()
         else:  # pragma: no cover
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
@@ -304,14 +304,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: list[str] | None,
+        right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
         original_alias = self._native_frame.alias
 
         if how == "cross":
@@ -510,20 +506,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: str | list[str] | None,
-        index: str | list[str] | None,
+        on: list[str] | None,
+        index: list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
-        index_: list[str] = (
-            [] if index is None else [index] if isinstance(index, str) else index
-        )
+        index_: list[str] = [] if index is None else index
         on_: list[str] = (
-            [c for c in self.columns if c not in index_]
-            if on is None
-            else [on]
-            if isinstance(on, str)
-            else on
+            [c for c in self.columns if c not in index_] if on is None else on
         )
 
         if variable_name == "":

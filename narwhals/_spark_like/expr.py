@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -351,7 +350,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _median(_input: Column) -> Column:
             import pyspark  # ignore-banned-import
 
-            if parse_version(pyspark.__version__) < (3, 4):
+            if parse_version(pyspark) < (3, 4):
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
@@ -378,12 +377,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(
-            _std,
-            ddof=ddof,
-            np_version=parse_version(np.__version__),
-            functions=self._F,
-        )
+        func = partial(_std, ddof=ddof, np_version=parse_version(np), functions=self._F)
 
         return self._from_call(func, "std", expr_kind=ExprKind.AGGREGATION)
 
@@ -394,12 +388,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(
-            _var,
-            ddof=ddof,
-            np_version=parse_version(np.__version__),
-            functions=self._F,
-        )
+        func = partial(_var, ddof=ddof, np_version=parse_version(np), functions=self._F)
 
         return self._from_call(func, "var", expr_kind=ExprKind.AGGREGATION)
 
@@ -429,36 +418,6 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             upper_bound=upper_bound,
             expr_kind=self._expr_kind,
         )
-
-    def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> Self:
-        def _is_between(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
-            if closed == "both":
-                return (_input >= lower_bound) & (_input <= upper_bound)
-            if closed == "none":
-                return (_input > lower_bound) & (_input < upper_bound)
-            if closed == "left":
-                return (_input >= lower_bound) & (_input < upper_bound)
-            return (_input > lower_bound) & (_input <= upper_bound)
-
-        return self._from_call(
-            _is_between,
-            "is_between",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            expr_kind=self._expr_kind,
-        )
-
-    def is_duplicated(self: Self) -> Self:
-        def _is_duplicated(_input: Column) -> Column:
-            # Create a window spec that treats each value separately.
-            return self._F.count("*").over(self._Window.partitionBy(_input)) > 1
-
-        return self._from_call(_is_duplicated, "is_duplicated", expr_kind=self._expr_kind)
 
     def is_finite(self: Self) -> Self:
         def _is_finite(_input: Column) -> Column:

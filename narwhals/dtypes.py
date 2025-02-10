@@ -10,10 +10,11 @@ from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Iterator
-    from typing import Literal
     from typing import Sequence
 
     from typing_extensions import Self
+
+    from narwhals.typing import TimeUnit
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -490,7 +491,7 @@ class Datetime(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
@@ -553,7 +554,7 @@ class Duration(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms", "s"] = "us",
+        time_unit: TimeUnit = "us",
     ) -> None:
         if time_unit not in ("s", "ms", "us", "ns"):
             msg = (
@@ -764,7 +765,7 @@ class Array(NestedType):
 
     Arguments:
         inner: The datatype of the values within each array.
-        width: the length of each array.
+        shape: The shape of the arrays.
 
     Examples:
         >>> import pandas as pd
@@ -777,21 +778,44 @@ class Array(NestedType):
         >>> ser_pa = pa.chunked_array([data], type=pa.list_(pa.int32(), 2))
 
         >>> nw.from_native(ser_pd, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
         >>> nw.from_native(ser_pl, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
         >>> nw.from_native(ser_pa, series_only=True).dtype
-        Array(Int32, 2)
+        Array(Int32, shape=(2,))
     """
 
+    inner: DType | type[DType]
+    size: int
+    shape: tuple[int, ...]
+
     def __init__(
-        self: Self, inner: DType | type[DType], width: int | None = None
+        self: Self,
+        inner: DType | type[DType],
+        shape: int | tuple[int, ...] | None = None,
     ) -> None:
-        self.inner = inner
-        if width is None:
-            error = "`width` must be specified when initializing an `Array`"
-            raise TypeError(error)
-        self.width = width
+        inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
+
+        if shape is None:  # pragma: no cover
+            msg = "Array constructor is missing the required argument `shape`"
+            raise TypeError(msg)
+
+        if isinstance(shape, int):
+            self.inner = inner
+            self.size = shape
+            self.shape = (shape, *inner_shape)
+
+        elif isinstance(shape, tuple) and isinstance(shape[0], int):
+            if len(shape) > 1:
+                inner = Array(inner, shape[1:])
+
+            self.inner = inner
+            self.size = shape[0]
+            self.shape = shape + inner_shape
+
+        else:
+            msg = f"invalid input for shape: {shape!r}"
+            raise TypeError(msg)
 
     def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
@@ -804,16 +828,24 @@ class Array(NestedType):
         if type(other) is type and issubclass(other, self.__class__):
             return True
         elif isinstance(other, self.__class__):
-            return self.inner == other.inner
+            if self.shape != other.shape:
+                return False
+            else:
+                return self.inner == other.inner
         else:
             return False
 
     def __hash__(self: Self) -> int:
-        return hash((self.__class__, self.inner, self.width))
+        return hash((self.__class__, self.inner, self.shape))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
+        # Get leaf type
+        dtype_ = self
+        for _ in self.shape:
+            dtype_ = dtype_.inner  # type: ignore[assignment]
+
         class_name = self.__class__.__name__
-        return f"{class_name}({self.inner!r}, {self.width})"
+        return f"{class_name}({dtype_!r}, shape={self.shape})"
 
 
 class Date(TemporalType):

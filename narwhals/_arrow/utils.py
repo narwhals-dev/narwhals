@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import pyarrow as pa
@@ -13,11 +14,14 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    import numpy as np
+    from typing import TypeVar
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+
+    _T = TypeVar("_T")
 
 
 @lru_cache(maxsize=16)
@@ -71,7 +75,6 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
                 for i in range(dtype.num_fields)
             ]
         )
-
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if pa.types.is_fixed_size_list(dtype):
@@ -85,6 +88,9 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
     dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
@@ -141,8 +147,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
             ]
         )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(
+            dtype.inner,  # type: ignore[union-attr]
+            version=version,
+        )
+        list_size = dtype.size  # type: ignore[union-attr]
+        return pa.list_(inner, list_size=list_size)
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -220,7 +231,7 @@ def broadcast_and_extract_dataframe_comparand(
 
     if isinstance(other, ArrowSeries):
         len_other = len(other)
-        if len_other == 1:
+        if len_other == 1 and length != 1:
             import numpy as np  # ignore-banned-import
 
             value = other._native_series[0]
@@ -363,22 +374,10 @@ def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
 
 
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> np.ndarray: ...
-
-
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
 @overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: int) -> int: ...
-
-
-@overload
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: Sequence[int]
-) -> Sequence[int]: ...
-
-
-def convert_slice_to_nparray(
-    num_rows: int, rows_slice: slice | int | Sequence[int]
-) -> np.ndarray | int | Sequence[int]:
+def convert_slice_to_nparray(num_rows: int, rows_slice: _T) -> _T: ...
+def convert_slice_to_nparray(num_rows: int, rows_slice: slice | _T) -> _AnyDArray | _T:
     if isinstance(rows_slice, slice):
         import numpy as np  # ignore-banned-import
 
@@ -387,14 +386,16 @@ def convert_slice_to_nparray(
         return rows_slice
 
 
-def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+def select_rows(
+    table: pa.Table, rows: slice | int | Sequence[int] | _AnyDArray
+) -> pa.Table:
     if isinstance(rows, slice) and rows == slice(None):
         selected_rows = table
     elif isinstance(rows, Sequence) and not rows:
         selected_rows = table.slice(0, 0)
     else:
         range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
-        selected_rows = table.take(range_)
+        selected_rows = table.take(cast("list[int]", range_))
     return selected_rows
 
 

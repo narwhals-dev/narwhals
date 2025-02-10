@@ -11,7 +11,9 @@ from typing import Sequence
 from typing import TypeVar
 
 import pandas as pd
+import pyarrow as pa
 
+import narwhals as nw
 from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
@@ -54,6 +56,12 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 
 
 def _to_comparable_list(column_values: Any) -> Any:
+    if isinstance(column_values, nw.Series) and isinstance(
+        column_values.to_native(), pa.Array
+    ):  # pragma: no cover
+        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+        msg = "Did not expect to see Arrow Array here"
+        raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF
@@ -91,11 +99,13 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
-        kwargs = {
-            Implementation.POLARS: (
-                {"engine": "gpu"} if os.environ.get("NARWHALS_POLARS_GPU", False) else {}
-            )  # pragma: no cover
-        }
+        kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
+
+        if os.environ.get("NARWHALS_POLARS_GPU", False):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": "gpu"})
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", False):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"new_streaming": True})
+
         result = result.collect(**kwargs.get(result.implementation, {}))
 
     if hasattr(result, "columns"):
