@@ -1369,7 +1369,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1416,7 +1416,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1465,7 +1465,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1488,7 +1488,7 @@ class When:
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
                 extract_compliant(plx, value, parse_column_name_as_expr=True)
             ),
-            combine_metadata(*self._predicates, value),
+            combine_metadata(*self._predicates, value, strings_are_column_names=True),
         )
 
 
@@ -1498,7 +1498,7 @@ class Then(Expr):
             lambda plx: self._to_compliant_expr(plx).otherwise(
                 extract_compliant(plx, value, parse_column_name_as_expr=True)
             ),
-            combine_metadata(self, value),
+            combine_metadata(self, value, strings_are_column_names=True),
         )
 
 
@@ -1589,7 +1589,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1684,7 +1684,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1733,7 +1733,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
                 for v in flat_exprs
             )
         ),
-        combine_metadata(*flat_exprs),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
 
 
@@ -1797,5 +1797,5 @@ def concat_str(
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
-        combine_metadata(*exprs),
+        combine_metadata(*exprs, strings_are_column_names=True),
     )

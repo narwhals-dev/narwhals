@@ -359,9 +359,9 @@ def evaluate_output_names_and_aliases(
 
 
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
-    # neither of which is order-dependent, so we default to `False`.
+    # If an arg is an Expr, we look at `_metadata['is_order_dependent']`.
+    # If it isn't, it means that it was a scalar (e.g. nw.col('a') + 1)
+    # or a column name, neither of which is order-dependent, so we default to `False`.
     from narwhals.expr import Expr
 
     return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
@@ -379,7 +379,7 @@ class ExprKind(Enum):
 
     LITERAL = auto()  # e.g. nw.lit(1)
     AGGREGATION = auto()  # e.g. nw.col('a').mean()
-    TRANSFORM = auto()  # e.g. nw.col('a').round()
+    TRANSFORM = auto()  # length-preserving, e.g. nw.col('a').round()
     CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
 
 
@@ -388,11 +388,10 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
-def combine_metadata(*args: IntoExpr) -> ExprMetadata:
-    # Strings are interpreted as column names.
+def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMetadata:
+    # Combine metadata from `args`.
     from narwhals.expr import Expr
 
-    kind = ExprKind.AGGREGATION
     n_changes_length = 0
     n_transforms = 0
     n_aggregations = 0
@@ -400,7 +399,7 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
     is_order_dependent = False
 
     for arg in args:
-        if isinstance(arg, str):
+        if isinstance(arg, str) and strings_are_column_names:
             n_transforms += 1
         elif isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
@@ -418,7 +417,7 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
                 msg = "unreachable code"
                 raise AssertionError(msg)
     if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
-        kind = ExprKind.LITERAL
+        out_kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
@@ -426,16 +425,19 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
         msg = "Cannot combine length-changing expressions with length-preserving ones"
         raise ShapeError(msg)
     elif n_changes_length:
-        kind = ExprKind.CHANGES_LENGTH
+        out_kind = ExprKind.CHANGES_LENGTH
     elif n_transforms:
-        kind = ExprKind.TRANSFORM
+        out_kind = ExprKind.TRANSFORM
     else:
-        kind = ExprKind.AGGREGATION
+        out_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(kind=kind, is_order_dependent=is_order_dependent)
+    return ExprMetadata(kind=out_kind, is_order_dependent=is_order_dependent)
 
 
 def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
+    # Raise if any argument in `args` isn't length-preserving.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
     from narwhals.expr import Expr
     from narwhals.series import Series
 

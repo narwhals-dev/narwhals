@@ -157,7 +157,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__eq__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -165,7 +165,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ne__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __and__(self: Self, other: Any) -> Self:
@@ -173,7 +173,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__and__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rand__(self: Self, other: Any) -> Self:
@@ -182,14 +182,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__and__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__or__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __ror__(self: Self, other: Any) -> Self:
@@ -198,14 +200,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__or__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__add__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __radd__(self: Self, other: Any) -> Self:
@@ -214,14 +218,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__add__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__sub__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
@@ -230,14 +236,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__sub__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__truediv__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
@@ -246,14 +254,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__truediv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mul__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
@@ -262,14 +272,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__mul__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__le__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __lt__(self: Self, other: Any) -> Self:
@@ -277,7 +289,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__lt__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __gt__(self: Self, other: Any) -> Self:
@@ -285,7 +297,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__gt__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __ge__(self: Self, other: Any) -> Self:
@@ -293,7 +305,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ge__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __pow__(self: Self, other: Any) -> Self:
@@ -301,7 +313,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__pow__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
@@ -310,14 +322,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__pow__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
@@ -326,14 +340,16 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__floordiv__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__mod__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            combine_metadata(self, other),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
@@ -342,7 +358,9 @@ class Expr:
                 extract_compliant(plx, other, parse_column_name_as_expr=False), dtype=None
             ).__mod__(extract_compliant(plx, self, parse_column_name_as_expr=False))
 
-        return self.__class__(func, combine_metadata(self, other))
+        return self.__class__(
+            func, combine_metadata(self, other, strings_are_column_names=False)
+        )
 
     # --- unary ---
     def __invert__(self: Self) -> Self:
