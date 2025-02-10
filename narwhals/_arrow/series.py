@@ -1058,7 +1058,7 @@ class ArrowSeries(CompliantSeries):
                     pc.value_counts(bin_indices).flatten(),
                     names=["values", "counts"],
                 )
-                # Null values are implicitly dropped in value_counts
+                # nan values are implicitly dropped in value_counts
                 .filter(~pc.field("values").is_nan())
                 .cast(pa.schema([("values", pa.int64()), ("counts", pa.int64())]))
                 .join(  # align bin ids to all possible bin ids (populate in missing bins)
@@ -1085,7 +1085,7 @@ class ArrowSeries(CompliantSeries):
                                 bin_left[0], pc.multiply(range_.cast("float"), 0.001)
                             )
                         ],
-                        bin_left[1:],  # pyarrow==0.11.0 needs to infer
+                        bin_left[1:],  # pyarrow==11.0 needs to infer
                     ]
                 )
             return counts.column("counts"), bin_left, bin_right
