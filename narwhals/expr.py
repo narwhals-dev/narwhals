@@ -152,7 +152,7 @@ class Expr:
         )
 
     # --- binary ---
-    def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__eq__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
@@ -160,7 +160,7 @@ class Expr:
             combine_metadata(self, other),
         )
 
-    def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__ne__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
@@ -670,9 +670,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            is_order_dependent=True,
-            changes_length=True,
-            aggregates=False,
+            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
         )
 
     def skew(self: Self) -> Self:
@@ -808,9 +806,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-            is_order_dependent=True,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
         )
 
     def arg_max(self: Self) -> Self:
@@ -834,9 +830,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-            is_order_dependent=True,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
         )
 
     def count(self: Self) -> Self:
@@ -860,9 +854,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def n_unique(self: Self) -> Self:
@@ -886,9 +881,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def unique(self: Self) -> Self:
@@ -970,7 +966,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def diff(self: Self) -> Self:
@@ -1013,7 +1009,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1059,7 +1055,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def replace_strict(
@@ -1150,7 +1146,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     # --- transform ---
@@ -1203,7 +1199,9 @@ class Expr:
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             func,
-            ExprMetadata(self._metadata["kind"], is_order_dependent=is_order_dependent),
+            ExprMetadata(
+                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
+            ),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1591,7 +1589,7 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._changes_length:
+        if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
@@ -1704,7 +1702,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1733,7 +1731,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def quantile(
@@ -1774,9 +1772,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1898,9 +1897,10 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -2073,7 +2073,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2106,7 +2106,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2139,7 +2139,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2172,7 +2172,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_sum(
@@ -2234,7 +2234,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_mean(
@@ -2296,7 +2296,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_var(
@@ -2358,7 +2358,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_std(
@@ -2423,7 +2423,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def rank(
@@ -2489,7 +2489,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     @property

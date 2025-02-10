@@ -24,6 +24,7 @@ from narwhals.exceptions import OrderDependentExprError
 from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
+from narwhals.utils import ExprKind
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
@@ -2181,7 +2182,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
-            if arg._is_order_dependent:
+            if arg._metadata["is_order_dependent"]:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -2192,7 +2193,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._changes_length:
+            if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

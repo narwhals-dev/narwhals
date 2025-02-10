@@ -1052,7 +1052,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
+    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1089,7 +1089,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func, is_order_dependent=False, changes_length=False, aggregates=False)
+    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1115,7 +1115,7 @@ def all_() -> Expr:
     """
     return Expr(
         lambda plx: plx.all(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
     )
 
 

@@ -14,6 +14,7 @@ from typing import overload
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
+from narwhals.utils import ExprKind
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_compliant_series
@@ -359,7 +360,10 @@ def operation_changes_length(*args: IntoExpr | Any) -> bool:
     from narwhals.expr import Expr
 
     n_exprs = len([x for x in args if isinstance(x, Expr)])
-    changes_length = any(isinstance(x, Expr) and x._changes_length for x in args)
+    changes_length = any(
+        isinstance(x, Expr) and x._metadata["kind"] is ExprKind.CHANGES_LENGTH
+        for x in args
+    )
     if n_exprs > 1 and changes_length:
         msg = (
             "Found multiple expressions at least one of which changes length.\n"
