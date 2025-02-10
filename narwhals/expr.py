@@ -373,7 +373,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).any(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -400,7 +400,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).all(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -530,7 +530,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).mean(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -560,7 +560,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).median(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -591,7 +591,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -622,7 +622,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -698,7 +698,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).skew(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -729,7 +729,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sum(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -756,7 +756,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).min(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -783,7 +783,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).max(),
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -914,7 +914,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).unique(),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -970,7 +970,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def diff(self: Self) -> Self:
@@ -1013,7 +1013,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1059,7 +1059,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def replace_strict(
@@ -1150,7 +1150,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     # --- transform ---
@@ -1202,7 +1202,8 @@ class Expr:
 
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            func, ExprMetadata(self._metadata.kind, is_order_dependent=is_order_dependent)
+            func,
+            ExprMetadata(self._metadata["kind"], is_order_dependent=is_order_dependent),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1503,7 +1504,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -1547,7 +1548,7 @@ class Expr:
             ),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -1703,7 +1704,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1732,7 +1733,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def quantile(
@@ -1962,15 +1963,15 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        is_order_dependent = is_order_dependent = operation_is_order_dependent(
-            self, lower_bound, upper_bound
-        )
+        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
                 extract_compliant(plx, lower_bound, parse_column_name_as_expr=True),
                 extract_compliant(plx, upper_bound, parse_column_name_as_expr=True),
             ),
-            ExprMetadata(kind=self._metadata.kind, is_order_dependent=is_order_dependent),
+            ExprMetadata(
+                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
+            ),
         )
 
     def mode(self: Self) -> Self:
@@ -1998,7 +1999,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).mode(),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -2072,7 +2073,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2105,7 +2106,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2138,7 +2139,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2171,7 +2172,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_sum(
@@ -2233,7 +2234,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_mean(
@@ -2295,7 +2296,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_var(
@@ -2357,7 +2358,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def rolling_std(
@@ -2422,7 +2423,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     def rank(
@@ -2488,7 +2489,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(self._metadata["kind"], is_order_dependent=True),
         )
 
     @property

@@ -67,6 +67,8 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
+from narwhals.utils import ExprKind
+from narwhals.utils import ExprMetadata
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import find_stacklevel
@@ -1016,7 +1018,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).unique(),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata._is_order_dependent,
+                is_order_dependent=self._metadata["is_order_dependent"],
             ),
         )
 
@@ -1034,7 +1036,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(self._metadata.kind, is_order_dependent=True),
+            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
         )
 
     def arg_true(self: Self) -> Self:
@@ -1126,12 +1128,7 @@ def _stableify(
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
-        return Expr(
-            obj._to_compliant_expr,
-            is_order_dependent=obj._is_order_dependent,
-            changes_length=obj._changes_length,
-            aggregates=obj._aggregates,
-        )
+        return Expr(obj._to_compliant_expr, obj._metadata)
     return obj
 
 
@@ -2090,10 +2087,7 @@ class Then(NwThen, Expr):
     @classmethod
     def from_then(cls: type, then: NwThen) -> Then:
         return cls(  # type: ignore[no-any-return]
-            then._to_compliant_expr,
-            is_order_dependent=then._is_order_dependent,
-            changes_length=then._changes_length,
-            aggregates=then._aggregates,
+            then._to_compliant_expr, then._metadata
         )
 
     def otherwise(self: Self, value: Any) -> Expr:

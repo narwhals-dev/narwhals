@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
+    from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
@@ -1277,5 +1278,9 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
-def combine_metadata(*args):
-    return args[0]._metadata
+def combine_metadata(*args: IntoExpr) -> ExprMetadata:
+    from narwhals.expr import Expr
+
+    if isinstance(args[0], Expr):
+        return args[0]._metadata
+    return ExprMetadata(ExprKind.LITERAL, is_order_dependent=False)

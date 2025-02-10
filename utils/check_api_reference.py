@@ -6,7 +6,9 @@ import sys
 import polars as pl
 
 import narwhals as nw
-from narwhals.utils import remove_prefix, ExprMetadata, ExprKind
+from narwhals.utils import ExprKind
+from narwhals.utils import ExprMetadata
+from narwhals.utils import remove_prefix
 from narwhals.utils import remove_suffix
 
 ret = 0
@@ -163,7 +165,7 @@ for namespace in NAMESPACES.difference({"name"}):
 expr_methods = [
     i
     for i in nw.Expr(
-        lambda: 0, ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
@@ -189,8 +191,7 @@ for namespace in NAMESPACES:
         i
         for i in getattr(
             nw.Expr(
-                lambda: 0,
-                ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
             ),
             namespace,
         ).__dir__()
@@ -236,9 +237,7 @@ if extra := set(documented).difference(dtypes):
 expr = [
     i
     for i in nw.Expr(
-        lambda: 0,
-                ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
-
+        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
@@ -262,9 +261,7 @@ for namespace in NAMESPACES.difference({"name"}):
         i
         for i in getattr(
             nw.Expr(
-                lambda: 0,
-
-                ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
             ),
             namespace,
         ).__dir__()
