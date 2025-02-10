@@ -36,6 +36,7 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -1312,7 +1313,7 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
         kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
-        raise ValueError(msg)
+        raise LengthChangingExprError(msg)
     elif n_changes_length and n_transforms:
         msg = "Cannot combine length-changing expressions with length-preserving ones"
         raise ShapeError(msg)

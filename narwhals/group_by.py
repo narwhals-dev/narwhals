@@ -11,6 +11,7 @@ from typing import cast
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.exceptions import InvalidOperationError
+from narwhals.utils import ExprKind
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
@@ -112,8 +113,12 @@ class GroupBy(Generic[DataFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all(getattr(x, "_aggregates", True) for x in flat_aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        if not all(
+            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            for x in flat_aggs
+        ) and all(
+            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            for x in named_aggs.values()
         ):
             msg = (
                 "Found expression which does not aggregate.\n\n"
@@ -216,8 +221,12 @@ class LazyGroupBy(Generic[LazyFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all(getattr(x, "_aggregates", True) for x in flat_aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
+        if not all(
+            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            for x in flat_aggs
+        ) and all(
+            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            for x in named_aggs.values()
         ):
             msg = (
                 "Found expression which does not aggregate.\n\n"

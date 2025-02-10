@@ -187,12 +187,12 @@ class BaseFrame(Generic[_FrameT]):
         **constraints: Any,
     ) -> Self:
         flat_predicates = flatten(predicates)
-        check_expression_transforms(*flat_predicates, function_name="filter")
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            check_expression_transforms(*flat_predicates, function_name="filter")
             predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates, **constraints),
