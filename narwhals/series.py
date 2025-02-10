@@ -12,6 +12,7 @@ from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import ComputeError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -271,7 +272,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).shape
             (3,)
         """
-        return self._compliant_series.shape  # type: ignore[no-any-return]
+        return (self._compliant_series.len(),)
 
     def _extract_native(self: Self, arg: Any) -> Any:
         from narwhals.series import Series
@@ -1637,7 +1638,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.filter(s_nw > 10).is_empty()
             True
         """
-        return self._compliant_series.is_empty()  # type: ignore[no-any-return]
+        return self._compliant_series.len() == 0  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
         r"""Get a mask of all unique rows in the Series.
@@ -1660,7 +1661,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(self._compliant_series.is_unique())
 
     def null_count(self: Self) -> int:
-        r"""Create a new Series that shows the null counts per column.
+        r"""Count the number of null values.
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
@@ -1897,7 +1898,7 @@ class Series(Generic[IntoSeriesT]):
             n: Number of rows to return.
 
         Returns:
-            A new Series containing the first n characters of each string.
+            A new Series containing the first n rows.
 
         Examples:
             >>> import pandas as pd
@@ -2549,6 +2550,63 @@ class Series(Generic[IntoSeriesT]):
 
         return self._from_compliant_series(
             self._compliant_series.rank(method=method, descending=descending)
+        )
+
+    def hist(
+        self: Self,
+        bins: list[float | int] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_breakpoint: bool = True,
+    ) -> DataFrame[Any]:
+        """Bin values into buckets and count their occurrences.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            bins: A monotonically increasing sequence of values.
+            bin_count: If no bins provided, this will be used to determine the distance of the bins.
+            include_breakpoint: Include a column that shows the intervals as categories.
+
+        Returns:
+            A new DataFrame containing the counts of values that occur within each passed bin.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 3, 8, 8, 2, 1, 3], name="a")
+            >>> nw.from_native(s_native, series_only=True).hist(bin_count=4)
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |   breakpoint  count|
+            |0        2.75      3|
+            |1        4.50      2|
+            |2        6.25      0|
+            |3        8.00      2|
+            └────────────────────┘
+        """
+        if bins is not None and bin_count is not None:
+            msg = "can only provide one of `bin_count` or `bins`"
+            raise ComputeError(msg)
+        if bins is None and bin_count is None:
+            bin_count = 10  # polars (v1.20) sets bin=10 if neither are provided.
+
+        if bins is not None:
+            for i in range(1, len(bins)):
+                if bins[i - 1] >= bins[i]:
+                    msg = "bins must increase monotonically"
+                    raise ComputeError(msg)
+
+        return self._dataframe(
+            self._compliant_series.hist(
+                bins=bins,
+                bin_count=bin_count,
+                include_breakpoint=include_breakpoint,
+            ),
+            level=self._level,
         )
 
     @property

@@ -9,6 +9,7 @@ from typing import overload
 import polars as pl
 
 from narwhals._polars.namespace import PolarsNamespace
+from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
@@ -102,10 +103,17 @@ class PolarsDataFrame:
         # scalar
         return obj
 
+    def __len__(self) -> int:
+        return len(self._native_frame)
+
+    def head(self, n: int) -> Self:
+        return self._from_native_frame(self._native_frame.head(n))
+
+    def tail(self, n: int) -> Self:
+        return self._from_native_frame(self._native_frame.tail(n))
+
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            import polars as pl
-
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             try:
                 return self._from_native_object(
@@ -114,6 +122,8 @@ class PolarsDataFrame:
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
+            except Exception as e:  # noqa: BLE001
+                raise catch_polars_exception(e, self._backend_version) from None
 
         return func
 
@@ -136,11 +146,12 @@ class PolarsDataFrame:
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
+            collected_schema = self._native_frame.collect_schema()
             return {
                 name: native_to_narwhals_dtype(
                     dtype, self._version, self._backend_version
                 )
-                for name, dtype in self._native_frame.collect_schema().items()
+                for name, dtype in collected_schema.items()
             }
 
     @property
@@ -179,7 +190,6 @@ class PolarsDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            import polars as pl
 
             if (
                 isinstance(item, tuple)
@@ -345,14 +355,17 @@ class PolarsDataFrame:
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             msg = "`pivot` is only supported for Polars>=1.0.0"
             raise NotImplementedError(msg)
-        result = self._native_frame.pivot(
-            on,
-            index=index,
-            values=values,
-            aggregate_function=aggregate_function,
-            sort_columns=sort_columns,
-            separator=separator,
-        )
+        try:
+            result = self._native_frame.pivot(
+                on,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                sort_columns=sort_columns,
+                separator=separator,
+            )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
         return self._from_native_object(result)
 
     def to_polars(self: Self) -> pl.DataFrame:
@@ -434,11 +447,15 @@ class PolarsLazyFrame:
                 for name, dtype in self._native_frame.schema.items()
             }
         else:
+            try:
+                collected_schema = self._native_frame.collect_schema()
+            except Exception as e:  # noqa: BLE001
+                raise catch_polars_exception(e, self._backend_version) from None
             return {
                 name: native_to_narwhals_dtype(
                     dtype, self._version, self._backend_version
                 )
-                for name, dtype in self._native_frame.collect_schema().items()
+                for name, dtype in collected_schema.items()
             }
 
     def collect(
@@ -446,12 +463,10 @@ class PolarsLazyFrame:
         backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame:
-        import polars as pl
-
         try:
             result = self._native_frame.collect(**kwargs)
-        except pl.exceptions.ColumnNotFoundError as e:
-            raise ColumnNotFoundError(str(e)) from e
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
 
         if backend is None or backend is Implementation.POLARS:
             from narwhals._polars.dataframe import PolarsDataFrame

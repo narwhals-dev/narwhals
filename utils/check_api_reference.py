@@ -18,6 +18,7 @@ SERIES_ONLY_METHODS = {
     "implementation",
     "is_empty",
     "is_sorted",
+    "hist",
     "item",
     "name",
     "rename",

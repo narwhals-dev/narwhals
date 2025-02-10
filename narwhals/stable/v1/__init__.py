@@ -659,6 +659,41 @@ class Series(NwSeries[Any]):
             ddof=ddof,
         )
 
+    def hist(
+        self: Self,
+        bins: list[float | int] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_breakpoint: bool = True,
+    ) -> DataFrame[Any]:
+        """Bin values into buckets and count their occurrences.
+
+        !!! warning
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            bins: A monotonically increasing sequence of values.
+            bin_count: If no bins provided, this will be used to determine the distance of the bins.
+            include_breakpoint: Include a column that shows the intervals as categories.
+
+        Returns:
+            A new DataFrame containing the counts of values that occur within each passed bin.
+        """
+        from narwhals.exceptions import NarwhalsUnstableWarning
+        from narwhals.utils import find_stacklevel
+
+        msg = (
+            "`Series.hist` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        return super().hist(  # type: ignore[return-value]
+            bins=bins,
+            bin_count=bin_count,
+            include_breakpoint=include_breakpoint,
+        )
+
 
 class Expr(NwExpr):
     def _l1_norm(self: Self) -> Self:

@@ -21,6 +21,7 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import pad_series
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -440,9 +441,6 @@ class ArrowSeries(CompliantSeries):
         else:  # pragma: no cover
             raise AssertionError
         return self._from_native_series(res)
-
-    def is_empty(self: Self) -> bool:
-        return len(self) == 0
 
     def is_null(self: Self) -> Self:
         ser = self._native_series
@@ -1009,6 +1007,129 @@ class ArrowSeries(CompliantSeries):
         result = pc.if_else(null_mask, pa.scalar(None), rank)
         return self._from_native_series(result)
 
+    def hist(  # noqa: PLR0915
+        self: Self,
+        bins: list[float | int] | None,
+        *,
+        bin_count: int | None,
+        include_breakpoint: bool,
+    ) -> ArrowDataFrame:
+        if self._backend_version < (13,):
+            msg = f"`Series.hist` requires PyArrow>=13.0.0, found PyArrow version: {self._backend_version}"
+            raise NotImplementedError(msg)
+        import numpy as np  # ignore-banned-import
+
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        def _hist_from_bin_count(
+            bin_count: int,
+        ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
+            d = pc.min_max(self._native_series)
+            lower, upper = d["min"], d["max"]
+            pad_lowest_bin = False
+            if lower == upper:
+                range_ = pa.scalar(1.0)
+                width = pc.divide(range_, bin_count)
+                lower = pc.subtract(lower, 0.5)
+                upper = pc.add(upper, 0.5)
+            else:
+                pad_lowest_bin = True
+                range_ = pc.subtract(upper, lower)
+                width = pc.divide(range_.cast("float"), float(bin_count))
+
+            bin_proportions = pc.divide(pc.subtract(self._native_series, lower), width)
+            bin_indices = pc.floor(bin_proportions)
+
+            bin_indices = pc.if_else(  # shift bins so they are right-closed
+                pc.and_(
+                    pc.equal(bin_indices, bin_proportions),
+                    pc.greater(bin_indices, 0),
+                ),
+                pc.subtract(bin_indices, 1),
+                bin_indices,
+            )
+            counts = (  # count bin id occurrences
+                pa.Table.from_arrays(
+                    pc.value_counts(bin_indices).flatten(),
+                    names=["values", "counts"],
+                )
+                # nan values are implicitly dropped in value_counts
+                .filter(~pc.field("values").is_nan())
+                .cast(pa.schema([("values", pa.int64()), ("counts", pa.int64())]))
+                .join(  # align bin ids to all possible bin ids (populate in missing bins)
+                    pa.Table.from_arrays(
+                        [np.arange(bin_count, dtype="int64")], ["values"]
+                    ),
+                    keys="values",
+                    join_type="right outer",
+                )
+                .sort_by("values")
+            )
+            counts = counts.set_column(  # empty bin intervals should have a 0 count
+                0, "counts", pc.coalesce(counts.column("counts"), 0)
+            )
+
+            # extract left/right side of the intervals
+            bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
+            bin_right = pc.add(bin_left, width)
+            if pad_lowest_bin:
+                bin_left = pa.chunked_array(
+                    [  # pad lowest bin by 1% of range
+                        [
+                            pc.subtract(
+                                bin_left[0], pc.multiply(range_.cast("float"), 0.001)
+                            )
+                        ],
+                        bin_left[1:],  # pyarrow==11.0 needs to infer
+                    ]
+                )
+            return counts.column("counts"), bin_left, bin_right
+
+        def _hist_from_bins(
+            bins: Sequence[int | float],
+        ) -> tuple[Sequence[int], Sequence[int | float], Sequence[int | float]]:
+            bin_indices = np.searchsorted(bins, self._native_series, side="left")
+            obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
+            obj_cats = np.arange(1, len(bins))
+            counts = np.zeros_like(obj_cats)
+            counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+
+            bin_right = bins[1:]
+            bin_left = bins[:-1]
+            return counts, bin_left, bin_right
+
+        counts: Sequence[int]
+        bin_left: Sequence[int | float]
+        bin_right: Sequence[int | float]
+        if bins is not None:
+            if len(bins) < 2:
+                counts, bin_left, bin_right = [], [], []
+            else:
+                counts, bin_left, bin_right = _hist_from_bins(bins)
+
+        elif bin_count is not None:
+            if bin_count == 0:
+                counts, bin_left, bin_right = [], [], []
+            else:
+                counts, bin_left, bin_right = _hist_from_bin_count(bin_count)
+
+        else:  # pragma: no cover
+            # caller guarantees that either bins or bin_count is specified
+            msg = "must provide one of `bin_count` or `bins`"
+            raise InvalidOperationError(msg)
+
+        data: dict[str, Sequence[int | float | str]] = {}
+        if include_breakpoint:
+            data["breakpoint"] = bin_right
+        data["count"] = counts
+
+        return ArrowDataFrame(
+            pa.Table.from_pydict(data),
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from (
             maybe_extract_py_scalar(x, return_py_scalar=True)
@@ -1036,10 +1157,6 @@ class ArrowSeries(CompliantSeries):
 
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
-
-    @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self._native_series),)
 
     @property
     def dt(self: Self) -> ArrowSeriesDateTimeNamespace:

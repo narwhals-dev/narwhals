@@ -45,18 +45,17 @@ def test_median_expr_raises_on_str(
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
 
     df = nw.from_native(constructor(data))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(
-            (InvalidOperationError, PlInvalidOperationError),
+            InvalidOperationError,
             match="`median` operation not supported",
         ):
             df.select(expr).lazy().collect()
     else:
         with pytest.raises(
-            (InvalidOperationError, PlInvalidOperationError),
+            InvalidOperationError,
             match="`median` operation not supported",
         ):
             df.select(expr)

@@ -167,7 +167,7 @@ def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         len_other = other.len()
 
-        if len_other == 1:
+        if len_other == 1 and len(index) != 1:
             # broadcast
             s = other._native_series
             return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
@@ -394,9 +394,7 @@ def rename(
 
 
 @lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(
-    dtype: str, version: Version, _implementation: Implementation
-) -> DType:
+def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -491,7 +489,7 @@ def native_to_narwhals_dtype(
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if str_dtype != "object":
-        return non_object_native_to_narwhals_dtype(str_dtype, version, implementation)
+        return non_object_native_to_narwhals_dtype(str_dtype, version)
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -529,6 +527,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         msg = f"Expected one of {{None, 'pyarrow', 'numpy_nullable'}}, got: '{dtype_backend}'"
         raise ValueError(msg)
     dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow":
             return "Float64[pyarrow]"
@@ -643,38 +644,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.List):
-        from narwhals._arrow.utils import (
-            narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-        )
-
+    if isinstance_or_issubclass(dtype, (dtypes.Struct, dtypes.Array, dtypes.List)):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
                 import pandas as pd
-                import pyarrow as pa  # ignore-banned-import
-            except ImportError as exc:  # pragma: no cover
-                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
-                raise ImportError(msg) from exc
-
-            return pd.ArrowDtype(
-                pa.list_(
-                    value_type=arrow_narwhals_to_native_dtype(
-                        dtype.inner,  # type: ignore[union-attr]
-                        version=version,
-                    )
-                )
-            )
-        else:  # pragma: no cover
-            msg = (
-                "Converting to List dtype is not supported for implementation "
-                f"{implementation} and version {version}."
-            )
-            return NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Struct):
-        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
-            try:
-                import pandas as pd
-                import pyarrow as pa  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import  # noqa: F401
             except ImportError as exc:  # pragma: no cover
                 msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
                 raise ImportError(msg) from exc
@@ -682,29 +656,13 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            return pd.ArrowDtype(
-                pa.struct(
-                    [
-                        (
-                            field.name,
-                            arrow_narwhals_to_native_dtype(
-                                field.dtype,
-                                version=version,
-                            ),
-                        )
-                        for field in dtype.fields  # type: ignore[union-attr]
-                    ]
-                )
-            )
+            return pd.ArrowDtype(arrow_narwhals_to_native_dtype(dtype, version=version))
         else:  # pragma: no cover
             msg = (
-                "Converting to Struct dtype is not supported for implementation "
+                f"Converting to {dtype} dtype is not supported for implementation "
                 f"{implementation} and version {version}."
             )
-            return NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+            raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
