@@ -392,40 +392,45 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     from narwhals.expr import Expr
 
     n_changes_length = 0
-    n_transforms = 0
-    n_aggregations = 0
-    n_literals = 0
+    has_transforms = False
+    has_aggregations = False
+    has_literals = False
     result_is_order_dependent = False
 
     for arg in args:
         if isinstance(arg, str) and strings_are_column_names:
-            n_transforms += 1
+            has_transforms |= True
         elif isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
                 result_is_order_dependent = True
             kind = arg._metadata["kind"]
             if kind is ExprKind.AGGREGATION:
-                n_aggregations += 1
+                has_aggregations = True
             elif kind is ExprKind.LITERAL:
-                n_literals += 1
+                has_literals = True
             elif kind is ExprKind.CHANGES_LENGTH:
                 n_changes_length += 1
             elif kind is ExprKind.TRANSFORM:
-                n_transforms += 1
+                has_transforms = True
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
-    if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
+    if (
+        has_literals
+        and not has_aggregations
+        and not has_transforms
+        and not n_changes_length
+    ):
         result_kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and n_transforms:
+    elif n_changes_length and has_transforms:
         msg = "Cannot combine length-changing expressions with length-preserving ones"
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
-    elif n_transforms:
+    elif has_transforms:
         result_kind = ExprKind.TRANSFORM
     else:
         result_kind = ExprKind.AGGREGATION
