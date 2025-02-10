@@ -77,8 +77,6 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        import polars as pl
-
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
         if isinstance(series, pl.DataFrame):
@@ -130,7 +128,7 @@ class PolarsSeries:
 
     def cast(self: Self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._from_native_series(ser.cast(dtype_pl))
 
     def replace_strict(
@@ -138,7 +136,7 @@ class PolarsSeries:
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version)
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )
@@ -244,8 +242,6 @@ class PolarsSeries:
         return self._native_series.median()
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
-        import polars as pl
-
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (0, 20, 15):
@@ -294,8 +290,6 @@ class PolarsSeries:
             **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_series(
                 pl.select(
                     pl.when(~native_series.is_null()).then(native_result).otherwise(None)
@@ -405,8 +399,6 @@ class PolarsSeries:
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                import polars as pl
-
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
         else:
@@ -433,8 +425,6 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):
-            import polars as pl
-
             value_name_ = name or ("proportion" if normalize else "count")
 
             result = self._native_series.value_counts(sort=sort, parallel=parallel)
@@ -547,15 +537,11 @@ class PolarsSeriesListNamespace:
         native_result = native_series.list.len()
 
         if self._series._backend_version < (1, 16):  # pragma: no cover
-            import polars as pl
-
             native_result = pl.select(
                 pl.when(~native_series.is_null()).then(native_result).otherwise(None)
             )[native_series.name].cast(pl.UInt32())
 
         elif self._series._backend_version < (1, 17):  # pragma: no cover
-            import polars as pl
-
             native_result = native_series.cast(pl.UInt32())
 
         return self._series._from_native_series(native_result)
