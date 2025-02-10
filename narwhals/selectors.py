@@ -95,7 +95,7 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     """
     return Selector(
         lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -162,7 +162,7 @@ def matches(pattern: str) -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.matches(pattern),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -221,7 +221,7 @@ def numeric() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.numeric(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -277,7 +277,7 @@ def boolean() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.boolean(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -333,7 +333,7 @@ def string() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.string(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -394,7 +394,7 @@ def categorical() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.categorical(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -454,7 +454,7 @@ def all() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.all(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -515,7 +515,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 

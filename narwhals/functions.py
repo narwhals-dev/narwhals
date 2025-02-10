@@ -1115,7 +1115,7 @@ def all_() -> Expr:
     """
     return Expr(
         lambda plx: plx.all(),
-        ExprMetadata(ExprKind.TRANSFORM, is_order_dependent=False)
+        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
     )
 
 
@@ -1149,7 +1149,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, is_order_dependent=False))
+    return Expr(func, ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False))
 
 
 def sum(*columns: str) -> Expr:

@@ -1283,4 +1283,4 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
 
     if isinstance(args[0], Expr):
         return args[0]._metadata
-    return ExprMetadata(ExprKind.LITERAL, is_order_dependent=False)
+    return ExprMetadata(kind=ExprKind.LITERAL, is_order_dependent=False)
