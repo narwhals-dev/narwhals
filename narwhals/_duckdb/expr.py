@@ -11,6 +11,7 @@ from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
 from duckdb import ConstantExpression
 from duckdb import FunctionExpression
+from duckdb.typing import DuckDBPyType
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
@@ -312,15 +313,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
             return CaseExpression(
-                condition=count == 0,  # type: ignore[arg-type]
+                condition=(count == ConstantExpression(0)),
                 value=ConstantExpression(None),
             ).otherwise(
                 CaseExpression(
-                    condition=count == 1,  # type: ignore[arg-type]
+                    condition=(count == ConstantExpression(1)),
                     value=ConstantExpression(float("nan")),
                 ).otherwise(
                     CaseExpression(
-                        condition=count == 2,  # type: ignore[arg-type]
+                        condition=(count == ConstantExpression(2)),
                         value=ConstantExpression(0.0),
                     ).otherwise(FunctionExpression("skewness", _input))
                 )
@@ -430,7 +431,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             return (
                 FunctionExpression("stddev_pop", _input)
                 * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - ddof)))  # type: ignore[operator]
+                / (FunctionExpression("sqrt", (n_samples - ConstantExpression(ddof))))
             )
 
         return self._from_call(
@@ -443,7 +444,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
     def var(self: Self, ddof: int) -> Self:
         def _var(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
-            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator]
+            return (
+                FunctionExpression("var_pop", _input)
+                * n_samples
+                / (n_samples - ConstantExpression(ddof))
+            )
 
         return self._from_call(
             _var,
@@ -524,7 +529,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return _input.cast(native_dtype)  # type: ignore[arg-type]
+            return _input.cast(DuckDBPyType(native_dtype))
 
         return self._from_call(
             func,
