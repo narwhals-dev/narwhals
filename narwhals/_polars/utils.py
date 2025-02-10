@@ -8,6 +8,10 @@ from typing import overload
 
 import polars as pl
 
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -216,3 +220,27 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def catch_polars_exception(
+    exception: Exception, backend_version: tuple[int, ...]
+) -> NarwhalsError | Exception:
+    if isinstance(exception, pl.exceptions.ColumnNotFoundError):
+        return ColumnNotFoundError(str(exception))
+    elif isinstance(exception, pl.exceptions.ShapeError):
+        return ShapeError(str(exception))
+    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+        return InvalidOperationError(str(exception))
+    elif isinstance(exception, pl.exceptions.ComputeError):
+        # We don't (yet?) have a Narwhals ComputeError.
+        return NarwhalsError(str(exception))
+    if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
+        # Old versions of Polars didn't have PolarsError.
+        return NarwhalsError(str(exception))
+    elif backend_version < (1,) and "polars.exceptions" in str(
+        type(exception)
+    ):  # pragma: no cover
+        # Last attempt, for old Polars versions.
+        return NarwhalsError(str(exception))
+    # Just return exception as-is.
+    return exception

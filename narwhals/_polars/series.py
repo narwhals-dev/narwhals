@@ -7,6 +7,7 @@ from typing import overload
 
 import polars as pl
 
+from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -223,14 +224,15 @@ class PolarsSeries:
 
     def is_nan(self: Self) -> Self:
         native = self._native_series
-
+        try:
+            native_is_nan = native.is_nan()
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
         if self._backend_version < (1, 18):  # pragma: no cover
             return self._from_native_series(
-                pl.select(pl.when(native.is_not_null()).then(native.is_nan()))[
-                    native.name
-                ]
+                pl.select(pl.when(native.is_not_null()).then(native_is_nan))[native.name]
             )
-        return self._from_native_series(native.is_nan())
+        return self._from_native_series(native_is_nan)
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -456,15 +458,10 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     def __contains__(self: Self, other: Any) -> bool:
-        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-
         try:
             return self._native_series.__contains__(other)
-        except PlInvalidOperationError as exc:
-            from narwhals.exceptions import InvalidOperationError
-
-            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
-            raise InvalidOperationError(msg) from exc
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
 
     def to_polars(self: Self) -> pl.Series:
         return self._native_series

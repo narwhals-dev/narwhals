@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
-from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
@@ -36,7 +35,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
     [
         (
             True,
-            pytest.raises((ColumnNotFoundError, PlColumnNotFoundError), match="z"),
+            pytest.raises(ColumnNotFoundError, match="z"),
         ),
         (False, does_not_raise()),
     ],
