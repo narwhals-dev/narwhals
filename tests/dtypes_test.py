@@ -327,27 +327,28 @@ def test_huge_int_to_native() -> None:
     assert type_a_unit == "UHUGEINT"
 
 
-@pytest.mark.parametrize("library", ["pandas", "duckdb", "polars", "pyarrow"])
-def test_cast_decimal_to_native(
-    library: Literal["pandas", "duckdb", "polars", "pyarrow"],
-) -> None:
+def test_cast_decimal_to_native() -> None:
     duckdb = pytest.importorskip("duckdb")
     data = {"a": [1, 2, 3]}
-    if library == "polars":
-        df = pl.DataFrame(data)
-    elif library == "duckdb":
-        df = pl.DataFrame(data)
-        df = duckdb.sql("""
+
+    df = pl.DataFrame(data)
+    library_obj_to_test = [
+        df,
+        duckdb.sql("""
             select cast(a as INT1) as a
             from df
-                         """)
-    elif library == "pandas":
-        df = pd.DataFrame(data)
-    elif library == "pyarrow":
-        df = pa.Table.from_arrays(
+                         """),
+        pd.DataFrame(data),
+        pa.Table.from_arrays(
             [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
-        )
-    with pytest.raises(
-        NotImplementedError, match="Casting to Decimal is not supported yet."
-    ):
-        (nw.from_native(df).with_columns(a=nw.col("a").cast(nw.Decimal())).to_native())
+        ),
+    ]
+    for obj in library_obj_to_test:
+        with pytest.raises(
+            NotImplementedError, match="Casting to Decimal is not supported yet."
+        ):
+            (
+                nw.from_native(obj)
+                .with_columns(a=nw.col("a").cast(nw.Decimal()))
+                .to_native()
+            )
