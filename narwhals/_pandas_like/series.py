@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
+    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -1039,7 +1041,7 @@ class PandasLikeSeries(CompliantSeries):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
-        data: dict[str, Sequence[int | float | str] | _1DArray]
+        data: dict[str, Sequence[int | float | str] | _AnyDArray]
 
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
             data = {}
@@ -1056,15 +1058,10 @@ class PandasLikeSeries(CompliantSeries):
             )
         elif self._native_series.count() < 1:
             if bins is not None:
-                data = {
-                    "breakpoint": bins[1:],
-                    "count": zeros(shape=len(bins) - 1),
-                }
+                data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
             else:
-                data = {
-                    "breakpoint": linspace(0, 1, bin_count),
-                    "count": zeros(shape=bin_count),
-                }
+                count = cast("int", bin_count)
+                data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
 
             if not include_breakpoint:
                 del data["breakpoint"]
