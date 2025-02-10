@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -43,6 +44,8 @@ def test_unique_illegal_combination(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises(LengthChangingExprError):
         df.select((nw.col("a").unique() + nw.col("b").unique()).sum())
+    with pytest.raises(ShapeError):
+        df.select(nw.col("a").unique() + nw.col("b"))
 
 
 def test_unique_series(constructor_eager: ConstructorEager) -> None:
