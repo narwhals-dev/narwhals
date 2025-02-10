@@ -2572,6 +2572,21 @@ class Series(Generic[IntoSeriesT]):
 
         Returns:
             A new DataFrame containing the counts of values that occur within each passed bin.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 3, 8, 8, 2, 1, 3], name="a")
+            >>> nw.from_native(s_native, series_only=True).hist(bin_count=4)
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |   breakpoint  count|
+            |0        2.75      3|
+            |1        4.50      2|
+            |2        6.25      0|
+            |3        8.00      2|
+            └────────────────────┘
         """
         if bins is not None and bin_count is not None:
             msg = "can only provide one of `bin_count` or `bins`"
