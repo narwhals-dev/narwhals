@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import NoReturn
 
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
+
+from narwhals._duckdb.utils import lit
 
 if TYPE_CHECKING:
     import duckdb
@@ -19,18 +20,14 @@ class DuckDBExprStringNamespace:
 
     def starts_with(self: Self, prefix: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "starts_with", _input, ConstantExpression(prefix)
-            ),
+            lambda _input: FunctionExpression("starts_with", _input, lit(prefix)),
             "starts_with",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
     def ends_with(self: Self, suffix: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "ends_with", _input, ConstantExpression(suffix)
-            ),
+            lambda _input: FunctionExpression("ends_with", _input, lit(suffix)),
             "ends_with",
             expr_kind=self._compliant_expr._expr_kind,
         )
@@ -38,10 +35,8 @@ class DuckDBExprStringNamespace:
     def contains(self: Self, pattern: str, *, literal: bool) -> DuckDBExpr:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if literal:
-                return FunctionExpression("contains", _input, ConstantExpression(pattern))
-            return FunctionExpression(
-                "regexp_matches", _input, ConstantExpression(pattern)
-            )
+                return FunctionExpression("contains", _input, lit(pattern))
+            return FunctionExpression("regexp_matches", _input, lit(pattern))
 
         return self._compliant_expr._from_call(
             func, "contains", expr_kind=self._compliant_expr._expr_kind
@@ -52,12 +47,12 @@ class DuckDBExprStringNamespace:
             return FunctionExpression(
                 "array_slice",
                 _input,
-                ConstantExpression(offset + 1)
+                lit(offset + 1)
                 if offset >= 0
                 else FunctionExpression("length", _input) + offset + 1,  # type: ignore[operator]
                 FunctionExpression("length", _input)
                 if length is None
-                else ConstantExpression(length) + offset,  # type: ignore[operator]
+                else lit(length) + offset,  # type: ignore[operator]
             )
 
         return self._compliant_expr._from_call(
@@ -92,9 +87,7 @@ class DuckDBExprStringNamespace:
             lambda _input: FunctionExpression(
                 "trim",
                 _input,
-                ConstantExpression(
-                    string.whitespace if characters is None else characters
-                ),
+                lit(string.whitespace if characters is None else characters),
             ),
             "strip_chars",
             expr_kind=self._compliant_expr._expr_kind,
@@ -104,18 +97,14 @@ class DuckDBExprStringNamespace:
         if not literal:
             return self._compliant_expr._from_call(
                 lambda _input: FunctionExpression(
-                    "regexp_replace",
-                    _input,
-                    ConstantExpression(pattern),
-                    ConstantExpression(value),
-                    ConstantExpression("g"),
+                    "regexp_replace", _input, lit(pattern), lit(value), lit("g")
                 ),
                 "replace_all",
                 expr_kind=self._compliant_expr._expr_kind,
             )
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression(
-                "replace", _input, ConstantExpression(pattern), ConstantExpression(value)
+                "replace", _input, lit(pattern), lit(value)
             ),
             "replace_all",
             expr_kind=self._compliant_expr._expr_kind,
@@ -133,9 +122,7 @@ class DuckDBExprStringNamespace:
             raise NotImplementedError(msg)
 
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression(
-                "strptime", _input, ConstantExpression(format)
-            ),
+            lambda _input: FunctionExpression("strptime", _input, lit(format)),
             "to_datetime",
             expr_kind=self._compliant_expr._expr_kind,
         )

@@ -8,10 +8,10 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
+from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_duckdb
@@ -494,10 +494,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         )
 
         null_rel = rel.filter(~not_null_condition).select(
-            *(
-                ConstantExpression(None).alias(col) if col in columns else col
-                for col in original_columns
-            )
+            *(lit(None).alias(col) if col in columns else col for col in original_columns)
         )
 
         return self._from_native_frame(

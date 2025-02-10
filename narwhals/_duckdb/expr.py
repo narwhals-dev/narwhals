@@ -9,7 +9,6 @@ from typing import Sequence
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
@@ -18,6 +17,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import ExprKind
+from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import n_ary_operation_expr_kind
 from narwhals._duckdb.utils import narwhals_to_native_dtype
@@ -312,18 +312,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
     def skew(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
-            return CaseExpression(
-                condition=(count == ConstantExpression(0)),
-                value=ConstantExpression(None),
-            ).otherwise(
+            return CaseExpression(condition=(count == lit(0)), value=lit(None)).otherwise(
                 CaseExpression(
-                    condition=(count == ConstantExpression(1)),
-                    value=ConstantExpression(float("nan")),
+                    condition=(count == lit(1)), value=lit(float("nan"))
                 ).otherwise(
-                    CaseExpression(
-                        condition=(count == ConstantExpression(2)),
-                        value=ConstantExpression(0.0),
-                    ).otherwise(FunctionExpression("skewness", _input))
+                    CaseExpression(condition=(count == lit(2)), value=lit(0.0)).otherwise(
+                        FunctionExpression("skewness", _input)
+                    )
                 )
             )
 
@@ -357,9 +352,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
     ) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if interpolation == "linear":
-                return FunctionExpression(
-                    "quantile_cont", _input, ConstantExpression(quantile)
-                )
+                return FunctionExpression("quantile_cont", _input, lit(quantile))
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
             raise NotImplementedError(msg)
 
@@ -399,9 +392,9 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
                 "array_unique", FunctionExpression("array_agg", _input)
             ) + FunctionExpression(
                 "max",
-                CaseExpression(
-                    condition=_input.isnotnull(), value=ConstantExpression(0)
-                ).otherwise(ConstantExpression(1)),
+                CaseExpression(condition=_input.isnotnull(), value=lit(0)).otherwise(
+                    lit(1)
+                ),
             )
 
         return self._from_call(
@@ -431,7 +424,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             return (
                 FunctionExpression("stddev_pop", _input)
                 * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - ConstantExpression(ddof))))
+                / (FunctionExpression("sqrt", (n_samples - lit(ddof))))
             )
 
         return self._from_call(
@@ -447,7 +440,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             return (
                 FunctionExpression("var_pop", _input)
                 * n_samples
-                / (n_samples - ConstantExpression(ddof))
+                / (n_samples - lit(ddof))
             )
 
         return self._from_call(
@@ -501,16 +494,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def is_in(self: Self, other: Sequence[Any]) -> Self:
         return self._from_call(
-            lambda _input: _input.isin(*[ConstantExpression(x) for x in other]),
+            lambda _input: _input.isin(*[lit(x) for x in other]),
             "is_in",
             expr_kind=self._expr_kind,
         )
 
     def round(self: Self, decimals: int) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression(
-                "round", _input, ConstantExpression(decimals)
-            ),
+            lambda _input: FunctionExpression("round", _input, lit(decimals)),
             "round",
             expr_kind=self._expr_kind,
         )
@@ -521,7 +512,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             raise NotImplementedError(msg)
 
         return self._from_call(
-            lambda _input: CoalesceOperator(_input, ConstantExpression(value)),
+            lambda _input: CoalesceOperator(_input, lit(value)),
             "fill_null",
             expr_kind=self._expr_kind,
         )
