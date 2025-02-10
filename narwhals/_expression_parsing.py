@@ -322,14 +322,14 @@ def extract_compliant(
     plx: CompliantNamespace[CompliantSeriesT_co],
     other: Any,
     *,
-    parse_column_name_as_expr: bool,
+    strings_are_column_names: bool,
 ) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
     if isinstance(other, Expr):
         return other._to_compliant_expr(plx)
-    if parse_column_name_as_expr and isinstance(other, str):
+    if strings_are_column_names and isinstance(other, str):
         return plx.col(other)
     if isinstance(other, Series):
         return other._compliant_series

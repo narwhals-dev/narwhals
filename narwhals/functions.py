@@ -1365,7 +1365,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.sum_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1412,7 +1412,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.min_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1461,7 +1461,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.max_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1479,14 +1479,14 @@ class When:
 
     def _extract_predicates(self: Self, plx: Any) -> Any:
         return [
-            extract_compliant(plx, v, parse_column_name_as_expr=True)
+            extract_compliant(plx, v, strings_are_column_names=True)
             for v in self._predicates
         ]
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: plx.when(*self._extract_predicates(plx)).then(
-                extract_compliant(plx, value, parse_column_name_as_expr=True)
+                extract_compliant(plx, value, strings_are_column_names=True)
             ),
             combine_metadata(*self._predicates, value, strings_are_column_names=True),
         )
@@ -1496,7 +1496,7 @@ class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         return Expr(
             lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value, parse_column_name_as_expr=True)
+                extract_compliant(plx, value, strings_are_column_names=True)
             ),
             combine_metadata(self, value, strings_are_column_names=True),
         )
@@ -1585,7 +1585,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.all_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1680,7 +1680,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.any_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1729,7 +1729,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.mean_horizontal(
             *(
-                extract_compliant(plx, v, parse_column_name_as_expr=True)
+                extract_compliant(plx, v, strings_are_column_names=True)
                 for v in flat_exprs
             )
         ),
@@ -1793,7 +1793,7 @@ def concat_str(
     exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
         lambda plx: plx.concat_str(
-            *(extract_compliant(plx, v, parse_column_name_as_expr=True) for v in exprs),
+            *(extract_compliant(plx, v, strings_are_column_names=True) for v in exprs),
             separator=separator,
             ignore_nulls=ignore_nulls,
         ),
