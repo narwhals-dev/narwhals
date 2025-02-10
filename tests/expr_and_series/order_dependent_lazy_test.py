@@ -20,6 +20,8 @@ def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:
         lf.select(nw.col("a").diff())
     with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
         lf.select(nw.sum_horizontal(nw.col("a").diff()))
+    with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+        lf.select(nw.sum_horizontal(nw.col("a").diff(), nw.col("a")))
 
 
 def test_dask_order_dependent_ops() -> None:
