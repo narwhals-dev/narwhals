@@ -25,6 +25,7 @@ from narwhals.utils import is_compliant_series
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -432,7 +433,7 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     return ExprMetadata(kind=out_kind, is_order_dependent=is_order_dependent)
 
 
-def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
+def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
@@ -446,3 +447,15 @@ def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise ShapeError(msg)
+
+
+def all_expressions_aggregate(*args: Expr, **kwargs: Expr) -> bool:
+    # Raise if any argument in `args` isn't an aggregation or literal.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
+    return all(
+        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL) for x in args
+    ) and all(
+        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        for x in kwargs.values()
+    )

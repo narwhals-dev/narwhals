@@ -8,7 +8,7 @@ from typing import Iterator
 from typing import TypeVar
 from typing import cast
 
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import all_expressions_aggregate
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.exceptions import InvalidOperationError
@@ -113,13 +113,7 @@ class GroupBy(Generic[DataFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all(
-            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-            for x in flat_aggs
-        ) and all(
-            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-            for x in named_aggs.values()
-        ):
+        if not all_expressions_aggregate(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -221,13 +215,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all(
-            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-            for x in flat_aggs
-        ) and all(
-            x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-            for x in named_aggs.values()
-        ):
+        if not all_expressions_aggregate(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"

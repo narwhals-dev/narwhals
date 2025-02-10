@@ -15,7 +15,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import check_expression_transforms
+from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -192,7 +192,7 @@ class BaseFrame(Generic[_FrameT]):
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            check_expression_transforms(*flat_predicates, function_name="filter")
+            check_expressions_transform(*flat_predicates, function_name="filter")
             predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates, **constraints),

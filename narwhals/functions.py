@@ -14,7 +14,7 @@ from typing import overload
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import check_expression_transforms
+from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dataframe import DataFrame
@@ -1475,7 +1475,7 @@ class When:
         if not self._predicates:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
-        check_expression_transforms(*self._predicates, function_name="when")
+        check_expressions_transform(*self._predicates, function_name="when")
 
     def _extract_predicates(self: Self, plx: Any) -> Any:
         return [
