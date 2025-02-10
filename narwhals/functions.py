@@ -1178,10 +1178,7 @@ def sum(*columns: str) -> Expr:
         |    0  3  4.8     |
         └──────────────────┘
     """
-    return Expr(
-        lambda plx: plx.col(*columns).sum(),
-        ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False),
-    )
+    return col(*columns).sum()
 
 
 def mean(*columns: str) -> Expr:
@@ -1213,10 +1210,7 @@ def mean(*columns: str) -> Expr:
         |b: [[17.173333333333336]]|
         └─────────────────────────┘
     """
-    return Expr(
-        lambda plx: plx.col(*columns).mean(),
-        ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False),
-    )
+    return col(*columns).mean()
 
 
 def median(*columns: str) -> Expr:
@@ -1252,10 +1246,7 @@ def median(*columns: str) -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-    return Expr(
-        lambda plx: plx.col(*columns).median(),
-        ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False),
-    )
+    return col(*columns).median()
 
 
 def min(*columns: str) -> Expr:
@@ -1287,10 +1278,7 @@ def min(*columns: str) -> Expr:
         |  b: [[5]]        |
         └──────────────────┘
     """
-    return Expr(
-        lambda plx: plx.col(*columns).min(),
-        ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False),
-    )
+    return col(*columns).min()
 
 
 def max(*columns: str) -> Expr:
@@ -1318,10 +1306,7 @@ def max(*columns: str) -> Expr:
         |     0  2  10     |
         └──────────────────┘
     """
-    return Expr(
-        lambda plx: plx.col(*columns).max(),
-        ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False),
-    )
+    return col(*columns).max()
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
