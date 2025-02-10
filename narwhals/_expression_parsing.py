@@ -395,14 +395,14 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     n_transforms = 0
     n_aggregations = 0
     n_literals = 0
-    is_order_dependent = False
+    result_is_order_dependent = False
 
     for arg in args:
         if isinstance(arg, str) and strings_are_column_names:
             n_transforms += 1
         elif isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
-                is_order_dependent = True
+                result_is_order_dependent = True
             kind = arg._metadata["kind"]
             if kind is ExprKind.AGGREGATION:
                 n_aggregations += 1
@@ -416,7 +416,7 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
                 msg = "unreachable code"
                 raise AssertionError(msg)
     if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
-        out_kind = ExprKind.LITERAL
+        result_kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
@@ -424,13 +424,13 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
         msg = "Cannot combine length-changing expressions with length-preserving ones"
         raise ShapeError(msg)
     elif n_changes_length:
-        out_kind = ExprKind.CHANGES_LENGTH
+        result_kind = ExprKind.CHANGES_LENGTH
     elif n_transforms:
-        out_kind = ExprKind.TRANSFORM
+        result_kind = ExprKind.TRANSFORM
     else:
-        out_kind = ExprKind.AGGREGATION
+        result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(kind=out_kind, is_order_dependent=is_order_dependent)
+    return ExprMetadata(kind=result_kind, is_order_dependent=result_is_order_dependent)
 
 
 def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
