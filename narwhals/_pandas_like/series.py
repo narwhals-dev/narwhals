@@ -1039,7 +1039,7 @@ class PandasLikeSeries(CompliantSeries):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
-        data: dict[str, Sequence[int | float | str]]
+        data: dict[str, Sequence[int | float | str] | _1DArray]
 
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
             data = {}
