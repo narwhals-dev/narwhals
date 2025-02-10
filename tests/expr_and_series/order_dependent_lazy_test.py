@@ -23,6 +23,13 @@ def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:
     with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
         lf.select(nw.sum_horizontal(nw.col("a").diff(), nw.col("a")))
 
+    for agg in ["max", "min", "mean", "sum", "median", "std", "var"]:
+        with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+            lf.select(getattr(nw.col("a").diff(), agg)())
+    for agg in ["any", "all"]:
+        with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+            lf.select(getattr((nw.col("a").diff() > 0), agg)())
+
 
 def test_dask_order_dependent_ops() -> None:
     # Preserve these for narwhals.stable.v1, even though they
