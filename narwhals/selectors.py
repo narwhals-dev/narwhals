@@ -5,9 +5,9 @@ from typing import Any
 from typing import Iterable
 from typing import NoReturn
 
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.expr import Expr
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:

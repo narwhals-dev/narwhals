@@ -8,6 +8,9 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
@@ -17,10 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
 from narwhals.utils import _validate_rolling_arguments
-from narwhals.utils import combine_metadata
 from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
 

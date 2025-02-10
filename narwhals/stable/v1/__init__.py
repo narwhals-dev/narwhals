@@ -15,6 +15,8 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -67,8 +69,6 @@ from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import find_stacklevel

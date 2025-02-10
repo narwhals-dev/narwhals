@@ -8,10 +8,10 @@ from typing import Iterator
 from typing import TypeVar
 from typing import cast
 
+from narwhals._expression_parsing import ExprKind
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import ExprKind
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
 

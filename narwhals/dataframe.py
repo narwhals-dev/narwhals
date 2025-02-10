@@ -14,6 +14,8 @@ from typing import TypeVar
 from typing import overload
 from warnings import warn
 
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import check_expression_transforms
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -23,9 +25,7 @@ from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
-from narwhals.utils import ExprKind
 from narwhals.utils import Implementation
-from narwhals.utils import check_expression_transforms
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr

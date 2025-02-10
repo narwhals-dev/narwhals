@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Generic
 from typing import TypeVar
 
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 
 if TYPE_CHECKING:
     from typing_extensions import Self

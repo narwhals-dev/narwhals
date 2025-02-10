@@ -3,10 +3,13 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing import overload
@@ -14,7 +17,7 @@ from typing import overload
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
-from narwhals.utils import ExprKind
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_compliant_series
@@ -333,56 +336,6 @@ def extract_compliant(
     return other
 
 
-def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
-    # neither of which is order-dependent, so we default to `False`.
-    return any(getattr(x, "_is_order_dependent", False) for x in args)
-
-
-def operation_changes_length(*args: IntoExpr | Any) -> bool:
-    """Track whether operation changes length.
-
-    n-ary operations between expressions which change length are not
-    allowed. This is because the output might be non-relational. For
-    example:
-        df = pl.LazyFrame({'a': [1,2,None], 'b': [4,None,6]})
-        df.select(pl.col('a', 'b').drop_nulls())
-    Polars does allow this, but in the result we end up with the
-    tuple (2, 6) which wasn't part of the original data.
-
-    Rules are:
-        - in an n-ary operation, if any one of them changes length, then
-          it must be the only expression present
-        - in a comparison between a changes-length expression and a
-          scalar, the output changes length
-    """
-    from narwhals.expr import Expr
-
-    n_exprs = len([x for x in args if isinstance(x, Expr)])
-    changes_length = any(
-        isinstance(x, Expr) and x._metadata["kind"] is ExprKind.CHANGES_LENGTH
-        for x in args
-    )
-    if n_exprs > 1 and changes_length:
-        msg = (
-            "Found multiple expressions at least one of which changes length.\n"
-            "Any length-changing expression can only be used in isolation, unless\n"
-            "it is followed by an aggregation."
-        )
-        raise LengthChangingExprError(msg)
-    return changes_length
-
-
-def operation_aggregates(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_aggregates`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a').sum() + 1),
-    # which is already length-1, so we default to `True`. If any
-    # expression does not aggregate, then broadcasting will take
-    # place and the result will not be an aggregate.
-    return all(getattr(x, "_aggregates", True) for x in args)
-
-
 def evaluate_output_names_and_aliases(
     expr: CompliantExpr[Any],
     df: CompliantDataFrame | CompliantLazyFrame,
@@ -403,3 +356,93 @@ def evaluate_output_names_and_aliases(
             *[(x, alias) for x, alias in zip(output_names, aliases) if x not in exclude]
         )
     return output_names, aliases
+
+
+def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
+    # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
+    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
+    # neither of which is order-dependent, so we default to `False`.
+    from narwhals.expr import Expr
+
+    return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
+
+
+class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with.
+
+    Composition rule is:
+    - LITERAL vs LITERAL -> LITERAL
+    - TRANSFORM vs anything -> TRANSFORM
+    - anything vs TRANSFORM -> TRANSFORM
+    - all remaining cases -> AGGREGATION
+    """
+
+    LITERAL = auto()  # e.g. nw.lit(1)
+    AGGREGATION = auto()  # e.g. nw.col('a').mean()
+    TRANSFORM = auto()  # e.g. nw.col('a').round()
+    CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
+
+
+class ExprMetadata(TypedDict):
+    kind: ExprKind
+    is_order_dependent: bool
+
+
+def combine_metadata(*args: IntoExpr) -> ExprMetadata:
+    # Strings are interpreted as column names.
+    from narwhals.expr import Expr
+
+    kind = ExprKind.AGGREGATION
+    n_changes_length = 0
+    n_transforms = 0
+    n_aggregations = 0
+    n_literals = 0
+    is_order_dependent = False
+
+    for arg in args:
+        if isinstance(arg, str):
+            n_transforms += 1
+        elif isinstance(arg, Expr):
+            if arg._metadata["is_order_dependent"]:
+                is_order_dependent = True
+            kind = arg._metadata["kind"]
+            if kind is ExprKind.AGGREGATION:
+                n_aggregations += 1
+            elif kind is ExprKind.LITERAL:
+                n_literals += 1
+            elif kind is ExprKind.CHANGES_LENGTH:
+                n_changes_length += 1
+            elif kind is ExprKind.TRANSFORM:
+                n_transforms += 1
+            else:  # pragma: no cover
+                msg = "unreachable code"
+                raise AssertionError(msg)
+    if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
+        kind = ExprKind.LITERAL
+    elif n_changes_length > 1:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
+        raise LengthChangingExprError(msg)
+    elif n_changes_length and n_transforms:
+        msg = "Cannot combine length-changing expressions with length-preserving ones"
+        raise ShapeError(msg)
+    elif n_changes_length:
+        kind = ExprKind.CHANGES_LENGTH
+    elif n_transforms:
+        kind = ExprKind.TRANSFORM
+    else:
+        kind = ExprKind.AGGREGATION
+
+    return ExprMetadata(kind=kind, is_order_dependent=is_order_dependent)
+
+
+def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    if not all(
+        (isinstance(x, Expr) and x._metadata["kind"] is ExprKind.TRANSFORM)
+        or isinstance(x, (str, Series))
+        for x in args
+    ):
+        msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
+        raise ShapeError(msg)

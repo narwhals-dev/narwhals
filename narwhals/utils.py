@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
-from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing import cast
@@ -36,8 +35,6 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -58,7 +55,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
-    from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
@@ -1257,84 +1253,3 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
-
-
-class ExprKind(Enum):
-    """Describe which kind of expression we are dealing with.
-
-    Composition rule is:
-    - LITERAL vs LITERAL -> LITERAL
-    - TRANSFORM vs anything -> TRANSFORM
-    - anything vs TRANSFORM -> TRANSFORM
-    - all remaining cases -> AGGREGATION
-    """
-
-    LITERAL = auto()  # e.g. nw.lit(1)
-    AGGREGATION = auto()  # e.g. nw.col('a').mean()
-    TRANSFORM = auto()  # e.g. nw.col('a').round()
-    CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
-
-
-class ExprMetadata(TypedDict):
-    kind: ExprKind
-    is_order_dependent: bool
-
-
-def combine_metadata(*args: IntoExpr) -> ExprMetadata:
-    # Strings are interpreted as column names.
-    from narwhals.expr import Expr
-
-    kind = ExprKind.AGGREGATION
-    n_changes_length = 0
-    n_transforms = 0
-    n_aggregations = 0
-    n_literals = 0
-    is_order_dependent = False
-
-    for arg in args:
-        if isinstance(arg, str):
-            n_transforms += 1
-        elif isinstance(arg, Expr):
-            if arg._metadata["is_order_dependent"]:
-                is_order_dependent = True
-            kind = arg._metadata["kind"]
-            if kind is ExprKind.AGGREGATION:
-                n_aggregations += 1
-            elif kind is ExprKind.LITERAL:
-                n_literals += 1
-            elif kind is ExprKind.CHANGES_LENGTH:
-                n_changes_length += 1
-            elif kind is ExprKind.TRANSFORM:
-                n_transforms += 1
-            else:  # pragma: no cover
-                msg = "unreachable code"
-                raise AssertionError(msg)
-    if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
-        kind = ExprKind.LITERAL
-    elif n_changes_length > 1:
-        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
-        raise LengthChangingExprError(msg)
-    elif n_changes_length and n_transforms:
-        msg = "Cannot combine length-changing expressions with length-preserving ones"
-        raise ShapeError(msg)
-    elif n_changes_length:
-        kind = ExprKind.CHANGES_LENGTH
-    elif n_transforms:
-        kind = ExprKind.TRANSFORM
-    else:
-        kind = ExprKind.AGGREGATION
-
-    return ExprMetadata(kind=kind, is_order_dependent=is_order_dependent)
-
-
-def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-
-    if not all(
-        (isinstance(x, Expr) and x._metadata["kind"] is ExprKind.TRANSFORM)
-        or isinstance(x, (str, Series))
-        for x in args
-    ):
-        msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
-        raise ShapeError(msg)

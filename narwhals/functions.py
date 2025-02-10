@@ -12,6 +12,10 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import check_expression_transforms
+from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -22,12 +26,8 @@ from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import check_expression_transforms
-from narwhals.utils import combine_metadata
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness

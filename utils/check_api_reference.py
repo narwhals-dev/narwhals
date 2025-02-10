@@ -6,8 +6,8 @@ import sys
 import polars as pl
 
 import narwhals as nw
-from narwhals.utils import ExprKind
-from narwhals.utils import ExprMetadata
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
 from narwhals.utils import remove_suffix
 
