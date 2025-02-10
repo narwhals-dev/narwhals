@@ -298,3 +298,60 @@ def test_dtype_is_x() -> None:
         assert dtype.is_decimal() == (dtype in is_decimal)
         assert dtype.is_temporal() == (dtype in is_temporal)
         assert dtype.is_nested() == (dtype in is_nested)
+
+
+def test_huge_int_to_native() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    if POLARS_VERSION >= (1, 18):  # pragma: no cover
+        df_casted = (
+            nw.from_native(df)
+            .with_columns(a_int=nw.col("a").cast(nw.Int128()))
+            .to_native()
+        )
+        assert df_casted.schema["a_int"] == pl.Int128
+    else:  # pragma: no cover
+        # Int128 was not available yet
+        pass
+    rel = duckdb.sql("""
+        select cast(a as int64) as a
+        from df
+                     """)
+    result = (
+        nw.from_native(rel)
+        .with_columns(
+            a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
+        )
+        .select("a_int", "a_unit")
+        .to_native()
+    )
+    type_a_int, type_a_unit = result.types
+    assert type_a_int == "HUGEINT"
+    assert type_a_unit == "UHUGEINT"
+
+
+def test_cast_decimal_to_native() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    data = {"a": [1, 2, 3]}
+
+    df = pl.DataFrame(data)
+    library_obj_to_test = [
+        df,
+        duckdb.sql("""
+            select cast(a as INT1) as a
+            from df
+                         """),
+        pd.DataFrame(data),
+        pa.Table.from_arrays(
+            [pa.array(data["a"])], schema=pa.schema([("a", pa.int64())])
+        ),
+    ]
+    for obj in library_obj_to_test:
+        with pytest.raises(
+            NotImplementedError, match="Casting to Decimal is not supported yet."
+        ):
+            (
+                nw.from_native(obj)
+                .with_columns(a=nw.col("a").cast(nw.Decimal()))
+                .to_native()
+            )
