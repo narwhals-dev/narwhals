@@ -20,8 +20,8 @@ from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.utils import _validate_rolling_arguments
-from narwhals.utils import flatten
-from narwhals.utils import issue_deprecation_warning
+from narwhals.utils import flatten, ExprMetadata, ExprKind
+from narwhals.utils import issue_deprecation_warning, combine_metadata
 
 if TYPE_CHECKING:
     from typing import TypeVar
@@ -43,22 +43,16 @@ class Expr:
     def __init__(
         self: Self,
         to_compliant_expr: Callable[[Any], Any],
-        is_order_dependent: bool,  # noqa: FBT001
-        changes_length: bool,  # noqa: FBT001
-        aggregates: bool,  # noqa: FBT001
+        metadata: ExprMetadata,
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         self._to_compliant_expr = to_compliant_expr
-        self._is_order_dependent = is_order_dependent
-        self._changes_length = changes_length
-        self._aggregates = aggregates
+        self._metadata = metadata
 
     def __repr__(self: Self) -> str:
         return (
             "Narwhals Expr\n"
-            f"is_order_dependent: {self._is_order_dependent}\n"
-            f"changes_length: {self._changes_length}\n"
-            f"aggregates: {self._aggregates}"
+            f"metadata: {self._metadata}\n"
         )
 
     def _taxicab_norm(self: Self) -> Self:
@@ -66,9 +60,7 @@ class Expr:
         # It's not intended to be used.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            self._is_order_dependent,
-            self._changes_length,
-            self._aggregates,
+            self._metadata
         )
 
     # --- convert ---
@@ -97,9 +89,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).alias(name),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            self._metadata
         )
 
     def pipe(
@@ -163,9 +153,7 @@ class Expr:
         _validate_dtype(dtype)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cast(dtype),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            self._metadata
         )
 
     # --- binary ---
@@ -174,9 +162,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__eq__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
@@ -184,9 +170,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ne__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __and__(self: Self, other: Any) -> Self:
@@ -194,9 +178,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__and__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rand__(self: Self, other: Any) -> Self:
@@ -207,9 +189,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __or__(self: Self, other: Any) -> Self:
@@ -217,9 +197,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__or__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __ror__(self: Self, other: Any) -> Self:
@@ -230,9 +208,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __add__(self: Self, other: Any) -> Self:
@@ -240,9 +216,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__add__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __radd__(self: Self, other: Any) -> Self:
@@ -253,9 +227,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __sub__(self: Self, other: Any) -> Self:
@@ -263,9 +235,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__sub__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
@@ -276,9 +246,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
@@ -286,9 +254,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__truediv__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
@@ -299,9 +265,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __mul__(self: Self, other: Any) -> Self:
@@ -309,9 +273,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__mul__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
@@ -322,9 +284,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __le__(self: Self, other: Any) -> Self:
@@ -332,9 +292,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__le__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __lt__(self: Self, other: Any) -> Self:
@@ -342,9 +300,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__lt__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __gt__(self: Self, other: Any) -> Self:
@@ -352,9 +308,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__gt__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __ge__(self: Self, other: Any) -> Self:
@@ -362,9 +316,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__ge__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __pow__(self: Self, other: Any) -> Self:
@@ -372,9 +324,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__pow__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
@@ -385,9 +335,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
@@ -395,9 +343,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__floordiv__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
@@ -408,9 +354,7 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __mod__(self: Self, other: Any) -> Self:
@@ -418,9 +362,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).__mod__(
                 extract_compliant(plx, other, parse_column_name_as_expr=False)
             ),
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
@@ -431,18 +373,14 @@ class Expr:
 
         return self.__class__(
             func,
-            is_order_dependent=operation_is_order_dependent(self, other),
-            changes_length=operation_changes_length(self, other),
-            aggregates=operation_aggregates(self, other),
+            combine_metadata(self, other)
         )
 
     # --- unary ---
     def __invert__(self: Self) -> Self:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).__invert__(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            self._metadata
         )
 
     def any(self: Self) -> Self:
@@ -597,9 +535,7 @@ class Expr:
                 min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
             ),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            self._metadata
         )
 
     def mean(self: Self) -> Self:

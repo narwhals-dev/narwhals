@@ -21,9 +21,7 @@ class Selector(Expr):
     def _to_expr(self: Self) -> Expr:
         return Expr(
             to_compliant_expr=self._to_compliant_expr,
-            is_order_dependent=self._is_order_dependent,
-            changes_length=self._changes_length,
-            aggregates=self._aggregates,
+            self._metadata
         )
 
     def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
