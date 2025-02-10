@@ -359,9 +359,6 @@ def evaluate_output_names_and_aliases(
 
 
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_metadata['is_order_dependent']`.
-    # If it isn't, it means that it was a scalar (e.g. nw.col('a') + 1)
-    # or a column name, neither of which is order-dependent, so we default to `False`.
     from narwhals.expr import Expr
 
     return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
@@ -370,11 +367,12 @@ def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
 
-    Composition rule is:
+    Commutative composition rules are:
     - LITERAL vs LITERAL -> LITERAL
-    - TRANSFORM vs anything -> TRANSFORM
-    - anything vs TRANSFORM -> TRANSFORM
-    - all remaining cases -> AGGREGATION
+    - CHANGES_LENGTH vs (LITERAL | AGGREGATION) -> CHANGES_LENGTH
+    - CHANGES_LENGTH vs (CHANGES_LENGTH | TRANSFORM) -> raise
+    - TRANSFORM vs (LITERAL | AGGREGATION) -> TRANSFORM
+    - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
     """
 
     LITERAL = auto()  # e.g. nw.lit(1)
