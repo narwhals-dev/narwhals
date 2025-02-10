@@ -9,6 +9,7 @@ from typing import overload
 import polars as pl
 
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
@@ -237,8 +238,7 @@ def catch_polars_exception(
     elif isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
-        # We don't (yet?) have a Narwhals ComputeError.
-        return NarwhalsError(str(exception))
+        return ComputeError(str(exception))
     if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
         # Old versions of Polars didn't have PolarsError.
         return NarwhalsError(str(exception))
