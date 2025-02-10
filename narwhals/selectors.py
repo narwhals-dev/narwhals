@@ -19,10 +19,7 @@ if TYPE_CHECKING:
 
 class Selector(Expr):
     def _to_expr(self: Self) -> Expr:
-        return Expr(
-            to_compliant_expr=self._to_compliant_expr,
-            self._metadata
-        )
+        return Expr(self._to_compliant_expr, self._metadata)
 
     def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):

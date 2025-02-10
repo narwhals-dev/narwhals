@@ -6,10 +6,11 @@ from datetime import timezone
 from enum import Enum
 from enum import auto
 from secrets import token_hex
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing import cast
@@ -1254,6 +1255,7 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
 
+
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
 
@@ -1269,6 +1271,11 @@ class ExprKind(Enum):
     TRANSFORM = auto()  # e.g. nw.col('a').round()
     CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
 
+
 class ExprMetadata(TypedDict):
     kind: ExprKind
     is_order_dependent: bool
+
+
+def combine_metadata(*args):
+    return args[0]._metadata
