@@ -136,24 +136,19 @@ def native_to_narwhals_dtype(
             native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
         )
     if dtype == pl.Array:
-        if backend_version < (0, 20, 30):  # pragma: no cover
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.width,  # type: ignore[attr-defined]
-            )
-        else:
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.size,  # type: ignore[attr-defined]
-            )
+        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
+        return dtypes.Array(
+            inner=native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
+            shape=outer_shape,
+        )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
-    import polars as pl
-
+def narwhals_to_native_dtype(
+    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+) -> pl.DataType:
     dtypes = import_dtypes_module(version)
 
     if dtype == dtypes.Float64:
@@ -197,20 +192,24 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
         du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)  # type: ignore[arg-type]
     if dtype == dtypes.List:
-        return pl.List(narwhals_to_native_dtype(dtype.inner, version))  # type: ignore[union-attr]
+        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
     if dtype == dtypes.Struct:
         return pl.Struct(
             fields=[
                 pl.Field(
                     name=field.name,
-                    dtype=narwhals_to_native_dtype(field.dtype, version),
+                    dtype=narwhals_to_native_dtype(field.dtype, version, backend_version),
                 )
                 for field in dtype.fields  # type: ignore[union-attr]
             ]
         )
     if dtype == dtypes.Array:  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
+        size = dtype.size  # type: ignore[union-attr]
+        kwargs = {"width": size} if backend_version < (0, 20, 30) else {"shape": size}
+        return pl.Array(
+            inner=narwhals_to_native_dtype(dtype.inner, version, backend_version),  # type: ignore[union-attr]
+            **kwargs,
+        )
     return pl.Unknown()  # pragma: no cover
 
 

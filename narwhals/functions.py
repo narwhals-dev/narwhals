@@ -243,7 +243,10 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype_pl = polars_narwhals_to_native_dtype(dtype, version=version)
+            backend_version = parse_version(native_namespace.__version__)
+            dtype_pl = polars_narwhals_to_native_dtype(
+                dtype, version=version, backend_version=backend_version
+            )
         else:
             dtype_pl = None
 
@@ -498,8 +501,13 @@ def _from_numpy_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
+            backend_version = parse_version(native_namespace.__version__)
             schema = {
-                name: polars_narwhals_to_native_dtype(dtype, version=version)  # type: ignore[misc]
+                name: polars_narwhals_to_native_dtype(  # type: ignore[misc]
+                    dtype,
+                    version=version,
+                    backend_version=backend_version,
+                )
                 for name, dtype in schema.items()
             }
         elif schema is None:
