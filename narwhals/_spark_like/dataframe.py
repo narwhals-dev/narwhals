@@ -22,6 +22,7 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import pyarrow as pa
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
@@ -108,6 +109,38 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             implementation=self._implementation,
         )
 
+    def _collect_to_arrow(self) -> pa.Table:
+        if self._implementation is Implementation.PYSPARK and self._backend_version < (
+            4,
+        ):
+            import pyarrow as pa  # ignore-banned-import
+
+            try:
+                native_pyarrow_frame = pa.Table.from_batches(
+                    self._native_frame._collect_as_arrow()
+                )
+            except ValueError as exc:
+                if "at least one RecordBatch" in str(exc):
+                    # Empty dataframe
+                    from narwhals._arrow.utils import narwhals_to_native_dtype
+
+                    data: dict[str, list[Any]] = {}
+                    schema = []
+                    current_schema = self.collect_schema()
+                    for key, value in current_schema.items():
+                        data[key] = []
+                        schema.append(
+                            (key, narwhals_to_native_dtype(value, self._version))
+                        )
+                    native_pyarrow_frame = pa.Table.from_pydict(
+                        data, schema=pa.schema(schema)
+                    )
+                else:  # pragma: no cover
+                    raise
+        else:
+            native_pyarrow_frame = self._native_frame.toArrow()
+        return native_pyarrow_frame
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
@@ -135,30 +168,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
             from narwhals._arrow.dataframe import ArrowDataFrame
 
-            try:
-                native_pyarrow_frame = pa.Table.from_batches(
-                    self._native_frame._collect_as_arrow()
-                )
-            except ValueError as exc:
-                if "at least one RecordBatch" in str(exc):
-                    # Empty dataframe
-                    from narwhals._arrow.utils import narwhals_to_native_dtype
-
-                    data: dict[str, list[Any]] = {}
-                    schema = []
-                    current_schema = self.collect_schema()
-                    for key, value in current_schema.items():
-                        data[key] = []
-                        schema.append(
-                            (key, narwhals_to_native_dtype(value, self._version))
-                        )
-                    native_pyarrow_frame = pa.Table.from_pydict(
-                        data, schema=pa.schema(schema)
-                    )
-                else:  # pragma: no cover
-                    raise
             return ArrowDataFrame(
-                native_pyarrow_frame,
+                self._collect_to_arrow(),
                 backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
@@ -171,9 +182,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=pl.from_arrow(  # type: ignore[arg-type]
-                    pa.Table.from_batches(self._native_frame._collect_as_arrow())
-                ),
+                df=pl.from_arrow(self._collect_to_arrow()),  # type: ignore[arg-type]
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -367,7 +376,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     if colname not in (right_on or [])
                 ]
             )
-
         return self._from_native_frame(
             self_native.join(other, on=left_on, how=how).select(col_order)
         )
