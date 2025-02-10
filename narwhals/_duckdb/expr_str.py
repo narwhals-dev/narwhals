@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import NoReturn
 
 from duckdb import FunctionExpression
 
@@ -9,6 +8,7 @@ from narwhals._duckdb.utils import lit
 
 if TYPE_CHECKING:
     import duckdb
+    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._duckdb.expr import DuckDBExpr
@@ -111,9 +111,7 @@ class DuckDBExprStringNamespace:
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def replace(
-        self: Self, pattern: str, value: str, *, literal: bool, n: int
-    ) -> NoReturn:
+    def replace(self: Self, pattern: str, value: str, *, literal: bool, n: int) -> Never:
         msg = "`replace` is currently not supported for DuckDB"
         raise NotImplementedError(msg)
 
