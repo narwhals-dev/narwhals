@@ -31,6 +31,7 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Hashable
 
     import pandas as pd
     import polars as pl
@@ -656,7 +657,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         ).alias(self.name)
 
-    def alias(self: Self, name: str) -> Self:
+    def alias(self: Self, name: str | Hashable) -> Self:
         if name != self.name:
             return self._from_native_series(
                 rename(
