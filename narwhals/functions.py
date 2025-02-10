@@ -17,15 +17,16 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
-from narwhals.exceptions import ShapeError
 from narwhals.expr import Expr
 from narwhals.schema import Schema
+from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import ExprKind
 from narwhals.utils import ExprMetadata
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import check_expression_transforms
 from narwhals.utils import combine_metadata
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
@@ -1474,12 +1475,7 @@ class When:
         if not self._predicates:
             msg = "At least one predicate needs to be provided to `narwhals.when`."
             raise TypeError(msg)
-        if any(
-            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
-            for x in self._predicates
-        ):
-            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
-            raise ShapeError(msg)
+        check_expression_transforms(*self._predicates, function_name="when")
 
     def _extract_predicates(self: Self, plx: Any) -> Any:
         return [

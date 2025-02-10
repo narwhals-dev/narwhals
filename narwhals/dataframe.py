@@ -21,11 +21,11 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
-from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import ExprKind
 from narwhals.utils import Implementation
+from narwhals.utils import check_expression_transforms
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -187,12 +187,7 @@ class BaseFrame(Generic[_FrameT]):
         **constraints: Any,
     ) -> Self:
         flat_predicates = flatten(predicates)
-        if any(
-            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
-            for x in flat_predicates
-        ):
-            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
-            raise ShapeError(msg)
+        check_expression_transforms(*flat_predicates, function_name="filter")
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)

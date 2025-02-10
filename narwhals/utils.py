@@ -36,6 +36,7 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -1300,8 +1301,10 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
                 n_aggregations += 1
             elif kind is ExprKind.LITERAL:
                 n_literals += 1
-            elif kind is ExprKind.CHANGES_LENGTH or kind is ExprKind.TRANSFORM:
+            elif kind is ExprKind.CHANGES_LENGTH:
                 n_changes_length += 1
+            elif kind is ExprKind.TRANSFORM:
+                n_transforms += 1
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
@@ -1312,7 +1315,7 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
         raise ValueError(msg)
     elif n_changes_length and n_transforms:
         msg = "Cannot combine length-changing expressions with length-preserving ones"
-        raise ValueError(msg)
+        raise ShapeError(msg)
     elif n_changes_length:
         kind = ExprKind.CHANGES_LENGTH
     elif n_transforms:
@@ -1321,3 +1324,16 @@ def combine_metadata(*args: IntoExpr) -> ExprMetadata:
         kind = ExprKind.AGGREGATION
 
     return ExprMetadata(kind=kind, is_order_dependent=is_order_dependent)
+
+
+def check_expression_transforms(*args: IntoExpr, function_name: str) -> None:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    if not all(
+        (isinstance(x, Expr) and x._metadata["kind"] is ExprKind.TRANSFORM)
+        or isinstance(x, (str, Series))
+        for x in args
+    ):
+        msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
+        raise ShapeError(msg)
