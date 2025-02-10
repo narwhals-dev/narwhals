@@ -223,7 +223,9 @@ def convert_str_slice_to_int_slice(
     return (start, stop, step)
 
 
-def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
+def catch_polars_exception(
+    exception: Exception, backend_version: tuple[int, ...]
+) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
     elif isinstance(exception, pl.exceptions.ShapeError):
@@ -233,12 +235,12 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     elif isinstance(exception, pl.exceptions.ComputeError):
         # We don't (yet?) have a Narwhals ComputeError.
         return NarwhalsError(str(exception))
-    if hasattr(pl.exceptions, "PolarsError") and isinstance(
-        exception, pl.exceptions.PolarsError
-    ):
+    if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
         # Old versions of Polars didn't have PolarsError.
         return NarwhalsError(str(exception))
-    elif "polars.exceptions" in str(type(exception)):  # pragma: no cover
+    elif backend_version < (1,) and "polars.exceptions" in str(
+        type(exception)
+    ):  # pragma: no cover
         # Last attempt, for old Polars versions.
         return NarwhalsError(str(exception))
     # Just return exception as-is.
