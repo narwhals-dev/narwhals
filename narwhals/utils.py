@@ -1279,7 +1279,7 @@ class ExprMetadata(TypedDict):
 
 
 def combine_metadata(*args: IntoExpr) -> ExprMetadata:
-    # do we need a column_names_as_string argument?
+    # Strings are interpreted as column names.
     from narwhals.expr import Expr
 
     kind = ExprKind.AGGREGATION
