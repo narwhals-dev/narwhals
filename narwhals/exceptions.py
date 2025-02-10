@@ -44,6 +44,10 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
         return ColumnNotFoundError(message)
 
 
+class ComputeError(NarwhalsError):
+    """Exception raised when the underlying computation could not be evaluated."""
+
+
 class ShapeError(NarwhalsError):
     """Exception raised when trying to perform operations on data structures with incompatible shapes."""
 

@@ -1026,6 +1026,95 @@ class PandasLikeSeries(CompliantSeries):
 
         return self._from_native_series(ranked_series)
 
+    def hist(
+        self: Self,
+        bins: list[float | int] | None,
+        *,
+        bin_count: int | None,
+        include_breakpoint: bool,
+    ) -> PandasLikeDataFrame:
+        from numpy import linspace
+        from numpy import zeros
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        ns = self.__native_namespace__()
+        data: dict[str, Sequence[int | float | str]]
+
+        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+            data = {}
+            if include_breakpoint:
+                data["breakpoint"] = []
+            data["count"] = []
+
+            return PandasLikeDataFrame(
+                ns.DataFrame(data),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+                validate_column_names=True,
+            )
+        elif self._native_series.count() < 1:
+            if bins is not None:
+                data = {
+                    "breakpoint": bins[1:],
+                    "count": zeros(shape=len(bins) - 1),
+                }
+            else:
+                data = {
+                    "breakpoint": linspace(0, 1, bin_count),
+                    "count": zeros(shape=bin_count),
+                }
+
+            if not include_breakpoint:
+                del data["breakpoint"]
+
+            return PandasLikeDataFrame(
+                ns.DataFrame(data),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+                validate_column_names=True,
+            )
+
+        elif bin_count is not None:  # use Polars binning behavior
+            lower, upper = self._native_series.min(), self._native_series.max()
+            pad_lowest_bin = False
+            if lower == upper:
+                lower -= 0.5
+                upper += 0.5
+            else:
+                pad_lowest_bin = True
+
+            bins = linspace(lower, upper, bin_count + 1)
+            if pad_lowest_bin and bins is not None:
+                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
+            bin_count = None
+
+        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
+        #   the bins were explicitly passed in.
+        categories = ns.cut(
+            self._native_series, bins=bins if bin_count is None else bin_count
+        )
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
+        #   is necessary to restore these bins.
+        result = categories.value_counts(dropna=True, sort=False).reindex(
+            categories.cat.categories, fill_value=0
+        )
+        data = {}
+        if include_breakpoint:
+            data["breakpoint"] = bins[1:] if bins is not None else result.index.right
+        data["count"] = result.reset_index(drop=True)
+
+        return PandasLikeDataFrame(
+            ns.DataFrame(data),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
+        )
+
     @property
     def str(self: Self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
