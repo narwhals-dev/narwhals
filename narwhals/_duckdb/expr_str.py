@@ -44,15 +44,16 @@ class DuckDBExprStringNamespace:
 
     def slice(self: Self, offset: int, length: int) -> DuckDBExpr:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
+            offset_lit = lit(offset)
             return FunctionExpression(
                 "array_slice",
                 _input,
                 lit(offset + 1)
                 if offset >= 0
-                else FunctionExpression("length", _input) + offset + 1,  # type: ignore[operator]
+                else FunctionExpression("length", _input) + offset_lit + lit(1),
                 FunctionExpression("length", _input)
                 if length is None
-                else lit(length) + offset,  # type: ignore[operator]
+                else lit(length) + offset_lit,
             )
 
         return self._compliant_expr._from_call(

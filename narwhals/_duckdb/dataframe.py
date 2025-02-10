@@ -481,9 +481,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         rel = self._native_frame
         original_columns = self.columns
 
-        not_null_condition = (
-            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0  # type: ignore[operator]
-        )
+        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
+            "len", col_to_explode
+        ) > lit(0)
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 FunctionExpression("unnest", col_to_explode).alias(col)
