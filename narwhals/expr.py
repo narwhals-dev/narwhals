@@ -404,9 +404,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def all(self: Self) -> Self:
@@ -430,9 +428,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def ewm_mean(
@@ -559,9 +555,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def median(self: Self) -> Self:
@@ -588,9 +582,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def std(self: Self, *, ddof: int = 1) -> Self:
@@ -618,9 +610,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -648,9 +638,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def map_batches(
@@ -723,9 +711,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def sum(self: Self) -> Expr:
@@ -753,9 +739,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def min(self: Self) -> Self:
@@ -779,9 +763,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def max(self: Self) -> Self:
@@ -805,9 +787,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            is_order_dependent=self._is_order_dependent,
-            changes_length=False,
-            aggregates=True,
+            ExprMetadata(ExprKind.AGGREGATION, self._metadata._is_order_dependent)
         )
 
     def arg_min(self: Self) -> Self:
