@@ -1279,8 +1279,45 @@ class ExprMetadata(TypedDict):
 
 
 def combine_metadata(*args: IntoExpr) -> ExprMetadata:
+    # do we need a column_names_as_string argument?
     from narwhals.expr import Expr
 
-    if isinstance(args[0], Expr):
-        return args[0]._metadata
-    return ExprMetadata(kind=ExprKind.LITERAL, is_order_dependent=False)
+    kind = ExprKind.AGGREGATION
+    n_changes_length = 0
+    n_transforms = 0
+    n_aggregations = 0
+    n_literals = 0
+    is_order_dependent = False
+
+    for arg in args:
+        if isinstance(arg, str):
+            n_transforms += 1
+        elif isinstance(arg, Expr):
+            if arg._metadata["is_order_dependent"]:
+                is_order_dependent = True
+            kind = arg._metadata["kind"]
+            if kind is ExprKind.AGGREGATION:
+                n_aggregations += 1
+            elif kind is ExprKind.LITERAL:
+                n_literals += 1
+            elif kind is ExprKind.CHANGES_LENGTH or kind is ExprKind.TRANSFORM:
+                n_changes_length += 1
+            else:  # pragma: no cover
+                msg = "unreachable code"
+                raise AssertionError(msg)
+    if n_literals and not n_aggregations and not n_transforms and not n_changes_length:
+        kind = ExprKind.LITERAL
+    elif n_changes_length > 1:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
+        raise ValueError(msg)
+    elif n_changes_length and n_transforms:
+        msg = "Cannot combine length-changing expressions with length-preserving ones"
+        raise ValueError(msg)
+    elif n_changes_length:
+        kind = ExprKind.CHANGES_LENGTH
+    elif n_transforms:
+        kind = ExprKind.TRANSFORM
+    else:
+        kind = ExprKind.AGGREGATION
+
+    return ExprMetadata(kind=kind, is_order_dependent=is_order_dependent)
