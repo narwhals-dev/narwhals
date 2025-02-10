@@ -399,7 +399,7 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
 
     for arg in args:
         if isinstance(arg, str) and strings_are_column_names:
-            has_transforms |= True
+            has_transforms = True
         elif isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
                 result_is_order_dependent = True
