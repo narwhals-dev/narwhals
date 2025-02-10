@@ -8,7 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import Sequence
-from typing import TypeVar
 
 import pandas as pd
 import pyarrow as pa
@@ -19,8 +18,6 @@ from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
-
-T = TypeVar("T")
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias  # pragma: no cover
