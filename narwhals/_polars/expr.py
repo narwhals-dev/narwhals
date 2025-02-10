@@ -47,7 +47,7 @@ class PolarsExpr:
 
     def cast(self: Self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._from_native_expr(expr.cast(dtype_pl))
 
     def ewm_mean(
@@ -79,8 +79,6 @@ class PolarsExpr:
             **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_expr(
                 pl.when(~expr.is_null()).then(native_expr).otherwise(None)
             )
@@ -193,7 +191,9 @@ class PolarsExpr:
         return_dtype: DType | None,
     ) -> Self:
         if return_dtype is not None:
-            return_dtype_pl = narwhals_to_native_dtype(return_dtype, self._version)
+            return_dtype_pl = narwhals_to_native_dtype(
+                return_dtype, self._version, self._backend_version
+            )
             return self._from_native_expr(
                 self._native_expr.map_batches(function, return_dtype_pl)
             )
@@ -205,7 +205,7 @@ class PolarsExpr:
     ) -> Self:
         expr = self._native_expr
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version)
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )
@@ -350,14 +350,10 @@ class PolarsExprListNamespace:
         native_result = native_expr.list.len()
 
         if self._expr._backend_version < (1, 16):  # pragma: no cover
-            import polars as pl
-
             native_result: pl.Expr = (  # type: ignore[no-redef]
                 pl.when(~native_expr.is_null()).then(native_result).cast(pl.UInt32())
             )
         elif self._expr._backend_version < (1, 17):  # pragma: no cover
-            import polars as pl
-
             native_result = native_result.cast(pl.UInt32())
 
         return self._expr._from_native_expr(native_result)

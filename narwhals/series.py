@@ -271,7 +271,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).shape
             (3,)
         """
-        return self._compliant_series.shape  # type: ignore[no-any-return]
+        return (self._compliant_series.len(),)
 
     def _extract_native(self: Self, arg: Any) -> Any:
         from narwhals.series import Series
@@ -1637,7 +1637,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.filter(s_nw > 10).is_empty()
             True
         """
-        return self._compliant_series.is_empty()  # type: ignore[no-any-return]
+        return self._compliant_series.len() == 0  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
         r"""Get a mask of all unique rows in the Series.
@@ -1660,7 +1660,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(self._compliant_series.is_unique())
 
     def null_count(self: Self) -> int:
-        r"""Create a new Series that shows the null counts per column.
+        r"""Count the number of null values.
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
@@ -1897,7 +1897,7 @@ class Series(Generic[IntoSeriesT]):
             n: Number of rows to return.
 
         Returns:
-            A new Series containing the first n characters of each string.
+            A new Series containing the first n rows.
 
         Examples:
             >>> import pandas as pd
