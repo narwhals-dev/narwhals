@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -391,11 +390,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def select(
         self: Self,
         *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
-        new_series: list[PandasLikeSeries] = evaluate_into_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_series: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -440,23 +436,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            mask_native = predicates[0]
+    def filter(self: Self, predicate: IntoPandasLikeExpr | list[bool]) -> Self:
+        if isinstance(predicate, list):
+            mask_native = predicate
         else:
-            expr = plx.all_horizontal(
-                *chain(
-                    predicates, (plx.col(name) == v for name, v in constraints.items())
-                )
-            )
-            # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]
+            # `[0]` is safe as the predicate's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 self._native_frame.index, mask
             )
@@ -465,15 +450,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(
-        self: Self,
-        *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
-    ) -> Self:
+    def with_columns(self: Self, *exprs: IntoPandasLikeExpr) -> Self:
         index = self._native_frame.index
-        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_columns and len(self) == 0:
             return self
 

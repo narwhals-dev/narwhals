@@ -58,7 +58,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
 
 
 def parse_exprs_and_named_exprs(
-    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
+    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> dict[str, duckdb.Expression]:
     native_results: dict[str, duckdb.Expression] = {}
     for expr in exprs:
@@ -70,12 +70,6 @@ def parse_exprs_and_named_exprs(
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         native_results.update(zip(output_names, native_series_list))
-    for col_alias, expr in named_exprs.items():
-        native_series_list = expr._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
-        native_results[col_alias] = native_series_list[0]
     return native_results
 
 

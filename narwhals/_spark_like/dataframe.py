@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -193,12 +192,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def simple_select(self: Self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
-    def select(
-        self: Self,
-        *exprs: SparkLikeExpr,
-        **named_exprs: SparkLikeExpr,
-    ) -> Self:
-        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+    def select(self: Self, *exprs: SparkLikeExpr) -> Self:
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -223,12 +218,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             ]
             return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
-    def with_columns(
-        self: Self,
-        *exprs: SparkLikeExpr,
-        **named_exprs: SparkLikeExpr,
-    ) -> Self:
-        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+    def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
+        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs)
 
         new_columns_map = {
             col_name: col.over(self._Window().partitionBy(self._F.lit(1)))
@@ -238,13 +229,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         }
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
-    def filter(self: Self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(
-            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
-        )
-        # `[0]` is safe as all_horizontal's expression only returns a single column
-        condition = expr._call(self)[0]
+    def filter(self: Self, predicate: SparkLikeExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        condition = predicate._call(self)[0]
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df)
 
