@@ -82,6 +82,8 @@ class BaseFrame(Generic[_FrameT]):
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        from itertools import chain
+
         plx = self.__narwhals_namespace__()
         compliant_exprs = (
             plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
@@ -192,7 +194,6 @@ class BaseFrame(Generic[_FrameT]):
         ):
             flat_predicates = flatten(predicates)
             compliant_predicates = self._flatten_and_extract(*flat_predicates)
-            breakpoint()
             plx = self.__narwhals_namespace__()
             predicate = plx.all_horizontal(
                 *chain(
@@ -414,11 +415,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        plx = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return plx._create_expr_from_series(arg)
+            return arg
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
@@ -430,6 +430,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
+            plx = self.__narwhals_namespace__()
             return plx._create_compliant_series(arg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 

@@ -43,7 +43,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
-    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
@@ -530,13 +529,13 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             df.append_column(name, row_indices).select([name, *cols])
         )
 
-    def filter(self: Self, predicate: ArrowExpr | list[bool]) -> Self:
+    def filter(self: Self, predicate: IntoArrowExpr | list[bool]) -> Self:
         if isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate):
             mask_native = predicate
         else:
-            # `[0]` is safe as all_horizontal's expression only returns a single column
             assert not isinstance(predicate, list)  # noqa: S101
-            mask = predicate(self)[0]
+            # `[0]` is safe as all_horizontal's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 length=len(self), other=mask, backend_version=self._backend_version
             )
@@ -759,7 +758,6 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         plx = self.__narwhals_namespace__()
         keep_expr = plx._create_expr_from_series(keep_idx)
         return self.filter(keep_expr)
-
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(

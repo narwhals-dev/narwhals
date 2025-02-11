@@ -441,9 +441,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         if isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate):
             mask_native = predicate
         else:
-            # `[0]` is safe as all_horizontal's expression only returns a single column
             assert not isinstance(predicate, list)  # noqa: S101
-            mask = predicate(self)[0]
+            # `[0]` is safe as all_horizontal's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 self._native_frame.index, mask
             )
