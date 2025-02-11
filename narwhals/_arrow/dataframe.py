@@ -127,7 +127,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def shape(self: Self) -> tuple[int, int]:
-        return self._native_frame.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape
 
     def __len__(self: Self) -> int:
         return len(self._native_frame)
@@ -149,7 +149,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
-        return self._native_frame.to_pylist()  # type: ignore[no-any-return]
+        return self._native_frame.to_pylist()
 
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
@@ -334,7 +334,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.schema.names  # type: ignore[no-any-return]
+        return self._native_frame.schema.names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(
@@ -699,8 +699,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
-            return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
-        return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
+            return csv_buffer.getvalue().to_pybytes().decode()
+        pa_csv.write_csv(pa_table, file)
+        return None
 
     def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
