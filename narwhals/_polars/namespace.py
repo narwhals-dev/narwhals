@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
@@ -143,10 +142,10 @@ class PolarsNamespace:
             pl.lit(value), version=self._version, backend_version=self._backend_version
         )
 
-    def mean_horizontal(self: Self, *exprs: IntoPolarsExpr) -> PolarsExpr:
+    def mean_horizontal(self: Self, *exprs: PolarsExpr) -> PolarsExpr:
         from narwhals._polars.expr import PolarsExpr
 
-        polars_exprs = cast("list[PolarsExpr]", parse_into_exprs(*exprs, namespace=self))
+        polars_exprs = cast("list[PolarsExpr]", parse_into_exprs(*exprs))
 
         if self._backend_version < (0, 20, 8):
             return PolarsExpr(
@@ -164,7 +163,7 @@ class PolarsNamespace:
 
     def concat_str(
         self: Self,
-        *exprs: IntoPolarsExpr,
+        *exprs: PolarsExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> PolarsExpr:
@@ -172,7 +171,7 @@ class PolarsNamespace:
 
         pl_exprs: list[pl.Expr] = [
             expr._native_expr  # type: ignore[attr-defined]
-            for expr in parse_into_exprs(*exprs, namespace=self)
+            for expr in parse_into_exprs(*exprs)
         ]
 
         if self._backend_version < (0, 20, 6):
