@@ -50,7 +50,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
-        run: uv pip install -e ".[tests, core, extra, dask, modin]" --system
+        run: uv pip install -e ".[tests, core, extra, dask]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
