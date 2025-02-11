@@ -8,8 +8,8 @@ from typing import Sequence
 
 from duckdb import ColumnExpression
 
-from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._duckdb.utils import ExprKind
+from narwhals._ibis.expr import DuckDBExpr
+from narwhals._ibis.utils import ExprKind
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
+    from narwhals._ibis.dataframe import DuckDBLazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Version

@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import lit
+from narwhals._ibis.utils import lit
 
 if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Never
     from typing_extensions import Self
 
-    from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._ibis.expr import DuckDBExpr
 
 
 class DuckDBExprStringNamespace:

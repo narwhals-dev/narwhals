@@ -6,8 +6,8 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._ibis.dataframe import DuckDBLazyFrame
+    from narwhals._ibis.expr import DuckDBExpr
 
 
 class DuckDBGroupBy:

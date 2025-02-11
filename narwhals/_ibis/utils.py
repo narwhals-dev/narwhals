@@ -1,25 +1,23 @@
 from __future__ import annotations
 
-import re
 from enum import Enum
 from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
-import duckdb
+from ibis.expr import datatypes as ir_dtypes
 
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.expr import DuckDBExpr
+    import ibis.expr.types as ir
+
+    from narwhals._ibis.dataframe import IbisLazyFrame
+    from narwhals._ibis.expr import IbisExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-
-lit = duckdb.ConstantExpression
-"""Alias for `duckdb.ConstantExpression`."""
 
 
 class ExprKind(Enum):
@@ -37,10 +35,10 @@ class ExprKind(Enum):
     TRANSFORM = auto()  # e.g. nw.col('a').round()
 
 
-def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
-    from narwhals._duckdb.expr import DuckDBExpr
+def maybe_evaluate(df: IbisLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
+    from narwhals._ibis.expr import IbisExpr
 
-    if isinstance(obj, DuckDBExpr):
+    if isinstance(obj, IbisExpr):
         column_results = obj._call(df)
         if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
@@ -61,7 +59,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
 
 
 def parse_exprs(
-    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
+    df: IbisLazyFrame, /, *exprs: IbisExpr
 ) -> dict[str, duckdb.Expression]:
     native_results: dict[str, duckdb.Expression] = {}
     for expr in exprs:
@@ -77,66 +75,44 @@ def parse_exprs(
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
+def native_to_narwhals_dtype(
+    dtype: ir_dtypes.DataType, version: Version
+) -> DType:
     dtypes = import_dtypes_module(version)
-    if duckdb_dtype == "HUGEINT":
-        return dtypes.Int128()
-    if duckdb_dtype == "BIGINT":
-        return dtypes.Int64()
-    if duckdb_dtype == "INTEGER":
-        return dtypes.Int32()
-    if duckdb_dtype == "SMALLINT":
-        return dtypes.Int16()
-    if duckdb_dtype == "TINYINT":
-        return dtypes.Int8()
-    if duckdb_dtype == "UHUGEINT":
-        return dtypes.UInt128()
-    if duckdb_dtype == "UBIGINT":
-        return dtypes.UInt64()
-    if duckdb_dtype == "UINTEGER":
-        return dtypes.UInt32()
-    if duckdb_dtype == "USMALLINT":
-        return dtypes.UInt16()
-    if duckdb_dtype == "UTINYINT":
-        return dtypes.UInt8()
-    if duckdb_dtype == "DOUBLE":
+
+    if isinstance(dtype, ir_dtypes.Float64):
         return dtypes.Float64()
-    if duckdb_dtype == "FLOAT":
+    if isinstance(dtype, ir_dtypes.Float32):
         return dtypes.Float32()
-    if duckdb_dtype == "VARCHAR":
+    if isinstance(dtype, ir_dtypes.Int64):
+        return dtypes.Int64()
+    if isinstance(dtype, ir_dtypes.Int32):
+        return dtypes.Int32()
+    if isinstance(dtype, ir_dtypes.Int16):
+        return dtypes.Int16()
+    if isinstance(dtype, ir_dtypes.Int8):
+        return dtypes.Int8()
+    if isinstance(dtype, ir_dtypes.String):
         return dtypes.String()
-    if duckdb_dtype == "DATE":
-        return dtypes.Date()
-    if duckdb_dtype == "TIMESTAMP":
-        return dtypes.Datetime()
-    if duckdb_dtype == "BOOLEAN":
+    if isinstance(dtype, ir_dtypes.Boolean):
         return dtypes.Boolean()
-    if duckdb_dtype == "INTERVAL":
-        return dtypes.Duration()
-    if duckdb_dtype.startswith("STRUCT"):
-        matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
-        return dtypes.Struct(
-            [
-                dtypes.Field(
-                    matchstruc_[i][0],
-                    native_to_narwhals_dtype(matchstruc_[i][1], version),
-                )
-                for i in range(len(matchstruc_))
-            ]
-        )
-    if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
-        return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
-    if match_ := re.match(r"(\w+)((?:\[\d+\])+)", duckdb_dtype):
-        duckdb_inner_type = match_.group(1)
-        duckdb_shape = match_.group(2)
-        shape = tuple(int(value) for value in re.findall(r"\[(\d+)\]", duckdb_shape))
-        return dtypes.Array(
-            inner=native_to_narwhals_dtype(duckdb_inner_type, version),
-            shape=shape,
-        )
-    if duckdb_dtype.startswith("DECIMAL("):
+    if isinstance(dtype, ir_dtypes.Date):
+        return dtypes.Date()
+    if isinstance(dtype, ir_dtypes.Timestamp):
+        return dtypes.Datetime(time_zone=dtype.timezone, time_unit=dtype.unit.value)
+    if isinstance(dtype, ir_dtypes.Time):
+        return dtypes.Time()
+    if isinstance(dtype, ir_dtypes.Decimal):
         return dtypes.Decimal()
-    return dtypes.Unknown()  # pragma: no cover
+    if isinstance(dtype, ir_dtypes.UInt64):
+        return dtypes.UInt64()
+    if isinstance(dtype, ir_dtypes.UInt32):
+        return dtypes.UInt32()
+    if isinstance(dtype, ir_dtypes.UInt16):
+        return dtypes.UInt16()
+    if isinstance(dtype, ir_dtypes.UInt8):
+        return dtypes.UInt8()
+    return dtypes.Unknown()
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
@@ -207,7 +183,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def n_ary_operation_expr_kind(*args: DuckDBExpr | Any) -> ExprKind:
+def n_ary_operation_expr_kind(*args: IbisExpr | Any) -> ExprKind:
     if all(
         getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
     ):

@@ -10,33 +10,28 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
-from duckdb import CaseExpression
-from duckdb import CoalesceOperator
-from duckdb import ColumnExpression
-from duckdb import FunctionExpression
-from duckdb.typing import BIGINT
-from duckdb.typing import VARCHAR
+import ibis
 
-from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._duckdb.selectors import DuckDBSelectorNamespace
-from narwhals._duckdb.utils import ExprKind
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import n_ary_operation_expr_kind
-from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._ibis.expr import IbisExpr
+from narwhals._ibis.selectors import DuckDBSelectorNamespace
+from narwhals._ibis.utils import ExprKind
+from narwhals._ibis.utils import n_ary_operation_expr_kind
+from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
-    import duckdb
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
+    import ibis.expr.types as ir
+
+    from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[type-var]
+class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
@@ -49,11 +44,13 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             backend_version=self._backend_version, version=self._version
         )
 
-    def all(self: Self) -> DuckDBExpr:
-        def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [ColumnExpression(col_name) for col_name in df.columns]
+    def all(self: Self) -> IbisExpr:
+        def _all(df: IbisLazyFrame) -> list[ir.Expr]:
+            from ibis import _ as col
 
-        return DuckDBExpr(
+            return [getattr(col, col_name).name(col_name) for col_name in df.columns]
+
+        return IbisExpr(
             call=_all,
             function_name="all",
             evaluate_output_names=lambda df: df.columns,
@@ -65,33 +62,32 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
 
     def concat(
         self: Self,
-        items: Sequence[DuckDBLazyFrame],
+        items: Sequence[IbisLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
-    ) -> DuckDBLazyFrame:
+    ) -> IbisLazyFrame:
         if how == "horizontal":
-            msg = "horizontal concat not supported for duckdb. Please join instead"
+            msg = "horizontal concat not supported for Ibis. Please join instead"
             raise TypeError(msg)
         if how == "diagonal":
-            msg = "Not implemented yet"
+            msg = "diagonal concat not supported for Ibis. Please join instead"
             raise NotImplementedError(msg)
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
-        res = functools.reduce(
-            lambda x, y: x.union(y), (item._native_frame for item in items)
-        )
+        native_dfs = [item._native_frame for item in items]
+        res = ibis.union(native_dfs[0], *native_dfs[1:])
         return first._from_native_frame(res)
 
-    def concat_str(
+    def concat_str(  # TODO: FIX SUPPORT
         self: Self,
-        *exprs: DuckDBExpr,
+        *exprs: IbisExpr,
         separator: str,
         ignore_nulls: bool,
-    ) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    ) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
             cols = [s for _expr in exprs for s in _expr(df)]
             null_mask = [s.isnull() for _expr in exprs for s in _expr(df)]
 
@@ -131,7 +127,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
 
             return [result]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -141,12 +137,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def all_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def all_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -156,12 +152,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def any_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def any_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="or_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -171,12 +167,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def max_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = (c for _expr in exprs for c in _expr(df))
-            return [FunctionExpression("greatest", *cols)]
+    def max_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            cols = [c for _expr in exprs for c in _expr(df)]
+            return [ibis.greatest(*cols).name(cols[0].get_name())]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -186,12 +182,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def min_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = (c for _expr in exprs for c in _expr(df))
-            return [FunctionExpression("least", *cols)]
+    def min_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            cols = [c for _expr in exprs for c in _expr(df)]
+            return [ibis.least(*cols).name(cols[0].get_name())]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -201,12 +197,12 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def sum_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = (CoalesceOperator(col, lit(0)) for _expr in exprs for col in _expr(df))
+    def sum_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            cols = [e.fill_null(0).name(e.get_name()) for _expr in exprs for e in _expr(df)]
             return [reduce(operator.add, cols)]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -216,17 +212,18 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def mean_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
-            return [
-                (
-                    reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
-                    / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
-                )
-            ]
+    def mean_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            expr = (e.fill_null(0) for _expr in exprs for e in _expr(df))
+            non_null = (e.isnull().ifelse(0, 1) for _expr in exprs for e in _expr(df))
+            first_expr_name = exprs[0](df)[0].get_name()
 
-        return DuckDBExpr(
+            def _name_preserving_sum(e1: ir.Expr, e2: ir.Expr) -> ir.Expr:
+                return (e1 + e2).name(e1.get_name())
+
+            return [(reduce(_name_preserving_sum, expr) / reduce(_name_preserving_sum, non_null)).name(first_expr_name)]
+
+        return IbisExpr(
             call=func,
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -238,38 +235,37 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
 
     def when(
         self: Self,
-        *predicates: DuckDBExpr,
-    ) -> DuckDBWhen:
+        *predicates: IbisExpr,
+    ) -> IbisWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
-        return DuckDBWhen(
+        return IbisWhen(
             condition,
             self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
-    def col(self: Self, *column_names: str) -> DuckDBExpr:
-        return DuckDBExpr.from_column_names(
+    def col(self: Self, *column_names: str) -> IbisExpr:
+        return IbisExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def nth(self: Self, *column_indices: int) -> DuckDBExpr:
-        return DuckDBExpr.from_column_indices(
+    def nth(self: Self, *column_indices: int) -> IbisExpr:
+        return IbisExpr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version
         )
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> DuckDBExpr:
-        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def lit(self: Self, value: Any, dtype: DType | None) -> IbisExpr:
+        def func(_df: IbisLazyFrame) -> list[ir.Expr]:
             if dtype is not None:
+                ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
                 return [
-                    lit(value).cast(
-                        narwhals_to_native_dtype(dtype, version=self._version)  # type: ignore[arg-type]
-                    )
+                    ibis.literal(value, ibis_dtype)
                 ]
-            return [lit(value)]
+            return [ibis.literal(value)]
 
-        return DuckDBExpr(
+        return IbisExpr(
             func,
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
@@ -279,11 +275,11 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def len(self: Self) -> DuckDBExpr:
-        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [FunctionExpression("count")]
+    def len(self: Self) -> IbisExpr:
+        def func(_df: IbisLazyFrame) -> list[ir.Expr]:
+            return [_df._native_frame.count()]
 
-        return DuckDBExpr(
+        return IbisExpr(
             call=func,
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
@@ -294,10 +290,10 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
         )
 
 
-class DuckDBWhen:
+class IbisWhen:
     def __init__(
         self: Self,
-        condition: DuckDBExpr,
+        condition: IbisExpr,
         backend_version: tuple[int, ...],
         then_value: Any = None,
         otherwise_value: Any = None,
@@ -312,33 +308,30 @@ class DuckDBWhen:
         self._expr_kind = expr_kind
         self._version = version
 
-    def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
         condition = self._condition(df)[0]
-        condition = cast("duckdb.Expression", condition)
+        condition = cast("Expr", condition)
 
-        if isinstance(self._then_value, DuckDBExpr):
+        if isinstance(self._then_value, IbisExpr):
             value = self._then_value(df)[0]
         else:
             # `self._otherwise_value` is a scalar
-            value = lit(self._then_value)
-        value = cast("duckdb.Expression", value)
+            value = ibis.literal(self._then_value)
+        value = cast("Expr", value)
 
         if self._otherwise_value is None:
-            return [CaseExpression(condition=condition, value=value)]
-        if not isinstance(self._otherwise_value, DuckDBExpr):
+            return [ibis.ifelse(condition, value, None)]
+        if not isinstance(self._otherwise_value, IbisExpr):
             # `self._otherwise_value` is a scalar
-            return [
-                CaseExpression(condition=condition, value=value).otherwise(
-                    lit(self._otherwise_value)
-                )
-            ]
-        otherwise = self._otherwise_value(df)[0]
-        return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
+            otherwise = ibis.literal(self._otherwise_value)
+        else:
+            otherwise = self._otherwise_value(df)[0]
+        return [ibis.ifelse(condition, value, otherwise)]
 
-    def then(self: Self, value: DuckDBExpr | Any) -> DuckDBThen:
+    def then(self: Self, value: IbisExpr | Any) -> IbisThen:
         self._then_value = value
 
-        return DuckDBThen(
+        return IbisThen(
             self,
             function_name="whenthen",
             evaluate_output_names=getattr(
@@ -351,13 +344,13 @@ class DuckDBWhen:
         )
 
 
-class DuckDBThen(DuckDBExpr):
+class IbisThen(IbisExpr):
     def __init__(
         self: Self,
-        call: DuckDBWhen,
+        call: IbisWhen,
         *,
         function_name: str,
-        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        evaluate_output_names: Callable[[IbisLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         expr_kind: ExprKind,
         backend_version: tuple[int, ...],
@@ -371,7 +364,7 @@ class DuckDBThen(DuckDBExpr):
         self._alias_output_names = alias_output_names
         self._expr_kind = expr_kind
 
-    def otherwise(self: Self, value: DuckDBExpr | Any) -> DuckDBExpr:
+    def otherwise(self: Self, value: IbisExpr | Any) -> IbisExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `DuckDBWhen`, base class has the attribute as
         # only a `Callable`

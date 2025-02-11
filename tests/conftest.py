@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -193,6 +194,15 @@ def sqlframe_pyspark_lazy_constructor(
     )
 
 
+def ibis_lazy_constructor(obj: dict[str, list[Any]]) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+    import ibis
+
+    backend = ibis.duckdb.connect()
+    ldf = pl.from_dict(obj).lazy()
+    table_name = str(uuid.uuid4())
+    return backend.create_table(table_name, ldf)
+
+
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
@@ -208,6 +218,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
+    "ibis": ibis_lazy_constructor,
     # We've reported several bugs to sqlframe - once they address
     # them, we can start testing them as part of our CI.
     # "sqlframe": sqlframe_pyspark_lazy_constructor,  # noqa: ERA001

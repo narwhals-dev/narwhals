@@ -12,38 +12,39 @@ from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
-from narwhals._duckdb.expr_list import DuckDBExprListNamespace
-from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
-from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
-from narwhals._duckdb.utils import ExprKind
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate
-from narwhals._duckdb.utils import n_ary_operation_expr_kind
-from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._ibis.expr_dt import DuckDBExprDateTimeNamespace
+from narwhals._ibis.expr_list import DuckDBExprListNamespace
+from narwhals._ibis.expr_name import DuckDBExprNameNamespace
+from narwhals._ibis.expr_str import DuckDBExprStringNamespace
+from narwhals._ibis.utils import ExprKind
+from narwhals._ibis.utils import lit
+from narwhals._ibis.utils import maybe_evaluate
+from narwhals._ibis.utils import n_ary_operation_expr_kind
+from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import duckdb
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._duckdb.namespace import DuckDBNamespace
+    import ibis.expr.types as ir
+    
+    from narwhals._ibis.dataframe import IbisLazyFrame
+    from narwhals._ibis.namespace import DuckDBNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
-    _implementation = Implementation.DUCKDB
+class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
+    _implementation = Implementation.IBIS
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,
-        call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
+        call: Callable[[IbisLazyFrame], Sequence[ir.Expr]],
         *,
         function_name: str,
-        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        evaluate_output_names: Callable[[IbisLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         expr_kind: ExprKind,
         backend_version: tuple[int, ...],
@@ -57,14 +58,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         self._backend_version = backend_version
         self._version = version
 
-    def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         # Unused, just for compatibility with PandasLikeExpr
-        from narwhals._duckdb.namespace import DuckDBNamespace
+        from narwhals._ibis.namespace import DuckDBNamespace
 
         return DuckDBNamespace(
             backend_version=self._backend_version, version=self._version
@@ -77,7 +78,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(_: IbisLazyFrame) -> list[ir.Expr]:
             return [ColumnExpression(col_name) for col_name in column_names]
 
         return cls(
@@ -97,7 +98,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
             columns = df.columns
 
             return [ColumnExpression(columns[i]) for i in column_indices]
@@ -114,7 +115,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def _from_call(
         self: Self,
-        call: Callable[..., duckdb.Expression],
+        call: Callable[..., ir.Expr],
         expr_name: str,
         *,
         expr_kind: ExprKind,
@@ -130,7 +131,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
 
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
             native_series_list = self._call(df)
             other_native_series = {
                 key: maybe_evaluate(df, value, expr_kind=expr_kind)
@@ -310,7 +311,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         )
 
     def skew(self: Self) -> Self:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: ir.Expr) -> ir.Expr:
             count = FunctionExpression("count", _input)
             return CaseExpression(condition=(count == lit(0)), value=lit(None)).otherwise(
                 CaseExpression(
@@ -350,7 +351,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: ir.Expr) -> ir.Expr:
             if interpolation == "linear":
                 return FunctionExpression("quantile_cont", _input, lit(quantile))
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
@@ -364,8 +365,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
         def func(
-            _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
-        ) -> duckdb.Expression:
+            _input: ir.Expr, lower_bound: Any, upper_bound: Any
+        ) -> ir.Expr:
             return FunctionExpression(
                 "greatest", FunctionExpression("least", _input, upper_bound), lower_bound
             )
@@ -386,7 +387,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         )
 
     def n_unique(self: Self) -> Self:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: ir.Expr) -> ir.Expr:
             # https://stackoverflow.com/a/79338887/4451315
             return FunctionExpression(
                 "array_unique", FunctionExpression("array_agg", _input)
@@ -418,9 +419,9 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         )
 
     def std(self: Self, ddof: int) -> Self:
-        def _std(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+        def _std(_input: ir.Expr, ddof: int) -> ir.Expr:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
+            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.Column'>' to DuckDB LogicalType
             return (
                 FunctionExpression("stddev_pop", _input)
                 * FunctionExpression("sqrt", n_samples)
@@ -435,9 +436,9 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         )
 
     def var(self: Self, ddof: int) -> Self:
-        def _var(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+        def _var(_input: ir.Expr, ddof: int) -> ir.Expr:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
+            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.Column'>' to DuckDB LogicalType
             return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator]
 
         return self._from_call(
@@ -515,7 +516,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: ir.Expr) -> ir.Expr:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(DuckDBPyType(native_dtype))
 

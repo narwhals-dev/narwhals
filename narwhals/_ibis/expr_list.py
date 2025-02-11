@@ -7,7 +7,7 @@ from duckdb import FunctionExpression
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._duckdb.expr import DuckDBExpr
+    from narwhals._ibis.expr import DuckDBExpr
 
 
 class DuckDBExprListNamespace:
