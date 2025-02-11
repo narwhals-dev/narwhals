@@ -192,7 +192,7 @@ class Implementation(Enum):
         if self is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
-            return pa  # type: ignore[no-any-return]
+            return pa
         if self is Implementation.PYSPARK:  # pragma: no cover
             import pyspark.sql
 
@@ -204,12 +204,12 @@ class Implementation(Enum):
         if self is Implementation.DASK:
             import dask.dataframe  # ignore-banned-import
 
-            return dask.dataframe  # type: ignore[no-any-return]
+            return dask.dataframe
 
         if self is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
-            return duckdb  # type: ignore[no-any-return]
+            return duckdb
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 

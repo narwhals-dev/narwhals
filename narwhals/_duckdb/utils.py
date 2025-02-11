@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+lit = duckdb.ConstantExpression
+"""Alias for `duckdb.ConstantExpression`."""
+
 
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
