@@ -12,7 +12,7 @@ from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import native_to_narwhals_dtype
-from narwhals._duckdb.utils import parse_exprs_and_named_exprs
+from narwhals._duckdb.utils import parse_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -141,24 +141,26 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*column_names), validate_column_names=False
         )
 
+    def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
+        new_columns_map = parse_exprs(self, *exprs)
+        return self._from_native_frame(
+            self._native_frame.aggregate(
+                [val.alias(col) for col, val in new_columns_map.items()]
+            ),
+            validate_column_names=False,
+        )
+
     def select(
         self: Self,
         *exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
+        new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(
                 self._native_frame.limit(0), validate_column_names=False
             )
 
-        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs):
-            return self._from_native_frame(
-                self._native_frame.aggregate(
-                    [val.alias(col) for col, val in new_columns_map.items()]
-                ),
-                validate_column_names=False,
-            )
         if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
@@ -195,7 +197,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self
 
     def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
+        new_columns_map = parse_exprs(self, *exprs)
 
         if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (

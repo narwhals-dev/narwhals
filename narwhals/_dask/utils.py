@@ -44,9 +44,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     return obj
 
 
-def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, /, *exprs: DaskExpr
-) -> dict[str, dx.Series]:
+def parse_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
     native_results: dict[str, dx.Series] = {}
     for expr in exprs:
         native_series_list = expr._call(df)

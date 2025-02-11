@@ -387,6 +387,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             validate_column_names=False,
         )
 
+    def aggregate(self: Self, *exprs: IntoPandasLikeExpr) -> Self:
+        return self.select(*exprs)
+
     def select(
         self: Self,
         *exprs: IntoPandasLikeExpr,

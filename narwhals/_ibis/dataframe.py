@@ -110,6 +110,9 @@ class IbisLazyFrame:
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(s.cols(*column_names)))
 
+    def aggregate(self: Self, *exprs: Any) -> Self:
+        raise NotImplementedError
+
     def select(
         self: Self,
         *exprs: Any,

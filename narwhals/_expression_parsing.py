@@ -25,7 +25,6 @@ from narwhals.utils import is_compliant_series
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
-    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -443,13 +442,18 @@ def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
         raise ShapeError(msg)
 
 
-def all_expressions_aggregate(*args: Expr, **kwargs: Expr) -> bool:
+def all_expressions_aggregate(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # Raise if any argument in `args` isn't an aggregation or literal.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
+    from narwhals import Expr
+
     return all(
-        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL) for x in args
+        isinstance(x, Expr)
+        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        for x in args
     ) and all(
-        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        isinstance(x, Expr)
+        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         for x in kwargs.values()
     )

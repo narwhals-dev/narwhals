@@ -16,6 +16,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import all_expressions_aggregate
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
@@ -82,8 +83,6 @@ class BaseFrame(Generic[_FrameT]):
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        from itertools import chain
-
         plx = self.__narwhals_namespace__()
         compliant_exprs = (
             plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
@@ -162,8 +161,12 @@ class BaseFrame(Generic[_FrameT]):
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns, available_columns
                 ) from e
-
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if flat_exprs and all_expressions_aggregate(*flat_exprs):
+            return self._from_compliant_dataframe(
+                self._compliant_frame.aggregate(*compliant_exprs),
+            )
+
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
         )

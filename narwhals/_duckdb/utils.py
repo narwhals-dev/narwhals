@@ -57,7 +57,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
     return duckdb.ConstantExpression(obj)
 
 
-def parse_exprs_and_named_exprs(
+def parse_exprs(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> dict[str, duckdb.Expression]:
     native_results: dict[str, duckdb.Expression] = {}
