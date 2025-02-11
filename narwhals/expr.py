@@ -1691,7 +1691,11 @@ class Expr:
             └──────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).null_count(), self._metadata
+            lambda plx: self._to_compliant_expr(plx).null_count(),
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def is_first_distinct(self: Self) -> Self:
