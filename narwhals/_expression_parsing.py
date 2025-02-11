@@ -442,7 +442,7 @@ def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
         raise ShapeError(msg)
 
 
-def all_expressions_aggregate(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
+def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # Raise if any argument in `args` isn't an aggregation or literal.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.

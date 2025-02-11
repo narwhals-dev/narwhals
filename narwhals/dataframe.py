@@ -16,7 +16,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import all_expressions_aggregate
+from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
@@ -162,7 +162,7 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if flat_exprs and all_expressions_aggregate(*flat_exprs, **named_exprs):
+        if flat_exprs and all_exprs_are_aggs_or_literals(*flat_exprs, **named_exprs):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
