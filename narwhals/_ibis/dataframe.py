@@ -113,7 +113,6 @@ class IbisLazyFrame:
     def select(
         self: Self,
         *exprs: Any,
-        **named_exprs: Any,
     ) -> Self:
         msg = (
             "`select`-ing not by name is not supported for Ibis backend.\n\n"

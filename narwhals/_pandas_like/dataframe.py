@@ -391,11 +391,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def select(
         self: Self,
         *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
-        new_series: list[PandasLikeSeries] = evaluate_into_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_series: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -465,15 +462,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(
-        self: Self,
-        *exprs: IntoPandasLikeExpr,
-        **named_exprs: IntoPandasLikeExpr,
-    ) -> Self:
+    def with_columns(self: Self, *exprs: IntoPandasLikeExpr) -> Self:
         index = self._native_frame.index
-        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(
-            self, *exprs, **named_exprs
-        )
+        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_columns and len(self) == 0:
             return self
 
