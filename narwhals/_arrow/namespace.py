@@ -424,10 +424,10 @@ class ArrowWhen:
         plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        try:
+        if isinstance(self._then_value, ArrowExpr):
             value_series = self._then_value(df)[0]
-        except TypeError:
-            # `self._then_value` is a scalar and can't be converted to an expression
+        else:
+            # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
                 self._then_value, reference_series=condition.alias("literal")
             )
@@ -445,11 +445,10 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_native)
                 )
             ]
-        try:
+        if isinstance(self._otherwise_value, ArrowExpr):
             otherwise_expr = self._otherwise_value
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression.
-            # Remark that string values _are_ converted into expressions!
+        else:
+            # `self._otherwise_value` is a scalar
             return [
                 value_series._from_native_series(
                     pc.if_else(
@@ -457,14 +456,13 @@ class ArrowWhen:
                     )
                 )
             ]
-        else:
-            otherwise_series = otherwise_expr(df)[0]
-            _, otherwise_native = broadcast_series([condition, otherwise_series])
-            return [
-                value_series._from_native_series(
-                    pc.if_else(condition_native, value_series_native, otherwise_native)
-                )
-            ]
+        otherwise_series = otherwise_expr(df)[0]
+        _, otherwise_native = broadcast_series([condition, otherwise_series])
+        return [
+            value_series._from_native_series(
+                pc.if_else(condition_native, value_series_native, otherwise_native)
+            )
+        ]
 
     def then(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowThen:
         self._then_value = value

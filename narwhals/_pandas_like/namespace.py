@@ -453,10 +453,10 @@ class PandasWhen:
         plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        try:
+        if isinstance(self._then_value, PandasLikeExpr):
             value_series = self._then_value(df)[0]
-        except TypeError:
-            # `self._then_value` is a scalar and can't be converted to an expression
+        else:
+            # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
                 self._then_value, reference_series=condition.alias("literal")
             )
@@ -470,25 +470,24 @@ class PandasWhen:
                     value_series_native.where(condition_native)
                 )
             ]
-        try:
+        if isinstance(self._otherwise_value, PandasLikeExpr):
             otherwise_expr = self._otherwise_value
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        else:
+            # `self._otherwise_value` is a scalar
             return [
                 value_series._from_native_series(
                     value_series_native.where(condition_native, self._otherwise_value)
                 )
             ]
-        else:
-            otherwise_series = otherwise_expr(df)[0]
-            _, otherwise_native = broadcast_align_and_extract_native(
-                condition, otherwise_series
+        otherwise_series = otherwise_expr(df)[0]
+        _, otherwise_native = broadcast_align_and_extract_native(
+            condition, otherwise_series
+        )
+        return [
+            value_series._from_native_series(
+                value_series_native.where(condition_native, otherwise_native)
             )
-            return [
-                value_series._from_native_series(
-                    value_series_native.where(condition_native, otherwise_native)
-                )
-            ]
+        ]
 
     def then(self: Self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
