@@ -15,12 +15,10 @@ from typing import Union
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
-from narwhals.utils import is_compliant_series
 
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
@@ -31,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
-    from narwhals.typing import IntoCompliantExpr
     from narwhals.typing import IntoExpr
 
     ArrowOrPandasLikeExpr = TypeVar(
@@ -45,7 +42,7 @@ if TYPE_CHECKING:
 
 def evaluate_into_expr(
     df: CompliantDataFrame | CompliantLazyFrame,
-    into_expr: IntoCompliantExpr[CompliantSeriesT_co],
+    expr: CompliantExpr[CompliantSeriesT_co],
 ) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns.
 
@@ -56,7 +53,6 @@ def evaluate_into_expr(
     calls. Note that for PySpark / DuckDB, we are less free to liberally
     set aliases whenever we want.
     """
-    expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
     _, aliases = evaluate_output_names_and_aliases(expr, df, [])
     result = expr(df)
     if list(aliases) != [s.name for s in result]:  # pragma: no cover
@@ -66,7 +62,7 @@ def evaluate_into_expr(
 
 
 def evaluate_into_exprs(
-    df: CompliantDataFrame, /, *exprs: IntoCompliantExpr[CompliantSeriesT_co]
+    df: CompliantDataFrame, /, *exprs: CompliantExpr[CompliantSeriesT_co]
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     return [
@@ -91,47 +87,6 @@ def maybe_evaluate_expr(
 ) -> Sequence[CompliantSeriesT_co] | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     return expr(df) if is_compliant_expr(expr) else expr
-
-
-def parse_into_exprs(
-    *exprs: IntoCompliantExpr[CompliantSeriesT_co],
-    namespace: CompliantNamespace[CompliantSeriesT_co],
-    **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
-) -> Sequence[CompliantExpr[CompliantSeriesT_co]]:
-    """Parse each input as an expression (if it's not already one).
-
-    See `parse_into_expr` for more details.
-    """
-    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
-        parse_into_expr(expr, namespace=namespace).alias(name)
-        for name, expr in named_exprs.items()
-    ]
-
-
-def parse_into_expr(
-    into_expr: IntoCompliantExpr[CompliantSeriesT_co],
-    *,
-    namespace: CompliantNamespace[CompliantSeriesT_co],
-) -> CompliantExpr[CompliantSeriesT_co]:
-    """Parse `into_expr` as an expression.
-
-    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
-    We do the same in Narwhals:
-
-    - if `into_expr` is already an expression, just return it
-    - if it's a Series, then convert it to an expression
-    - if it's a numpy array, then convert it to a Series and then to an expression
-    - if it's a string, then convert it to an expression
-    - else, raise
-    """
-    if is_compliant_expr(into_expr):
-        return into_expr
-    if is_compliant_series(into_expr):
-        return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
-    if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)
-    raise InvalidIntoExprError.from_invalid_type(type(into_expr))
 
 
 @overload
@@ -321,7 +276,10 @@ def extract_compliant(
     if strings_are_column_names and isinstance(other, str):
         return plx.col(other)
     if isinstance(other, Series):
-        return other._compliant_series
+        return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
+    if is_numpy_array(other):
+        series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
+        return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
     return other
 
 
