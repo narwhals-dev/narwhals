@@ -3,10 +3,13 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 from typing import overload
@@ -14,6 +17,7 @@ from typing import overload
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_compliant_series
@@ -21,6 +25,7 @@ from narwhals.utils import is_compliant_series
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -318,65 +323,18 @@ def extract_compliant(
     plx: CompliantNamespace[CompliantSeriesT_co],
     other: Any,
     *,
-    parse_column_name_as_expr: bool,
+    strings_are_column_names: bool,
 ) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
     if isinstance(other, Expr):
         return other._to_compliant_expr(plx)
-    if parse_column_name_as_expr and isinstance(other, str):
+    if strings_are_column_names and isinstance(other, str):
         return plx.col(other)
     if isinstance(other, Series):
         return other._compliant_series
     return other
-
-
-def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_is_order_dependent`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1) or a column name,
-    # neither of which is order-dependent, so we default to `False`.
-    return any(getattr(x, "_is_order_dependent", False) for x in args)
-
-
-def operation_changes_length(*args: IntoExpr | Any) -> bool:
-    """Track whether operation changes length.
-
-    n-ary operations between expressions which change length are not
-    allowed. This is because the output might be non-relational. For
-    example:
-        df = pl.LazyFrame({'a': [1,2,None], 'b': [4,None,6]})
-        df.select(pl.col('a', 'b').drop_nulls())
-    Polars does allow this, but in the result we end up with the
-    tuple (2, 6) which wasn't part of the original data.
-
-    Rules are:
-        - in an n-ary operation, if any one of them changes length, then
-          it must be the only expression present
-        - in a comparison between a changes-length expression and a
-          scalar, the output changes length
-    """
-    from narwhals.expr import Expr
-
-    n_exprs = len([x for x in args if isinstance(x, Expr)])
-    changes_length = any(isinstance(x, Expr) and x._changes_length for x in args)
-    if n_exprs > 1 and changes_length:
-        msg = (
-            "Found multiple expressions at least one of which changes length.\n"
-            "Any length-changing expression can only be used in isolation, unless\n"
-            "it is followed by an aggregation."
-        )
-        raise LengthChangingExprError(msg)
-    return changes_length
-
-
-def operation_aggregates(*args: IntoExpr | Any) -> bool:
-    # If an arg is an Expr, we look at `_aggregates`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a').sum() + 1),
-    # which is already length-1, so we default to `True`. If any
-    # expression does not aggregate, then broadcasting will take
-    # place and the result will not be an aggregate.
-    return all(getattr(x, "_aggregates", True) for x in args)
 
 
 def evaluate_output_names_and_aliases(
@@ -399,3 +357,110 @@ def evaluate_output_names_and_aliases(
             *[(x, alias) for x, alias in zip(output_names, aliases) if x not in exclude]
         )
     return output_names, aliases
+
+
+def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
+    from narwhals.expr import Expr
+
+    return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
+
+
+class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with.
+
+    Commutative composition rules are:
+    - LITERAL vs LITERAL -> LITERAL
+    - CHANGES_LENGTH vs (LITERAL | AGGREGATION) -> CHANGES_LENGTH
+    - CHANGES_LENGTH vs (CHANGES_LENGTH | TRANSFORM) -> raise
+    - TRANSFORM vs (LITERAL | AGGREGATION) -> TRANSFORM
+    - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
+    """
+
+    LITERAL = auto()  # e.g. nw.lit(1)
+    AGGREGATION = auto()  # e.g. nw.col('a').mean()
+    TRANSFORM = auto()  # length-preserving, e.g. nw.col('a').round()
+    CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
+
+
+class ExprMetadata(TypedDict):
+    kind: ExprKind
+    is_order_dependent: bool
+
+
+def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMetadata:
+    # Combine metadata from `args`.
+    from narwhals.expr import Expr
+
+    n_changes_length = 0
+    has_transforms = False
+    has_aggregations = False
+    has_literals = False
+    result_is_order_dependent = False
+
+    for arg in args:
+        if isinstance(arg, str) and strings_are_column_names:
+            has_transforms = True
+        elif isinstance(arg, Expr):
+            if arg._metadata["is_order_dependent"]:
+                result_is_order_dependent = True
+            kind = arg._metadata["kind"]
+            if kind is ExprKind.AGGREGATION:
+                has_aggregations = True
+            elif kind is ExprKind.LITERAL:
+                has_literals = True
+            elif kind is ExprKind.CHANGES_LENGTH:
+                n_changes_length += 1
+            elif kind is ExprKind.TRANSFORM:
+                has_transforms = True
+            else:  # pragma: no cover
+                msg = "unreachable code"
+                raise AssertionError(msg)
+    if (
+        has_literals
+        and not has_aggregations
+        and not has_transforms
+        and not n_changes_length
+    ):
+        result_kind = ExprKind.LITERAL
+    elif n_changes_length > 1:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
+        raise LengthChangingExprError(msg)
+    elif n_changes_length and has_transforms:
+        msg = "Cannot combine length-changing expressions with length-preserving ones"
+        raise ShapeError(msg)
+    elif n_changes_length:
+        result_kind = ExprKind.CHANGES_LENGTH
+    elif has_transforms:
+        result_kind = ExprKind.TRANSFORM
+    else:
+        result_kind = ExprKind.AGGREGATION
+
+    return ExprMetadata(kind=result_kind, is_order_dependent=result_is_order_dependent)
+
+
+def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
+    # Raise if any argument in `args` isn't length-preserving.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    if not all(
+        (isinstance(x, Expr) and x._metadata["kind"] is ExprKind.TRANSFORM)
+        or isinstance(x, (str, Series))
+        for x in args
+    ):
+        msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
+        raise ShapeError(msg)
+
+
+def all_expressions_aggregate(*args: Expr, **kwargs: Expr) -> bool:
+    # Raise if any argument in `args` isn't an aggregation or literal.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
+    return all(
+        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL) for x in args
+    ) and all(
+        x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        for x in kwargs.values()
+    )

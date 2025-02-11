@@ -14,6 +14,8 @@ from typing import TypeVar
 from typing import overload
 from warnings import warn
 
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -21,7 +23,6 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
-from narwhals.exceptions import ShapeError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
@@ -186,17 +187,12 @@ class BaseFrame(Generic[_FrameT]):
         **constraints: Any,
     ) -> Self:
         flat_predicates = flatten(predicates)
-        if any(
-            getattr(x, "_aggregates", False) or getattr(x, "_changes_length", False)
-            for x in flat_predicates
-        ):
-            msg = "Expressions which aggregate or change length cannot be passed to `filter`."
-            raise ShapeError(msg)
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            check_expressions_transform(*flat_predicates, function_name="filter")
             predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates, **constraints),
@@ -2181,7 +2177,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
-            if arg._is_order_dependent:
+            if arg._metadata["is_order_dependent"]:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -2192,7 +2188,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._changes_length:
+            if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"
