@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -55,31 +56,41 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._call(df)
 
     @property
-    def _F(self) -> Any:  # noqa: N802
+    def _F(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import functions
+            from sqlframe.base.session import _BaseSession
 
-            return functions
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
+            )
+
         from pyspark.sql import functions
 
         return functions
 
     @property
-    def _native_types(self) -> Any:
+    def _native_dtypes(self: Self) -> Any:
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import types
+            from sqlframe.base.session import _BaseSession
 
-            return types
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
+            )
+
         from pyspark.sql import types
 
         return types
 
     @property
-    def _Window(self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import Window
+            from sqlframe.base.session import _BaseSession
 
-            return Window
+            _window = import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+            )
+            return _window.Window
+
         from pyspark.sql import Window
 
         return Window
@@ -331,7 +342,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def _cast(_input: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_types
+                dtype, self._version, self._native_dtypes
             )
             return _input.cast(spark_dtype)
 
@@ -474,7 +485,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
             return self._F.count_distinct(_input) + self._F.max(
-                self._F.isnull(_input).cast(self._native_types.IntegerType())
+                self._F.isnull(_input).cast(self._native_dtypes.IntegerType())
             )
 
         return self._from_call(_n_unique, "n_unique", expr_kind=ExprKind.AGGREGATION)

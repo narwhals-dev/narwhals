@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -50,9 +51,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _F(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import functions
+            from sqlframe.base.session import _BaseSession
 
-            return functions
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
+            )
+
         from pyspark.sql import functions
 
         return functions
@@ -60,9 +64,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _native_dtypes(self: Self) -> Any:
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import types
+            from sqlframe.base.session import _BaseSession
 
-            return types
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
+            )
+
         from pyspark.sql import types
 
         return types
@@ -70,12 +77,23 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _Window(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import Window
+            from sqlframe.base.session import _BaseSession
 
-            return Window
+            _window = import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+            )
+            return _window.Window
+
         from pyspark.sql import Window
 
         return Window
+
+    @property
+    def _session(self: Self) -> Any:
+        if self._implementation is Implementation.SQLFRAME:
+            return self._native_frame.session
+
+        return self._native_frame.sparkSession
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -209,8 +227,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
         if not new_columns:
             # return empty dataframe, like Polars does
-            spark_session = self._native_frame.sparkSession
-            spark_df = spark_session.createDataFrame(
+            spark_df = self._session.createDataFrame(
                 [], self._native_dtypes.StructType([])
             )
 
@@ -262,10 +279,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        spark_session = self._native_frame.sparkSession
-
         return self._from_native_frame(
-            spark_session.createDataFrame(self._native_frame.take(num=n))
+            self._session.createDataFrame(self._native_frame.take(num=n))
         )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:

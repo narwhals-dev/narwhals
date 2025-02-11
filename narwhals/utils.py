@@ -24,6 +24,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -123,6 +124,7 @@ class Implementation(Enum):
             get_dask_dataframe(): Implementation.DASK,
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -148,6 +150,7 @@ class Implementation(Enum):
             "dask": Implementation.DASK,
             "duckdb": Implementation.DUCKDB,
             "ibis": Implementation.IBIS,
+            "sqlframe": Implementation.SQLFRAME,
         }
         return mapping.get(backend_name, Implementation.UNKNOWN)
 
@@ -210,6 +213,12 @@ class Implementation(Enum):
             import duckdb  # ignore-banned-import
 
             return duckdb
+
+        if self is Implementation.SQLFRAME:
+            import sqlframe  # ignore-banned-import
+
+            return sqlframe
+
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -248,6 +257,22 @@ class Implementation(Enum):
             Implementation.MODIN,
             Implementation.CUDF,
         }
+
+    def is_spark_like(self: Self) -> bool:
+        """Return whether implementation is pyspark or sqlframe.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_spark_like()
+            False
+        """
+        return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
 
     def is_polars(self: Self) -> bool:
         """Return whether implementation is Polars.
@@ -376,6 +401,22 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.IBIS  # pragma: no cover
+
+    def is_sqlframe(self: Self) -> bool:
+        """Return whether implementation is SQLFrame.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_sqlframe()
+            False
+        """
+        return self is Implementation.SQLFRAME  # pragma: no cover
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
