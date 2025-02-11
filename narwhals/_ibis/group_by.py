@@ -6,14 +6,14 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
-    from narwhals._ibis.dataframe import DuckDBLazyFrame
-    from narwhals._ibis.expr import DuckDBExpr
+    from narwhals._ibis.dataframe import IbisLazyFrame
+    from narwhals._ibis.expr import IbisExpr
 
 
-class DuckDBGroupBy:
+class IbisGroupBy:
     def __init__(
         self: Self,
-        compliant_frame: DuckDBLazyFrame,
+        compliant_frame: IbisLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
@@ -23,7 +23,7 @@ class DuckDBGroupBy:
             self._compliant_frame = compliant_frame
         self._keys = keys
 
-    def agg(self: Self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
+    def agg(self: Self, *exprs: IbisExpr) -> IbisLazyFrame:
         agg_columns: list[str | Expression] = list(self._keys)
         df = self._compliant_frame
         for expr in exprs:

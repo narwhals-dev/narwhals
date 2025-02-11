@@ -79,7 +79,7 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
         res = ibis.union(native_dfs[0], *native_dfs[1:])
         return first._from_native_frame(res)
 
-    def concat_str(  # TODO: FIX SUPPORT
+    def concat_str(  # TODO(rwhitten577): IMPLEMENT
         self: Self,
         *exprs: IbisExpr,
         separator: str,

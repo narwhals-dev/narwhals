@@ -5,18 +5,15 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from narwhals._ibis.utils import ExprKind
-from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals._ibis.utils import parse_exprs
-from narwhals.dependencies import get_duckdb
+from narwhals.dependencies import get_ibis
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_names_are_unique
-from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -24,13 +21,15 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-    import ibis.expr.types as ir
     from typing_extensions import Self
 
-    from narwhals._ibis.expr import DuckDBExpr
+    import ibis.expr.types as ir
+    import pandas as pd
+    import pyarrow as pa
+
+    from narwhals._ibis.expr import IbisExpr
     from narwhals._ibis.group_by import DuckDBGroupBy
-    from narwhals._ibis.namespace import DuckDBNamespace
+    from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
 
@@ -49,8 +48,8 @@ class IbisLazyFrame(CompliantLazyFrame):
         validate_column_names: bool,
     ) -> None:
         if validate_column_names:
-            check_column_names_are_unique(df.columns)
-        self._native_frame: duckdb.DuckDBPyRelation = df
+            check_column_names_are_unique(list(df.columns))
+        self._native_frame: ir.Table = df
         self._version = version
         self._backend_version = backend_version
         validate_backend_version(self._implementation, self._backend_version)
@@ -66,19 +65,17 @@ class IbisLazyFrame(CompliantLazyFrame):
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
-        return get_duckdb()  # type: ignore[no-any-return]
+        return get_ibis()  # type: ignore[no-any-return]
 
-    def __narwhals_namespace__(self: Self) -> DuckDBNamespace:
-        from narwhals._ibis.namespace import DuckDBNamespace
+    def __narwhals_namespace__(self: Self) -> IbisNamespace:
+        from narwhals._ibis.namespace import IbisNamespace
 
-        return DuckDBNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
     def __getitem__(self: Self, item: str) -> DuckDBInterchangeSeries:
-        from narwhals._ibis.series import DuckDBInterchangeSeries
+        from narwhals._ibis.series import IbisInterchangeSeries
 
-        return DuckDBInterchangeSeries(
+        return IbisInterchangeSeries(
             self._native_frame.select(item), version=self._version
         )
 
@@ -93,7 +90,7 @@ class IbisLazyFrame(CompliantLazyFrame):
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self._native_frame.arrow(),
+                native_dataframe=self._native_frame.to_pyarrow(),
                 backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=False,
@@ -105,7 +102,7 @@ class IbisLazyFrame(CompliantLazyFrame):
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self._native_frame.df(),
+                native_dataframe=self._native_frame.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
@@ -118,7 +115,7 @@ class IbisLazyFrame(CompliantLazyFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self._native_frame.pl(),
+                df=self._native_frame.to_polars(),
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -128,7 +125,7 @@ class IbisLazyFrame(CompliantLazyFrame):
 
     def head(self: Self, n: int) -> Self:
         return self._from_native_frame(
-            self._native_frame.limit(n), validate_column_names=False
+            self._native_frame.head(n), validate_column_names=False
         )
 
     def simple_select(self, *column_names: str) -> Self:
@@ -136,41 +133,33 @@ class IbisLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*column_names), validate_column_names=False
         )
 
-    def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
+    def aggregate(self: Self, *exprs: IbisExpr) -> Self:
         new_columns_map = parse_exprs(self, *exprs)
         return self._from_native_frame(
             self._native_frame.aggregate(
-                [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
+                [val.name(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
             ),
             validate_column_names=False,
         )
 
     def select(
         self: Self,
-        *exprs: DuckDBExpr,
+        *exprs: IbisExpr,
     ) -> Self:
+        from ibis.expr.operations.window import WindowFunction
+
         new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
-            # TODO(marco): return empty relation with 0 columns?
-            return self._from_native_frame(
-                self._native_frame.limit(0), validate_column_names=False
-            )
+            raise ValueError("No columns to select. Must provide at least one column.")
 
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
+        t = self._native_frame.select(**new_columns_map)
 
-        return self._from_native_frame(
-            self._native_frame.select(
-                *(val.alias(col) for col, val in new_columns_map.items())
-            ),
-            validate_column_names=False,
-        )
+        # Ibis broadcasts aggregate functions in selects as window functions, keeping the original number of rows.
+        # Need to reduce it to a single row if they are all window functions, by calling .distinct()
+        if all(isinstance(c, WindowFunction) for c in t.op().values.values()):
+            t = t.distinct()
+
+        return self._from_native_frame(t, validate_column_names=False)
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         columns_to_drop = parse_columns_to_drop(
@@ -184,37 +173,21 @@ class IbisLazyFrame(CompliantLazyFrame):
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
-        # function `.from_native()` will return a DataFrame for DuckDB.
+        # function `.from_native()` will return a DataFrame for Ibis.
 
         if backend is not None:  # pragma: no cover
-            msg = "`backend` argument is not supported for DuckDB"
+            msg = "`backend` argument is not supported for Ibis"
             raise ValueError(msg)
         return self
 
-    def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
+    def with_columns(self: Self, *exprs: IbisExpr) -> Self:
         new_columns_map = parse_exprs(self, *exprs)
 
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
-
-        result = [
-            new_columns_map.pop(col).alias(col)
-            if col in new_columns_map
-            else ColumnExpression(col)
-            for col in self._native_frame.columns
-        ]
-        result.extend(value.alias(col) for col, value in new_columns_map.items())
         return self._from_native_frame(
-            self._native_frame.select(*result), validate_column_names=False
+            self._native_frame.mutate(**new_columns_map), validate_column_names=False
         )
 
-    def filter(self: Self, predicate: DuckDBExpr) -> Self:
+    def filter(self: Self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate._call(self)[0]
         return self._from_native_frame(
@@ -224,29 +197,27 @@ class IbisLazyFrame(CompliantLazyFrame):
     @property
     def schema(self: Self) -> dict[str, DType]:
         return {
-            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-            for column_name, duckdb_dtype in zip(
-                self._native_frame.columns, self._native_frame.types
-            )
+            name: native_to_narwhals_dtype(dtype=dtype, version=self._version)
+            for name, dtype in self._native_frame.schema().fields.items()
         }
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return list(self._native_frame.columns)  # type: ignore[no-any-return]
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd) >= (1, 0, 0):
-            return self._native_frame.df()
+            return self._native_frame.to_pandas()
         else:  # pragma: no cover
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self._native_frame.arrow()
+        return self._native_frame.to_pyarrow()
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -257,7 +228,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         )
 
     def _from_native_frame(
-        self: Self, df: duckdb.DuckDBPyRelation, *, validate_column_names: bool = True
+        self: Self, df: ir.Table, *, validate_column_names: bool = True
     ) -> Self:
         return self.__class__(
             df,
@@ -267,18 +238,17 @@ class IbisLazyFrame(CompliantLazyFrame):
         )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
-        from narwhals._ibis.group_by import DuckDBGroupBy
+        from narwhals._ibis.group_by import IbisGroupBy
 
-        return DuckDBGroupBy(
+        return IbisGroupBy(
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
-        df = self._native_frame
-        selection = [
-            f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
-        ]
-        return self._from_native_frame(df.select(", ".join(selection)))
+        def _rename(col: str) -> str:
+            return mapping.get(col, col)
+
+        return self._from_native_frame(self._native_frame.rename(_rename))
 
     def join(
         self: Self,
@@ -289,42 +259,37 @@ class IbisLazyFrame(CompliantLazyFrame):
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
-        original_alias = self._native_frame.alias
-
-        if how == "cross":
-            if self._backend_version < (1, 1, 4):
-                msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
-                raise NotImplementedError(msg)
-            rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
-                other._native_frame.set_alias("rhs")
-            )  # type: ignore[operator]
+        if how != "cross":
+            if left_on is None or right_on is None:
+                raise ValueError(
+                    f"For '{how}' joins, both 'left_on' and 'right_on' must be provided."
+                )  # pragma: no cover (caught upstream)
+            predicates = self._convert_predicates(other, left_on, right_on)
         else:
-            # help mypy
-            assert left_on is not None  # noqa: S101
-            assert right_on is not None  # noqa: S101
+            # For cross joins, no predicates are needed
+            predicates = []
 
-            conditions = [
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
-            ]
-            condition = " and ".join(conditions)
-            rel = self._native_frame.set_alias("lhs").join(
-                other._native_frame.set_alias("rhs"), condition=condition, how=how
-            )
+        joined = self._native_frame.join(
+            other._native_frame, predicates=predicates, how=how, rname="{name}" + suffix
+        )
+        if how == "left":
+            # Drop duplicate columns from the right table. Ibis keeps them.
+            if right_on is not None:
+                for right in right_on if isinstance(right_on, list) else [right_on]:
+                    to_drop = right + suffix
+                    if to_drop in joined.columns:
+                        joined = joined.drop(right + suffix)
 
-        if how in ("inner", "left", "cross"):
-            select = [f'lhs."{x}"' for x in self._native_frame.columns]
-            for col in other._native_frame.columns:
-                if col in self._native_frame.columns and (
-                    right_on is None or col not in right_on
-                ):
-                    select.append(f'rhs."{col}" as "{col}{suffix}"')
-                elif right_on is None or col not in right_on:
-                    select.append(col)
-        else:  # semi
-            select = ["lhs.*"]
+            for pred in predicates:
+                left = pred.op().left.name
+                right = pred.op().right.name
 
-        res = rel.select(", ".join(select)).set_alias(original_alias)
-        return self._from_native_frame(res)
+                # If right column is not in the left table, drop it as it will be present in the left column
+                # Mirrors how polars works.
+                if left != right and right not in self.columns:
+                    joined = joined.drop(right)
+
+        return self._from_native_frame(joined)
 
     def join_asof(
         self: Self,
@@ -337,47 +302,59 @@ class IbisLazyFrame(CompliantLazyFrame):
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
-        lhs = self._native_frame
-        rhs = other._native_frame
-        conditions = []
-        if by_left is not None and by_right is not None:
-            conditions += [
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
-            ]
-        else:
-            by_left = by_right = []
         if strategy == "backward":
-            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
+            on_condition = self._native_frame[left_on] >= other._native_frame[right_on]
         elif strategy == "forward":
-            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
+            on_condition = self._native_frame[left_on] <= other._native_frame[right_on]
         else:
-            msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
+            msg = "Only 'backward' and 'forward' strategies are currently supported for Ibis"
             raise NotImplementedError(msg)
-        condition = " and ".join(conditions)
-        select = ["lhs.*"]
-        for col in rhs.columns:
-            if col in lhs.columns and (
-                right_on is None or col not in (right_on, *by_right)
-            ):
-                select.append(f'rhs."{col}" as "{col}{suffix}"')
-            elif right_on is None or col not in (right_on, *by_right):
-                select.append(col)
-        query = f"""
-            SELECT {",".join(select)}
-            FROM lhs
-            ASOF LEFT JOIN rhs
-            ON {condition}
-            """  # noqa: S608
-        res = duckdb.sql(query)
-        return self._from_native_frame(res)
+
+        if by_left is not None and by_right is not None:
+            predicates = self._convert_predicates(other, by_left, by_right)
+        else:
+            predicates = []
+
+        joined = self._native_frame.asof_join(
+            other._native_frame, on=on_condition, predicates=predicates
+        )  # type: ignore[operator]
+
+        # Drop duplicate columns from the right table. Ibis keeps them.
+        if right_on is not None:
+            for right in right_on if isinstance(right_on, list) else [right_on]:
+                to_drop = right + suffix
+                if to_drop in joined.columns:
+                    joined = joined.drop(right + suffix)
+
+        if by_right is not None:
+            for right in by_right if isinstance(by_right, list) else [by_right]:
+                to_drop = right + suffix
+                if to_drop in joined.columns:
+                    joined = joined.drop(right + suffix)
+
+        return self._from_native_frame(joined)
+
+    def _convert_predicates(
+        self, other: Self, left_on: str | list[str], right_on: str | list[str]
+    ) -> list[ir.BooleanValue]:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        if len(left_on) != len(right_on):
+            raise ValueError(
+                "'left_on' and 'right_on' must have the same number of columns."
+            )
+
+        predicates = [
+            self._native_frame[left] == other._native_frame[right]
+            for left, right in zip(left_on, right_on)
+        ]
+        return predicates
 
     def collect_schema(self: Self) -> dict[str, DType]:
-        return {
-            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-            for column_name, duckdb_dtype in zip(
-                self._native_frame.columns, self._native_frame.types
-            )
-        }
+        return self.schema
 
     def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
         if subset is not None:
@@ -386,26 +363,18 @@ class IbisLazyFrame(CompliantLazyFrame):
             if any(x not in rel.columns for x in subset):
                 msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
                 raise ColumnNotFoundError(msg)
-            idx_name = f'"{generate_temporary_column_name(8, rel.columns)}"'
-            count_name = (
-                f'"{generate_temporary_column_name(8, [*rel.columns, idx_name])}"'
+
+            mapped_keep: dict[str, Literal["first"] | None] = {
+                "any": "first",
+                "none": None,
+            }
+            to_keep = mapped_keep[keep]
+            return self._from_native_frame(
+                self._native_frame.distinct(on=subset, keep=to_keep),
+                validate_column_names=False,
             )
-            if keep == "none":
-                keep_condition = f"where {count_name}=1"
-            else:
-                keep_condition = f"where {idx_name}=1"
-            query = f"""
-                with cte as (
-                    select *,
-                           row_number() over (partition by {",".join(subset)}) as {idx_name},
-                           count(*) over (partition by {",".join(subset)}) as {count_name}
-                    from rel
-                )
-                select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
-                """  # noqa: S608
-            return self._from_native_frame(duckdb.sql(query), validate_column_names=False)
         return self._from_native_frame(
-            self._native_frame.unique(", ".join(self.columns)),
+            self._native_frame.distinct(on=self.columns),
             validate_column_names=False,
         )
 
@@ -415,30 +384,38 @@ class IbisLazyFrame(CompliantLazyFrame):
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending] * len(by)
-        descending_str = ["desc" if x else "" for x in descending]
+        import ibis
 
-        result = self._native_frame.order(
-            ",".join(
-                (
-                    f'"{col}" {desc} nulls last'
-                    if nulls_last
-                    else f'"{col}" {desc} nulls first'
-                    for col, desc in zip(by, descending_str)
-                )
-            )
+        if isinstance(descending, bool):
+            descending = [descending for _ in range(len(by))]
+
+        if nulls_last:
+            sort_cols = [
+                ibis.desc(by[i], nulls_first=False)
+                if descending[i]
+                else ibis.asc(by[i], nulls_first=False)
+                for i in range(len(by))
+            ]
+        else:
+            sort_cols = [
+                ibis.desc(by[i], nulls_first=True)
+                if descending[i]
+                else ibis.asc(by[i], nulls_first=True)
+                for i in range(len(by))
+            ]
+
+        return self._from_native_frame(
+            self._native_frame.order_by(*sort_cols), validate_column_names=False
         )
-        return self._from_native_frame(result, validate_column_names=False)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
-        keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
-        query = f"select * from rel where {keep_condition}"  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query), validate_column_names=False)
+        return self._from_native_frame(
+            self._native_frame.drop(*subset_), validate_column_names=False
+        )
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: list[str]) -> Self:  # TODO(rwhitten577): IMPLEMENT
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
         for col in columns:
@@ -489,34 +466,24 @@ class IbisLazyFrame(CompliantLazyFrame):
         variable_name: str,
         value_name: str,
     ) -> Self:
+        import ibis.selectors as s
+
         index_: list[str] = [] if index is None else index
         on_: list[str] = (
             [c for c in self.columns if c not in index_] if on is None else on
         )
 
         if variable_name == "":
-            msg = "`variable_name` cannot be empty string for duckdb backend."
-            raise NotImplementedError(msg)
-
+            variable_name = "variable"
         if value_name == "":
-            msg = "`value_name` cannot be empty string for duckdb backend."
-            raise NotImplementedError(msg)
+            value_name = "value"
 
-        cols_to_select = ", ".join(
-            f'"{col}"' for col in (*index_, variable_name, value_name)
+        # Discard columns not in the index
+        final_columns = list(dict.fromkeys(index + [variable_name, value_name]))
+
+        unpivoted = self._native_frame.pivot_longer(
+            s.cols(*on_),
+            names_to=variable_name,
+            values_to=value_name,
         )
-        unpivot_on = ", ".join(f'"{col}"' for col in on_)
-
-        rel = self._native_frame  # noqa: F841
-        query = f"""
-            with unpivot_cte as (
-                unpivot rel
-                on {unpivot_on}
-                into
-                    name {variable_name}
-                    value {value_name}
-            )
-            select {cols_to_select}
-            from unpivot_cte;
-            """  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._from_native_frame(unpivoted.select(*final_columns))
