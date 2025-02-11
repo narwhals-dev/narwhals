@@ -81,9 +81,37 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[IntoCompliantExpr[Any]]:
+    ) -> tuple[list[IntoCompliantExpr[Any]], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        compliant_exprs = (self._extract_compliant(expr) for expr in flatten(exprs))
+        from narwhals.series import Series
+        from narwhals.expr import Expr
+        out_exprs = []
+        out_kinds = []
+        for expr in flatten(exprs):
+            compliant_expr = self._extract_compliant(expr)
+            out_exprs.append(compliant_expr)
+            if isinstance(expr, Expr):
+                out_kinds.append(expr._metadata['kind'])
+            elif isinstance(expr, (str, Series)):
+                out_kinds.append(ExprKind.TRANSFORM)
+            else:  # pragma: no cover
+                msg = "unreachable"
+                raise AssertionError(msg)
+        for expr in named_exprs.items():
+            compliant_expr = self._extract_compliant(expr)
+            out_exprs.append(compliant_expr)
+            if isinstance(expr, Expr):
+                out_kinds.append(expr._metadata['kind'])
+            elif isinstance(expr, (str, Series)):
+                out_kinds.append(ExprKind.TRANSFORM)
+            else:  # pragma: no cover
+                msg = "unreachable"
+                raise AssertionError(msg)
+
+
+
+
+        compliant_exprs = ( for expr in flatten(exprs))
         compliant_named_exprs = (
             self._extract_compliant(value).alias(key)
             for key, value in named_exprs.items()
@@ -153,13 +181,16 @@ class BaseFrame(Generic[_FrameT]):
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns, available_columns
                 ) from e
-        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
         if (flat_exprs or named_exprs) and all_exprs_are_aggs_or_literals(
             *flat_exprs, **named_exprs
         ):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
+
+        plx = self.__narwhals_namespace__()
+        compliant_exprs = plx.broadcast_exprs(compliant_exprs, kinds)
 
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
