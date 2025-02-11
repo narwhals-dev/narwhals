@@ -193,6 +193,7 @@ class BaseFrame(Generic[_FrameT]):
             and all(isinstance(x, bool) for x in predicates[0])
         ):
             flat_predicates = flatten(predicates)
+            check_expressions_transform(*flat_predicates, function_name="filter")
             compliant_predicates = self._flatten_and_extract(*flat_predicates)
             plx = self.__narwhals_namespace__()
             predicate = plx.all_horizontal(
@@ -201,7 +202,6 @@ class BaseFrame(Generic[_FrameT]):
                     (plx.col(name) == v for name, v in constraints.items()),
                 )
             )
-            check_expressions_transform(*flat_predicates, function_name="filter")
         else:
             predicate = predicates[0]
         return self._from_compliant_dataframe(
@@ -418,7 +418,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return arg
+            return arg._compliant_series
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
