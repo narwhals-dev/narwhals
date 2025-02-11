@@ -178,12 +178,6 @@ class DaskLazyFrame(CompliantLazyFrame):
                 validate_column_names=False,
             )
 
-        if all(getattr(expr, "_returns_scalar", False) for expr in exprs):
-            df = dd.concat(
-                [val.to_series().rename(name) for name, val in new_series.items()], axis=1
-            )
-            return self._from_native_frame(df, validate_column_names=False)
-
         df = select_columns_by_name(
             self._native_frame.assign(**new_series),
             list(new_series.keys()),

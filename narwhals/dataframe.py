@@ -162,7 +162,7 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if flat_exprs and all_expressions_aggregate(*flat_exprs):
+        if flat_exprs and all_expressions_aggregate(*flat_exprs, **named_exprs):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
