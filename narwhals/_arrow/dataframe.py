@@ -405,9 +405,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                self.with_columns(**{key_token: plx.lit(0, None)})
+                self.with_columns(plx.lit(0, None).alias(key_token))
                 ._native_frame.join(
-                    other.with_columns(**{key_token: plx.lit(0, None)})._native_frame,
+                    other.with_columns(plx.lit(0, None).alias(key_token))._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",

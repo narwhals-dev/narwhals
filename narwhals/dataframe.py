@@ -420,7 +420,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return arg
+            plx = self.__narwhals_namespace__()
+            return plx._create_compliant_series(arg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
