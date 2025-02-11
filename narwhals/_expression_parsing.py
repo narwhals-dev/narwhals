@@ -89,17 +89,6 @@ def maybe_evaluate_expr(
     return expr(df) if is_compliant_expr(expr) else expr
 
 
-def parse_into_exprs(
-    *exprs: CompliantExpr[CompliantSeriesT_co],
-    **named_exprs: CompliantExpr[CompliantSeriesT_co],
-) -> Sequence[CompliantExpr[CompliantSeriesT_co]]:
-    """Parse each input as an expression (if it's not already one).
-
-    See `parse_into_expr` for more details.
-    """
-    return list(exprs) + [expr.alias(name) for name, expr in named_exprs.items()]
-
-
 @overload
 def reuse_series_implementation(
     expr: PandasLikeExprT,

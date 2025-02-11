@@ -11,7 +11,6 @@ from typing import Sequence
 
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
-from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
@@ -194,83 +193,73 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     # --- horizontal ---
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
                 s.fill_null(0, strategy=None, limit=None)
-                for _expr in parsed_exprs
+                for _expr in exprs
                 for s in _expr(df)
             )
             return [reduce(operator.add, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
     def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr(df))
+            series = (s for _expr in exprs for s in _expr(df))
             return [reduce(operator.and_, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr(df))
+            series = (s for _expr in exprs for s in _expr(df))
             return [reduce(operator.or_, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
                 s.fill_null(0, strategy=None, limit=None)
-                for _expr in parsed_exprs
+                for _expr in exprs
                 for s in _expr(df)
             )
-            non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr(df))
+            non_na = (1 - s.is_null() for _expr in exprs for s in _expr(df))
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
+            series = [s for _expr in exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
@@ -285,18 +274,16 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
-
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
+            series = [s for _expr in exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
@@ -311,10 +298,10 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={"exprs": exprs},
         )
 
@@ -379,14 +366,11 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (
-                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())(df)
-            )
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
+            series = (s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
+            null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -417,10 +401,10 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            evaluate_output_names=combine_evaluate_output_names(*parsed_exprs),
-            alias_output_names=combine_alias_output_names(*parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             kwargs={
                 "exprs": exprs,
                 "separator": separator,
