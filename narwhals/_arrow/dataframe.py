@@ -341,6 +341,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.select(list(column_names)), validate_column_names=False
         )
 
+    def aggregate(self: Self, *exprs: IntoArrowExpr) -> Self:
+        return self.select(*exprs)
+
     def select(self: Self, *exprs: IntoArrowExpr) -> Self:
         new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:

@@ -9,7 +9,7 @@ import dask.dataframe as dd
 import pandas as pd
 
 from narwhals._dask.utils import add_row_index
-from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._dask.utils import parse_exprs
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -86,7 +86,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         df = self._native_frame
-        new_series = parse_exprs_and_named_exprs(self, *exprs)
+        new_series = parse_exprs(self, *exprs)
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
@@ -159,8 +159,15 @@ class DaskLazyFrame(CompliantLazyFrame):
             validate_column_names=False,
         )
 
+    def aggregate(self: Self, *exprs: DaskExpr) -> Self:
+        new_series = parse_exprs(self, *exprs)
+        df = dd.concat(
+            [val.to_series().rename(name) for name, val in new_series.items()], axis=1
+        )
+        return self._from_native_frame(df, validate_column_names=False)
+
     def select(self: Self, *exprs: DaskExpr) -> Self:
-        new_series = parse_exprs_and_named_exprs(self, *exprs)
+        new_series = parse_exprs(self, *exprs)
 
         if not new_series:
             # return empty dataframe, like Polars does
@@ -170,12 +177,6 @@ class DaskLazyFrame(CompliantLazyFrame):
                 ),
                 validate_column_names=False,
             )
-
-        if all(getattr(expr, "_returns_scalar", False) for expr in exprs):
-            df = dd.concat(
-                [val.to_series().rename(name) for name, val in new_series.items()], axis=1
-            )
-            return self._from_native_frame(df, validate_column_names=False)
 
         df = select_columns_by_name(
             self._native_frame.assign(**new_series),
