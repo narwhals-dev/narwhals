@@ -188,8 +188,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={},
         )
 
-    def all_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
@@ -204,8 +204,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
@@ -220,8 +220,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def sum_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (
@@ -240,8 +240,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def mean_horizontal(self: Self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> IntoArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -266,8 +266,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in parsed_exprs for s in _expr(df)]
@@ -293,8 +293,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self: Self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in parsed_exprs for s in _expr(df)]
@@ -356,7 +356,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def when(
         self: Self,
-        *predicates: IntoArrowExpr,
+        *predicates: ArrowExpr,
     ) -> ArrowWhen:
         plx = self.__class__(backend_version=self._backend_version, version=self._version)
         condition = plx.all_horizontal(*predicates)
@@ -364,11 +364,11 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def concat_str(
         self: Self,
-        *exprs: IntoArrowExpr,
+        *exprs: ArrowExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+        parsed_exprs = parse_into_exprs(*exprs)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -421,13 +421,11 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-        from narwhals._expression_parsing import parse_into_expr
-
         plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
 
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+            value_series = self._then_value(df)[0]
         except TypeError:
             # `self._then_value` is a scalar and can't be converted to an expression
             value_series = plx._create_series_from_scalar(
@@ -448,7 +446,7 @@ class ArrowWhen:
                 )
             ]
         try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
+            otherwise_expr = self._otherwise_value
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression.
             # Remark that string values _are_ converted into expressions!

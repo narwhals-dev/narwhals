@@ -45,9 +45,9 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
+    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -387,13 +387,10 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             validate_column_names=False,
         )
 
-    def aggregate(self: Self, *exprs: IntoPandasLikeExpr) -> Self:
+    def aggregate(self: Self, *exprs: PandasLikeExpr) -> Self:
         return self.select(*exprs)
 
-    def select(
-        self: Self,
-        *exprs: IntoPandasLikeExpr,
-    ) -> Self:
+    def select(self: Self, *exprs: PandasLikeExpr) -> Self:
         new_series: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -439,7 +436,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, predicate: IntoPandasLikeExpr | list[bool]) -> Self:
+    def filter(self: Self, predicate: PandasLikeExpr | list[bool]) -> Self:
         if isinstance(predicate, list):
             mask_native = predicate
         else:
@@ -453,7 +450,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(self: Self, *exprs: IntoPandasLikeExpr) -> Self:
+    def with_columns(self: Self, *exprs: PandasLikeExpr) -> Self:
         index = self._native_frame.index
         new_columns: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
         if not new_columns and len(self) == 0:

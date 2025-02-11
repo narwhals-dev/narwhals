@@ -26,7 +26,6 @@ from narwhals.utils import import_dtypes_module
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -194,8 +193,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         )
 
     # --- horizontal ---
-    def sum_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
@@ -214,8 +213,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def all_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
@@ -230,8 +229,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (s for _expr in parsed_exprs for s in _expr(df))
@@ -246,8 +245,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def mean_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = (
@@ -267,8 +266,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
@@ -293,8 +292,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self: Self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in parsed_exprs for s in _expr(df)]
@@ -365,10 +364,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             )
         raise NotImplementedError
 
-    def when(
-        self: Self,
-        *predicates: IntoPandasLikeExpr,
-    ) -> PandasWhen:
+    def when(self: Self, *predicates: PandasLikeExpr) -> PandasWhen:
         plx = self.__class__(
             self._implementation, self._backend_version, version=self._version
         )
@@ -379,11 +375,11 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def concat_str(
         self: Self,
-        *exprs: IntoPandasLikeExpr,
+        *exprs: PandasLikeExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+        parsed_exprs = parse_into_exprs(*exprs)
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -452,14 +448,13 @@ class PandasWhen:
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-        from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
         plx = df.__narwhals_namespace__()
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
+        condition = self._condition(df)[0]
 
         try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
+            value_series = self._then_value(df)[0]
         except TypeError:
             # `self._then_value` is a scalar and can't be converted to an expression
             value_series = plx._create_series_from_scalar(
@@ -476,7 +471,7 @@ class PandasWhen:
                 )
             ]
         try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
+            otherwise_expr = self._otherwise_value
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [

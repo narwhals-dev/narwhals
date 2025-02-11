@@ -420,10 +420,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
+        plx = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return arg._compliant_series
+            return plx._create_expr_from_series(arg._compliant_series)
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
@@ -435,8 +436,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            plx = self.__narwhals_namespace__()
-            return plx._create_compliant_series(arg)
+            return plx._create_expr_from_series(plx._create_compliant_series(arg))
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
