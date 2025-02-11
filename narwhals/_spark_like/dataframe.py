@@ -230,7 +230,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def filter(self: Self, predicate: SparkLikeExpr) -> Self:
-        # `[0]` is safe as all_horizontal's expression only returns a single column
+        # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df)

@@ -530,11 +530,10 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
 
     def filter(self: Self, predicate: IntoArrowExpr | list[bool]) -> Self:
-        if isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate):
+        if isinstance(predicate, list):
             mask_native = predicate
         else:
-            assert not isinstance(predicate, list)  # noqa: S101
-            # `[0]` is safe as all_horizontal's expression only returns a single column
+            # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 length=len(self), other=mask, backend_version=self._backend_version

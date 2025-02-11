@@ -141,7 +141,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
     def filter(self: Self, predicate: DaskExpr) -> Self:
-        # `[0]` is safe as all_horizontal's expression only returns a single column
+        # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate._call(self)[0]
 
         return self._from_native_frame(

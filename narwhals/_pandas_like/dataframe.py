@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
 
-    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -437,12 +436,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, predicate: PandasLikeExpr | list[bool]) -> Self:
-        if isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate):
+    def filter(self: Self, predicate: IntoPandasLikeExpr | list[bool]) -> Self:
+        if isinstance(predicate, list):
             mask_native = predicate
         else:
-            assert not isinstance(predicate, list)  # noqa: S101
-            # `[0]` is safe as all_horizontal's expression only returns a single column
+            # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 self._native_frame.index, mask
