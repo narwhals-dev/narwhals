@@ -141,8 +141,8 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs_and_named_exprs(
-    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
+def parse_exprs(
+    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
 ) -> tuple[dict[str, Column], list[ExprKind]]:
     native_results: dict[str, list[Column]] = {}
 
@@ -157,13 +157,6 @@ def parse_exprs_and_named_exprs(
             raise AssertionError(msg)
         native_results.update(zip(output_names, native_series_list))
         expr_kinds.extend([expr._expr_kind] * len(output_names))
-    for col_alias, expr in named_exprs.items():
-        native_series_list = expr._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
-        native_results[col_alias] = native_series_list[0]
-        expr_kinds.append(expr._expr_kind)
 
     return native_results, expr_kinds
 

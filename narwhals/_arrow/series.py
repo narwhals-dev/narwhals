@@ -474,7 +474,12 @@ class ArrowSeries(CompliantSeries):
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        value_set = pa.array(other)
+        if isinstance(other, list) and isinstance(other[0], self.__class__):
+            # We can't use `broadcast_and_align` because we don't want to align here.
+            # `other` is just a sequence that all rows from `self` are checked against.
+            value_set = other[0]._native_series
+        else:
+            value_set = pa.array(other)
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 

@@ -300,10 +300,10 @@ class PandasLikeSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        if isinstance(other, self.__class__):
+        if isinstance(other, list) and isinstance(other[0], self.__class__):
             # We can't use `broadcast_and_align` because we don't want to align here.
             # `other` is just a sequence that all rows from `self` are checked against.
-            other = other._native_series
+            other = other[0]._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
 

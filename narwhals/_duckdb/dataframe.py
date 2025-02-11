@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -13,7 +12,7 @@ from duckdb import FunctionExpression
 from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
-from narwhals._duckdb.utils import parse_exprs_and_named_exprs
+from narwhals._duckdb.utils import parse_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -142,30 +141,27 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*column_names), validate_column_names=False
         )
 
+    def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
+        new_columns_map = parse_exprs(self, *exprs)
+        return self._from_native_frame(
+            self._native_frame.aggregate(
+                [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
+            ),
+            validate_column_names=False,
+        )
+
     def select(
         self: Self,
         *exprs: DuckDBExpr,
-        **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(
                 self._native_frame.limit(0), validate_column_names=False
             )
 
-        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs) and not any(
-            expr._expr_kind is ExprKind.TRANSFORM for expr in named_exprs.values()
-        ):
-            return self._from_native_frame(
-                self._native_frame.aggregate(
-                    [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
-                ),
-                validate_column_names=False,
-            )
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
-            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
-        ):
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
                 "is not yet supported by the DuckDB backend. Once they introduce\n"
@@ -200,16 +196,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise ValueError(msg)
         return self
 
-    def with_columns(
-        self: Self,
-        *exprs: DuckDBExpr,
-        **named_exprs: DuckDBExpr,
-    ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+    def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
+        new_columns_map = parse_exprs(self, *exprs)
 
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
-            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
-        ):
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
                 "is not yet supported by the DuckDB backend. Once they introduce\n"
@@ -229,13 +219,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*result), validate_column_names=False
         )
 
-    def filter(self: Self, *predicates: DuckDBExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(
-            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
-        )
-        # `[0]` is safe as all_horizontal's expression only returns a single column
-        mask = expr._call(self)[0]
+    def filter(self: Self, predicate: DuckDBExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        mask = predicate._call(self)[0]
         return self._from_native_frame(
             self._native_frame.filter(mask), validate_column_names=False
         )
