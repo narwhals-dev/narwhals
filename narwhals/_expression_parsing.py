@@ -57,9 +57,9 @@ def evaluate_into_expr(
     plx = expr.__narwhals_namespace__()
     result = expr(df)
     if expr._is_broadcastable_aggregation:
-        result = plx.broadcast_aggregation(df, result)
+        result = plx.broadcast_aggregation(df, result)  # type: ignore[attr-defined]
     elif expr._is_broadcastable_literal:
-        result = plx.broadcast_literal(df, result)
+        result = plx.broadcast_literal(df, result)  # type: ignore[attr-defined]
     if list(aliases) != [s.name for s in result]:  # pragma: no cover
         msg = f"Safety assertion failed, expected {aliases}, got {result}"
         raise AssertionError(msg)

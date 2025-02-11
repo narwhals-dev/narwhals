@@ -100,7 +100,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def broadcast_aggregation(
         self, df: ArrowDataFrame, result: list[ArrowSeries]
-    ) -> ArrowExpr:
+    ) -> list[ArrowSeries]:
         return [
             series._from_native_series(
                 pa.array(
@@ -109,6 +109,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             )
             for series in result
         ]
+
+    broadcast_literal = broadcast_aggregation
 
     # --- not in spec ---
     def __init__(

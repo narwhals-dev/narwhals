@@ -97,7 +97,7 @@ class BaseFrame(Generic[_FrameT]):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:  # pragma: no cover
                 msg = "unreachable"
-                raise AssertionError(msg)
+                raise AssertionError(msg)  # noqa: TRY004
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
@@ -107,7 +107,7 @@ class BaseFrame(Generic[_FrameT]):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:  # pragma: no cover
                 msg = "unreachable"
-                raise AssertionError(msg)
+                raise AssertionError(msg)  # noqa: TRY004
         return out_exprs, out_kinds
 
     @abstractmethod
@@ -149,7 +149,12 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, _kinds = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
+        for compliant_expr, kind in zip(compliant_exprs, kinds):
+            if kind is ExprKind.AGGREGATION:
+                compliant_expr._is_broadcastable_aggregation = True
+            elif kind is ExprKind.LITERAL:
+                compliant_expr._is_broadcastable_literal = True
         return self._from_compliant_dataframe(
             self._compliant_frame.with_columns(*compliant_exprs),
         )
@@ -174,9 +179,7 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if (flat_exprs or named_exprs) and all_exprs_are_aggs_or_literals(
-            *flat_exprs, **named_exprs
-        ):
+        if compliant_exprs and all_exprs_are_aggs_or_literals(*flat_exprs, **named_exprs):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )

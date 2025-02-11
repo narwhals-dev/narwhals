@@ -141,12 +141,9 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs(
-    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
-) -> tuple[dict[str, Column], list[ExprKind]]:
+def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, Column]:
     native_results: dict[str, list[Column]] = {}
 
-    expr_kinds: list[ExprKind] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
@@ -155,10 +152,13 @@ def parse_exprs(
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
+        if expr._is_broadcastable_aggregation:
+            native_series_list = [
+                s.over(df._Window().partitionBy(df._F.lit(1))) for s in native_series_list
+            ]
         native_results.update(zip(output_names, native_series_list))
-        expr_kinds.extend([expr._expr_kind] * len(output_names))
 
-    return native_results, expr_kinds
+    return native_results
 
 
 def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Column:

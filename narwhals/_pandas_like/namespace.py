@@ -107,7 +107,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def broadcast_aggregation(
         self, df: PandasLikeDataFrame, result: list[PandasLikeSeries]
-    ):
+    ) -> list[PandasLikeSeries]:
         return result
 
     # --- selection ---
