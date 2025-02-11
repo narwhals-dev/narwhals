@@ -46,11 +46,8 @@ TEST_DATA_COLUMNS = list(TEST_DATA.keys())
 TEST_DATA_NUM_ROWS = len(TEST_DATA[TEST_DATA_COLUMNS[0]])
 
 
-@st.composite  # type: ignore[misc]
-def string_slice(
-    draw: st.DrawFn,
-    strs: Sequence[str],
-) -> slice:
+@st.composite
+def string_slice(draw: st.DrawFn, strs: Sequence[str]) -> slice:
     """Return slices such as `"a":`, `"a":"c"`, `"a":"c":2`, etc."""
     n_cols = len(strs)
     index_slice = draw(
@@ -90,7 +87,7 @@ single_selector = st.one_of(
 )
 
 
-@st.composite  # type: ignore[misc]
+@st.composite
 def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
     rows = st.one_of(
         st.lists(
@@ -105,7 +102,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
         ),
         st.slices(TEST_DATA_NUM_ROWS),
         arrays(
-            dtype=st.sampled_from([np.int8, np.int16, np.int32, np.int64]),
+            dtype=st.sampled_from([np.int8, np.int16, np.int32, np.int64]),  # type: ignore[arg-type]
             shape=st.integers(min_value=0, max_value=10),
             elements=st.integers(
                 min_value=0,  # pyarrow does not support negative indexing
@@ -135,11 +132,8 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 
 
 @given(
-    selector=st.one_of(
-        single_selector,
-        tuple_selector(),
-    ),
-)  # type: ignore[misc]
+    selector=st.one_of(single_selector, tuple_selector()),
+)
 @pytest.mark.slow
 def test_getitem(
     pandas_or_pyarrow_constructor: Any,

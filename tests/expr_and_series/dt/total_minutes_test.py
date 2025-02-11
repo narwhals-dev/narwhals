@@ -17,11 +17,8 @@ from tests.utils import PANDAS_VERSION
         min_value=-timedelta(days=5, minutes=70, seconds=10),
         max_value=timedelta(days=3, minutes=90, seconds=60),
     )
-)  # type: ignore[misc]
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2, 0),
-    reason="pyarrow dtype not available",
 )
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 @pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
     result_pd = nw.from_native(

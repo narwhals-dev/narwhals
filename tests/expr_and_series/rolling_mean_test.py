@@ -69,7 +69,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-@given(  # type: ignore[misc]
+@given(
     center=st.booleans(),
     values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
 )
