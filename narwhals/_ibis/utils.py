@@ -12,7 +12,6 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    import ibis.expr.types as ir
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
@@ -58,9 +57,7 @@ def maybe_evaluate(df: IbisLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
     return duckdb.ConstantExpression(obj)
 
 
-def parse_exprs(
-    df: IbisLazyFrame, /, *exprs: IbisExpr
-) -> dict[str, duckdb.Expression]:
+def parse_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> dict[str, duckdb.Expression]:
     native_results: dict[str, duckdb.Expression] = {}
     for expr in exprs:
         native_series_list = expr._call(df)
@@ -75,9 +72,7 @@ def parse_exprs(
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(
-    dtype: ir_dtypes.DataType, version: Version
-) -> DType:
+def native_to_narwhals_dtype(dtype: ir_dtypes.DataType, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
 
     if isinstance(dtype, ir_dtypes.Float64):

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
@@ -12,19 +11,18 @@ from typing import cast
 
 import ibis
 
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import DuckDBSelectorNamespace
 from narwhals._ibis.utils import ExprKind
 from narwhals._ibis.utils import n_ary_operation_expr_kind
 from narwhals._ibis.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     import ibis.expr.types as ir
+    from typing_extensions import Self
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals.dtypes import DType
@@ -199,7 +197,9 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
 
     def sum_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            cols = [e.fill_null(0).name(e.get_name()) for _expr in exprs for e in _expr(df)]
+            cols = [
+                e.fill_null(0).name(e.get_name()) for _expr in exprs for e in _expr(df)
+            ]
             return [reduce(operator.add, cols)]
 
         return IbisExpr(
@@ -221,7 +221,12 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             def _name_preserving_sum(e1: ir.Expr, e2: ir.Expr) -> ir.Expr:
                 return (e1 + e2).name(e1.get_name())
 
-            return [(reduce(_name_preserving_sum, expr) / reduce(_name_preserving_sum, non_null)).name(first_expr_name)]
+            return [
+                (
+                    reduce(_name_preserving_sum, expr)
+                    / reduce(_name_preserving_sum, non_null)
+                ).name(first_expr_name)
+            ]
 
         return IbisExpr(
             call=func,
@@ -260,9 +265,7 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
         def func(_df: IbisLazyFrame) -> list[ir.Expr]:
             if dtype is not None:
                 ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
-                return [
-                    ibis.literal(value, ibis_dtype)
-                ]
+                return [ibis.literal(value, ibis_dtype)]
             return [ibis.literal(value)]
 
         return IbisExpr(

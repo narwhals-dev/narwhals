@@ -5,9 +5,6 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-import ibis
-import ibis.selectors as s
-
 from narwhals._ibis.utils import ExprKind
 from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import native_to_narwhals_dtype
@@ -28,9 +25,8 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import Self
-
     import ibis.expr.types as ir
+    from typing_extensions import Self
 
     from narwhals._ibis.expr import DuckDBExpr
     from narwhals._ibis.group_by import DuckDBGroupBy

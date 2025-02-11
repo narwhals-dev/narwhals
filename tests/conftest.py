@@ -194,7 +194,9 @@ def sqlframe_pyspark_lazy_constructor(
     )
 
 
-def ibis_lazy_constructor(obj: dict[str, list[Any]]) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+def ibis_lazy_constructor(
+    obj: dict[str, list[Any]],
+) -> Callable[[Any], IntoFrame]:  # pragma: no cover
     import ibis
 
     backend = ibis.duckdb.connect()

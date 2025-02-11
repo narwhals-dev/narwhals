@@ -25,10 +25,9 @@ from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    import ibis.expr.types as ir
     from typing_extensions import Self
 
-    import ibis.expr.types as ir
-    
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import DuckDBNamespace
     from narwhals.dtypes import DType
@@ -364,9 +363,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         )
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
-        def func(
-            _input: ir.Expr, lower_bound: Any, upper_bound: Any
-        ) -> ir.Expr:
+        def func(_input: ir.Expr, lower_bound: Any, upper_bound: Any) -> ir.Expr:
             return FunctionExpression(
                 "greatest", FunctionExpression("least", _input, upper_bound), lower_bound
             )
