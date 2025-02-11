@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -186,16 +187,25 @@ class BaseFrame(Generic[_FrameT]):
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
-        flat_predicates = flatten(predicates)
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            flat_predicates = flatten(predicates)
             check_expressions_transform(*flat_predicates, function_name="filter")
-            predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
+            compliant_predicates = self._flatten_and_extract(*flat_predicates)
+            plx = self.__narwhals_namespace__()
+            predicate = plx.all_horizontal(
+                *chain(
+                    compliant_predicates,
+                    (plx.col(name) == v for name, v in constraints.items()),
+                )
+            )
+        else:
+            predicate = predicates[0]
         return self._from_compliant_dataframe(
-            self._compliant_frame.filter(*predicates, **constraints),
+            self._compliant_frame.filter(predicate),
         )
 
     def sort(

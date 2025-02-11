@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -141,13 +140,9 @@ class DaskLazyFrame(CompliantLazyFrame):
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
-    def filter(self: Self, *predicates: DaskExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(
-            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
-        )
-        # `[0]` is safe as all_horizontal's expression only returns a single column
-        mask = expr._call(self)[0]
+    def filter(self: Self, predicate: DaskExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        mask = predicate._call(self)[0]
 
         return self._from_native_frame(
             self._native_frame.loc[mask], validate_column_names=False
@@ -428,12 +423,12 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        pln = self.__narwhals_namespace__()
+        plx = self.__narwhals_namespace__()
         return (
-            self.with_row_index(name=row_index_token)
+            self.with_row_index(row_index_token)
             .filter(
-                pln.col(row_index_token) >= offset,  # type: ignore[operator]
-                (pln.col(row_index_token) - offset) % n == 0,  # type: ignore[arg-type]
+                (plx.col(row_index_token) >= offset)  # type: ignore[operator]
+                & ((plx.col(row_index_token) - offset) % n == 0)
             )
             .drop([row_index_token], strict=False)
         )

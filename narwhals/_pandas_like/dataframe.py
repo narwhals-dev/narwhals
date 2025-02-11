@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -437,23 +436,12 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            mask_native = predicates[0]
+    def filter(self: Self, predicate: IntoPandasLikeExpr | list[bool]) -> Self:
+        if isinstance(predicate, list):
+            mask_native = predicate
         else:
-            expr = plx.all_horizontal(
-                *chain(
-                    predicates, (plx.col(name) == v for name, v in constraints.items())
-                )
-            )
-            # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]
+            # `[0]` is safe as the predicate's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 self._native_frame.index, mask
             )

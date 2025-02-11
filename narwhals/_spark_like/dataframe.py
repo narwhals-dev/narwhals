@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -230,13 +229,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         }
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
-    def filter(self: Self, *predicates: SparkLikeExpr, **constraints: Any) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(
-            *chain(predicates, (plx.col(name) == v for name, v in constraints.items()))
-        )
-        # `[0]` is safe as all_horizontal's expression only returns a single column
-        condition = expr._call(self)[0]
+    def filter(self: Self, predicate: SparkLikeExpr) -> Self:
+        # `[0]` is safe as the predicate's expression only returns a single column
+        condition = predicate._call(self)[0]
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df)
 

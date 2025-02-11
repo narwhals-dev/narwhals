@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -530,23 +529,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             df.append_column(name, row_indices).select([name, *cols])
         )
 
-    def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            mask_native = predicates[0]
+    def filter(self: Self, predicate: IntoArrowExpr | list[bool]) -> Self:
+        if isinstance(predicate, list):
+            mask_native = predicate
         else:
-            plx = self.__narwhals_namespace__()
-            expr = plx.all_horizontal(
-                *chain(
-                    predicates, (plx.col(name) == v for name, v in constraints.items())
-                )
-            )
-            # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]
+            # `[0]` is safe as the predicate's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 length=len(self), other=mask, backend_version=self._backend_version
             )
