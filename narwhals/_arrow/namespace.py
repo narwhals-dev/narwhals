@@ -20,6 +20,7 @@ from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
@@ -94,6 +95,22 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         return ArrowSeries(
             native_series=pa.chunked_array([value]),
             name="",
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def broadcast_exprs(exprs: list[ArrowExpr], kinds: ExprKind) -> ArrowExpr:
+        def func(df):
+            series = [ser for expr in exprs for ser in expr(df)]
+            return broadcast_series(series)
+
+        return ArrowExpr(
+            func,
+            function_name="broadcast",
+            evaluate_output_names=lambda df: [
+                name for expr in exprs for name in expr._evaluate_output_names(df)
+            ],
+            alias_output_names=lambda output_names: output_names,  # TODO
             backend_version=self._backend_version,
             version=self._version,
         )

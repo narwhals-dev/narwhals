@@ -83,15 +83,16 @@ class BaseFrame(Generic[_FrameT]):
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[IntoCompliantExpr[Any]], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        from narwhals.series import Series
         from narwhals.expr import Expr
+        from narwhals.series import Series
+
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
             if isinstance(expr, Expr):
-                out_kinds.append(expr._metadata['kind'])
+                out_kinds.append(expr._metadata["kind"])
             elif isinstance(expr, (str, Series)):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:  # pragma: no cover
@@ -101,22 +102,13 @@ class BaseFrame(Generic[_FrameT]):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
             if isinstance(expr, Expr):
-                out_kinds.append(expr._metadata['kind'])
+                out_kinds.append(expr._metadata["kind"])
             elif isinstance(expr, (str, Series)):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:  # pragma: no cover
                 msg = "unreachable"
                 raise AssertionError(msg)
-
-
-
-
-        compliant_exprs = ( for expr in flatten(exprs))
-        compliant_named_exprs = (
-            self._extract_compliant(value).alias(key)
-            for key, value in named_exprs.items()
-        )
-        return tuple(chain(compliant_exprs, compliant_named_exprs))
+        return out_exprs, out_kinds
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -157,7 +149,7 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs, _kinds = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_compliant_dataframe(
             self._compliant_frame.with_columns(*compliant_exprs),
         )
@@ -190,7 +182,7 @@ class BaseFrame(Generic[_FrameT]):
             )
 
         plx = self.__narwhals_namespace__()
-        compliant_exprs = plx.broadcast_exprs(compliant_exprs, kinds)
+        # compliant_exprs = plx.broadcast_exprs(compliant_exprs, kinds)
 
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
@@ -222,7 +214,7 @@ class BaseFrame(Generic[_FrameT]):
         ):
             flat_predicates = flatten(predicates)
             check_expressions_transform(*flat_predicates, function_name="filter")
-            compliant_predicates = self._flatten_and_extract(*flat_predicates)
+            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
             plx = self.__narwhals_namespace__()
             predicate = plx.all_horizontal(
                 *chain(
