@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -82,17 +83,19 @@ class BaseFrame(Generic[_FrameT]):
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         plx = self.__narwhals_namespace__()
-        compliant_exprs = tuple(
+        compliant_exprs = (
             plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
             for expr in flatten(exprs)
         )
-        compliant_named_exprs = {
-            key: plx.col(value)
-            if isinstance(value, str)
-            else self._extract_compliant(value)
+        compliant_named_exprs = (
+            (
+                plx.col(value).alias(key)
+                if isinstance(value, str)
+                else self._extract_compliant(value).alias(key)
+            )
             for key, value in named_exprs.items()
-        }
-        return compliant_exprs, compliant_named_exprs
+        )
+        return tuple(chain(compliant_exprs, compliant_named_exprs))
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -133,11 +136,9 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
-            *exprs, **named_exprs
-        )
+        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*compliant_exprs, **compliant_named_exprs),
+            self._compliant_frame.with_columns(*compliant_exprs),
         )
 
     def select(
@@ -160,11 +161,9 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
 
-        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
-            *flat_exprs, **named_exprs
-        )
+        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
+            self._compliant_frame.select(*compliant_exprs),
         )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -186,16 +185,26 @@ class BaseFrame(Generic[_FrameT]):
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
-        flat_predicates = flatten(predicates)
         if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            flat_predicates = flatten(predicates)
+            compliant_predicates = self._flatten_and_extract(*flat_predicates)
+            breakpoint()
+            plx = self.__narwhals_namespace__()
+            predicate = plx.all_horizontal(
+                *chain(
+                    compliant_predicates,
+                    (plx.col(name) == v for name, v in constraints.items()),
+                )
+            )
             check_expressions_transform(*flat_predicates, function_name="filter")
-            predicates = [self._extract_compliant(v) for v in flat_predicates]  # type: ignore[assignment]
+        else:
+            predicate = predicates[0]
         return self._from_compliant_dataframe(
-            self._compliant_frame.filter(*predicates, **constraints),
+            self._compliant_frame.filter(predicate),
         )
 
     def sort(
@@ -405,10 +414,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
+        plx = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return arg._compliant_series
+            return plx._create_expr_from_series(arg)
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
@@ -420,7 +430,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return arg
+            return plx._create_compliant_series(arg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property

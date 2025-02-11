@@ -12,6 +12,7 @@ from typing import overload
 import polars as pl
 
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.dtypes import DType
@@ -50,6 +51,11 @@ class PolarsNamespace:
             )
 
         return func
+
+    def _create_compliant_series(self, value: Any) -> PolarsSeries:
+        return PolarsSeries(
+            pl.Series(value), backend_version=self._backend_version, version=self._version
+        )
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
         from narwhals._polars.expr import PolarsExpr
