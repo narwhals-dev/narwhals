@@ -145,27 +145,22 @@ class DuckDBLazyFrame(CompliantLazyFrame):
     def select(
         self: Self,
         *exprs: DuckDBExpr,
-        **named_exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(
                 self._native_frame.limit(0), validate_column_names=False
             )
 
-        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs) and not any(
-            expr._expr_kind is ExprKind.TRANSFORM for expr in named_exprs.values()
-        ):
+        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs):
             return self._from_native_frame(
                 self._native_frame.aggregate(
                     [val.alias(col) for col, val in new_columns_map.items()]
                 ),
                 validate_column_names=False,
             )
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
-            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
-        ):
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
                 "is not yet supported by the DuckDB backend. Once they introduce\n"
@@ -200,16 +195,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             raise ValueError(msg)
         return self
 
-    def with_columns(
-        self: Self,
-        *exprs: DuckDBExpr,
-        **named_exprs: DuckDBExpr,
-    ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+    def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
+        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
 
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs) or any(
-            expr._expr_kind is ExprKind.AGGREGATION for expr in named_exprs.values()
-        ):
+        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
                 "is not yet supported by the DuckDB backend. Once they introduce\n"

@@ -85,9 +85,9 @@ class DaskLazyFrame(CompliantLazyFrame):
             validate_column_names=validate_column_names,
         )
 
-    def with_columns(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
+    def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         df = self._native_frame
-        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_series = parse_exprs_and_named_exprs(self, *exprs)
         df = df.assign(**new_series)
         return self._from_native_frame(df)
 
@@ -164,8 +164,8 @@ class DaskLazyFrame(CompliantLazyFrame):
             validate_column_names=False,
         )
 
-    def select(self: Self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
-        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+    def select(self: Self, *exprs: DaskExpr) -> Self:
+        new_series = parse_exprs_and_named_exprs(self, *exprs)
 
         if not new_series:
             # return empty dataframe, like Polars does
@@ -176,9 +176,7 @@ class DaskLazyFrame(CompliantLazyFrame):
                 validate_column_names=False,
             )
 
-        if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
-            getattr(val, "_returns_scalar", False) for val in named_exprs.values()
-        ):
+        if all(getattr(expr, "_returns_scalar", False) for expr in exprs):
             df = dd.concat(
                 [val.to_series().rename(name) for name, val in new_series.items()], axis=1
             )

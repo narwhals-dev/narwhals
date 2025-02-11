@@ -342,8 +342,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
-        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
+    def select(self: Self, *exprs: IntoArrowExpr) -> Self:
+        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -353,11 +353,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         df = pa.Table.from_arrays(broadcast_series(new_series), names=names)
         return self._from_native_frame(df, validate_column_names=False)
 
-    def with_columns(
-        self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr
-    ) -> Self:
+    def with_columns(self: Self, *exprs: IntoArrowExpr) -> Self:
         native_frame = self._native_frame
-        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
 
         length = len(self)
         columns = self.columns

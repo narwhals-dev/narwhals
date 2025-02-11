@@ -81,18 +81,22 @@ class BaseFrame(Generic[_FrameT]):
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        from itertools import chain
+
         plx = self.__narwhals_namespace__()
-        compliant_exprs = tuple(
+        compliant_exprs = (
             plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
             for expr in flatten(exprs)
         )
-        compliant_named_exprs = {
-            key: plx.col(value)
-            if isinstance(value, str)
-            else self._extract_compliant(value)
+        compliant_named_exprs = (
+            (
+                plx.col(value).alias(key)
+                if isinstance(value, str)
+                else self._extract_compliant(value).alias(key)
+            )
             for key, value in named_exprs.items()
-        }
-        return compliant_exprs, compliant_named_exprs
+        )
+        return tuple(chain(compliant_exprs, compliant_named_exprs))
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -133,11 +137,9 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
-            *exprs, **named_exprs
-        )
+        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*compliant_exprs, **compliant_named_exprs),
+            self._compliant_frame.with_columns(*compliant_exprs),
         )
 
     def select(
@@ -160,11 +162,9 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
 
-        compliant_exprs, compliant_named_exprs = self._flatten_and_extract(
-            *flat_exprs, **named_exprs
-        )
+        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
         return self._from_compliant_dataframe(
-            self._compliant_frame.select(*compliant_exprs, **compliant_named_exprs),
+            self._compliant_frame.select(*compliant_exprs),
         )
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
