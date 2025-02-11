@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -189,7 +188,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def len(self: Self) -> Self:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
-    def filter(self: Self, *predicates: IntoArrowExpr) -> Self:
+    def filter(self: Self, *predicates: ArrowExpr) -> Self:
         plx = self.__narwhals_namespace__()
         other = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=other)

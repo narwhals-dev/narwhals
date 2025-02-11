@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+lit = duckdb.ConstantExpression
+"""Alias for `duckdb.ConstantExpression`."""
+
 
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
@@ -57,8 +60,8 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
     return duckdb.ConstantExpression(obj)
 
 
-def parse_exprs_and_named_exprs(
-    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr, **named_exprs: DuckDBExpr
+def parse_exprs(
+    df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> dict[str, duckdb.Expression]:
     native_results: dict[str, duckdb.Expression] = {}
     for expr in exprs:
@@ -70,12 +73,6 @@ def parse_exprs_and_named_exprs(
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         native_results.update(zip(output_names, native_series_list))
-    for col_alias, expr in named_exprs.items():
-        native_series_list = expr._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
-        native_results[col_alias] = native_series_list[0]
     return native_results
 
 
@@ -129,10 +126,13 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
         return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
-    if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
+    if match_ := re.match(r"(\w+)((?:\[\d+\])+)", duckdb_dtype):
+        duckdb_inner_type = match_.group(1)
+        duckdb_shape = match_.group(2)
+        shape = tuple(int(value) for value in re.findall(r"\[(\d+)\]", duckdb_shape))
         return dtypes.Array(
-            native_to_narwhals_dtype(match_.group(1), version),
-            int(match_.group(2)),
+            inner=native_to_narwhals_dtype(duckdb_inner_type, version),
+            shape=shape,
         )
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()
@@ -141,10 +141,15 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
     dtypes = import_dtypes_module(version)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "DOUBLE"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
         return "FLOAT"
+    if isinstance_or_issubclass(dtype, dtypes.Int128):
+        return "INT128"
     if isinstance_or_issubclass(dtype, dtypes.Int64):
         return "BIGINT"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
@@ -153,6 +158,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return "SMALLINT"
     if isinstance_or_issubclass(dtype, dtypes.Int8):
         return "TINYINT"
+    if isinstance_or_issubclass(dtype, dtypes.UInt128):
+        return "UINT128"
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
         return "UBIGINT"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
@@ -189,8 +196,13 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "todo"
-        raise NotImplementedError(msg)
+        shape: tuple[int] = dtype.shape  # type: ignore[union-attr]
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
+        inner_dtype = dtype
+        for _ in shape:
+            inner_dtype = inner_dtype.inner  # type: ignore[union-attr]
+        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
+        return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

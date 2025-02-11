@@ -13,7 +13,7 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyspark.types as pyspark_types
+    import pyspark.sql.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -58,7 +58,8 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.ByteType):
         return dtypes.Int8()
     if isinstance(
-        dtype, (spark_types.StringType, spark_types.VarcharType, spark_types.CharType)
+        dtype,
+        (spark_types.StringType, spark_types.VarcharType, spark_types.CharType),
     ):
         return dtypes.String()
     if isinstance(dtype, spark_types.BooleanType):
@@ -123,8 +124,13 @@ def narwhals_to_native_dtype(
         msg = "Converting to Struct dtype is not supported yet"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
+        inner = narwhals_to_native_dtype(
+            dtype.inner,  # type: ignore[union-attr]
+            version=version,
+            spark_types=spark_types,
+        )
+        return spark_types.ArrayType(elementType=inner)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.UInt64, dtypes.UInt32, dtypes.UInt16, dtypes.UInt8)
     ):  # pragma: no cover
@@ -135,8 +141,8 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs_and_named_exprs(
-    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr, **named_exprs: SparkLikeExpr
+def parse_exprs(
+    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
 ) -> tuple[dict[str, Column], list[ExprKind]]:
     native_results: dict[str, list[Column]] = {}
 
@@ -151,13 +157,6 @@ def parse_exprs_and_named_exprs(
             raise AssertionError(msg)
         native_results.update(zip(output_names, native_series_list))
         expr_kinds.extend([expr._expr_kind] * len(output_names))
-    for col_alias, expr in named_exprs.items():
-        native_series_list = expr._call(df)
-        if len(native_series_list) != 1:  # pragma: no cover
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
-        native_results[col_alias] = native_series_list[0]
-        expr_kinds.append(expr._expr_kind)
 
     return native_results, expr_kinds
 

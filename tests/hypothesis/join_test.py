@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -37,7 +39,7 @@ from tests.utils import assert_equal_data
         max_size=3,
         unique=True,
     ),
-)  # type: ignore[misc]
+)
 @pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
@@ -48,18 +50,20 @@ def test_join(  # pragma: no cover
     cols: st.SearchStrategy[list[str]],
 ) -> None:
     data = {"a": integers, "b": other_integers, "c": floats}
+    join_cols = cast(list[str], cols)
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
     df_pl = nw.from_native(df_polars, eager_only=True)
     other_pl = nw.from_native(df_polars2, eager_only=True)
-    dframe_pl = df_pl.join(other_pl, left_on=cols, right_on=cols, how="inner")
+
+    dframe_pl = df_pl.join(other_pl, left_on=join_cols, right_on=join_cols, how="inner")
 
     df_pandas = pd.DataFrame(data)
     df_pandas2 = pd.DataFrame(data)
     df_pd = nw.from_native(df_pandas, eager_only=True)
     other_pd = nw.from_native(df_pandas2, eager_only=True)
-    dframe_pd = df_pd.join(other_pd, left_on=cols, right_on=cols, how="inner")
+    dframe_pd = df_pd.join(other_pd, left_on=join_cols, right_on=join_cols, how="inner")
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
     dframe_pd1 = dframe_pd1.sort_values(
@@ -85,7 +89,7 @@ def test_join(  # pragma: no cover
         min_size=3,
         max_size=3,
     ),
-)  # type: ignore[misc]
+)
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_cross_join(  # pragma: no cover
@@ -119,7 +123,7 @@ def test_cross_join(  # pragma: no cover
     assert_frame_equal(dframe_pd1, dframe_pd2)
 
 
-@given(  # type: ignore[misc]
+@given(
     a_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
     b_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
     c_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),

@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
@@ -30,6 +31,7 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Hashable
 
     import pandas as pd
     import polars as pl
@@ -39,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
+    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -168,15 +171,11 @@ class PandasLikeSeries(CompliantSeries):
         )
 
     def __len__(self: Self) -> int:
-        return self.shape[0]
+        return len(self._native_series)
 
     @property
     def name(self: Self) -> str:
         return self._name  # type: ignore[no-any-return]
-
-    @property
-    def shape(self: Self) -> tuple[int]:
-        return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
     def dtype(self: Self) -> DType:
@@ -301,10 +300,10 @@ class PandasLikeSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        if isinstance(other, self.__class__):
+        if isinstance(other, list) and isinstance(other[0], self.__class__):
             # We can't use `broadcast_and_align` because we don't want to align here.
             # `other` is just a sequence that all rows from `self` are checked against.
-            other = other._native_series
+            other = other[0]._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
 
@@ -658,7 +657,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         ).alias(self.name)
 
-    def alias(self: Self, name: str) -> Self:
+    def alias(self: Self, name: str | Hashable) -> Self:
         if name != self.name:
             return self._from_native_series(
                 rename(
@@ -729,9 +728,6 @@ class PandasLikeSeries(CompliantSeries):
         raise AssertionError(msg)
 
     # --- descriptive ---
-    def is_empty(self: Self) -> bool:
-        return self._native_series.empty  # type: ignore[no-any-return]
-
     def is_unique(self: Self) -> Self:
         return self._from_native_series(
             ~self._native_series.duplicated(keep=False)
@@ -1032,6 +1028,90 @@ class PandasLikeSeries(CompliantSeries):
             )
 
         return self._from_native_series(ranked_series)
+
+    def hist(
+        self: Self,
+        bins: list[float | int] | None,
+        *,
+        bin_count: int | None,
+        include_breakpoint: bool,
+    ) -> PandasLikeDataFrame:
+        from numpy import linspace
+        from numpy import zeros
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        ns = self.__native_namespace__()
+        data: dict[str, Sequence[int | float | str] | _AnyDArray]
+
+        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+            data = {}
+            if include_breakpoint:
+                data["breakpoint"] = []
+            data["count"] = []
+
+            return PandasLikeDataFrame(
+                ns.DataFrame(data),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+                validate_column_names=True,
+            )
+        elif self._native_series.count() < 1:
+            if bins is not None:
+                data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
+            else:
+                count = cast("int", bin_count)
+                data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
+
+            if not include_breakpoint:
+                del data["breakpoint"]
+
+            return PandasLikeDataFrame(
+                ns.DataFrame(data),
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+                validate_column_names=True,
+            )
+
+        elif bin_count is not None:  # use Polars binning behavior
+            lower, upper = self._native_series.min(), self._native_series.max()
+            pad_lowest_bin = False
+            if lower == upper:
+                lower -= 0.5
+                upper += 0.5
+            else:
+                pad_lowest_bin = True
+
+            bins = linspace(lower, upper, bin_count + 1)
+            if pad_lowest_bin and bins is not None:
+                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
+            bin_count = None
+
+        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
+        #   the bins were explicitly passed in.
+        categories = ns.cut(
+            self._native_series, bins=bins if bin_count is None else bin_count
+        )
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
+        #   is necessary to restore these bins.
+        result = categories.value_counts(dropna=True, sort=False).reindex(
+            categories.cat.categories, fill_value=0
+        )
+        data = {}
+        if include_breakpoint:
+            data["breakpoint"] = bins[1:] if bins is not None else result.index.right
+        data["count"] = result.reset_index(drop=True)
+
+        return PandasLikeDataFrame(
+            ns.DataFrame(data),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
+        )
 
     @property
     def str(self: Self) -> PandasLikeSeriesStringNamespace:

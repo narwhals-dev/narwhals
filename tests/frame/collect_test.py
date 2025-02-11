@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -30,6 +31,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.lazy().collect().to_native()
 
+    expected_cls: Any
     if "polars" in str(constructor):
         expected_cls = pl.DataFrame
     elif any(x in str(constructor) for x in ("pandas", "dask")):

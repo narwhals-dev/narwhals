@@ -188,7 +188,7 @@ def test_rolling_sum_series_invalid_params(
         df["a"].rolling_sum(window_size=window_size, min_samples=min_samples)
 
 
-@given(  # type: ignore[misc]
+@given(
     center=st.booleans(),
     values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
 )
