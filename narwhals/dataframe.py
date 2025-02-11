@@ -81,19 +81,11 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
+    ) -> tuple[IntoCompliantExpr[Any]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        plx = self.__narwhals_namespace__()
-        compliant_exprs = (
-            plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
-            for expr in flatten(exprs)
-        )
+        compliant_exprs = (self._extract_compliant(expr) for expr in flatten(exprs))
         compliant_named_exprs = (
-            (
-                plx.col(value).alias(key)
-                if isinstance(value, str)
-                else self._extract_compliant(value).alias(key)
-            )
+            self._extract_compliant(value).alias(key)
             for key, value in named_exprs.items()
         )
         return tuple(chain(compliant_exprs, compliant_named_exprs))
@@ -427,6 +419,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             return plx._create_expr_from_series(arg._compliant_series)
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if isinstance(arg, str):
+            return plx.col(arg)
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
@@ -2192,6 +2186,9 @@ class LazyFrame(BaseFrame[FrameT]):
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
+        if isinstance(arg, str):  # pragma: no cover
+            plx = self.__narwhals_namespace__()
+            return plx.col(arg)
         if isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
                 msg = (
