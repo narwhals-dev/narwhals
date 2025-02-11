@@ -92,7 +92,9 @@ def test_replace_time_zone_series(
         ]
     }
     df = nw.from_native(constructor_eager(data), eager_only=True)
+    breakpoint()
     result = df.select(df["a"].dt.replace_time_zone("Asia/Kathmandu"))
+    breakpoint()
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]

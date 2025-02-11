@@ -56,6 +56,7 @@ def evaluate_into_expr(
     _, aliases = evaluate_output_names_and_aliases(expr, df, [])
     plx = expr.__narwhals_namespace__()
     result = expr(df)
+    breakpoint()
     if expr._is_broadcastable_aggregation:
         result = plx.broadcast_aggregation(df, result)  # type: ignore[attr-defined]
     elif expr._is_broadcastable_literal:

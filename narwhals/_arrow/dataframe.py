@@ -345,6 +345,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def select(self: Self, *exprs: ArrowExpr) -> Self:
         new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
+        breakpoint()
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
