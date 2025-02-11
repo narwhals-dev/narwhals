@@ -27,6 +27,8 @@ class PolarsExpr:
         self._implementation = Implementation.POLARS
         self._version = version
         self._backend_version = backend_version
+        self._is_broadcastable_aggregation = False
+        self._is_broadcastable_literal = False
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsExpr"

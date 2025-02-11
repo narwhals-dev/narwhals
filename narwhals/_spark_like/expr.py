@@ -50,6 +50,8 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
+        self._is_broadcastable_aggregation = False
+        self._is_broadcastable_literal = False
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)

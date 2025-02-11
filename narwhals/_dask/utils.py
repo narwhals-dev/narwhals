@@ -48,13 +48,14 @@ def parse_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
     native_results: dict[str, dx.Series] = {}
     for expr in exprs:
         native_series_list = expr._call(df)
-        return_scalar = getattr(expr, "_returns_scalar", False)
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
         if len(aliases) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         for native_series, alias in zip(native_series_list, aliases):
-            native_results[alias] = native_series[0] if return_scalar else native_series
+            native_results[alias] = (
+                native_series[0] if expr._is_broadcastable_aggregation else native_series
+            )
     return native_results
 
 

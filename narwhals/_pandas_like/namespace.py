@@ -105,6 +105,11 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             version=self._version,
         )
 
+    def broadcast_aggregation(
+        self, df: PandasLikeDataFrame, result: list[PandasLikeSeries]
+    ):
+        return result
+
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(

@@ -55,6 +55,8 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):
         self._expr_kind = expr_kind
         self._backend_version = backend_version
         self._version = version
+        self._is_broadcastable_aggregation = False
+        self._is_broadcastable_literal = False
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)

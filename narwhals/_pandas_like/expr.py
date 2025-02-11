@@ -68,6 +68,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._backend_version = backend_version
         self._version = version
         self._kwargs = kwargs
+        self._is_broadcastable_aggregation = False
+        self._is_broadcastable_literal = False
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)

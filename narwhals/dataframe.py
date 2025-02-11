@@ -98,8 +98,8 @@ class BaseFrame(Generic[_FrameT]):
             else:  # pragma: no cover
                 msg = "unreachable"
                 raise AssertionError(msg)
-        for expr in named_exprs.items():
-            compliant_expr = self._extract_compliant(expr)
+        for alias, expr in named_exprs.items():
+            compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
             if isinstance(expr, Expr):
                 out_kinds.append(expr._metadata["kind"])
@@ -180,10 +180,11 @@ class BaseFrame(Generic[_FrameT]):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
-
-        plx = self.__narwhals_namespace__()
-        # compliant_exprs = plx.broadcast_exprs(compliant_exprs, kinds)
-
+        for compliant_expr, kind in zip(compliant_exprs, kinds):
+            if kind is ExprKind.AGGREGATION:
+                compliant_expr._is_broadcastable_aggregation = True
+            elif kind is ExprKind.LITERAL:
+                compliant_expr._is_broadcastable_literal = True
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
         )

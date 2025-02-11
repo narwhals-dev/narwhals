@@ -54,7 +54,12 @@ def evaluate_into_expr(
     set aliases whenever we want.
     """
     _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+    plx = expr.__narwhals_namespace__()
     result = expr(df)
+    if expr._is_broadcastable_aggregation:
+        result = plx.broadcast_aggregation(df, result)
+    elif expr._is_broadcastable_literal:
+        result = plx.broadcast_literal(df, result)
     if list(aliases) != [s.name for s in result]:  # pragma: no cover
         msg = f"Safety assertion failed, expected {aliases}, got {result}"
         raise AssertionError(msg)
@@ -371,8 +376,8 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and has_transforms:
-        msg = "Cannot combine length-changing expressions with length-preserving ones"
+    elif n_changes_length and (has_transforms or has_aggregations):
+        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
