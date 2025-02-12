@@ -1260,16 +1260,11 @@ class Expr:
         """
         flat_predicates = flatten(predicates)
         is_order_dependent = operation_is_order_dependent(*flat_predicates)
+        def func(compliant_expr, *compliant_predicates):
+            return compliant_expr.filter(*compliant_predicates)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).filter(
-                *[
-                    extract_compliant(plx, pred, strings_are_column_names=True)
-                    for pred in flat_predicates
-                ],
-            ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
-            ),
+            lambda plx: apply_n_ary_operation(plx, self, func, *predicates),
+            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent)
         )
 
     def is_null(self: Self) -> Self:
