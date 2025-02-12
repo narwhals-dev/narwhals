@@ -442,7 +442,10 @@ def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callabl
     )
     compliant_exprs = [
         compliant_expr.broadcast(kind)
-        if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        # `compliant` expr could also be literal, hence the check is needed before calling `broadcast`.
+        # We can't (yet) use `plx.lit` for all literals due to dtype mismatches in pandas,
+        # see test failures in https://github.com/narwhals-dev/narwhals/pull/1999.
+        if broadcast and is_compliant_expr(compliant_expr) and compliant_expr in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     ]

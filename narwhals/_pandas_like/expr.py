@@ -16,7 +16,7 @@ from narwhals._pandas_like.expr_list import PandasLikeExprListNamespace
 from narwhals._pandas_like.expr_name import PandasLikeExprNameNamespace
 from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import rename
+from narwhals._pandas_like.utils import rename, broadcast_and_extract_dataframe_comparand
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
@@ -85,6 +85,26 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def __narwhals_expr__(self) -> None: ...
+
+    def broadcast(self, _kind: Any) -> Self:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            return [
+                result._from_native_series(broadcast_and_extract_dataframe_comparand(df._native_frame.index, result))
+                for result in self(df)
+            ]
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+            kwargs=self._kwargs,
+        )
+
 
     @classmethod
     def from_column_names(

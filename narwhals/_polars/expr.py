@@ -36,6 +36,10 @@ class PolarsExpr:
             expr, version=self._version, backend_version=self._backend_version
         )
 
+    def broadcast(self, kind):
+        # Let Polars do its thing.
+        return self
+
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]

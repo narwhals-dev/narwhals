@@ -14,6 +14,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
@@ -66,7 +67,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 result._from_native_series(
-                    pa.array([result[0]] * len(df), type=result._native_series.type)
+                    broadcast_and_extract_dataframe_comparand(len(df), result, self._backend_version)
                 )
                 for result in self(df)
             ]
