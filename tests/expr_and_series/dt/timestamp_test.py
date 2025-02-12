@@ -50,7 +50,7 @@ def test_timestamp_datetimes(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -92,7 +92,7 @@ def test_timestamp_datetimes_tz_aware(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     if (
         (any(x in str(constructor) for x in ("pyarrow",)) and is_windows())
@@ -140,7 +140,7 @@ def test_timestamp_dates(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     if any(
         x in str(constructor)
@@ -167,7 +167,7 @@ def test_timestamp_dates(
 def test_timestamp_invalid_date(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)

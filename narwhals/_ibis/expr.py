@@ -453,8 +453,19 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         )
 
     def is_nan(self: Self) -> Self:
+        def func(_input: ir.Expr) -> ir.Expr:
+            ibis = get_ibis()
+            dtype = _input.type()
+
+            if dtype.is_float64() or dtype.is_float32():
+                otherwise = _input.isnan()
+            else:
+                otherwise = False
+
+            return ibis.ifelse(_input.isnull(), None, otherwise)
+
         return self._from_call(
-            lambda _input: _input.isnan(),
+            func,
             "is_nan",
             expr_kind=self._expr_kind,
         )

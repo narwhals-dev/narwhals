@@ -28,6 +28,7 @@ def test_replace_time_zone(
         or ("cudf" in str(constructor))
         or ("duckdb" in str(constructor))
         or ("pyspark" in str(constructor))
+        or ("ibis" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -56,6 +57,7 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("duckdb" in str(constructor))
         or ("pyspark" in str(constructor))
+        or ("ibis" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {

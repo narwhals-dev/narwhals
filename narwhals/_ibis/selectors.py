@@ -34,7 +34,7 @@ class IbisSelectorNamespace:
     def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> IbisSelector:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
             return [
-                ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
+                df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
             ]
 
         def evaluate_output_names(df: IbisLazyFrame) -> Sequence[str]:
@@ -53,7 +53,7 @@ class IbisSelectorNamespace:
     def matches(self: Self, pattern: str) -> IbisSelector:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
             return [
-                ColumnExpression(col) for col in df.columns if re.search(pattern, col)
+                df._native_frame[col] for col in df.columns if re.search(pattern, col)
             ]
 
         def evaluate_output_names(df: IbisLazyFrame) -> Sequence[str]:
@@ -102,7 +102,7 @@ class IbisSelectorNamespace:
 
     def all(self: Self) -> IbisSelector:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            return [ColumnExpression(col) for col in df.columns]
+            return [df._native_frame[col] for col in df.columns]
 
         return IbisSelector(
             func,
@@ -126,7 +126,7 @@ class IbisSelectorNamespace:
 
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
             return [
-                ColumnExpression(col)
+                df._native_frame[col]
                 for col in df.columns
                 if dtype_matches_time_unit_and_time_zone(
                     dtype=df.schema[col],

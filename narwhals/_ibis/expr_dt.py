@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Literal
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -102,13 +101,6 @@ class IbisExprDateTimeNamespace:
         return self._compliant_expr._from_call(
             lambda _input: _input.date(),
             "date",
-            expr_kind=self._compliant_expr._expr_kind,
-        )
-
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> IbisExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: _input.truncate(time_unit),
-            "datetime",
             expr_kind=self._compliant_expr._expr_kind,
         )
 

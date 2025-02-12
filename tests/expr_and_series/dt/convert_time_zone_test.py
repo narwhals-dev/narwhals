@@ -30,6 +30,7 @@ def test_convert_time_zone(
         or ("cudf" in str(constructor))
         or ("duckdb" in str(constructor))
         or ("pyspark" in str(constructor))
+        or ("ibis" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -88,6 +89,7 @@ def test_convert_time_zone_from_none(
         or ("cudf" in str(constructor))
         or ("duckdb" in str(constructor))
         or ("pyspark" in str(constructor))
+        or ("ibis" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
