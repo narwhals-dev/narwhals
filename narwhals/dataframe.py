@@ -26,7 +26,6 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
-from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
@@ -2364,6 +2363,8 @@ class LazyFrame(BaseFrame[FrameT]):
             └───────┴───────┘
             <BLANKLINE>
         """
+        from narwhals.translate import to_native
+
         return to_native(narwhals_object=self, pass_through=False)
 
     # inherited
