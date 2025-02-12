@@ -41,7 +41,7 @@ class IbisGroupBy:
             )
             agg_columns.extend(
                 [
-                    native_expression.alias(alias)
+                    native_expression.name(alias)
                     for native_expression, output_name, alias in zip(
                         native_expressions, output_names, aliases
                     )

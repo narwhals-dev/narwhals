@@ -393,7 +393,9 @@ def test_joinasof_numeric(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -465,7 +467,9 @@ def test_joinasof_time(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -682,6 +686,10 @@ def test_join_duplicate_column_names(
         exception = AnalysisException
     elif "modin" in str(constructor):
         exception = NotImplementedError
+    elif "ibis" in str(constructor):
+        from ibis.common.exceptions import IbisInputError
+
+        exception = IbisInputError
     else:
         exception = nw.exceptions.DuplicateError
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})

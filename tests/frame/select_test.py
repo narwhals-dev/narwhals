@@ -29,7 +29,7 @@ def test_select(constructor: Constructor) -> None:
 
 
 def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
     assert result.collect().shape == (0, 0)
@@ -76,7 +76,11 @@ def test_comparison_with_list_error_message() -> None:
 def test_missing_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))

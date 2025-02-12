@@ -14,6 +14,7 @@ from narwhals._ibis.utils import ExprKind
 from narwhals._ibis.utils import maybe_evaluate
 from narwhals._ibis.utils import n_ary_operation_expr_kind
 from narwhals._ibis.utils import narwhals_to_native_dtype
+from narwhals.dependencies import get_ibis
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
@@ -469,6 +470,15 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         return self._from_call(
             lambda _input: _input.isin(other),
             "is_in",
+            expr_kind=self._expr_kind,
+        )
+
+    def is_unique(self: Self) -> Self:
+        ibis = get_ibis()
+
+        return self._from_call(
+            lambda _input: _input.count().over(ibis.window(group_by=_input)) == 1,
+            "is_unique",
             expr_kind=self._expr_kind,
         )
 

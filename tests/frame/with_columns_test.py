@@ -30,7 +30,12 @@ def test_with_columns_order(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_columns_empty(constructor: Constructor) -> None:
+def test_with_columns_empty(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.select().with_columns()
@@ -52,7 +57,11 @@ def test_with_columns_dtypes_single_row(
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))

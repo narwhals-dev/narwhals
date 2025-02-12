@@ -10,7 +10,11 @@ from tests.utils import assert_equal_data
 def test_clone(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)

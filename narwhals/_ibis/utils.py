@@ -60,52 +60,50 @@ def parse_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> dict[str, ir.Expr]:
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
+def native_to_narwhals_dtype(dtype: Any, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
 
-    if ibis_dtype.is_int64():
+    if dtype.is_int64():
         return dtypes.Int64()
-    if ibis_dtype.is_int32():
+    if dtype.is_int32():
         return dtypes.Int32()
-    if ibis_dtype.is_int16():
+    if dtype.is_int16():
         return dtypes.Int16()
-    if ibis_dtype.is_int8():
+    if dtype.is_int8():
         return dtypes.Int8()
-    if ibis_dtype.is_uint64():
+    if dtype.is_uint64():
         return dtypes.UInt64()
-    if ibis_dtype.is_uint32():
+    if dtype.is_uint32():
         return dtypes.UInt32()
-    if ibis_dtype.is_uint16():
+    if dtype.is_uint16():
         return dtypes.UInt16()
-    if ibis_dtype.is_uint8():
+    if dtype.is_uint8():
         return dtypes.UInt8()
-    if ibis_dtype.is_boolean():
+    if dtype.is_boolean():
         return dtypes.Boolean()
-    if ibis_dtype.is_float64():
+    if dtype.is_float64():
         return dtypes.Float64()
-    if ibis_dtype.is_float32():
+    if dtype.is_float32():
         return dtypes.Float32()
-    if ibis_dtype.is_string():
+    if dtype.is_string():
         return dtypes.String()
-    if ibis_dtype.is_date():
+    if dtype.is_date():
         return dtypes.Date()
-    if ibis_dtype.is_timestamp():
-        return dtypes.Datetime(
-            time_zone=ibis_dtype.timezone, time_unit=ibis_dtype.unit.value
-        )
-    if ibis_dtype.is_array():
-        return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
-    if ibis_dtype.is_struct():
+    if dtype.is_timestamp():
+        return dtypes.Datetime(time_zone=dtype.timezone, time_unit=dtype.unit.value)
+    if dtype.is_array():
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
+    if dtype.is_struct():
         return dtypes.Struct(
             [
                 dtypes.Field(
                     ibis_dtype_name,
                     native_to_narwhals_dtype(ibis_dtype_field, version),
                 )
-                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+                for ibis_dtype_name, ibis_dtype_field in dtype.items()
             ]
         )
-    if ibis_dtype.is_decimal():
+    if dtype.is_decimal():
         return dtypes.Decimal()
     return dtypes.Unknown()  # pragma: no cover
 

@@ -29,7 +29,9 @@ class IbisInterchangeSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type(), self._version)
+        return native_to_narwhals_dtype(
+            self._native_series.schema().types[0], self._version
+        )
 
     def __getattr__(self: Self, attr: str) -> NoReturn:
         msg = (

@@ -9,15 +9,14 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
-import ibis
-
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._ibis.expr import IbisExpr
-from narwhals._ibis.selectors import DuckDBSelectorNamespace
+from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import ExprKind
 from narwhals._ibis.utils import n_ary_operation_expr_kind
 from narwhals._ibis.utils import narwhals_to_native_dtype
+from narwhals.dependencies import get_ibis
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
@@ -37,16 +36,16 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
         self._version = version
 
     @property
-    def selectors(self: Self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(
+    def selectors(self: Self) -> IbisSelectorNamespace:
+        return IbisSelectorNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
     def all(self: Self) -> IbisExpr:
         def _all(df: IbisLazyFrame) -> list[ir.Expr]:
-            from ibis import _ as col
+            ibis = get_ibis()
 
-            return [getattr(col, col_name).name(col_name) for col_name in df.columns]
+            return [getattr(ibis._, col_name).name(col_name) for col_name in df.columns]
 
         return IbisExpr(
             call=_all,
@@ -64,6 +63,8 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> IbisLazyFrame:
+        ibis = get_ibis()
+
         if how == "horizontal":
             msg = "horizontal concat not supported for Ibis. Please join instead"
             raise TypeError(msg)
@@ -167,6 +168,7 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
 
     def max_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            ibis = get_ibis()
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.greatest(*cols).name(cols[0].get_name())]
 
@@ -182,6 +184,7 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
 
     def min_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            ibis = get_ibis()
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.least(*cols).name(cols[0].get_name())]
 
@@ -263,6 +266,7 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
 
     def lit(self: Self, value: Any, dtype: DType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Expr]:
+            ibis = get_ibis()
             if dtype is not None:
                 ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
                 return [ibis.literal(value, ibis_dtype)]
@@ -312,15 +316,17 @@ class IbisWhen:
         self._version = version
 
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
+        ibis = get_ibis()
+
         condition = self._condition(df)[0]
-        condition = cast("Expr", condition)
+        condition = cast("ir.Expr", condition)
 
         if isinstance(self._then_value, IbisExpr):
             value = self._then_value(df)[0]
         else:
             # `self._otherwise_value` is a scalar
             value = ibis.literal(self._then_value)
-        value = cast("Expr", value)
+        value = cast("ir.Expr", value)
 
         if self._otherwise_value is None:
             return [ibis.ifelse(condition, value, None)]

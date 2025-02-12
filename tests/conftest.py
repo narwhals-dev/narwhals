@@ -4,6 +4,7 @@ import os
 import sys
 import uuid
 from copy import deepcopy
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -19,6 +20,7 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
+    import ibis
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
@@ -194,15 +196,20 @@ def sqlframe_pyspark_lazy_constructor(
     )
 
 
+@lru_cache(maxsize=1)
+def _ibis_backend() -> ibis.backends.BaseBackend:
+    """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
+    import ibis
+
+    return ibis.duckdb.connect()
+
+
 def ibis_lazy_constructor(
     obj: dict[str, list[Any]],
 ) -> Callable[[Any], IntoFrame]:  # pragma: no cover
-    import ibis
-
-    backend = ibis.duckdb.connect()
     ldf = pl.from_dict(obj).lazy()
     table_name = str(uuid.uuid4())
-    return backend.create_table(table_name, ldf)
+    return _ibis_backend().create_table(table_name, ldf)
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {

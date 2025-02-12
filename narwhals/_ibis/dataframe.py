@@ -150,7 +150,7 @@ class IbisLazyFrame(CompliantLazyFrame):
 
         new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
-            msg = "No columns to select. Must provide at least one column."
+            msg = "At least one expression must be provided to `select` with the Ibis backend."
             raise ValueError(msg)
 
         t = self._native_frame.select(**new_columns_map)
@@ -260,6 +260,10 @@ class IbisLazyFrame(CompliantLazyFrame):
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
+        if other == self:
+            # Ibis does not support self-references unless created as a view
+            other = self._from_native_frame(other._native_frame.view())
+
         if how != "cross":
             if left_on is None or right_on is None:
                 msg = (
@@ -318,7 +322,10 @@ class IbisLazyFrame(CompliantLazyFrame):
             predicates = []
 
         joined = self._native_frame.asof_join(
-            other._native_frame, on=on_condition, predicates=predicates
+            other._native_frame,
+            on=on_condition,
+            predicates=predicates,
+            rname="{name}" + suffix,
         )  # type: ignore[operator]
 
         # Drop duplicate columns from the right table. Ibis keeps them.
@@ -384,7 +391,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        import ibis
+        ibis = get_ibis()
 
         if isinstance(descending, bool):
             descending = [descending for _ in range(len(by))]
@@ -412,10 +419,10 @@ class IbisLazyFrame(CompliantLazyFrame):
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         return self._from_native_frame(
-            self._native_frame.drop(*subset_), validate_column_names=False
+            self._native_frame.drop_null(subset_), validate_column_names=False
         )
 
-    def explode(self: Self, columns: list[str]) -> Self:  # TODO(rwhitten577): IMPLEMENT
+    def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
         for col in columns:
@@ -430,33 +437,14 @@ class IbisLazyFrame(CompliantLazyFrame):
 
         if len(columns) != 1:
             msg = (
-                "Exploding on multiple columns is not supported with DuckDB backend since "
+                "Exploding on multiple columns is not supported with Ibis backend since "
                 "we cannot guarantee that the exploded columns have matching element counts."
             )
             raise NotImplementedError(msg)
 
-        col_to_explode = ColumnExpression(columns[0])
-        rel = self._native_frame
-        original_columns = self.columns
-
-        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
-            "len", col_to_explode
-        ) > lit(0)
-        non_null_rel = rel.filter(not_null_condition).select(
-            *(
-                FunctionExpression("unnest", col_to_explode).alias(col)
-                if col in columns
-                else col
-                for col in original_columns
-            )
-        )
-
-        null_rel = rel.filter(~not_null_condition).select(
-            *(lit(None).alias(col) if col in columns else col for col in original_columns)
-        )
-
         return self._from_native_frame(
-            non_null_rel.union(null_rel), validate_column_names=False
+            self._native_frame.unnest(columns[0], keep_empty=True),
+            validate_column_names=False,
         )
 
     def unpivot(
@@ -472,11 +460,6 @@ class IbisLazyFrame(CompliantLazyFrame):
         on_: list[str] = (
             [c for c in self.columns if c not in index_] if on is None else on
         )
-
-        if variable_name == "":
-            variable_name = "variable"
-        if value_name == "":
-            value_name = "value"
 
         # Discard columns not in the index
         final_columns = list(dict.fromkeys([*index, variable_name, value_name]))
