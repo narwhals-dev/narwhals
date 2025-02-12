@@ -93,7 +93,7 @@ class BaseFrame(Generic[_FrameT]):
             out_exprs.append(compliant_expr)
             if isinstance(expr, Expr):
                 out_kinds.append(expr._metadata["kind"])
-            elif isinstance(expr, (str, Series)):
+            elif isinstance(expr, (str, Series)) or is_numpy_array(expr):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:
                 out_kinds.append(ExprKind.LITERAL)
@@ -102,7 +102,7 @@ class BaseFrame(Generic[_FrameT]):
             out_exprs.append(compliant_expr)
             if isinstance(expr, Expr):
                 out_kinds.append(expr._metadata["kind"])
-            elif isinstance(expr, (str, Series)):
+            elif isinstance(expr, (str, Series)) or is_numpy_array(expr):
                 out_kinds.append(ExprKind.TRANSFORM)
             else:
                 out_kinds.append(ExprKind.LITERAL)
