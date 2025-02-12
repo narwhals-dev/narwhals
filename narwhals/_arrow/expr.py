@@ -6,6 +6,8 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+import pyarrow as pa
+
 from narwhals._arrow.expr_cat import ArrowExprCatNamespace
 from narwhals._arrow.expr_dt import ArrowExprDateTimeNamespace
 from narwhals._arrow.expr_list import ArrowExprListNamespace
@@ -53,14 +55,32 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._backend_version = backend_version
         self._version = version
         self._kwargs = kwargs
-        self._is_broadcastable_aggregation = False
-        self._is_broadcastable_literal = False
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
+
+    def broadcast_against_frame(self, _kind: Any) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [
+                result._from_native_series(
+                    pa.array([result[0]] * len(df), type=result._native_series.type)
+                )
+                for result in self(df)
+            ]
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs=self._kwargs,
+        )
 
     @classmethod
     def from_column_names(

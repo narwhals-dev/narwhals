@@ -183,11 +183,12 @@ class BaseFrame(Generic[_FrameT]):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
-        for compliant_expr, kind in zip(compliant_exprs, kinds):
-            if kind is ExprKind.AGGREGATION:
-                compliant_expr._is_broadcastable_aggregation = True
-            elif kind is ExprKind.LITERAL:
-                compliant_expr._is_broadcastable_literal = True
+        compliant_exprs = [
+            compliant_expr.broadcast_against_frame(kind)
+            if kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            else compliant_expr
+            for compliant_expr, kind in zip(compliant_exprs, kinds)
+        ]
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
         )

@@ -53,9 +53,8 @@ def parse_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         for native_series, alias in zip(native_series_list, aliases):
-            native_results[alias] = (
-                native_series[0] if expr._is_broadcastable_aggregation else native_series
-            )
+            # TODO: broadcast somewhere?
+            native_results[alias] = native_series
     return native_results
 
 

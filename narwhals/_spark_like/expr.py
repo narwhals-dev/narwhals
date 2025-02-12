@@ -5,6 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind as NwExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
@@ -50,11 +51,30 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
-        self._is_broadcastable_aggregation = False
-        self._is_broadcastable_literal = False
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
+
+    def broadcast_against_frame(self, kind: NwExprKind) -> Self:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            if kind is NwExprKind.AGGREGATION:
+                return [
+                    result.over(df._Window().partitionBy(df._F.lit(1)))
+                    for result in self(df)
+                ]
+            # Let PySpark do its own broadcasting for literals.
+            return self(df)
+
+        return self.__class__(
+            func,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            expr_kind=ExprKind.TRANSFORM,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     @property
     def _F(self) -> Any:  # noqa: N802

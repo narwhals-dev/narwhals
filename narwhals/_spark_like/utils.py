@@ -152,10 +152,10 @@ def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, C
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        if expr._is_broadcastable_aggregation:
-            native_series_list = [
-                s.over(df._Window().partitionBy(df._F.lit(1))) for s in native_series_list
-            ]
+        # if expr._is_broadcastable_aggregation:
+        #     native_series_list = [
+        #         s.over(df._Window().partitionBy(df._F.lit(1))) for s in native_series_list
+        #     ]
         native_results.update(zip(output_names, native_series_list))
 
     return native_results
