@@ -184,7 +184,7 @@ class BaseFrame(Generic[_FrameT]):
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
         compliant_exprs = [
-            compliant_expr.broadcast_against_frame(kind)
+            compliant_expr.broadcast(kind)
             if kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
             else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)

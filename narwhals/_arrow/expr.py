@@ -62,7 +62,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
-    def broadcast_against_frame(self, _kind: Any) -> Self:
+    def broadcast(self, _kind: Any) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 result._from_native_series(

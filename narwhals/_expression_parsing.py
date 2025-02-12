@@ -424,8 +424,7 @@ def infer_expr_kind(into_expr: IntoExpr) -> ExprKind:
         return into_expr._metadata['kind']
     if isinstance(into_expr, (str, Series)):
         return ExprKind.TRANSFORM
-    msg = "unreachable"  # pragma: no cover
-    raise AssertionError(msg)
+    return ExprKind.LITERAL
 
 
 def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callable[[Any], CompliantExpr[Any]], *comparands: IntoExpr) -> CompliantExpr[Any]:
@@ -442,7 +441,7 @@ def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callabl
         kind is ExprKind.TRANSFORM for kind in kinds
     )
     compliant_exprs = [
-        compliant_expr.broadcast_against_frame(kind)
+        compliant_expr.broadcast(kind)
         if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
