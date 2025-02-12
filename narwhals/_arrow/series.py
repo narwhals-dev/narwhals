@@ -780,10 +780,8 @@ class ArrowSeries(CompliantSeries):
         _, upper_bound = broadcast_and_extract_native(
             self, upper_bound, self._backend_version
         )
-        if lower_bound is not None:
-            arr = pc.max_element_wise(arr, lower_bound)
-        if upper_bound is not None:
-            arr = pc.min_element_wise(arr, upper_bound)
+        arr = pc.max_element_wise(arr, lower_bound)
+        arr = pc.min_element_wise(arr, upper_bound)
 
         return self._from_native_series(arr)
 
