@@ -1541,7 +1541,11 @@ class Expr:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)), self._metadata
+            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
+            ExprMetadata(
+                kind=ExprKind.TRANSFORM,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def is_duplicated(self: Self) -> Self:

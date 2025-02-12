@@ -13,7 +13,7 @@ import numpy as np
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import broadcast_and_extract_dataframe_comparand
+from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
@@ -442,7 +442,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
-            mask_native = broadcast_and_extract_dataframe_comparand(
+            mask_native = extract_dataframe_comparand(
                 self._native_frame.index, mask
             )
 
@@ -462,14 +462,14 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         for name in self._native_frame.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    broadcast_and_extract_dataframe_comparand(
+                    extract_dataframe_comparand(
                         index, new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            broadcast_and_extract_dataframe_comparand(
+            extract_dataframe_comparand(
                 index, new_column_name_to_new_column_map[s]
             )
             for s in new_column_name_to_new_column_map

@@ -153,7 +153,7 @@ def broadcast_align_and_extract_native(
     return lhs._native_series, rhs
 
 
-def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
+def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -167,11 +167,6 @@ def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         len_other = other.len()
 
-        if len_other == 1 and len(index) != 1:
-            # broadcast
-            s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-
         if other._native_series.index is not index:
             return set_index(
                 other._native_series,
@@ -182,6 +177,16 @@ def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
         return other._native_series
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
+
+def broadcast_dataframe_comparand(index: pd.Index, other: PandasLikeSeries) -> PandasLikeSeries:
+    """Validate RHS of binary operation.
+
+    If the comparison isn't supported, return `NotImplemented` so that the
+    "right-hand-side" operation (e.g. `__radd__`) can be tried.
+    """
+    # broadcast
+    s = other._native_series
+    return other._from_native_series(s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name))
 
 
 def create_compliant_series(
