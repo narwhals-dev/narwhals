@@ -188,7 +188,6 @@ class BaseFrame(Generic[_FrameT]):
                 compliant_expr._is_broadcastable_aggregation = True
             elif kind is ExprKind.LITERAL:
                 compliant_expr._is_broadcastable_literal = True
-        breakpoint()
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
         )
