@@ -148,11 +148,12 @@ class BaseFrame(Generic[_FrameT]):
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
-        for compliant_expr, kind in zip(compliant_exprs, kinds):
-            if kind is ExprKind.AGGREGATION:
-                compliant_expr._is_broadcastable_aggregation = True
-            elif kind is ExprKind.LITERAL:
-                compliant_expr._is_broadcastable_literal = True
+        compliant_exprs = [
+            compliant_expr.broadcast(kind)
+            if kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            else compliant_expr
+            for compliant_expr, kind in zip(compliant_exprs, kinds)
+        ]
         return self._from_compliant_dataframe(
             self._compliant_frame.with_columns(*compliant_exprs),
         )
