@@ -452,3 +452,10 @@ def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callabl
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     ]
     return function(*compliant_exprs)
+
+def apply_rhs_arithmetic_operation(plx, expr, other, attr):
+    expr_compliant = extract_compliant(plx, expr, strings_are_column_names=False)
+    other_compliant = plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None)
+    if expr._metadata['kind'] is ExprKind.TRANSFORM:
+        return getattr(other_compliant.broadcast(ExprKind.LITERAL), attr)(expr_compliant)
+    return getattr(other_compliant, attr)(expr_compliant)

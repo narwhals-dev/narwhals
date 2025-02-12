@@ -8,7 +8,7 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._expression_parsing import ExprKind, apply_n_ary_operation
+from narwhals._expression_parsing import ExprKind, apply_n_ary_operation, apply_rhs_arithmetic_operation
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
@@ -175,13 +175,9 @@ class Expr:
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__and__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__and__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __or__(self: Self, other: Any) -> Self:
@@ -191,13 +187,9 @@ class Expr:
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__or__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__or__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __add__(self: Self, other: Any) -> Self:
@@ -207,15 +199,9 @@ class Expr:
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            if self._metadata['kind'] is ExprKind.TRANSFORM:
-                return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-                ).broadcast(ExprKind.LITERAL).__add__(extract_compliant(plx, self, strings_are_column_names=False))
-            return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__add__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __sub__(self: Self, other: Any) -> Self:
@@ -225,15 +211,9 @@ class Expr:
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            if self._metadata['kind'] is ExprKind.TRANSFORM:
-                return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-                ).broadcast(ExprKind.LITERAL).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
-            return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__sub__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
@@ -243,13 +223,9 @@ class Expr:
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__truediv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__truediv__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __mul__(self: Self, other: Any) -> Self:
@@ -259,13 +235,9 @@ class Expr:
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mul__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__mul__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __le__(self: Self, other: Any) -> Self:
@@ -299,13 +271,9 @@ class Expr:
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__pow__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__pow__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
@@ -315,13 +283,9 @@ class Expr:
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__floordiv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__floordiv__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     def __mod__(self: Self, other: Any) -> Self:
@@ -331,13 +295,9 @@ class Expr:
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mod__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, '__mod__'),
+            combine_metadata(self, other, strings_are_column_names=False)
         )
 
     # --- unary ---
