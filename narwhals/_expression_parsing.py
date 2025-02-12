@@ -417,24 +417,26 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
         for x in kwargs.values()
     )
 
-def infer_expr_kind(into_expr: IntoExpr) -> ExprKind:
+def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> ExprKind:
     from narwhals.expr import Expr
     from narwhals.series import Series
     if isinstance(into_expr, Expr):
         return into_expr._metadata['kind']
-    if isinstance(into_expr, (str, Series)):
+    if isinstance(into_expr, Series):
+        return ExprKind.TRANSFORM
+    if isinstance(into_expr, str) and strings_are_column_names:
         return ExprKind.TRANSFORM
     return ExprKind.LITERAL
 
 
-def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callable[[Any], CompliantExpr[Any]], *comparands: IntoExpr) -> CompliantExpr[Any]:
+def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callable[[Any], CompliantExpr[Any]], *comparands: IntoExpr, strings_are_column_names: bool) -> CompliantExpr[Any]:
     compliant_exprs = [
         expr._to_compliant_expr(plx),
-        *(extract_compliant(plx, comparand, strings_are_column_names=False) for comparand in comparands),
+        *(extract_compliant(plx, comparand, strings_are_column_names=strings_are_column_names) for comparand in comparands),
     ]
     kinds = [
         expr._metadata["kind"],
-        *(infer_expr_kind(comparand) for comparand in comparands)
+        *(infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names) for comparand in comparands)
     ]
 
     broadcast = any(
