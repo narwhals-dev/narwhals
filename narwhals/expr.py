@@ -1254,6 +1254,9 @@ class Expr:
         from narwhals.series import Series
 
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            # In the eager case, `other` is allowed to be a Series. However,
+            # we don't allow expressiions. So, to avoid special-casing, we
+            # just call `to_native` here if `other` is a Series.
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     other.to_native() if isinstance(other, Series) else other
