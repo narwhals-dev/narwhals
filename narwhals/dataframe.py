@@ -15,7 +15,7 @@ from typing import TypeVar
 from typing import overload
 from warnings import warn
 
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprKind, infer_expr_kind
 from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
@@ -91,21 +91,11 @@ class BaseFrame(Generic[_FrameT]):
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
-            if isinstance(expr, Expr):
-                out_kinds.append(expr._metadata["kind"])
-            elif isinstance(expr, (str, Series)) or is_numpy_array(expr):
-                out_kinds.append(ExprKind.TRANSFORM)
-            else:
-                out_kinds.append(ExprKind.LITERAL)
+            out_kinds.append(infer_expr_kind(expr, strings_are_column_names=True))
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
-            if isinstance(expr, Expr):
-                out_kinds.append(expr._metadata["kind"])
-            elif isinstance(expr, (str, Series)) or is_numpy_array(expr):
-                out_kinds.append(ExprKind.TRANSFORM)
-            else:
-                out_kinds.append(ExprKind.LITERAL)
+            out_kinds.append(infer_expr_kind(expr, strings_are_column_names=True))
         return out_exprs, out_kinds
 
     @abstractmethod

@@ -422,7 +422,7 @@ def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> E
     from narwhals.series import Series
     if isinstance(into_expr, Expr):
         return into_expr._metadata['kind']
-    if isinstance(into_expr, Series):
+    if isinstance(into_expr, Series) or is_numpy_array(into_expr):
         return ExprKind.TRANSFORM
     if isinstance(into_expr, str) and strings_are_column_names:
         return ExprKind.TRANSFORM
