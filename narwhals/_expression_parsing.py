@@ -23,6 +23,7 @@ from narwhals.utils import is_compliant_expr
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -415,3 +416,35 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
         and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         for x in kwargs.values()
     )
+
+def infer_expr_kind(into_expr: IntoExpr) -> ExprKind:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    if isinstance(into_expr, Expr):
+        return into_expr._metadata['kind']
+    if isinstance(into_expr, (str, Series)):
+        return ExprKind.TRANSFORM
+    msg = "unreachable"  # pragma: no cover
+    raise AssertionError(msg)
+
+
+def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callable[[Any], CompliantExpr[Any]], *comparands: IntoExpr) -> CompliantExpr[Any]:
+    compliant_exprs = [
+        expr._to_compliant_expr(plx),
+        *(extract_compliant(plx, comparand, strings_are_column_names=False) for comparand in comparands),
+    ]
+    kinds = [
+        expr._metadata["kind"],
+        *(infer_expr_kind(comparand) for comparand in comparands)
+    ]
+
+    broadcast = any(
+        kind is ExprKind.TRANSFORM for kind in kinds
+    )
+    compliant_exprs = [
+        compliant_expr.broadcast_against_frame(kind)
+        if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        else compliant_expr
+        for compliant_expr, kind in zip(compliant_exprs, kinds)
+    ]
+    return function(*compliant_exprs)
