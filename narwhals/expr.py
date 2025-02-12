@@ -1952,11 +1952,10 @@ class Expr:
             └──────────────────┘
         """
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
+        def func(compliant_expr, lb, ub):
+            return compliant_expr.clip(lb, ub)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound, strings_are_column_names=True),
-                extract_compliant(plx, upper_bound, strings_are_column_names=True),
-            ),
+            lambda plx: apply_n_ary_operation(plx, self, func, lower_bound, upper_bound),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent
             ),
