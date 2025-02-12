@@ -170,10 +170,10 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> 
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
-            # Returns scalar, but overall expression doesn't.
-            # Let PySpark do its broadcasting
-            return column_result.over(df._Window().partitionBy(df._F.lit(1)))
+        # if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
+        # Returns scalar, but overall expression doesn't.
+        # Let PySpark do its broadcasting
+        # return column_result.over(df._Window().partitionBy(df._F.lit(1)))
         return column_result
     return df._F.lit(obj)
 

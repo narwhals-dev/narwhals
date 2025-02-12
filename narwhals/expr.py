@@ -227,10 +227,25 @@ class Expr:
         )
 
     def __sub__(self: Self, other: Any) -> Self:
+        def func(plx):
+            compliant_exprs = [
+                self._to_compliant_expr(plx),
+                extract_compliant(plx, other, strings_are_column_names=False),
+            ]
+            kinds = [self._metadata["kind"], other._metadata["kind"]]
+            broadcast = any(
+                expr._metadata["kind"] is ExprKind.TRANSFORM for expr in [self, other]
+            )
+            compliant_exprs = [
+                compliant_expr.broadcast_against_frame(kind)
+                if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+                else compliant_expr
+                for compliant_expr, kind in zip(compliant_exprs, kinds)
+            ]
+            return compliant_exprs[0] - compliant_exprs[1]
+
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other, strings_are_column_names=False)
-            ),
+            func,
             combine_metadata(self, other, strings_are_column_names=False),
         )
 
