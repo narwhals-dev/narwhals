@@ -208,8 +208,10 @@ class Expr:
 
     def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+            if self._metadata['kind'] is ExprKind.TRANSFORM:
+                return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+                ).broadcast(ExprKind.LITERAL).__add__(extract_compliant(plx, self, strings_are_column_names=False))
+            return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
             ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
 
         return self.__class__(
@@ -224,8 +226,10 @@ class Expr:
 
     def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+            if self._metadata['kind'] is ExprKind.TRANSFORM:
+                return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+                ).broadcast(ExprKind.LITERAL).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
+            return plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None
             ).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
 
         return self.__class__(

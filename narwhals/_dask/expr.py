@@ -73,6 +73,23 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
+    
+    def broadcast(self, kind):
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [result[0] for result in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            returns_scalar=self._returns_scalar,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs=self._kwargs
+        )
+
 
     @classmethod
     def from_column_names(
@@ -144,14 +161,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                 for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
-                if self._returns_scalar:
-                    result_native = call(native_series[0], **other_native_series)
-                else:
-                    result_native = call(native_series, **other_native_series)
-                if returns_scalar:
-                    native_results.append(result_native.to_series())
-                else:
-                    native_results.append(result_native)
+                # if self._returns_scalar:
+                #     result_native = call(native_series[0], **other_native_series)
+                # else:
+                result_native = call(native_series, **other_native_series)
+                # if returns_scalar:
+                #     native_results.append(result_native.to_series())
+                # else:
+                native_results.append(result_native)
             return native_results
 
         return self.__class__(
