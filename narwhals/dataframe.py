@@ -95,9 +95,8 @@ class BaseFrame(Generic[_FrameT]):
                 out_kinds.append(expr._metadata["kind"])
             elif isinstance(expr, (str, Series)):
                 out_kinds.append(ExprKind.TRANSFORM)
-            else:  # pragma: no cover
-                msg = "unreachable"
-                raise AssertionError(msg)  # noqa: TRY004
+            else:
+                out_kinds.append(ExprKind.LITERAL)
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
@@ -105,9 +104,8 @@ class BaseFrame(Generic[_FrameT]):
                 out_kinds.append(expr._metadata["kind"])
             elif isinstance(expr, (str, Series)):
                 out_kinds.append(ExprKind.TRANSFORM)
-            else:  # pragma: no cover
-                msg = "unreachable"
-                raise AssertionError(msg)  # noqa: TRY004
+            else:
+                out_kinds.append(ExprKind.LITERAL)
         return out_exprs, out_kinds
 
     @abstractmethod
