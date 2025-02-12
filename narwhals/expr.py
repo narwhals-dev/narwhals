@@ -1251,9 +1251,13 @@ class Expr:
             |   3  10  False   |
             └──────────────────┘
         """
+        from narwhals.series import Series
+
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
-                lambda plx: self._to_compliant_expr(plx).is_in(other),
+                lambda plx: self._to_compliant_expr(plx).is_in(
+                    other.to_native() if isinstance(other, Series) else other
+                ),
                 self._metadata,
             )
         else:
