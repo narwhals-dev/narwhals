@@ -672,28 +672,15 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
-    native_namespace = series[0].__native_namespace__()
-
+def align_and_extract_series(series: Sequence[PandasLikeSeries]) -> list[pd.Series[Any]]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
     idx = series[lengths.index(max_length)]._native_series.index
     reindexed = []
-    max_length_gt_1 = max_length > 1
-    for s, length in zip(series, lengths):
+    for s in series:
         s_native = s._native_series
-        if max_length_gt_1 and length == 1:
-            reindexed.append(
-                native_namespace.Series(
-                    [s_native.iloc[0]] * max_length,
-                    index=idx,
-                    name=s_native.name,
-                    dtype=s_native.dtype,
-                )
-            )
-
-        elif s_native.index is not idx:
+        if s_native.index is not idx:
             reindexed.append(
                 set_index(
                     s_native,
