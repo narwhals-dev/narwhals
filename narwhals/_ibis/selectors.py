@@ -8,7 +8,7 @@ from typing import Sequence
 
 from duckdb import ColumnExpression
 
-from narwhals._ibis.expr import DuckDBExpr
+from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.utils import ExprKind
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
@@ -16,9 +16,9 @@ from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from datetime import timezone
-
-    import duckdb
     from typing_extensions import Self
+
+    import ibis.expr.types as ir
 
     from narwhals._ibis.dataframe import DuckDBLazyFrame
     from narwhals.dtypes import DType
@@ -26,15 +26,15 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBSelectorNamespace:
+class IbisSelectorNamespace:
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> DuckDBSelector:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> IbisSelector:
+        def func(df: DuckDBLazyFrame) -> list[ir.Expr]:
             return [
                 ColumnExpression(col) for col in df.columns if df.schema[col] in dtypes
             ]
@@ -42,7 +42,7 @@ class DuckDBSelectorNamespace:
         def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
-        return DuckDBSelector(
+        return IbisSelector(
             func,
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
@@ -52,8 +52,8 @@ class DuckDBSelectorNamespace:
             version=self._version,
         )
 
-    def matches(self: Self, pattern: str) -> DuckDBSelector:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def matches(self: Self, pattern: str) -> IbisSelector:
+        def func(df: DuckDBLazyFrame) -> list[ir.Expr]:
             return [
                 ColumnExpression(col) for col in df.columns if re.search(pattern, col)
             ]
@@ -61,7 +61,7 @@ class DuckDBSelectorNamespace:
         def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
-        return DuckDBSelector(
+        return IbisSelector(
             func,
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
@@ -71,7 +71,7 @@ class DuckDBSelectorNamespace:
             version=self._version,
         )
 
-    def numeric(self: Self) -> DuckDBSelector:
+    def numeric(self: Self) -> IbisSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype(
             {
@@ -90,23 +90,23 @@ class DuckDBSelectorNamespace:
             },
         )
 
-    def categorical(self: Self) -> DuckDBSelector:  # pragma: no cover
+    def categorical(self: Self) -> IbisSelector:  # pragma: no cover
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype({dtypes.Categorical})
 
-    def string(self: Self) -> DuckDBSelector:
+    def string(self: Self) -> IbisSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype({dtypes.String})
 
-    def boolean(self: Self) -> DuckDBSelector:
+    def boolean(self: Self) -> IbisSelector:
         dtypes = import_dtypes_module(self._version)
         return self.by_dtype({dtypes.Boolean})
 
-    def all(self: Self) -> DuckDBSelector:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+    def all(self: Self) -> IbisSelector:
+        def func(df: DuckDBLazyFrame) -> list[ir.Expr]:
             return [ColumnExpression(col) for col in df.columns]
 
-        return DuckDBSelector(
+        return IbisSelector(
             func,
             function_name="selector",
             evaluate_output_names=lambda df: df.columns,
@@ -120,13 +120,13 @@ class DuckDBSelectorNamespace:
         self: Self,
         time_unit: TimeUnit | Iterable[TimeUnit] | None,
         time_zone: str | timezone | Iterable[str | timezone | None] | None,
-    ) -> DuckDBSelector:
+    ) -> IbisSelector:
         dtypes = import_dtypes_module(version=self._version)
         time_units, time_zones = _parse_time_unit_and_time_zone(
             time_unit=time_unit, time_zone=time_zone
         )
 
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[ir.Expr]:
             return [
                 ColumnExpression(col)
                 for col in df.columns
@@ -150,7 +150,7 @@ class DuckDBSelectorNamespace:
                 )
             ]
 
-        return DuckDBSelector(
+        return IbisSelector(
             func,
             function_name="selector",
             evaluate_output_names=evalute_output_names,
@@ -161,12 +161,12 @@ class DuckDBSelectorNamespace:
         )
 
 
-class DuckDBSelector(DuckDBExpr):
+class IbisSelector(IbisExpr):
     def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"DuckDBSelector(function_name={self._function_name})"
+        return f"IbisSelector(function_name={self._function_name})"
 
-    def _to_expr(self: Self) -> DuckDBExpr:
-        return DuckDBExpr(
+    def _to_expr(self: Self) -> IbisExpr:
+        return IbisExpr(
             self._call,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
@@ -176,10 +176,10 @@ class DuckDBSelector(DuckDBExpr):
             version=self._version,
         )
 
-    def __sub__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
-        if isinstance(other, DuckDBSelector):
+    def __sub__(self: Self, other: IbisSelector | Any) -> IbisSelector | Any:
+        if isinstance(other, IbisSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            def call(df: DuckDBLazyFrame) -> list[ir.Expr]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -190,7 +190,7 @@ class DuckDBSelector(DuckDBExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x not in rhs_names]
 
-            return DuckDBSelector(
+            return IbisSelector(
                 call,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
@@ -202,10 +202,10 @@ class DuckDBSelector(DuckDBExpr):
         else:
             return self._to_expr() - other
 
-    def __or__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
-        if isinstance(other, DuckDBSelector):
+    def __or__(self: Self, other: IbisSelector | Any) -> IbisSelector | Any:
+        if isinstance(other, IbisSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            def call(df: DuckDBLazyFrame) -> list[ir.Expr]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -220,7 +220,7 @@ class DuckDBSelector(DuckDBExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
-            return DuckDBSelector(
+            return IbisSelector(
                 call,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
@@ -232,10 +232,10 @@ class DuckDBSelector(DuckDBExpr):
         else:
             return self._to_expr() | other
 
-    def __and__(self: Self, other: DuckDBSelector | Any) -> DuckDBSelector | Any:
-        if isinstance(other, DuckDBSelector):
+    def __and__(self: Self, other: IbisSelector | Any) -> IbisSelector | Any:
+        if isinstance(other, IbisSelector):
 
-            def call(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            def call(df: DuckDBLazyFrame) -> list[ir.Expr]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -246,7 +246,7 @@ class DuckDBSelector(DuckDBExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x in rhs_names]
 
-            return DuckDBSelector(
+            return IbisSelector(
                 call,
                 function_name="selector",
                 evaluate_output_names=evaluate_output_names,
@@ -258,9 +258,9 @@ class DuckDBSelector(DuckDBExpr):
         else:
             return self._to_expr() & other
 
-    def __invert__(self: Self) -> DuckDBSelector:
+    def __invert__(self: Self) -> IbisSelector:
         return (
-            DuckDBSelectorNamespace(
+            IbisSelectorNamespace(
                 backend_version=self._backend_version, version=self._version
             ).all()
             - self

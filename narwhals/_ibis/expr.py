@@ -6,18 +6,11 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from duckdb import CaseExpression
-from duckdb import CoalesceOperator
-from duckdb import ColumnExpression
-from duckdb import FunctionExpression
-from duckdb.typing import DuckDBPyType
-
-from narwhals._ibis.expr_dt import DuckDBExprDateTimeNamespace
-from narwhals._ibis.expr_list import DuckDBExprListNamespace
-from narwhals._ibis.expr_name import DuckDBExprNameNamespace
-from narwhals._ibis.expr_str import DuckDBExprStringNamespace
+from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
+from narwhals._ibis.expr_list import IbisExprListNamespace
+from narwhals._ibis.expr_name import IbisExprNameNamespace
+from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.utils import ExprKind
-from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import maybe_evaluate
 from narwhals._ibis.utils import n_ary_operation_expr_kind
 from narwhals._ibis.utils import narwhals_to_native_dtype
@@ -29,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._ibis.dataframe import IbisLazyFrame
-    from narwhals._ibis.namespace import DuckDBNamespace
+    from narwhals._ibis.namespace import IbisNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -62,13 +55,11 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def __narwhals_expr__(self) -> None: ...
 
-    def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
+    def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         # Unused, just for compatibility with PandasLikeExpr
-        from narwhals._ibis.namespace import DuckDBNamespace
+        from narwhals._ibis.namespace import IbisNamespace
 
-        return DuckDBNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
     @classmethod
     def from_column_names(
@@ -77,8 +68,8 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: IbisLazyFrame) -> list[ir.Expr]:
-            return [ColumnExpression(col_name) for col_name in column_names]
+        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            return [df._native_frame[col_name] for col_name in column_names]
 
         return cls(
             func,
@@ -100,7 +91,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
             columns = df.columns
 
-            return [ColumnExpression(columns[i]) for i in column_indices]
+            return [df._native_frame[columns[i]] for i in column_indices]
 
         return cls(
             func,
@@ -133,7 +124,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value, expr_kind=expr_kind)
+                key: maybe_evaluate(df, value)
                 for key, value in expressifiable_args.items()
             }
             return [
@@ -151,7 +142,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             version=self._version,
         )
 
-    def __and__(self: Self, other: DuckDBExpr) -> Self:
+    def __and__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input & other,
             "__and__",
@@ -159,7 +150,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __or__(self: Self, other: DuckDBExpr) -> Self:
+    def __or__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input | other,
             "__or__",
@@ -167,7 +158,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __add__(self: Self, other: DuckDBExpr) -> Self:
+    def __add__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input + other,
             "__add__",
@@ -175,7 +166,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __truediv__(self: Self, other: DuckDBExpr) -> Self:
+    def __truediv__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input / other,
             "__truediv__",
@@ -183,7 +174,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
+    def __floordiv__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
@@ -191,7 +182,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __mod__(self: Self, other: DuckDBExpr) -> Self:
+    def __mod__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
             "__mod__",
@@ -199,7 +190,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __sub__(self: Self, other: DuckDBExpr) -> Self:
+    def __sub__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
@@ -207,7 +198,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __mul__(self: Self, other: DuckDBExpr) -> Self:
+    def __mul__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input * other,
             "__mul__",
@@ -215,7 +206,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __pow__(self: Self, other: DuckDBExpr) -> Self:
+    def __pow__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input**other,
             "__pow__",
@@ -223,7 +214,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __lt__(self: Self, other: DuckDBExpr) -> Self:
+    def __lt__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input < other,
             "__lt__",
@@ -231,7 +222,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __gt__(self: Self, other: DuckDBExpr) -> Self:
+    def __gt__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input > other,
             "__gt__",
@@ -239,7 +230,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __le__(self: Self, other: DuckDBExpr) -> Self:
+    def __le__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input <= other,
             "__le__",
@@ -247,7 +238,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __ge__(self: Self, other: DuckDBExpr) -> Self:
+    def __ge__(self: Self, other: IbisExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input >= other,
             "__ge__",
@@ -255,7 +246,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __eq__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
+    def __eq__(self: Self, other: IbisExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input == other,
             "__eq__",
@@ -263,7 +254,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
-    def __ne__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
+    def __ne__(self: Self, other: IbisExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input != other,
             "__ne__",
@@ -297,19 +288,19 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def abs(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("abs", _input),
+            lambda _input: _input.abs(),
             "abs",
             expr_kind=self._expr_kind,
         )
 
     def mean(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("mean", _input),
+            lambda _input: _input.mean(),
             "mean",
             expr_kind=ExprKind.AGGREGATION,
         )
 
-    def skew(self: Self) -> Self:
+    def skew(self: Self) -> Self:  # TODO(rwhitten577): IMPLEMENT
         def func(_input: ir.Expr) -> ir.Expr:
             count = FunctionExpression("count", _input)
             return CaseExpression(condition=(count == lit(0)), value=lit(None)).otherwise(
@@ -326,21 +317,21 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def median(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("median", _input),
+            lambda _input: _input.median(),
             "median",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def all(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("bool_and", _input),
+            lambda _input: _input.all().name(_input.get_name()),
             "all",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def any(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("bool_or", _input),
+            lambda _input: _input.any().name(_input.get_name()),
             "any",
             expr_kind=ExprKind.AGGREGATION,
         )
@@ -352,8 +343,8 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
     ) -> Self:
         def func(_input: ir.Expr) -> ir.Expr:
             if interpolation == "linear":
-                return FunctionExpression("quantile_cont", _input, lit(quantile))
-            msg = "Only linear interpolation methods are supported for DuckDB quantile."
+                return _input.quantile(quantile).name(_input.get_name())
+            msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
 
         return self._from_call(
@@ -363,13 +354,8 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         )
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
-        def func(_input: ir.Expr, lower_bound: Any, upper_bound: Any) -> ir.Expr:
-            return FunctionExpression(
-                "greatest", FunctionExpression("least", _input, upper_bound), lower_bound
-            )
-
         return self._from_call(
-            func,
+            lambda _input: _input.clip(lower=lower_bound, upper=upper_bound),
             "clip",
             lower_bound=lower_bound,
             upper_bound=upper_bound,
@@ -378,52 +364,42 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def sum(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("sum", _input),
+            lambda _input: _input.sum(),
             "sum",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def n_unique(self: Self) -> Self:
-        def func(_input: ir.Expr) -> ir.Expr:
-            # https://stackoverflow.com/a/79338887/4451315
-            return FunctionExpression(
-                "array_unique", FunctionExpression("array_agg", _input)
-            ) + FunctionExpression(
-                "max",
-                CaseExpression(condition=_input.isnotnull(), value=lit(0)).otherwise(
-                    lit(1)
-                ),
-            )
-
         return self._from_call(
-            func,
+            lambda _input: _input.cast("string")
+            .fill_null("__NULL__")
+            .nunique()
+            .name(_input.get_name()),
             "n_unique",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def count(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("count", _input),
+            lambda _input: _input.count(),
             "count",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def len(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("count"),
+            lambda _input: _input.count(),
             "len",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def std(self: Self, ddof: int) -> Self:
         def _std(_input: ir.Expr, ddof: int) -> ir.Expr:
-            n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.Column'>' to DuckDB LogicalType
-            return (
-                FunctionExpression("stddev_pop", _input)
-                * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - ddof)))  # type: ignore[operator]
-            )
+            if ddof not in {0, 1}:
+                msg = "Ibis only supports ddof of 0 or 1"
+                raise NotImplementedError(msg)
+
+            return _input.std(how="sample" if ddof == 1 else "pop")
 
         return self._from_call(
             _std,
@@ -434,9 +410,11 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def var(self: Self, ddof: int) -> Self:
         def _var(_input: ir.Expr, ddof: int) -> ir.Expr:
-            n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.Column'>' to DuckDB LogicalType
-            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator]
+            if ddof not in {0, 1}:
+                msg = "Ibis only supports ddof of 0 or 1"
+                raise NotImplementedError(msg)
+
+            return _input.var(how="sample" if ddof == 1 else "pop")
 
         return self._from_call(
             _var,
@@ -447,21 +425,21 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def max(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("max", _input),
+            lambda _input: _input.max(),
             "max",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def min(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("min", _input),
+            lambda _input: _input.min(),
             "min",
             expr_kind=ExprKind.AGGREGATION,
         )
 
     def null_count(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
+            lambda _input: _input.isnull().sum().name(_input.get_name()),
             "null_count",
             expr_kind=ExprKind.AGGREGATION,
         )
@@ -475,39 +453,42 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
 
     def is_nan(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("isnan", _input),
+            lambda _input: _input.isnan(),
             "is_nan",
             expr_kind=self._expr_kind,
         )
 
     def is_finite(self: Self) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("isfinite", _input),
+            lambda _input: ~_input.isinf(),
             "is_finite",
             expr_kind=self._expr_kind,
         )
 
     def is_in(self: Self, other: Sequence[Any]) -> Self:
         return self._from_call(
-            lambda _input: _input.isin(*[lit(x) for x in other]),
+            lambda _input: _input.isin(other),
             "is_in",
             expr_kind=self._expr_kind,
         )
 
     def round(self: Self, decimals: int) -> Self:
         return self._from_call(
-            lambda _input: FunctionExpression("round", _input, lit(decimals)),
+            lambda _input: _input.round(decimals),
             "round",
             expr_kind=self._expr_kind,
         )
 
     def fill_null(self: Self, value: Any, strategy: Any, limit: int | None) -> Self:
         if strategy is not None:
-            msg = "todo"
+            msg = "`strategy` is not supported for the Ibis backend"
+            raise NotImplementedError(msg)
+        if limit is not None:
+            msg = "`limit` is not supported for the Ibis backend"
             raise NotImplementedError(msg)
 
         return self._from_call(
-            lambda _input: CoalesceOperator(_input, lit(value)),
+            lambda _input: _input.fill_null(value),
             "fill_null",
             expr_kind=self._expr_kind,
         )
@@ -515,7 +496,7 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: ir.Expr) -> ir.Expr:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return _input.cast(DuckDBPyType(native_dtype))
+            return _input.cast(native_dtype)
 
         return self._from_call(
             func,
@@ -524,17 +505,17 @@ class IbisExpr(CompliantExpr["ir.Expr"]):  # type: ignore[type-var]
         )
 
     @property
-    def str(self: Self) -> DuckDBExprStringNamespace:
-        return DuckDBExprStringNamespace(self)
+    def str(self: Self) -> IbisExprStringNamespace:
+        return IbisExprStringNamespace(self)
 
     @property
-    def dt(self: Self) -> DuckDBExprDateTimeNamespace:
-        return DuckDBExprDateTimeNamespace(self)
+    def dt(self: Self) -> IbisExprDateTimeNamespace:
+        return IbisExprDateTimeNamespace(self)
 
     @property
-    def name(self: Self) -> DuckDBExprNameNamespace:
-        return DuckDBExprNameNamespace(self)
+    def name(self: Self) -> IbisExprNameNamespace:
+        return IbisExprNameNamespace(self)
 
     @property
-    def list(self: Self) -> DuckDBExprListNamespace:
-        return DuckDBExprListNamespace(self)
+    def list(self: Self) -> IbisExprListNamespace:
+        return IbisExprListNamespace(self)

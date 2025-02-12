@@ -2,147 +2,124 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from duckdb import FunctionExpression
-
-from narwhals._ibis.utils import lit
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._ibis.expr import DuckDBExpr
+    from narwhals._ibis.expr import IbisExpr
 
 
-class DuckDBExprDateTimeNamespace:
-    def __init__(self: Self, expr: DuckDBExpr) -> None:
+class IbisExprDateTimeNamespace:
+    def __init__(self: Self, expr: IbisExpr) -> None:
         self._compliant_expr = expr
 
-    def year(self: Self) -> DuckDBExpr:
+    def year(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("year", _input),
+            lambda _input: _input.year(),
             "year",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def month(self: Self) -> DuckDBExpr:
+    def month(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("month", _input),
+            lambda _input: _input.month(),
             "month",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def day(self: Self) -> DuckDBExpr:
+    def day(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("day", _input),
+            lambda _input: _input.day(),
             "day",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def hour(self: Self) -> DuckDBExpr:
+    def hour(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("hour", _input),
+            lambda _input: _input.hour(),
             "hour",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def minute(self: Self) -> DuckDBExpr:
+    def minute(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("minute", _input),
+            lambda _input: _input.minute(),
             "minute",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def second(self: Self) -> DuckDBExpr:
+    def second(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("second", _input),
+            lambda _input: _input.second(),
             "second",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def millisecond(self: Self) -> DuckDBExpr:
+    def millisecond(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("millisecond", _input)
-            - FunctionExpression("second", _input) * lit(1_000),
+            lambda _input: _input.millisecond(),
             "millisecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def microsecond(self: Self) -> DuckDBExpr:
+    def microsecond(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("microsecond", _input)
-            - FunctionExpression("second", _input) * lit(1_000_000),
+            lambda _input: _input.microsecond(),
             "microsecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def nanosecond(self: Self) -> DuckDBExpr:
+    def nanosecond(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("nanosecond", _input)
-            - FunctionExpression("second", _input) * lit(1_000_000_000),
+            lambda _input: _input.microsecond() * 1000,
             "nanosecond",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def to_string(self: Self, format: str) -> DuckDBExpr:  # noqa: A002
+    def to_string(self: Self, format: str) -> IbisExpr:  # noqa: A002
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("strftime", _input, lit(format)),
+            lambda _input: _input.strftime(format),
             "to_string",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def weekday(self: Self) -> DuckDBExpr:
+    def weekday(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("isodow", _input),
+            lambda _input: _input.day_of_week.index()
+            + 1,  # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
             "weekday",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def ordinal_day(self: Self) -> DuckDBExpr:
+    def ordinal_day(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("dayofyear", _input),
+            lambda _input: _input.day_of_year(),
             "ordinal_day",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def date(self: Self) -> DuckDBExpr:
+    def date(self: Self) -> IbisExpr:
         return self._compliant_expr._from_call(
-            lambda _input: _input.cast("date"),
+            lambda _input: _input.date(),
             "date",
             expr_kind=self._compliant_expr._expr_kind,
         )
 
-    def total_minutes(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("datepart", lit("minute"), _input),
-            "total_minutes",
-            expr_kind=self._compliant_expr._expr_kind,
-        )
+    def total_minutes(self: Self) -> IbisExpr:
+        msg = "`total_minutes` is not implemented for Ibis"
+        raise NotImplementedError(msg)
 
-    def total_seconds(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: lit(60) * FunctionExpression("datepart", lit("minute"), _input)
-            + FunctionExpression("datepart", lit("second"), _input),
-            "total_seconds",
-            expr_kind=self._compliant_expr._expr_kind,
-        )
+    def total_seconds(self: Self) -> IbisExpr:
+        msg = "`total_seconds` is not implemented for Ibis"
+        raise NotImplementedError(msg)
 
-    def total_milliseconds(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: lit(60_000)
-            * FunctionExpression("datepart", lit("minute"), _input)
-            + FunctionExpression("datepart", lit("millisecond"), _input),
-            "total_milliseconds",
-            expr_kind=self._compliant_expr._expr_kind,
-        )
+    def total_milliseconds(self: Self) -> IbisExpr:
+        msg = "`total_milliseconds` is not implemented for Ibis"
+        raise NotImplementedError(msg)
 
-    def total_microseconds(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: lit(60_000_000)
-            * FunctionExpression("datepart", lit("minute"), _input)
-            + FunctionExpression("datepart", lit("microsecond"), _input),
-            "total_microseconds",
-            expr_kind=self._compliant_expr._expr_kind,
-        )
+    def total_microseconds(self: Self) -> IbisExpr:
+        msg = "`total_microseconds` is not implemented for Ibis"
+        raise NotImplementedError(msg)
 
-    def total_nanoseconds(self: Self) -> DuckDBExpr:
-        msg = "`total_nanoseconds` is not implemented for DuckDB"
+    def total_nanoseconds(self: Self) -> IbisExpr:
+        msg = "`total_nanoseconds` is not implemented for Ibis"
         raise NotImplementedError(msg)

@@ -6,13 +6,11 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
-
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
-    from ibis.expr import datatypes as ir_dtypes
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
@@ -35,7 +33,7 @@ class ExprKind(Enum):
     TRANSFORM = auto()  # e.g. nw.col('a').round()
 
 
-def maybe_evaluate(df: IbisLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
+def maybe_evaluate(df: IbisLazyFrame, obj: Any) -> Any:
     from narwhals._ibis.expr import IbisExpr
 
     if isinstance(obj, IbisExpr):
@@ -43,19 +41,8 @@ def maybe_evaluate(df: IbisLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
         if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
-        column_result = column_results[0]
-        if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
-            # Returns scalar, but overall expression doesn't.
-            # Not yet supported.
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
-        return column_result
-    return duckdb.ConstantExpression(obj)
+        return column_results[0]
+    return obj
 
 
 def parse_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> dict[str, ir.Expr]:
@@ -103,7 +90,9 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_date():
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
-        return dtypes.Datetime(time_zone=ibis_dtype.timezone, time_unit=ibis_dtype.unit.value)
+        return dtypes.Datetime(
+            time_zone=ibis_dtype.timezone, time_unit=ibis_dtype.unit.value
+        )
     if ibis_dtype.is_array():
         return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
     if ibis_dtype.is_struct():
@@ -124,67 +113,60 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
+        return "decimal"
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "DOUBLE"
+        return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "FLOAT"
+        return "float32"
     if isinstance_or_issubclass(dtype, dtypes.Int128):
-        return "INT128"
+        msg = "Int128 not supported by Ibis"
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "BIGINT"
+        return "int64"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "INTEGER"
+        return "int32"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "SMALLINT"
+        return "int16"
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "TINYINT"
+        return "int8"
     if isinstance_or_issubclass(dtype, dtypes.UInt128):
-        return "UINT128"
+        msg = "UInt128 not supported by Ibis"
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "UBIGINT"
+        return "uint64"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "UINTEGER"
+        return "uint32"
     if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
-        return "USMALLINT"
+        return "uint16"
     if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
-        return "UTINYINT"
+        return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return "VARCHAR"
+        return "string"
     if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
-        return "BOOLEAN"
+        return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by DuckDB"
+        msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        _time_unit = getattr(dtype, "time_unit", "us")
-        _time_zone = getattr(dtype, "time_zone", None)
-        msg = "todo"
-        raise NotImplementedError(msg)
+        return "timestamp"
     if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
         _time_unit = getattr(dtype, "time_unit", "us")
-        msg = "todo"
+        msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
-        return "DATE"
+        return "date"
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
-        return f"{inner}[]"
+        return f"array<{inner}>"
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         inner = ", ".join(
-            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
+            f"{field.name}: {narwhals_to_native_dtype(field.dtype, version)}"
             for field in dtype.fields  # type: ignore[union-attr]
         )
-        return f"STRUCT({inner})"
+        return f"struct<{inner}>"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        shape: tuple[int] = dtype.shape  # type: ignore[union-attr]
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype = dtype
-        for _ in shape:
-            inner_dtype = inner_dtype.inner  # type: ignore[union-attr]
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
-        return f"{duckdb_inner}{duckdb_shape_fmt}"
+        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
+        return f"array<{inner}>"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

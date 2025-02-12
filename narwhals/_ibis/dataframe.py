@@ -21,16 +21,16 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing_extensions import Self
 
     import ibis.expr.types as ir
     import pandas as pd
     import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals._ibis.expr import IbisExpr
-    from narwhals._ibis.group_by import DuckDBGroupBy
+    from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals._ibis.series import DuckDBInterchangeSeries
+    from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
 
 from narwhals.typing import CompliantLazyFrame
@@ -72,7 +72,7 @@ class IbisLazyFrame(CompliantLazyFrame):
 
         return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
-    def __getitem__(self: Self, item: str) -> DuckDBInterchangeSeries:
+    def __getitem__(self: Self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
         return IbisInterchangeSeries(
@@ -150,13 +150,14 @@ class IbisLazyFrame(CompliantLazyFrame):
 
         new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
-            raise ValueError("No columns to select. Must provide at least one column.")
+            msg = "No columns to select. Must provide at least one column."
+            raise ValueError(msg)
 
         t = self._native_frame.select(**new_columns_map)
 
         # Ibis broadcasts aggregate functions in selects as window functions, keeping the original number of rows.
         # Need to reduce it to a single row if they are all window functions, by calling .distinct()
-        if all(isinstance(c, WindowFunction) for c in t.op().values.values()):
+        if all(isinstance(c, WindowFunction) for c in t.op().values.values()):  # noqa: PD011
             t = t.distinct()
 
         return self._from_native_frame(t, validate_column_names=False)
@@ -237,7 +238,7 @@ class IbisLazyFrame(CompliantLazyFrame):
             validate_column_names=validate_column_names,
         )
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:
         from narwhals._ibis.group_by import IbisGroupBy
 
         return IbisGroupBy(
@@ -261,9 +262,10 @@ class IbisLazyFrame(CompliantLazyFrame):
     ) -> Self:
         if how != "cross":
             if left_on is None or right_on is None:
-                raise ValueError(
+                msg = (
                     f"For '{how}' joins, both 'left_on' and 'right_on' must be provided."
-                )  # pragma: no cover (caught upstream)
+                )
+                raise ValueError(msg)  # pragma: no cover (caught upstream)
             predicates = self._convert_predicates(other, left_on, right_on)
         else:
             # For cross joins, no predicates are needed
@@ -343,15 +345,13 @@ class IbisLazyFrame(CompliantLazyFrame):
             right_on = [right_on]
 
         if len(left_on) != len(right_on):
-            raise ValueError(
-                "'left_on' and 'right_on' must have the same number of columns."
-            )
+            msg = "'left_on' and 'right_on' must have the same number of columns."
+            raise ValueError(msg)
 
-        predicates = [
+        return [
             self._native_frame[left] == other._native_frame[right]
             for left, right in zip(left_on, right_on)
         ]
-        return predicates
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
@@ -479,7 +479,7 @@ class IbisLazyFrame(CompliantLazyFrame):
             value_name = "value"
 
         # Discard columns not in the index
-        final_columns = list(dict.fromkeys(index + [variable_name, value_name]))
+        final_columns = list(dict.fromkeys([*index, variable_name, value_name]))
 
         unpivoted = self._native_frame.pivot_longer(
             s.cols(*on_),

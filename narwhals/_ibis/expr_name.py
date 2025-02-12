@@ -7,45 +7,45 @@ from typing import Sequence
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._ibis.expr import DuckDBExpr
+    from narwhals._ibis.expr import IbisExpr
 
 
-class DuckDBExprNameNamespace:
-    def __init__(self: Self, expr: DuckDBExpr) -> None:
+class IbisExprNameNamespace:
+    def __init__(self: Self, expr: IbisExpr) -> None:
         self._compliant_expr = expr
 
-    def keep(self: Self) -> DuckDBExpr:
+    def keep(self: Self) -> IbisExpr:
         return self._from_alias_output_names(alias_output_names=None)
 
-    def map(self: Self, function: Callable[[str], str]) -> DuckDBExpr:
+    def map(self: Self, function: Callable[[str], str]) -> IbisExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
                 function(name) for name in output_names
             ],
         )
 
-    def prefix(self: Self, prefix: str) -> DuckDBExpr:
+    def prefix(self: Self, prefix: str) -> IbisExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
                 f"{prefix}{output_name}" for output_name in output_names
             ],
         )
 
-    def suffix(self: Self, suffix: str) -> DuckDBExpr:
+    def suffix(self: Self, suffix: str) -> IbisExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
                 f"{output_name}{suffix}" for output_name in output_names
             ]
         )
 
-    def to_lowercase(self: Self) -> DuckDBExpr:
+    def to_lowercase(self: Self) -> IbisExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
                 name.lower() for name in output_names
             ],
         )
 
-    def to_uppercase(self: Self) -> DuckDBExpr:
+    def to_uppercase(self: Self) -> IbisExpr:
         return self._from_alias_output_names(
             alias_output_names=lambda output_names: [
                 name.upper() for name in output_names
@@ -55,7 +55,7 @@ class DuckDBExprNameNamespace:
     def _from_alias_output_names(
         self: Self,
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-    ) -> DuckDBExpr:
+    ) -> IbisExpr:
         return self._compliant_expr.__class__(
             call=self._compliant_expr._call,
             function_name=self._compliant_expr._function_name,
