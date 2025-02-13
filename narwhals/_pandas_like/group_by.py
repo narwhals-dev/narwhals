@@ -3,7 +3,6 @@ from __future__ import annotations
 import collections
 import re
 import warnings
-from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -74,14 +73,13 @@ class PandasLikeGroupBy:
     def agg(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
         implementation = self._df._implementation
         backend_version = self._df._backend_version
+        new_names: list[str] = self._keys.copy()
 
-        new_names: list[str] = copy(self._keys)
+        all_aggs_are_simple = True
         for expr in exprs:
             _, aliases = evaluate_output_names_and_aliases(expr, self._df, self._keys)
             new_names.extend(aliases)
 
-        all_aggs_are_simple = True
-        for expr in exprs:
             if not (
                 is_simple_aggregation(expr)
                 and re.sub(r"(\w+->)", "", expr._function_name)
@@ -94,6 +92,7 @@ class PandasLikeGroupBy:
         # can pass the `dropna` kwargs.
         nunique_aggs: dict[str, str] = {}
         simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
+        simple_aggs_functions: set[str] = set()
 
         # ddof to (output_names, aliases) mapping
         std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
@@ -116,6 +115,8 @@ class PandasLikeGroupBy:
                     function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                         expr._function_name, expr._function_name
                     )
+                    simple_aggs_functions.add(function_name)
+
                     for alias in aliases:
                         expected_old_names.append(f"{self._keys[0]}_{function_name}")
                         simple_aggs[self._keys[0]].append(function_name)
@@ -144,14 +145,28 @@ class PandasLikeGroupBy:
                         expected_old_names.append(f"{output_name}_{function_name}")
                         simple_aggs[output_name].append(function_name)
                         simple_agg_new_names.append(alias)
+                        simple_aggs_functions.add(function_name)
 
             result_aggs = []
 
             if simple_aggs:
-                result_simple_aggs = self._grouped.agg(simple_aggs)
-                result_simple_aggs.columns = [
-                    f"{a}_{b}" for a, b in result_simple_aggs.columns
-                ]
+                # Fast path for single aggregation such as `df.groupby(...).mean()`
+                if (
+                    len(simple_aggs_functions) == 1
+                    and (agg_method := simple_aggs_functions.pop()) != "size"
+                    and len(simple_aggs) > 1
+                ):
+                    result_simple_aggs = getattr(
+                        self._grouped[list(simple_aggs.keys())], agg_method
+                    )()
+                    result_simple_aggs.columns = [
+                        f"{a}_{agg_method}" for a in result_simple_aggs.columns
+                    ]
+                else:
+                    result_simple_aggs = self._grouped.agg(simple_aggs)
+                    result_simple_aggs.columns = [
+                        f"{a}_{b}" for a, b in result_simple_aggs.columns
+                    ]
                 if not (
                     set(result_simple_aggs.columns) == set(expected_old_names)
                     and len(result_simple_aggs.columns) == len(expected_old_names)
