@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -311,8 +312,7 @@ def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
     if len(set(names)) < len(names):  # pragma: no cover
         msg = "Expected unique column names"
         raise ValueError(msg)
-
-    arrays = [a for df in dfs for a in df]
+    arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
     return pa.Table.from_arrays(arrays, names=names)
 
 

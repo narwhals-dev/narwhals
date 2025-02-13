@@ -133,7 +133,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return len(self._native_frame)
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
-        return tuple(col[index] for col in self._native_frame)
+        return tuple(col[index] for col in self._native_frame.itercolumns())
 
     @overload
     def rows(self: Self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
