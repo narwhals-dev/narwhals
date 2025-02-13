@@ -11,11 +11,10 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import broadcast_and_extract_dataframe_comparand
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._expression_parsing import evaluate_into_exprs, ExprKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -358,22 +357,16 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         native_frame = self._native_frame
         new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
 
-        length = len(self)
         columns = self.columns
 
         for col_value in new_columns:
             col_name = col_value.name
-
-            column = broadcast_and_extract_dataframe_comparand(
-                length=length, other=col_value, backend_version=self._backend_version
-            )
-
             native_frame = (
                 native_frame.set_column(
-                    columns.index(col_name), field_=col_name, column=column
+                    columns.index(col_name), field_=col_name, column=col_value._native_series
                 )
                 if col_name in columns
-                else native_frame.append_column(field_=col_name, column=column)
+                else native_frame.append_column(field_=col_name, column=col_value._native_series)
             )
 
         return self._from_native_frame(native_frame, validate_column_names=False)
@@ -406,9 +399,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                self.with_columns(plx.lit(0, None).alias(key_token))
+                self.with_columns(plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL))
                 ._native_frame.join(
-                    other.with_columns(plx.lit(0, None).alias(key_token))._native_frame,
+                    other.with_columns(plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL))._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
@@ -536,10 +529,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             mask_native = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask = evaluate_into_exprs(self, predicate)[0]
-            mask_native = broadcast_and_extract_dataframe_comparand(
-                length=len(self), other=mask, backend_version=self._backend_version
-            )
+            mask_native = evaluate_into_exprs(self, predicate)[0]._native_series
         return self._from_native_frame(
             self._native_frame.filter(mask_native), validate_column_names=False
         )

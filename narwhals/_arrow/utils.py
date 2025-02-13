@@ -158,7 +158,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     raise AssertionError(msg)
 
 
-def broadcast_and_extract_native(
+def extract_native(
     lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
 ) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
@@ -194,32 +194,12 @@ def broadcast_and_extract_native(
         return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, ArrowSeries):
-        if len(rhs) == 1:
-            # broadcast
-            return lhs._native_series, rhs[0]
-        if len(lhs) == 1:
-            # broadcast
-            import numpy as np  # ignore-banned-import
-
-            fill_value = lhs[0]
-            if backend_version < (13,) and hasattr(fill_value, "as_py"):
-                fill_value = fill_value.as_py()
-            left_result = pa.chunked_array(
-                [
-                    pa.array(
-                        np.full(shape=rhs.len(), fill_value=fill_value),
-                        type=lhs._native_series.type,
-                    )
-                ]
-            )
-            return left_result, rhs._native_series
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
 
-
-def broadcast_and_extract_dataframe_comparand(
+def broadcast_dataframe_comparand(
     length: int,
-    other: Any,
+    other: ArrowSeries,
     backend_version: tuple[int, ...],
 ) -> Any:
     """Validate RHS of binary operation.
@@ -227,27 +207,13 @@ def broadcast_and_extract_dataframe_comparand(
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._arrow.series import ArrowSeries
+    import numpy as np  # ignore-banned-import
 
-    if isinstance(other, ArrowSeries):
-        len_other = len(other)
-        if len_other == 1 and length != 1:
-            import numpy as np  # ignore-banned-import
+    value = other._native_series[0]
+    if backend_version < (13,) and hasattr(value, "as_py"):
+        value = value.as_py()
+    return other._from_native_series(pa.array(np.full(shape=length, fill_value=value)))
 
-            value = other._native_series[0]
-            if backend_version < (13,) and hasattr(value, "as_py"):
-                value = value.as_py()
-            return pa.array(np.full(shape=length, fill_value=value))
-
-        return other._native_series
-
-    from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
-
-    if isinstance(other, ArrowDataFrame):  # pragma: no cover
-        return NotImplemented
-
-    msg = "Please report a bug"  # pragma: no cover
-    raise AssertionError(msg)
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
