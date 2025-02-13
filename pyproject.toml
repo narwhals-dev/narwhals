@@ -47,6 +47,7 @@ tests = [
   "typing_extensions",
 ]
 typing = [
+  "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
 ]

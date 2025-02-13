@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -15,20 +16,20 @@ if TYPE_CHECKING:
 
 
 def test_is_ordered_categorical() -> None:
-    s = pl.Series(["a", "b"], dtype=pl.Categorical)
-    assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pl.Series(["a", "b"], dtype=pl.Categorical(ordering="lexical"))
-    assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"]))
-    assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=True))
-    assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=False))
-    assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pa.chunked_array(
+    s_pl = pl.Series(["a", "b"], dtype=pl.Categorical)
+    assert nw.is_ordered_categorical(nw.from_native(s_pl, series_only=True))
+    s_pl = pl.Series(["a", "b"], dtype=pl.Categorical(ordering="lexical"))
+    assert not nw.is_ordered_categorical(nw.from_native(s_pl, series_only=True))
+    s_pl = pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"]))
+    assert nw.is_ordered_categorical(nw.from_native(s_pl, series_only=True))
+    s_pd: pd.Series[Any] = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=True))
+    assert nw.is_ordered_categorical(nw.from_native(s_pd, series_only=True))
+    s_pd = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=False))
+    assert not nw.is_ordered_categorical(nw.from_native(s_pd, series_only=True))
+    s_pa = pa.chunked_array(
         [pa.array(["a", "b"], type=pa.dictionary(pa.int32(), pa.string()))]
     )
-    assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
+    assert not nw.is_ordered_categorical(nw.from_native(s_pa, series_only=True))
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import cast
 
 import pandas as pd
 import pytest
@@ -22,10 +23,10 @@ def test_convert_pandas(
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor_eager(data)
-    result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
+    result = nw.from_native(df_raw, eager_only=True).to_pandas()  # type: ignore[union-attr]
 
     if constructor_eager.__name__.startswith("pandas"):
-        expected = constructor_eager(data)
+        expected = cast(pd.DataFrame, constructor_eager(data))
     elif "modin_pyarrow" in str(constructor_eager):
         expected = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
     else:

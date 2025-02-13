@@ -77,18 +77,12 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [
-                dd.from_pandas(
-                    pd.Series(
-                        [value],
-                        dtype=narwhals_to_native_dtype(dtype, self._version)
-                        if dtype is not None
-                        else None,
-                        name="literal",
-                    ),
-                    npartitions=df._native_frame.npartitions,
-                )
-            ]
+            if dtype is not None:
+                native_dtype = narwhals_to_native_dtype(dtype, self._version)
+                s = pd.Series([value], dtype=native_dtype)
+            else:
+                s = pd.Series([value])
+            return [dd.from_pandas(s, npartitions=df._native_frame.npartitions)]
 
         return DaskExpr(
             func,

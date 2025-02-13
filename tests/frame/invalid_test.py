@@ -24,14 +24,14 @@ def test_invalid() -> None:
 
 
 def test_native_vs_non_native() -> None:
-    s = pd.Series([1, 2, 3])
-    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    s_pd = pd.Series([1, 2, 3])
+    df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you forgot"):
-        nw.from_native(df).filter(s > 1)
-    s = pl.Series([1, 2, 3])
-    df = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
+        nw.from_native(df_pd).filter(s_pd > 1)  # type: ignore[arg-type]
+    s_pl = pl.Series([1, 2, 3])
+    df_pl = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
-        nw.from_native(df).filter(s > 1)
+        nw.from_native(df_pl).filter(s_pl > 1)
 
 
 def test_validate_laziness() -> None:

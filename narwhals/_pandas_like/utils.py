@@ -9,6 +9,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 
 import pandas as pd
 
@@ -722,8 +723,17 @@ def int_dtype_mapper(dtype: Any) -> str:
 def convert_str_slice_to_int_slice(
     str_slice: slice, columns: pd.Index
 ) -> tuple[int | None, int | None, int | None]:
-    start = columns.get_loc(str_slice.start) if str_slice.start is not None else None
-    stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
+    # We can safely cast to int because we know that `columns` doesn't contain duplicates.
+    start = (
+        cast(int, columns.get_loc(str_slice.start))
+        if str_slice.start is not None
+        else None
+    )
+    stop = (
+        cast(int, columns.get_loc(str_slice.stop)) + 1
+        if str_slice.stop is not None
+        else None
+    )
     step = str_slice.step
     return (start, stop, step)
 

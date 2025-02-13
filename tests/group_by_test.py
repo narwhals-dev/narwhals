@@ -25,14 +25,14 @@ def test_group_by_complex() -> None:
 
     df = nw.from_native(df_pandas)
     with pytest.warns(UserWarning, match="complex group-by"):
-        result = nw.to_native(
+        result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    assert_equal_data(result, expected)
+    assert_equal_data(result_pd, expected)
 
     lf = nw.from_native(df_lazy).lazy()
-    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    assert_equal_data(result, expected)
+    result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result_pl, expected)
 
 
 def test_invalid_group_by_dask() -> None:

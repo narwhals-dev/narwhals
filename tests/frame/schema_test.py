@@ -212,9 +212,9 @@ def test_schema_object(method: str, expected: Any) -> None:
 def test_from_non_hashable_column_name() -> None:
     # This is technically super-illegal
     # BUT, it shows up in a scikit-learn test, so...
-    df = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
+    df_pd = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
 
-    df = nw.from_native(df, eager_only=True)
+    df = nw.from_native(df_pd, eager_only=True)
     assert df.columns == ["pizza", ["a", "b"]]
     assert df["pizza"].dtype == nw.Int64
 
@@ -250,39 +250,39 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
 )
 def test_nested_dtypes() -> None:
     duckdb = pytest.importorskip("duckdb")
-    df = pl.DataFrame(
+    df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
-    nwdf = nw.from_native(df)
+    nwdf: nw.DataFrame[Any] | nw.LazyFrame[Any] = nw.from_native(df_pd)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
-    df = pl.DataFrame(
+    df_pl = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pl)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
 
-    df = pl.DataFrame(
+    df_pa = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1, "b": "x", "c": 1.1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pa)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
-    df = duckdb.sql("select * from df")
-    nwdf = nw.from_native(df)
+    rel = duckdb.sql("select * from df")
+    nwdf = nw.from_native(rel)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
