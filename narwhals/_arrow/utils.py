@@ -316,29 +316,6 @@ def cast_for_truediv(
     return arrow_array, pa_object
 
 
-def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
-    lengths = [len(s) for s in series]
-    max_length = max(lengths)
-    fast_path = all(_len == max_length for _len in lengths)
-
-    if fast_path:
-        return [s._native_series for s in series]
-
-    is_max_length_gt_1 = max_length > 1
-    reshaped = []
-    for s, length in zip(series, lengths):
-        s_native = s._native_series
-        if is_max_length_gt_1 and length == 1:
-            value = s_native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):
-                value = value.as_py()
-            reshaped.append(pa.array([value] * max_length, type=s_native.type))
-        else:
-            reshaped.append(s_native)
-
-    return reshaped
-
-
 @overload
 def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
 @overload

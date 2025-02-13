@@ -12,9 +12,9 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprKind, infer_expr_kind, apply_namespace_n_ary_operation
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import apply_n_ary_operation
+from narwhals._expression_parsing import apply_expr_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
@@ -27,7 +27,7 @@ from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
-from narwhals.utils import Implementation
+from narwhals.utils import Implementation, is_compliant_expr
 from narwhals.utils import Version
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
@@ -1458,24 +1458,39 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
-        self._to_compliant_expr = self._predicate._to_compliant_expr
         check_expressions_transform(self._predicate, function_name="when")
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
+        kind = infer_expr_kind(value, strings_are_column_names=True)
+        def func(plx):
+            compliant_predicate = self._predicate._to_compliant_expr(plx)
+            compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
+            if kind is not ExprKind.TRANSFORM:
+                if not is_compliant_expr(compliant_value):
+                    # We don't (yet) always return CompliantExpr from `extract_compliant`.
+                    compliant_value = plx.lit(compliant_value, dtype=None)
+                compliant_value = compliant_value.broadcast(kind)
+            return plx.when(compliant_predicate).then(compliant_value)
         return Then(
-            lambda plx: apply_n_ary_operation(
-                plx, self, lambda x, y: x.then(y), value, strings_are_column_names=True
-            ),
+            func,
             combine_metadata(self._predicate, value, strings_are_column_names=True),
         )
 
 
 class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
+        kind = infer_expr_kind(value, strings_are_column_names=True)
+        def func(plx):
+            compliant_expr = self._to_compliant_expr(plx)
+            compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
+            if kind is not ExprKind.TRANSFORM:
+                if not is_compliant_expr(compliant_value):
+                    # We don't (yet) always return CompliantExpr from `extract_compliant`.
+                    compliant_value = plx.lit(compliant_value, dtype=None)
+                compliant_value = compliant_value.broadcast(kind)
+            return compliant_expr.otherwise(compliant_value)
         return Expr(
-            lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value, strings_are_column_names=True)
-            ),
+            func,
             combine_metadata(self, value, strings_are_column_names=True),
         )
 

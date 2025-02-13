@@ -10,7 +10,7 @@ from typing import Sequence
 
 from narwhals._expression_parsing import (
     ExprKind,
-    apply_n_ary_operation,
+    apply_expr_n_ary_operation,
     apply_rhs_arithmetic_operation,
 )
 from narwhals._expression_parsing import ExprMetadata
@@ -162,7 +162,7 @@ class Expr:
     # --- binary ---
     def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x == y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -170,7 +170,7 @@ class Expr:
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x != y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -178,7 +178,7 @@ class Expr:
 
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x & y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -192,7 +192,7 @@ class Expr:
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x | y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -206,7 +206,7 @@ class Expr:
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x + y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -220,7 +220,7 @@ class Expr:
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x - y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -234,7 +234,7 @@ class Expr:
 
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x / y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -248,7 +248,7 @@ class Expr:
 
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x * y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -262,7 +262,7 @@ class Expr:
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x <= y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -270,7 +270,7 @@ class Expr:
 
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x < y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -278,7 +278,7 @@ class Expr:
 
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x > y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -286,7 +286,7 @@ class Expr:
 
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x >= y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -294,7 +294,7 @@ class Expr:
 
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x**y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -308,7 +308,7 @@ class Expr:
 
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x // y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -322,7 +322,7 @@ class Expr:
 
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, lambda x, y: x % y, other, strings_are_column_names=False
             ),
             combine_metadata(self, other, strings_are_column_names=False),
@@ -1185,7 +1185,7 @@ class Expr:
 
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, func, lower_bound, upper_bound, strings_are_column_names=True
             ),
             ExprMetadata(
@@ -1265,7 +1265,7 @@ class Expr:
             return compliant_expr.filter(*compliant_predicates)
 
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, func, *predicates, strings_are_column_names=True
             ),
             ExprMetadata(
@@ -1967,7 +1967,7 @@ class Expr:
             return compliant_expr.clip(lb, ub)
 
         return self.__class__(
-            lambda plx: apply_n_ary_operation(
+            lambda plx: apply_expr_n_ary_operation(
                 plx, self, func, lower_bound, upper_bound, strings_are_column_names=True
             ),
             ExprMetadata(

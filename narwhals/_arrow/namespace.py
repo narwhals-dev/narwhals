@@ -16,7 +16,6 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
@@ -451,8 +450,7 @@ class ArrowWhen:
                     )
                 )
             ]
-        otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = broadcast_series([condition, otherwise_series])
+        otherwise_native = otherwise_expr(df)[0]._native_series
         return [
             value_series._from_native_series(
                 pc.if_else(condition_native, value_series_native, otherwise_native)
