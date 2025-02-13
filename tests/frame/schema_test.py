@@ -281,7 +281,7 @@ def test_nested_dtypes() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
-    rel = duckdb.sql("select * from df")
+    rel = duckdb.sql("select * from df_pa")
     nwdf = nw.from_native(rel)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
