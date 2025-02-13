@@ -76,18 +76,18 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [
-                dd.from_pandas(
-                    pd.Series(
-                        [value],
-                        dtype=narwhals_to_native_dtype(dtype, self._version)
-                        if dtype is not None
-                        else None,
-                        name="literal",
-                    ),
-                    npartitions=df._native_frame.npartitions,
-                )[0]
-            ]
+            native_dtype = (
+                narwhals_to_native_dtype(dtype, self._version)
+                if dtype is not None
+                else None
+            )
+            if native_dtype is not None:
+                return [
+                    df._native_frame.assign(literal=value)["literal"]
+                    .astype(native_dtype)[:1][0]
+                    .to_series()
+                ]
+            return [df._native_frame.assign(literal=value)["literal"][:1][0].to_series()]
 
         return DaskExpr(
             func,
@@ -107,9 +107,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     dd.from_pandas(
                         pd.Series([0], name="len"),
                         npartitions=df._native_frame.npartitions,
-                    )[0]
+                    )
                 ]
-            return [df._native_frame[df.columns[0]].size]
+            return [df._native_frame[df.columns[0]].size.to_series()]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
