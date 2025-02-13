@@ -71,6 +71,13 @@ def maybe_extract_py_scalar(
 
 @overload
 def maybe_extract_py_scalar(
+    value: pa.Scalar[pa.StructType],
+    return_py_scalar: bool,  # noqa: FBT001
+) -> list[dict[str, Any]]: ...
+
+
+@overload
+def maybe_extract_py_scalar(
     value: pa.Scalar[pa.ListType[_BasicDataType[_AsPyType]]],
     return_py_scalar: bool,  # noqa: FBT001
 ) -> list[_AsPyType]: ...
@@ -78,17 +85,9 @@ def maybe_extract_py_scalar(
 
 @overload
 def maybe_extract_py_scalar(
-    value: pa.Scalar[pa.StructType],
+    value: pa.Scalar[Any] | Any,
     return_py_scalar: bool,  # noqa: FBT001
-) -> list[dict[str, Any]]: ...
-
-
-@overload
-def maybe_extract_py_scalar(value: pa.Scalar[Any], return_py_scalar: bool) -> Any: ...  # noqa: FBT001
-
-
-@overload
-def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any: ...  # noqa: FBT001
+) -> Any: ...
 
 
 def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa: FBT001
