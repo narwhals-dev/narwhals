@@ -37,7 +37,7 @@ class ExprKind(Enum):
     TRANSFORM = auto()  # e.g. nw.col('a').round()
 
 
-def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any:
+def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
     from narwhals._duckdb.expr import DuckDBExpr
 
     if isinstance(obj, DuckDBExpr):
@@ -46,16 +46,6 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Any
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
         column_result = column_results[0]
-        if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
-            # Returns scalar, but overall expression doesn't.
-            # Not yet supported.
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
         return column_result
     return duckdb.ConstantExpression(obj)
 
@@ -205,15 +195,3 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
-
-
-def n_ary_operation_expr_kind(*args: DuckDBExpr | Any) -> ExprKind:
-    if all(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
-    ):
-        return ExprKind.LITERAL
-    if any(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.AGGREGATION

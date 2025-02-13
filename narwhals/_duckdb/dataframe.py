@@ -160,16 +160,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(
                 self._native_frame.limit(0), validate_column_names=False
             )
-
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
-
         return self._from_native_frame(
             self._native_frame.select(
                 *(val.alias(col) for col, val in new_columns_map.items())
@@ -198,16 +188,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
         new_columns_map = parse_exprs(self, *exprs)
-
-        if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
-            msg = (
-                "Mixing expressions which aggregate and expressions which don't\n"
-                "is not yet supported by the DuckDB backend. Once they introduce\n"
-                "duckdb.WindowExpression to their Python API, we'll be able to\n"
-                "support this."
-            )
-            raise NotImplementedError(msg)
-
         result = [
             new_columns_map.pop(col).alias(col)
             if col in new_columns_map
