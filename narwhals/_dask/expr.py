@@ -76,7 +76,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
     
     def broadcast(self, kind):
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [result[0] for result in self(df)]
+            return [result for result in self(df)]
 
         return self.__class__(
             func,

@@ -87,7 +87,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                         name="literal",
                     ),
                     npartitions=df._native_frame.npartitions,
-                )
+                )[0]
             ]
 
         return DaskExpr(
@@ -109,9 +109,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                     dd.from_pandas(
                         pd.Series([0], name="len"),
                         npartitions=df._native_frame.npartitions,
-                    )
+                    )[0]
                 ]
-            return [df._native_frame[df.columns[0]].size.to_series()]
+            return [df._native_frame[df.columns[0]].size]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
@@ -382,12 +382,12 @@ class DaskWhen:
             value_sequence: Sequence[Any] = self._then_value(df)[0]
         else:
             # `self._then_value` is a scalar
-            value_sequence = [self._then_value]
+            value_sequence = self._then_value
             is_scalar = True
 
         if is_scalar:
             _df = condition.to_frame("a")
-            _df["literal"] = value_sequence[0]
+            _df["literal"] = value_sequence
             value_series = _df["literal"]
         else:
             value_series = value_sequence
@@ -405,7 +405,7 @@ class DaskWhen:
         otherwise_series = otherwise_expr(df)[0]
 
         if otherwise_expr._returns_scalar:
-            return [value_series.where(condition, otherwise_series[0])]
+            return [value_series.where(condition, otherwise_series)]
 
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
