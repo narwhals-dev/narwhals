@@ -433,10 +433,10 @@ class ArrowWhen:
         if self._otherwise_value is None:
             # NOTE: Casting just to match *some overload*, as the series type isn't known statically
             null_value = cast("pa.NullScalar", lit(None, type=value_series_native.type))
-            otherwise_native = pa.repeat(null_value, len(condition_native))
+            otherwise_null = pa.repeat(null_value, len(condition_native))
             return [
                 value_series._from_native_series(
-                    pc.if_else(condition_native, value_series_native, otherwise_native)
+                    pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
         if isinstance(self._otherwise_value, ArrowExpr):

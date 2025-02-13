@@ -1094,9 +1094,11 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         sort_keys = "descending" if descending else "ascending"
         tiebreaker = "first" if method == "ordinal" else method
 
-        native_series = self._native_series
+        native_series: pa.ChunkedArray[_ScalarT_co] | pa.Array[_ScalarT_co]
         if self._backend_version < (14, 0, 0):  # pragma: no cover
-            native_series = native_series.combine_chunks()
+            native_series = self._native_series.combine_chunks()
+        else:
+            native_series = self._native_series
 
         null_mask = pc.is_null(native_series)
 
@@ -1141,13 +1143,15 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
                 ),
                 width,
             )
-            bin_indices = cast("pa.ChunkedArray[Any]", pc.floor(bin_proportions))
+            bin_indices: pa.ChunkedArray[Any] = cast(
+                "pa.ChunkedArray[Any]", pc.floor(bin_proportions)
+            )
 
             # NOTE: stubs leave unannotated
             if_else: Incomplete = pc.if_else
 
             # shift bins so they are right-closed
-            bin_indices: pa.ChunkedArray[Any] = if_else(
+            bin_indices = if_else(
                 pc.and_(
                     pc.equal(bin_indices, bin_proportions),
                     pc.greater(bin_indices, 0),

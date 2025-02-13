@@ -747,17 +747,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             agg_func = agg_func_map[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-            keep_idx = (
+            keep_idx_native = (
                 df.append_column(col_token, pa.array(np.arange(len(self))))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
-
-            return self._from_native_frame(
-                pc.take(df, keep_idx),  # type: ignore[call-overload, unused-ignore]
-                validate_column_names=False,
-            )
+            indices = cast("Indices", keep_idx_native)
+            return self._from_native_frame(df.take(indices), validate_column_names=False)
 
         keep_idx = self.simple_select(*subset).is_unique()
         plx = self.__narwhals_namespace__()
