@@ -350,13 +350,8 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries[Any]]):
             backend_version=self._backend_version, version=self._version
         )
 
-    def when(
-        self: Self,
-        *predicates: ArrowExpr,
-    ) -> ArrowWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
-        return ArrowWhen(condition, self._backend_version, version=self._version)
+    def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
+        return ArrowWhen(predicate, self._backend_version, version=self._version)
 
     def concat_str(
         self: Self,

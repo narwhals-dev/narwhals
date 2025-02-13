@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
     _AsPyType = TypeVar("_AsPyType")
@@ -419,7 +420,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
     ) -> ArrowSeries[_ScalarT_co]:
         import numpy as np  # ignore-banned-import
 
-        mask = np.zeros(self.len(), dtype=bool)
+        mask: _1DArray = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
         if isinstance(values, self.__class__):
             ser, values = broadcast_and_extract_native(
@@ -823,7 +824,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         # NOTE: stub is missing attributes (https://arrow.apache.org/docs/python/generated/pyarrow.DictionaryArray.html)
         da: Incomplete = series.combine_chunks().dictionary_encode(null_encoding="encode")
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
+        columns: _2DArray = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
         null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
         cols = [

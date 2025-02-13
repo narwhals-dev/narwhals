@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+lit = duckdb.ConstantExpression
+"""Alias for `duckdb.ConstantExpression`."""
+
 
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
@@ -193,11 +196,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        shape: tuple[int] = dtype.shape  # type: ignore[union-attr]
+        shape = dtype.shape
         duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype = dtype
+        inner_dtype: Any = dtype
         for _ in shape:
-            inner_dtype = inner_dtype.inner  # type: ignore[union-attr]
+            inner_dtype = inner_dtype.inner
         duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

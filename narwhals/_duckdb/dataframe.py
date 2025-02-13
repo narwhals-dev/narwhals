@@ -7,10 +7,10 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
+from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs
 from narwhals.dependencies import get_duckdb
@@ -145,7 +145,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         new_columns_map = parse_exprs(self, *exprs)
         return self._from_native_frame(
             self._native_frame.aggregate(
-                [val.alias(col) for col, val in new_columns_map.items()]
+                [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
             ),
             validate_column_names=False,
         )
@@ -237,7 +237,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
@@ -302,7 +302,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 raise NotImplementedError(msg)
             rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
                 other._native_frame.set_alias("rhs")
-            )
+            )  # type: ignore[operator]
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
@@ -467,9 +467,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         rel = self._native_frame
         original_columns = self.columns
 
-        not_null_condition = (
-            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
-        )
+        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
+            "len", col_to_explode
+        ) > lit(0)
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 FunctionExpression("unnest", col_to_explode).alias(col)
@@ -480,10 +480,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         )
 
         null_rel = rel.filter(~not_null_condition).select(
-            *(
-                ConstantExpression(None).alias(col) if col in columns else col
-                for col in original_columns
-            )
+            *(lit(None).alias(col) if col in columns else col for col in original_columns)
         )
 
         return self._from_native_frame(

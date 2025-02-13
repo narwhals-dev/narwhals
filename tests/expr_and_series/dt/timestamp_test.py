@@ -204,7 +204,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
         nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
 
 
-@given(  # type: ignore[misc]
+@given(
     inputs=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)),
     time_unit=st.sampled_from(["ms", "us", "ns"]),
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
