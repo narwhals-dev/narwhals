@@ -181,7 +181,7 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
 
 def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
-    result = cast(pd.Index[Any], nw.maybe_get_index(nw.from_native(pandas_df)))
+    result = cast("pd.Index[Any]", nw.maybe_get_index(nw.from_native(pandas_df)))
     assert_index_equal(result, pandas_df.index)
     pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
     result_s = cast(
