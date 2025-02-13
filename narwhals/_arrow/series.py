@@ -332,18 +332,17 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
     def drop_nulls(self: Self) -> ArrowSeries[_ScalarT_co]:
         return self._from_native_series(self._native_series.drop_null())
 
-    def shift(self: ArrowSeries[_ScalarT_co], n: int) -> ArrowSeries[_ScalarT_co]:
+    def shift(
+        self: ArrowSeries[pa.Scalar[DataTypeT_co]], n: int
+    ) -> ArrowSeries[pa.Scalar[DataTypeT_co]]:
         ca = self._native_series
-        # NOTE: Annotated as `DataType`, but only concrete subclasses are accepted in overloads
-        ca_type: Incomplete = ca.type
-
         if n > 0:
-            result = pa.concat_arrays([pa.nulls(n, ca_type), *ca[:-n].chunks])
+            arrays = [pa.repeat(None, n).cast(self._type), *ca[:-n].chunks]
         elif n < 0:
-            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca_type)])
+            arrays = [*ca[-n:].chunks, pa.repeat(None, -n).cast(self._type)]
         else:
-            result = ca
-        return self._from_native_series(result)
+            return self._from_native_series(ca)
+        return self._from_native_series(pa.concat_arrays(arrays))
 
     def std(self: Self, ddof: int, *, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
