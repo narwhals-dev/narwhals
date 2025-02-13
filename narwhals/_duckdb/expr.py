@@ -66,6 +66,13 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         return DuckDBNamespace(
             backend_version=self._backend_version, version=self._version
         )
+    
+    def broadcast(self, kind: ExprKind) -> Self:
+        if kind is ExprKind.AGGREGATION:
+            msg = "Broadcasting aggregations is not yet supported for DuckDB."
+            raise NotImplementedError(msg)
+        # For literals, DuckDB does its own broadcasting.
+        return self
 
     @classmethod
     def from_column_names(
@@ -111,7 +118,6 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         self: Self,
         call: Callable[..., duckdb.Expression],
         expr_name: str,
-        *,
         **expressifiable_args: Self | Any,
     ) -> Self:
         """Create expression from callable.

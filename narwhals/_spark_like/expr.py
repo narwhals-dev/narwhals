@@ -185,117 +185,82 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            lambda _input, other: _input.__eq__(other),
-            "__eq__",
-            other=other
+            lambda _input, other: _input.__eq__(other), "__eq__", other=other
         )
 
     def __ne__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            lambda _input, other: _input.__ne__(other),
-            "__ne__",
-            other=other
+            lambda _input, other: _input.__ne__(other), "__ne__", other=other
         )
 
     def __add__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__add__(other),
-            "__add__",
-            other=other
+            lambda _input, other: _input.__add__(other), "__add__", other=other
         )
 
     def __sub__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__sub__(other),
-            "__sub__",
-            other=other
+            lambda _input, other: _input.__sub__(other), "__sub__", other=other
         )
 
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__mul__(other),
-            "__mul__",
-            other=other
+            lambda _input, other: _input.__mul__(other), "__mul__", other=other
         )
 
     def __truediv__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__truediv__(other),
-            "__truediv__",
-            other=other
+            lambda _input, other: _input.__truediv__(other), "__truediv__", other=other
         )
 
     def __floordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _floordiv(_input: Column, other: Column) -> Column:
             return self._F.floor(_input / other)
 
-        return self._from_call(
-            _floordiv,
-            "__floordiv__",
-            other=other
-        )
+        return self._from_call(_floordiv, "__floordiv__", other=other)
 
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__pow__(other),
-            "__pow__",
-            other=other
+            lambda _input, other: _input.__pow__(other), "__pow__", other=other
         )
 
     def __mod__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__mod__(other),
-            "__mod__",
-            other=other
+            lambda _input, other: _input.__mod__(other), "__mod__", other=other
         )
 
     def __ge__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__ge__(other),
-            "__ge__",
-            other=other
+            lambda _input, other: _input.__ge__(other), "__ge__", other=other
         )
 
     def __gt__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input > other,
-            "__gt__",
-            other=other
+            lambda _input, other: _input > other, "__gt__", other=other
         )
 
     def __le__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__le__(other),
-            "__le__",
-            other=other
+            lambda _input, other: _input.__le__(other), "__le__", other=other
         )
 
     def __lt__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__lt__(other),
-            "__lt__",
-            other=other
+            lambda _input, other: _input.__lt__(other), "__lt__", other=other
         )
 
     def __and__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__and__(other),
-            "__and__",
-            other=other
+            lambda _input, other: _input.__and__(other), "__and__", other=other
         )
 
     def __or__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__or__(other),
-            "__or__",
-            other=other
+            lambda _input, other: _input.__or__(other), "__or__", other=other
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.__invert__(),
-            "__invert__"
-        )
+        return self._from_call(lambda _input: _input.__invert__(), "__invert__")
 
     def abs(self: Self) -> Self:
         return self._from_call(self._F.abs, "abs")
@@ -407,10 +372,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             return result
 
         return self._from_call(
-            _clip,
-            "clip",
-            lower_bound=lower_bound,
-            upper_bound=upper_bound
+            _clip, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_finite(self: Self) -> Self:
@@ -432,10 +394,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _is_in(_input: Column) -> Column:
             return _input.isin(values)
 
-        return self._from_call(
-            _is_in,
-            "is_in"
-        )
+        return self._from_call(_is_in, "is_in")
 
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:
@@ -455,10 +414,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def _round(_input: Column) -> Column:
             return self._F.round(_input, decimals)
 
-        return self._from_call(
-            _round,
-            "round"
-        )
+        return self._from_call(_round, "round")
 
     def skew(self: Self) -> Self:
         return self._from_call(self._F.skewness, "skew")
