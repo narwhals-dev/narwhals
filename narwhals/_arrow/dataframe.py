@@ -352,7 +352,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 self._native_frame.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        df = pa.Table.from_arrays(broadcast_series(new_series), names=names)
+        df = pa.Table.from_arrays(broadcast_series(new_series), names=names)  # pyright: ignore[reportArgumentType]
         return self._from_native_frame(df, validate_column_names=False)
 
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
