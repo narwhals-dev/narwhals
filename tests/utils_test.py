@@ -185,7 +185,8 @@ def test_maybe_get_index_pandas() -> None:
     assert_index_equal(result, pandas_df.index)
     pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
     result_s = cast(
-        pd.Index[Any], nw.maybe_get_index(nw.from_native(pandas_series, series_only=True))
+        "pd.Index[Any]",
+        nw.maybe_get_index(nw.from_native(pandas_series, series_only=True)),
     )
     assert_index_equal(result_s, pandas_series.index)
 

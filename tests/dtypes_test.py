@@ -15,6 +15,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -136,6 +137,8 @@ def test_struct_hashes() -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="old pandas")
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
     df = nw.from_native(constructor(data)).with_columns(
