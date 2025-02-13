@@ -15,9 +15,10 @@ from typing import TypeVar
 from typing import overload
 from warnings import warn
 
-from narwhals._expression_parsing import ExprKind, infer_expr_kind
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
 from narwhals._expression_parsing import check_expressions_transform
+from narwhals._expression_parsing import infer_expr_kind
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -83,9 +84,6 @@ class BaseFrame(Generic[_FrameT]):
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[IntoCompliantExpr[Any]], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):

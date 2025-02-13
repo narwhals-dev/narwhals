@@ -460,9 +460,7 @@ class PandasWhen:
                 )
             ]
         otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = align_and_extract_native(
-            condition, otherwise_series
-        )
+        _, otherwise_native = align_and_extract_native(condition, otherwise_series)
         return [
             value_series._from_native_series(
                 value_series_native.where(condition_native, otherwise_native)

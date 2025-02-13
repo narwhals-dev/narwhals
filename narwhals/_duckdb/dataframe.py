@@ -9,7 +9,6 @@ import duckdb
 from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals._duckdb.utils import parse_exprs

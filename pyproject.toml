@@ -137,6 +137,7 @@ lint.ignore = [
   "RET505",
   "SLF001",
   "TD003",
+  "TD004",
 ]
 
 [tool.ruff.lint.per-file-ignores]

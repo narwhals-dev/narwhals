@@ -469,6 +469,7 @@ def apply_expr_n_ary_operation(
     ]
     return function(*compliant_exprs)
 
+
 def apply_namespace_n_ary_operation(
     plx: CompliantNamespace,
     function: Callable[[Any], CompliantExpr[Any]],

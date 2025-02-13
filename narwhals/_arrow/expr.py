@@ -6,8 +6,6 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-import pyarrow as pa
-
 from narwhals._arrow.expr_cat import ArrowExprCatNamespace
 from narwhals._arrow.expr_dt import ArrowExprDateTimeNamespace
 from narwhals._arrow.expr_list import ArrowExprListNamespace
@@ -66,9 +64,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def broadcast(self, _kind: Any) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
-                broadcast_dataframe_comparand(
-                    len(df), result, self._backend_version
-                )
+                broadcast_dataframe_comparand(len(df), result, self._backend_version)
                 for result in self(df)
             ]
 

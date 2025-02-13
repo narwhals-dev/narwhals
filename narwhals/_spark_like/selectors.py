@@ -7,7 +7,6 @@ from typing import Iterable
 from typing import Sequence
 
 from narwhals._spark_like.expr import SparkLikeExpr
-from narwhals._spark_like.utils import ExprKind
 from narwhals.utils import Implementation
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone

@@ -87,9 +87,7 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def align_and_extract_native(
-    lhs: PandasLikeSeries, rhs: Any
-) -> tuple[pd.Series, Any]:
+def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the

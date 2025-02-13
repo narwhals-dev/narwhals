@@ -9,7 +9,6 @@ from typing import Sequence
 from duckdb import ColumnExpression
 
 from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._duckdb.utils import ExprKind
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module

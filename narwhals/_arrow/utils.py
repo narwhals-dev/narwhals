@@ -159,7 +159,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
+    lhs: ArrowSeries, rhs: Any
 ) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
 
@@ -197,6 +197,7 @@ def extract_native(
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
 
+
 def broadcast_dataframe_comparand(
     length: int,
     other: ArrowSeries,
@@ -213,7 +214,6 @@ def broadcast_dataframe_comparand(
     if backend_version < (13,) and hasattr(value, "as_py"):
         value = value.as_py()
     return other._from_native_series(pa.array(np.full(shape=length, fill_value=value)))
-
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:

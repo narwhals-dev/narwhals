@@ -8,12 +8,10 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._expression_parsing import (
-    ExprKind,
-    apply_expr_n_ary_operation,
-    apply_rhs_arithmetic_operation,
-)
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_expr_n_ary_operation
+from narwhals._expression_parsing import apply_rhs_arithmetic_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_is_order_dependent
@@ -37,7 +35,6 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")

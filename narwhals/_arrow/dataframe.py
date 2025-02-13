@@ -14,7 +14,8 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._expression_parsing import evaluate_into_exprs, ExprKind
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -363,10 +364,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             col_name = col_value.name
             native_frame = (
                 native_frame.set_column(
-                    columns.index(col_name), field_=col_name, column=col_value._native_series
+                    columns.index(col_name),
+                    field_=col_name,
+                    column=col_value._native_series,
                 )
                 if col_name in columns
-                else native_frame.append_column(field_=col_name, column=col_value._native_series)
+                else native_frame.append_column(
+                    field_=col_name, column=col_value._native_series
+                )
             )
 
         return self._from_native_frame(native_frame, validate_column_names=False)
@@ -399,9 +404,13 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                self.with_columns(plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL))
+                self.with_columns(
+                    plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                )
                 ._native_frame.join(
-                    other.with_columns(plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL))._native_frame,
+                    other.with_columns(
+                        plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                    )._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",

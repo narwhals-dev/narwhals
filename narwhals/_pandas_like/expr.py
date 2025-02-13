@@ -16,7 +16,8 @@ from narwhals._pandas_like.expr_list import PandasLikeExprListNamespace
 from narwhals._pandas_like.expr_name import PandasLikeExprNameNamespace
 from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import rename, broadcast_dataframe_comparand
+from narwhals._pandas_like.utils import broadcast_dataframe_comparand
+from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
