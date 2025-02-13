@@ -15,7 +15,7 @@ data = {
 def test_mode_single_expr(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow" in str(constructor_eager):
+    if "pyarrow_table" in str(constructor_eager):
         # TODO(unassigned): reimplement mode for pyarrow
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data))
@@ -27,7 +27,7 @@ def test_mode_single_expr(
 def test_mode_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow" in str(constructor_eager):
+    if "pyarrow_table" in str(constructor_eager):
         # TODO(unassigned): reimplement mode for pyarrow
         request.applymarker(pytest.mark.xfail)
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
