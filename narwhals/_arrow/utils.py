@@ -46,6 +46,9 @@ if TYPE_CHECKING:
     def is_list(t: Any) -> TypeIs[pa_types.ListType[Any]]: ...
     def is_large_list(t: Any) -> TypeIs[pa_types.LargeListType[Any]]: ...
     def is_fixed_size_list(t: Any) -> TypeIs[pa_types.FixedSizeListType[Any, Any]]: ...
+    def is_dictionary(
+        t: Any,
+    ) -> TypeIs[pa_types.DictionaryType[Any, Any, pa_types._Ordered]]: ...
     def extract_regex(
         strings: pa.ChunkedArray[StringScalarT],
         /,
@@ -56,6 +59,7 @@ if TYPE_CHECKING:
     ) -> ChunkedArrayStructArray: ...
 else:
     from pyarrow.compute import extract_regex
+    from pyarrow.types import is_dictionary  # noqa: F401
     from pyarrow.types import is_duration
     from pyarrow.types import is_fixed_size_list
     from pyarrow.types import is_large_list
