@@ -64,7 +64,7 @@ def test_sumh_aggregations(
 def test_sumh_transformations(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "duckdb")):
+    if any(x in str(constructor) for x in ("dask", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
