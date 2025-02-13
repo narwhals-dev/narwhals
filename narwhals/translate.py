@@ -798,7 +798,7 @@ def get_native_namespace(
     | pl.LazyFrame
     | pl.Series
     | pa.Table
-    | pa.ChunkedArray,
+    | pa.ChunkedArray[Any],
 ) -> Any:
     """Get native namespace from object.
 

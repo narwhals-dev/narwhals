@@ -862,7 +862,7 @@ class PandasLikeSeries(CompliantSeries):
             self._native_series.clip(lower_bound, upper_bound, **kwargs)
         )
 
-    def to_arrow(self: Self) -> pa.Array:
+    def to_arrow(self: Self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 

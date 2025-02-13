@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -11,17 +12,71 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_compliant_expr
+from narwhals.utils import is_compliant_series
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import TypeVar
 
+    from pyarrow.__lib_pxi import (  # pyright: ignore[reportMissingModuleSource]
+        types as pa_types,  # pyright: ignore[reportMissingModuleSource]
+    )
+    from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
+
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import StringArray
+    from narwhals._arrow.typing import StringScalar
+    from narwhals._arrow.typing import StringScalarT
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.typing import _AnyDArray
+    from narwhals.typing import _ScalarT_co
     from narwhals.utils import Version
 
+    # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
+    # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
+    ChunkedArrayStructArray: TypeAlias = pa.ChunkedArray[Any]
+
     _T = TypeVar("_T")
+
+    def is_timestamp(t: Any) -> TypeIs[pa_types.TimestampType[Any, Any]]: ...
+    def is_duration(t: Any) -> TypeIs[pa_types.DurationType[Any]]: ...
+    def is_list(t: Any) -> TypeIs[pa_types.ListType[Any]]: ...
+    def is_large_list(t: Any) -> TypeIs[pa_types.LargeListType[Any]]: ...
+    def is_fixed_size_list(t: Any) -> TypeIs[pa_types.FixedSizeListType[Any, Any]]: ...
+    def extract_regex(
+        strings: pa.ChunkedArray[StringScalarT],
+        /,
+        pattern: str,
+        *,
+        options: Any = None,
+        memory_pool: Any = None,
+    ) -> ChunkedArrayStructArray: ...
+else:
+    from pyarrow.compute import extract_regex
+    from pyarrow.types import is_duration
+    from pyarrow.types import is_fixed_size_list
+    from pyarrow.types import is_large_list
+    from pyarrow.types import is_list
+    from pyarrow.types import is_timestamp
+
+lit = pa.scalar
+"""Alias for `pyarrow.scalar`."""
+
+
+def chunked_array(
+    arr: pa.Array[_ScalarT_co]
+    | list[Iterable[_ScalarT_co]]
+    | pa.ChunkedArray[_ScalarT_co],
+) -> pa.ChunkedArray[_ScalarT_co]:
+    if isinstance(arr, pa.ChunkedArray):
+        return arr
+    if isinstance(arr, list):
+        return pa.chunked_array(cast("Any", arr))
+    else:
+        return cast("pa.ChunkedArray[_ScalarT_co]", pa.chunked_array([arr], arr.type))
 
 
 @lru_cache(maxsize=16)
@@ -59,9 +114,9 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         return dtypes.String()
     if pa.types.is_date32(dtype):
         return dtypes.Date()
-    if pa.types.is_timestamp(dtype):
+    if is_timestamp(dtype):
         return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
-    if pa.types.is_duration(dtype):
+    if is_duration(dtype):
         return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
@@ -75,9 +130,9 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
                 for i in range(dtype.num_fields)
             ]
         )
-    if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
+    if is_list(dtype) or is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
-    if pa.types.is_fixed_size_list(dtype):
+    if is_fixed_size_list(dtype):
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
@@ -118,7 +173,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        time_unit = getattr(dtype, "time_unit", "us")
+        time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         time_zone = getattr(dtype, "time_zone", None)
         return pa.timestamp(time_unit, tz=time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
@@ -127,40 +182,40 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):
-        return pa.list_(
-            value_type=narwhals_to_native_dtype(
-                dtype.inner,  # type: ignore[union-attr]
-                version=version,
-            )
-        )
+        return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         return pa.struct(
             [
-                (
-                    field.name,
-                    narwhals_to_native_dtype(
-                        field.dtype,
-                        version=version,
-                    ),
-                )
-                for field in dtype.fields  # type: ignore[union-attr]
+                (field.name, narwhals_to_native_dtype(field.dtype, version=version))
+                for field in dtype.fields
             ]
         )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        inner = narwhals_to_native_dtype(
-            dtype.inner,  # type: ignore[union-attr]
-            version=version,
-        )
-        list_size = dtype.size  # type: ignore[union-attr]
+        inner = narwhals_to_native_dtype(dtype.inner, version=version)
+        list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
 
+@overload
 def broadcast_and_extract_native(
-    lhs: ArrowSeries, rhs: Any, backend_version: tuple[int, ...]
-) -> tuple[pa.ChunkedArray, Any]:
+    lhs: ArrowSeries[_ScalarT_co], rhs: None, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray[_ScalarT_co], _ScalarT_co]: ...
+
+
+@overload
+def broadcast_and_extract_native(
+    lhs: ArrowSeries[_ScalarT_co],
+    rhs: ArrowSeries[_ScalarT_co] | list[ArrowSeries[_ScalarT_co]] | Any,
+    backend_version: tuple[int, ...],
+) -> tuple[pa.ChunkedArray[Any], _ScalarT_co | pa.ChunkedArray[_ScalarT_co]]: ...
+
+
+def broadcast_and_extract_native(
+    lhs: ArrowSeries[_ScalarT_co], rhs: Any, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray[Any], Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -172,7 +227,7 @@ def broadcast_and_extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:
+    if rhs is None:  # DONE
         return lhs._native_series, pa.scalar(None, type=lhs._native_series.type)
 
     # If `rhs` is the output of an expression evaluation, then it is
@@ -180,9 +235,7 @@ def broadcast_and_extract_native(
     # and take the first (and only) element.
     if isinstance(rhs, list):
         if len(rhs) > 1:
-            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
-                rhs[0], "__narwhals_series__"
-            ):
+            if is_compliant_expr(rhs[0]) or is_compliant_series(rhs[0]):
                 # e.g. `plx.all() + plx.all()`
                 msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
                 raise ValueError(msg)
@@ -204,24 +257,18 @@ def broadcast_and_extract_native(
             fill_value = lhs[0]
             if backend_version < (13,) and hasattr(fill_value, "as_py"):
                 fill_value = fill_value.as_py()
-            left_result = pa.chunked_array(
-                [
-                    pa.array(
-                        np.full(shape=rhs.len(), fill_value=fill_value),
-                        type=lhs._native_series.type,
-                    )
-                ]
+            arr = pa.array(
+                np.full(shape=rhs.len(), fill_value=fill_value),
+                type=lhs._native_series.type,
             )
-            return left_result, rhs._native_series
+            return chunked_array(arr), rhs._native_series
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
 
 
 def broadcast_and_extract_dataframe_comparand(
-    length: int,
-    other: Any,
-    backend_version: tuple[int, ...],
-) -> Any:
+    length: int, other: ArrowSeries[Any], backend_version: tuple[int, ...]
+) -> pa.BooleanArray:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -239,7 +286,7 @@ def broadcast_and_extract_dataframe_comparand(
                 value = value.as_py()
             return pa.array(np.full(shape=length, fill_value=value))
 
-        return other._native_series
+        return cast("pa.BooleanArray", other._native_series)
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
 
@@ -289,10 +336,10 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
 
     Should be in namespace.
     """
-    kwargs = (
+    kwargs: dict[str, Any] = (
         {"promote": True}
         if backend_version < (14, 0, 0)
-        else {"promote_options": "default"}  # type: ignore[dict-item]
+        else {"promote_options": "default"}
     )
     return pa.concat_tables(dfs, **kwargs)
 
@@ -334,8 +381,12 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 
 
 def cast_for_truediv(
-    arrow_array: pa.ChunkedArray | pa.Scalar, pa_object: pa.ChunkedArray | pa.Scalar
-) -> tuple[pa.ChunkedArray | pa.Scalar, pa.ChunkedArray | pa.Scalar]:
+    arrow_array: pa.ChunkedArray[Any] | pa.Scalar[Any],
+    pa_object: pa.ChunkedArray[Any] | pa.Array[Any] | pa.Scalar[Any],
+) -> tuple[
+    pa.ChunkedArray[Any] | pa.Scalar[Any],
+    pa.ChunkedArray[Any] | pa.Array[Any] | pa.Scalar[Any],
+]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     # Ensure int / int -> float mirroring Python/Numpy behavior
@@ -350,7 +401,9 @@ def cast_for_truediv(
     return arrow_array, pa_object
 
 
-def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
+def broadcast_series(
+    series: Sequence[ArrowSeries[_ScalarT_co]],
+) -> Sequence[pa.ChunkedArray[_ScalarT_co] | pa.Array[_ScalarT_co]]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
@@ -359,14 +412,18 @@ def broadcast_series(series: Sequence[ArrowSeries]) -> list[Any]:
         return [s._native_series for s in series]
 
     is_max_length_gt_1 = max_length > 1
-    reshaped = []
+    reshaped: list[pa.ChunkedArray[_ScalarT_co] | pa.Array[_ScalarT_co]] = []
     for s, length in zip(series, lengths):
         s_native = s._native_series
         if is_max_length_gt_1 and length == 1:
             value = s_native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(pa.array([value] * max_length, type=s_native.type))
+            arr = cast(
+                "pa.Array[_ScalarT_co]",
+                pa.array([value] * max_length, type=s_native.type),
+            )
+            reshaped.append(arr)
         else:
             reshaped.append(s_native)
 
@@ -433,12 +490,23 @@ DATE_FORMATS = (
 TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"))
 
 
-def parse_datetime_format(arr: pa.StringArray) -> str:
-    """Try to infer datetime format from StringArray."""
-    matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
-        pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
+def _extract_regex_concat_arrays(
+    strings: pa.ChunkedArray[StringScalar],
+    /,
+    pattern: str,
+    *,
+    options: Any = None,
+    memory_pool: Any = None,
+) -> pa.StructArray:
+    r = pa.concat_arrays(
+        extract_regex(strings, pattern, options=options, memory_pool=memory_pool).chunks
     )
+    return cast("pa.StructArray", r)
 
+
+def parse_datetime_format(arr: pa.ChunkedArray[StringScalar]) -> str:
+    """Try to infer datetime format from StringArray."""
+    matches = _extract_regex_concat_arrays(arr.drop_null().slice(0, 10), pattern=FULL_RE)
     if not pc.all(matches.is_valid()).as_py():
         msg = (
             "Unable to infer datetime format, provided format is not supported. "
@@ -446,9 +514,7 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
         )
         raise NotImplementedError(msg)
 
-    dates = matches.field("date")
     separators = matches.field("sep")
-    times = matches.field("time")
     tz = matches.field("tz")
 
     # separators and time zones must be unique
@@ -460,8 +526,8 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
         msg = "Found multiple timezone values while inferring datetime format."
         raise ValueError(msg)
 
-    date_value = _parse_date_format(dates)
-    time_value = _parse_time_format(times)
+    date_value = _parse_date_format(cast("StringArray", matches.field("date")))
+    time_value = _parse_time_format(cast("StringArray", matches.field("time")))
 
     sep_value = separators[0].as_py()
     tz_value = "%z" if tz[0].as_py() else ""
@@ -469,7 +535,7 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
     return f"{date_value}{sep_value}{time_value}{tz_value}"
 
 
-def _parse_date_format(arr: pa.Array) -> str:
+def _parse_date_format(arr: StringArray) -> str:
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
@@ -489,7 +555,7 @@ def _parse_date_format(arr: pa.Array) -> str:
     raise ValueError(msg)
 
 
-def _parse_time_format(arr: pa.Array) -> str:
+def _parse_time_format(arr: StringArray) -> str:
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
@@ -498,8 +564,8 @@ def _parse_time_format(arr: pa.Array) -> str:
 
 
 def pad_series(
-    series: ArrowSeries, *, window_size: int, center: bool
-) -> tuple[ArrowSeries, int]:
+    series: ArrowSeries[Any], *, window_size: int, center: bool
+) -> tuple[ArrowSeries[Any], int]:
     """Pad series with None values on the left and/or right side, depending on the specified parameters.
 
     Arguments:
@@ -510,8 +576,6 @@ def pad_series(
     Returns:
         A tuple containing the padded ArrowSeries and the offset value.
     """
-    # ignore-banned-import
-
     if center:
         offset_left = window_size // 2
         offset_right = offset_left - (

@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
+from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -68,7 +69,7 @@ class ArrowGroupBy:
             )
             raise ValueError(msg)
 
-        aggs: list[tuple[str, str, pc.FunctionOptions | None]] = []
+        aggs: list[Any] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
 
@@ -139,15 +140,26 @@ class ArrowGroupBy:
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
-        null_token = "__null_token_value__"  # noqa: S105
+        null_token: str = "__null_token_value__"  # noqa: S105
 
         table = self._df._native_frame
-        key_values = pc.binary_join_element_wise(
-            *[pc.cast(table[key], pa.string()) for key in self._keys],
-            "",
-            null_handling="replace",
-            null_replacement=null_token,
+        # NOTE: stubs fail in multiple places for `ChunkedArray`
+        it = cast(
+            "Iterator[pa.StringArray]",
+            (table[key].cast(pa.string()) for key in self._keys),
         )
+        if TYPE_CHECKING:
+            # NOTE: stubs indicate `separator` would get appended to the end, instead of between elements
+            key_values = pc.binary_join_element_wise(
+                *it, null_handling="replace", null_replacement=null_token
+            )
+        else:
+            key_values = pc.binary_join_element_wise(
+                *it,
+                "",
+                null_handling="replace",
+                null_replacement=null_token,
+            )
         table = table.add_column(i=0, field_=col_token, column=key_values)
 
         yield from (

@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
+    from narwhals.typing import _ScalarT_co
     from narwhals.typing import _ShapeT
 
 # We silently allow these but - given that they claim
@@ -211,7 +212,9 @@ def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
-def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
+def is_pyarrow_chunked_array(
+    ser: Any | pa.ChunkedArray[_ScalarT_co],
+) -> TypeIs[pa.ChunkedArray[_ScalarT_co]]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 

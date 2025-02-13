@@ -2044,7 +2044,7 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self: Self) -> pa.Array:
+    def to_arrow(self: Self) -> pa.Array[Any]:
         r"""Convert to arrow.
 
         Returns:

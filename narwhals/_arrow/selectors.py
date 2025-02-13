@@ -33,7 +33,7 @@ class ArrowSelectorNamespace:
         self._version = version
 
     def by_dtype(self: Self, dtypes: Iterable[DType | type[DType]]) -> ArrowSelector:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
         def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
@@ -51,7 +51,7 @@ class ArrowSelectorNamespace:
         )
 
     def matches(self: Self, pattern: str) -> ArrowSelector:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
             return [df[col] for col in df.columns if re.search(pattern, col)]
 
         def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
@@ -100,7 +100,7 @@ class ArrowSelectorNamespace:
         return self.by_dtype([dtypes.Boolean])
 
     def all(self: Self) -> ArrowSelector:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
             return [df[col] for col in df.columns]
 
         return ArrowSelector(
@@ -124,7 +124,7 @@ class ArrowSelectorNamespace:
             time_unit=time_unit, time_zone=time_zone
         )
 
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
             return [
                 df[col]
                 for col in df.columns
@@ -179,7 +179,7 @@ class ArrowSelector(ArrowExpr):
     def __sub__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -206,7 +206,7 @@ class ArrowSelector(ArrowExpr):
     def __or__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
@@ -237,7 +237,7 @@ class ArrowSelector(ArrowExpr):
     def __and__(self: Self, other: Self | Any) -> ArrowSelector | Any:
         if isinstance(other, ArrowSelector):
 
-            def call(df: ArrowDataFrame) -> list[ArrowSeries]:
+            def call(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
                 lhs_names = self._evaluate_output_names(df)
                 rhs_names = other._evaluate_output_names(df)
                 lhs = self._call(df)
