@@ -1171,7 +1171,11 @@ class Expr:
             └──────────────────┘
         """
 
-        def func(compliant_expr, lb, ub) -> CompliantExpr[Any]:
+        def func(
+            compliant_expr: CompliantExpr[Any],
+            lb: CompliantExpr[Any],
+            ub: CompliantExpr[Any],
+        ) -> CompliantExpr[Any]:
             if closed == "left":
                 return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             elif closed == "right":
@@ -1258,12 +1262,13 @@ class Expr:
         flat_predicates = flatten(predicates)
         is_order_dependent = operation_is_order_dependent(*flat_predicates)
 
-        def func(compliant_expr, *compliant_predicates):
-            return compliant_expr.filter(*compliant_predicates)
-
         return self.__class__(
             lambda plx: apply_expr_n_ary_operation(
-                plx, self, func, *predicates, strings_are_column_names=True
+                plx,
+                self,
+                lambda *exprs: exprs[0].filter(*exprs[1:]),
+                *predicates,
+                strings_are_column_names=True,
             ),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
@@ -1959,13 +1964,14 @@ class Expr:
             └──────────────────┘
         """
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
-
-        def func(compliant_expr, lb, ub):
-            return compliant_expr.clip(lb, ub)
-
         return self.__class__(
             lambda plx: apply_expr_n_ary_operation(
-                plx, self, func, lower_bound, upper_bound, strings_are_column_names=True
+                plx,
+                self,
+                lambda *exprs: exprs[0].clip(exprs[1], exprs[2]),
+                lower_bound,  # type: ignore[arg-type]
+                upper_bound,  # type: ignore[arg-type]
+                strings_are_column_names=True,
             ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent

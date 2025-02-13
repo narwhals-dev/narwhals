@@ -16,10 +16,10 @@ from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
-from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._expression_parsing import ExprKind
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 

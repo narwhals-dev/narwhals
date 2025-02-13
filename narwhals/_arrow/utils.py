@@ -158,9 +158,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     raise AssertionError(msg)
 
 
-def extract_native(
-    lhs: ArrowSeries, rhs: Any
-) -> tuple[pa.ChunkedArray, Any]:
+def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the

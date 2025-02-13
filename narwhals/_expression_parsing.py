@@ -434,7 +434,7 @@ def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> E
 def apply_expr_n_ary_operation(
     plx: CompliantNamespace,
     expr: Expr,
-    function: Callable[[Any], CompliantExpr[Any]],
+    function: Any,
     *comparands: IntoExpr,
     strings_are_column_names: bool,
 ) -> CompliantExpr[Any]:
@@ -470,43 +470,9 @@ def apply_expr_n_ary_operation(
     return function(*compliant_exprs)
 
 
-def apply_namespace_n_ary_operation(
-    plx: CompliantNamespace,
-    function: Callable[[Any], CompliantExpr[Any]],
-    *into_exprs: IntoExpr,
-    strings_are_column_names: bool,
+def apply_rhs_arithmetic_operation(
+    plx: CompliantNamespace[Any], expr: Expr, other: Any, attr: str
 ) -> CompliantExpr[Any]:
-    compliant_exprs = [
-        *(
-            extract_compliant(
-                plx, into_expr, strings_are_column_names=strings_are_column_names
-            )
-            for into_expr in into_exprs
-        ),
-    ]
-    kinds = [
-        *(
-            infer_expr_kind(into_expr, strings_are_column_names=strings_are_column_names)
-            for into_expr in into_exprs
-        ),
-    ]
-
-    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
-    compliant_exprs = [
-        compliant_expr.broadcast(kind)
-        # `compliant` expr could also be literal, hence the check is needed before calling `broadcast`.
-        # We can't (yet) use `plx.lit` for all literals due to dtype mismatches in pandas,
-        # see test failures in https://github.com/narwhals-dev/narwhals/pull/1999.
-        if broadcast
-        and is_compliant_expr(compliant_expr)
-        and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-        else compliant_expr
-        for compliant_expr, kind in zip(compliant_exprs, kinds)
-    ]
-    return function(*compliant_exprs)
-
-
-def apply_rhs_arithmetic_operation(plx, expr, other, attr):
     expr_compliant = extract_compliant(plx, expr, strings_are_column_names=False)
     other_compliant = plx.lit(
         extract_compliant(plx, other, strings_are_column_names=False), dtype=None

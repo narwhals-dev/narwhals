@@ -31,7 +31,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __init__(
         self: Self,
-        call: Callable[[SparkLikeLazyFrame], list[Column]],
+        call: Callable[[SparkLikeLazyFrame], Sequence[Column]],
         *,
         function_name: str,
         evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
@@ -52,7 +52,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         return self._call(df)
 
     def broadcast(self, kind: NwExprKind) -> Self:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             if kind is NwExprKind.AGGREGATION:
                 return [
                     result.over(df._Window().partitionBy(df._F.lit(1)))

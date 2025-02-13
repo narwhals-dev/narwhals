@@ -15,6 +15,7 @@ from narwhals.utils import Implementation
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._expression_parsing import ExprKind
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -36,7 +37,7 @@ class PolarsExpr:
             expr, version=self._version, backend_version=self._backend_version
         )
 
-    def broadcast(self, kind):
+    def broadcast(self, kind: ExprKind) -> Self:
         # Let Polars do its thing.
         return self
 

@@ -49,6 +49,8 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.series import Series
+    from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantNamespace
     from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
@@ -1464,7 +1466,7 @@ class When:
     def then(self: Self, value: IntoExpr | Any) -> Then:
         kind = infer_expr_kind(value, strings_are_column_names=True)
 
-        def func(plx):
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_predicate = self._predicate._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
             if kind is not ExprKind.TRANSFORM:
@@ -1472,7 +1474,7 @@ class When:
                     # We don't (yet) always return CompliantExpr from `extract_compliant`.
                     compliant_value = plx.lit(compliant_value, dtype=None)
                 compliant_value = compliant_value.broadcast(kind)
-            return plx.when(compliant_predicate).then(compliant_value)
+            return plx.when(compliant_predicate).then(compliant_value)  # type: ignore[attr-defined]
 
         return Then(
             func,
@@ -1484,7 +1486,7 @@ class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         kind = infer_expr_kind(value, strings_are_column_names=True)
 
-        def func(plx):
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
             if kind is not ExprKind.TRANSFORM:
