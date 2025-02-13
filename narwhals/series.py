@@ -183,7 +183,9 @@ class Series(Generic[IntoSeriesT]):
         if parse_version(pa) < (16, 0):  # pragma: no cover
             msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
-        ca = pa.chunked_array([self.to_arrow()])  # type: ignore[call-overload, unused-ignore]
+        from narwhals._arrow.utils import chunked_array
+
+        ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     def to_native(self: Self) -> IntoSeriesT:
