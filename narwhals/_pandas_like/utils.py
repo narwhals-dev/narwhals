@@ -147,8 +147,6 @@ def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        len_other = other.len()
-
         if other._native_series.index is not index:
             return set_index(
                 other._native_series,
