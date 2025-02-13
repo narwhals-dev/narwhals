@@ -87,16 +87,13 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def broadcast_align_and_extract_native(
+def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: Any
 ) -> tuple[pd.Series, Any]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
-
-    If RHS is length 1, return the scalar value, so that the underlying
-    library can broadcast it.
     """
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -122,21 +119,6 @@ def broadcast_align_and_extract_native(
         return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, PandasLikeSeries):
-        rhs_index = rhs._native_series.index
-        if rhs.len() == 1:
-            # broadcast
-            s = rhs._native_series
-            return (
-                lhs._native_series,
-                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype, name=rhs.name),
-            )
-        if lhs.len() == 1:
-            # broadcast
-            s = lhs._native_series
-            return (
-                s.__class__(s.iloc[0], index=rhs_index, dtype=s.dtype, name=s.name),
-                rhs._native_series,
-            )
         if rhs._native_series.index is not lhs_index:
             return (
                 lhs._native_series,
@@ -182,12 +164,6 @@ def extract_dataframe_comparand(index: Any, other: Any) -> Any:
 def broadcast_dataframe_comparand(
     index: pd.Index, other: PandasLikeSeries
 ) -> PandasLikeSeries:
-    """Validate RHS of binary operation.
-
-    If the comparison isn't supported, return `NotImplemented` so that the
-    "right-hand-side" operation (e.g. `__radd__`) can be tried.
-    """
-    # broadcast
     s = other._native_series
     return other._from_native_series(
         s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)

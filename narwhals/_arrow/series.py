@@ -475,7 +475,6 @@ class ArrowSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> Self:
         if isinstance(other, list) and isinstance(other[0], self.__class__):
-            # We can't use `broadcast_and_align` because we don't want to align here.
             # `other` is just a sequence that all rows from `self` are checked against.
             value_set = other[0]._native_series
         else:

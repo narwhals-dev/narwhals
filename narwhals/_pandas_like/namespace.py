@@ -428,7 +428,7 @@ class PandasWhen:
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+        from narwhals._pandas_like.utils import align_and_extract_native
 
         plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
@@ -441,7 +441,7 @@ class PandasWhen:
                 self._then_value, reference_series=condition.alias("literal")
             )
 
-        condition_native, value_series_native = broadcast_align_and_extract_native(
+        condition_native, value_series_native = align_and_extract_native(
             condition, value_series
         )
         if self._otherwise_value is None:
@@ -460,7 +460,7 @@ class PandasWhen:
                 )
             ]
         otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = broadcast_align_and_extract_native(
+        _, otherwise_native = align_and_extract_native(
             condition, otherwise_series
         )
         return [

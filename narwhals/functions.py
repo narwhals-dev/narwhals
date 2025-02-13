@@ -387,7 +387,7 @@ def _from_dict_impl(
         schema_pl = Schema(schema).to_polars() if schema else None
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif eager_backend.is_pandas_like():
-        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+        from narwhals._pandas_like.utils import align_and_extract_native
 
         aligned_data = {}
         left_most_series = None
@@ -400,7 +400,7 @@ def _from_dict_impl(
                     left_most_series = compliant_series
                     aligned_data[key] = native_series
                 else:
-                    aligned_data[key] = broadcast_align_and_extract_native(
+                    aligned_data[key] = align_and_extract_native(
                         left_most_series, compliant_series
                     )[1]
             else:
