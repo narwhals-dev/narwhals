@@ -47,11 +47,7 @@ def test_sumh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_sumh_aggregations(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_sumh_aggregations(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.sum_horizontal(nw.all().mean().name.suffix("_foo")))
@@ -64,7 +60,7 @@ def test_sumh_aggregations(
 def test_sumh_transformations(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "duckdb")):
+    if any(x in str(constructor) for x in ("duckdb",)):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))

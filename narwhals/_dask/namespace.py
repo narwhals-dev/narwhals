@@ -24,12 +24,12 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
-if TYPE_CHECKING:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
+try:
+    import dask.dataframe.dask_expr as dx
+except ModuleNotFoundError:
+    import dask_expr as dx
 
+if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -157,7 +157,11 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
+            series = [
+                s.fillna(0) if isinstance(s, dx.Series) else 0 if s is None else s
+                for _expr in exprs
+                for s in _expr(df)
+            ]
             return [reduce(operator.add, series)]
 
         return DaskExpr(
