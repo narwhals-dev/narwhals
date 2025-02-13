@@ -257,10 +257,14 @@ class PolarsExpr:
         return self._from_native_expr(self._native_expr.__pow__(extract_native(other)))
 
     def __truediv__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__truediv__(extract_native(other)))
+        return self._from_native_expr(
+            self._native_expr.__truediv__(extract_native(other))
+        )
 
     def __floordiv__(self: Self, other: Any) -> Self:
-        return self._from_native_expr(self._native_expr.__floordiv__(extract_native(other)))
+        return self._from_native_expr(
+            self._native_expr.__floordiv__(extract_native(other))
+        )
 
     def __mod__(self: Self, other: Any) -> Self:
         return self._from_native_expr(self._native_expr.__mod__(extract_native(other)))

@@ -178,7 +178,10 @@ def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
 
-def broadcast_dataframe_comparand(index: pd.Index, other: PandasLikeSeries) -> PandasLikeSeries:
+
+def broadcast_dataframe_comparand(
+    index: pd.Index, other: PandasLikeSeries
+) -> PandasLikeSeries:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -186,7 +189,9 @@ def broadcast_dataframe_comparand(index: pd.Index, other: PandasLikeSeries) -> P
     """
     # broadcast
     s = other._native_series
-    return other._from_native_series(s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name))
+    return other._from_native_series(
+        s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+    )
 
 
 def create_compliant_series(

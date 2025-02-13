@@ -105,7 +105,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs=self._kwargs,
         )
 
-
     @classmethod
     def from_column_names(
         cls: type[Self],

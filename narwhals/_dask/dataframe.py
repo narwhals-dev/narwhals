@@ -161,7 +161,9 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def aggregate(self: Self, *exprs: DaskExpr) -> Self:
         new_series = parse_exprs(self, *exprs)
-        df = dd.concat([val.to_series().rename(name) for name, val in new_series.items()], axis=1)
+        df = dd.concat(
+            [val.to_series().rename(name) for name, val in new_series.items()], axis=1
+        )
         return self._from_native_frame(df, validate_column_names=False)
 
     def select(self: Self, *exprs: DaskExpr) -> Self:

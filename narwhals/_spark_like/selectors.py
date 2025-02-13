@@ -50,7 +50,6 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
             implementation=self._implementation,
         )
@@ -68,7 +67,6 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
             implementation=self._implementation,
         )
@@ -114,7 +112,6 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
             implementation=self._implementation,
         )
@@ -159,7 +156,6 @@ class SparkLikeSelectorNamespace:
             evaluate_output_names=evalute_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
             implementation=self._implementation,
         )
@@ -176,7 +172,6 @@ class SparkLikeSelector(SparkLikeExpr):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
-            expr_kind=self._expr_kind,
             version=self._version,
             implementation=self._implementation,
         )
@@ -201,7 +196,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -232,7 +226,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -259,7 +252,6 @@ class SparkLikeSelector(SparkLikeExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
                 implementation=self._implementation,
             )

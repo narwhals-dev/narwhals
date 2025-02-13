@@ -417,11 +417,13 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
         for x in kwargs.values()
     )
 
+
 def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> ExprKind:
     from narwhals.expr import Expr
     from narwhals.series import Series
+
     if isinstance(into_expr, Expr):
-        return into_expr._metadata['kind']
+        return into_expr._metadata["kind"]
     if isinstance(into_expr, Series) or is_numpy_array(into_expr):
         return ExprKind.TRANSFORM
     if isinstance(into_expr, str) and strings_are_column_names:
@@ -429,33 +431,50 @@ def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> E
     return ExprKind.LITERAL
 
 
-def apply_n_ary_operation(plx: CompliantNamespace, expr: Expr, function: Callable[[Any], CompliantExpr[Any]], *comparands: IntoExpr, strings_are_column_names: bool) -> CompliantExpr[Any]:
+def apply_n_ary_operation(
+    plx: CompliantNamespace,
+    expr: Expr,
+    function: Callable[[Any], CompliantExpr[Any]],
+    *comparands: IntoExpr,
+    strings_are_column_names: bool,
+) -> CompliantExpr[Any]:
     compliant_exprs = [
         expr._to_compliant_expr(plx),
-        *(extract_compliant(plx, comparand, strings_are_column_names=strings_are_column_names) for comparand in comparands),
+        *(
+            extract_compliant(
+                plx, comparand, strings_are_column_names=strings_are_column_names
+            )
+            for comparand in comparands
+        ),
     ]
     kinds = [
         expr._metadata["kind"],
-        *(infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names) for comparand in comparands)
+        *(
+            infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
+            for comparand in comparands
+        ),
     ]
 
-    broadcast = any(
-        kind is ExprKind.TRANSFORM for kind in kinds
-    )
+    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
     compliant_exprs = [
         compliant_expr.broadcast(kind)
         # `compliant` expr could also be literal, hence the check is needed before calling `broadcast`.
         # We can't (yet) use `plx.lit` for all literals due to dtype mismatches in pandas,
         # see test failures in https://github.com/narwhals-dev/narwhals/pull/1999.
-        if broadcast and is_compliant_expr(compliant_expr) and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        if broadcast
+        and is_compliant_expr(compliant_expr)
+        and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     ]
     return function(*compliant_exprs)
 
+
 def apply_rhs_arithmetic_operation(plx, expr, other, attr):
     expr_compliant = extract_compliant(plx, expr, strings_are_column_names=False)
-    other_compliant = plx.lit( extract_compliant(plx, other, strings_are_column_names=False), dtype=None)
-    if expr._metadata['kind'] is ExprKind.TRANSFORM:
+    other_compliant = plx.lit(
+        extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+    )
+    if expr._metadata["kind"] is ExprKind.TRANSFORM:
         return getattr(other_compliant.broadcast(ExprKind.LITERAL), attr)(expr_compliant)
     return getattr(other_compliant, attr)(expr_compliant)

@@ -442,9 +442,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
-            mask_native = extract_dataframe_comparand(
-                self._native_frame.index, mask
-            )
+            mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
 
         return self._from_native_frame(
             self._native_frame.loc[mask_native], validate_column_names=False
@@ -469,9 +467,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            extract_dataframe_comparand(
-                index, new_column_name_to_new_column_map[s]
-            )
+            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s])
             for s in new_column_name_to_new_column_map
         )
 

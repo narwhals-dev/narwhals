@@ -67,7 +67,9 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 result._from_native_series(
-                    broadcast_and_extract_dataframe_comparand(len(df), result, self._backend_version)
+                    broadcast_and_extract_dataframe_comparand(
+                        len(df), result, self._backend_version
+                    )
                 )
                 for result in self(df)
             ]

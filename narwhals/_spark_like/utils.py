@@ -157,7 +157,7 @@ def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, C
     return native_results
 
 
-def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Column:
+def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Column:
     from narwhals._spark_like.expr import SparkLikeExpr
 
     if isinstance(obj, SparkLikeExpr):
@@ -202,15 +202,3 @@ def _var(
 
     input_col = functions.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)
-
-
-def n_ary_operation_expr_kind(*args: SparkLikeExpr | Any) -> ExprKind:
-    if all(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
-    ):
-        return ExprKind.LITERAL
-    if any(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.AGGREGATION
