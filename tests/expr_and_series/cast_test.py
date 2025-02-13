@@ -259,7 +259,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     assert result.schema == {"a": dtype}
 
 
-def test_cast_struct_pyspark() -> None:
+def test_cast_struct_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
 
     from pyspark.sql import SparkSession
