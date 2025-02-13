@@ -49,16 +49,13 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
+        # we are not testing pyspark on Windows here because it is very slow
         run: uv pip install -e ".[tests, core, extra, dask, modin]" --system
-      - name: install pyspark
-        run: uv pip install -e ".[pyspark]" --system
-        # PySpark is not yet available on Python3.12+
-        if: matrix.python-version != '3.12'
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --all-cpu-constructors
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb
 
   pytest-full-coverage:
     strategy:
