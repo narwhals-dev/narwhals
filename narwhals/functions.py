@@ -12,8 +12,9 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
-from narwhals._expression_parsing import ExprKind, apply_n_ary_operation
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
@@ -1456,24 +1457,16 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 class When:
     def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
-        self._predicates = flatten([predicates])
-        if not self._predicates:
-            msg = "At least one predicate needs to be provided to `narwhals.when`."
-            raise TypeError(msg)
-        check_expressions_transform(*self._predicates, function_name="when")
-
-    def _extract_predicates(self: Self, plx: Any) -> Any:
-        return [
-            extract_compliant(plx, v, strings_are_column_names=True)
-            for v in self._predicates
-        ]
+        self._predicate = all_horizontal(*flatten(predicates))
+        self._to_compliant_expr = self._predicate._to_compliant_expr
+        check_expressions_transform(self._predicate, function_name="when")
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx, self, lambda x, y: x.then(y), value, strings_are_column_names=True
             ),
-            combine_metadata(*self._predicates, value, strings_are_column_names=True),
+            combine_metadata(self._predicate, value, strings_are_column_names=True),
         )
 
 

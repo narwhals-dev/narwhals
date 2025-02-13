@@ -14,7 +14,6 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
-from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
 
@@ -314,15 +313,9 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
             implementation=self._implementation,
         )
 
-    def when(self: Self, *predicates: SparkLikeExpr) -> SparkLikeWhen:
-        plx = self.__class__(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: SparkLikeExpr) -> SparkLikeWhen:
         return SparkLikeWhen(
-            condition,
+            predicate,
             self._backend_version,
             version=self._version,
             implementation=self._implementation,

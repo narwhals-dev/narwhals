@@ -45,8 +45,7 @@ def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
         if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
-        column_result = column_results[0]
-        return column_result
+        return column_results[0]
     return duckdb.ConstantExpression(obj)
 
 
@@ -186,11 +185,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        shape: tuple[int] = dtype.shape  # type: ignore[union-attr]
+        shape = dtype.shape
         duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype = dtype
+        inner_dtype: Any = dtype
         for _ in shape:
-            inner_dtype = inner_dtype.inner  # type: ignore[union-attr]
+            inner_dtype = inner_dtype.inner
         duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

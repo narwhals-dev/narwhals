@@ -19,7 +19,6 @@ from duckdb.typing import VARCHAR
 
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
-from narwhals._duckdb.utils import ExprKind
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
@@ -227,14 +226,9 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def when(
-        self: Self,
-        *predicates: DuckDBExpr,
-    ) -> DuckDBWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen(
-            condition,
+            predicate,
             self._backend_version,
             version=self._version,
         )
