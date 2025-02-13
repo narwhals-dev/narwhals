@@ -236,14 +236,9 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
             version=self._version,
         )
 
-    def when(
-        self: Self,
-        *predicates: DuckDBExpr,
-    ) -> DuckDBWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen(
-            condition,
+            predicate,
             self._backend_version,
             expr_kind=ExprKind.TRANSFORM,
             version=self._version,
