@@ -431,9 +431,7 @@ class ArrowWhen:
                 self._then_value, reference_series=condition.alias("literal")
             )
 
-        condition_native, value_series_native = broadcast_series(
-            [condition, value_series]
-        )
+        condition_native, value_series_native = condition._native_series, value_series._native_series
 
         if self._otherwise_value is None:
             otherwise_native = pa.repeat(

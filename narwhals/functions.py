@@ -12,7 +12,7 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprKind, apply_n_ary_operation
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
@@ -1470,8 +1470,8 @@ class When:
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
-            lambda plx: plx.when(*self._extract_predicates(plx)).then(
-                extract_compliant(plx, value, strings_are_column_names=True)
+            lambda plx: apply_n_ary_operation(
+                plx, self, lambda x, y: x.then(y), value, strings_are_column_names=True
             ),
             combine_metadata(*self._predicates, value, strings_are_column_names=True),
         )
