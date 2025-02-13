@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
-from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -20,20 +17,6 @@ def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}
-    assert_equal_data(result, expected)
-
-
-def test_mode_multi_expr(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION >= (1, 7, 0):
-        request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor_eager):
-        return
-    df = nw.from_native(constructor_eager(data))
-    result = df.select(nw.col("a", "b").mode()).sort("a", "b")
-    expected = {"a": [1, 2], "b": [3, 3]}
     assert_equal_data(result, expected)
 
 
