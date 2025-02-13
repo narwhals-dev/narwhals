@@ -56,9 +56,9 @@ class ArrowSeriesDateTimeNamespace:
 
     def convert_time_zone(self: Self, time_zone: str) -> ArrowSeries[pa.TimestampScalar]:
         if self._compliant_series.dtype.time_zone is None:  # type: ignore[attr-defined]
-            ser = self.replace_time_zone("UTC")
+            ser: ArrowSeries[pa.TimestampScalar] = self.replace_time_zone("UTC")
         else:
-            ser: ArrowSeries[pa.TimestampScalar] = self._compliant_series
+            ser = self._compliant_series
         result = ser._native_series.cast(pa.timestamp(ser._type.unit, time_zone))
         return self._compliant_series._from_native_series(result)
 
