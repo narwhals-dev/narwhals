@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Literal
 
 import numpy as np
 import pyarrow as pa
@@ -107,7 +108,9 @@ def test_duration_attributes_series(
         ("total_nanoseconds", 70e9),
     ],
 )
-def test_pyarrow_units(unit: str, attribute: str, expected: int) -> None:
+def test_pyarrow_units(
+    unit: Literal["s", "ms", "us", "ns"], attribute: str, expected: int
+) -> None:
     data = [None, timedelta(minutes=1, seconds=10)]
     arr = pc.cast(pa.array(data), pa.duration(unit))
     df = nw.from_native(pa.table({"a": arr}), eager_only=True)

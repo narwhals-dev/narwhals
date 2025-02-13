@@ -57,7 +57,11 @@ class Expr:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).abs().sum(), self._metadata
+            lambda plx: self._to_compliant_expr(plx).abs().sum(),
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     # --- convert ---

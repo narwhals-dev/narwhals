@@ -16,6 +16,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
@@ -80,21 +81,11 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[tuple[IntoCompliantExpr[Any]], dict[str, IntoCompliantExpr[Any]]]:
+    ) -> tuple[IntoCompliantExpr[Any]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        from itertools import chain
-
-        plx = self.__narwhals_namespace__()
-        compliant_exprs = (
-            plx.col(expr) if isinstance(expr, str) else self._extract_compliant(expr)
-            for expr in flatten(exprs)
-        )
+        compliant_exprs = (self._extract_compliant(expr) for expr in flatten(exprs))
         compliant_named_exprs = (
-            (
-                plx.col(value).alias(key)
-                if isinstance(value, str)
-                else self._extract_compliant(value).alias(key)
-            )
+            self._extract_compliant(value).alias(key)
             for key, value in named_exprs.items()
         )
         return tuple(chain(compliant_exprs, compliant_named_exprs))
@@ -162,8 +153,14 @@ class BaseFrame(Generic[_FrameT]):
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns, available_columns
                 ) from e
-
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if (flat_exprs or named_exprs) and all_exprs_are_aggs_or_literals(
+            *flat_exprs, **named_exprs
+        ):
+            return self._from_compliant_dataframe(
+                self._compliant_frame.aggregate(*compliant_exprs),
+            )
+
         return self._from_compliant_dataframe(
             self._compliant_frame.select(*compliant_exprs),
         )
@@ -415,12 +412,15 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
+        plx = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return arg._compliant_series
+            return plx._create_expr_from_series(arg._compliant_series)
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if isinstance(arg, str):
+            return plx.col(arg)
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
@@ -430,8 +430,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            plx = self.__narwhals_namespace__()
-            return plx._create_compliant_series(arg)
+            return plx._create_expr_from_series(plx._create_compliant_series(arg))
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -2187,6 +2186,9 @@ class LazyFrame(BaseFrame[FrameT]):
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
+        if isinstance(arg, str):  # pragma: no cover
+            plx = self.__narwhals_namespace__()
+            return plx.col(arg)
         if isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
                 msg = (

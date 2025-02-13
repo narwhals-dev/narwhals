@@ -13,6 +13,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
+from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
@@ -64,6 +65,9 @@ if TYPE_CHECKING:
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
     _T = TypeVar("_T")
+    _T1 = TypeVar("_T1")
+    _T2 = TypeVar("_T2")
+    _T3 = TypeVar("_T3")
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -192,7 +196,7 @@ class Implementation(Enum):
         if self is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
-            return pa  # type: ignore[no-any-return]
+            return pa
         if self is Implementation.PYSPARK:  # pragma: no cover
             import pyspark.sql
 
@@ -204,12 +208,12 @@ class Implementation(Enum):
         if self is Implementation.DASK:
             import dask.dataframe  # ignore-banned-import
 
-            return dask.dataframe  # type: ignore[no-any-return]
+            return dask.dataframe
 
         if self is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
-            return duckdb  # type: ignore[no-any-return]
+            return duckdb
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -474,7 +478,49 @@ def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ..
     return tuple(int(re.sub(r"\D", "", v)) for v in version_str.split("."))
 
 
-def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: type[_T]
+) -> TypeIs[type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: type[_T]
+) -> TypeIs[_T | type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[_T1 | _T2 | type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: Any, cls_or_tuple: tuple[type, ...]
+) -> TypeIs[Any]: ...
+
+
+def isinstance_or_issubclass(obj_or_cls: Any, cls_or_tuple: Any) -> bool:
     from narwhals.dtypes import DType
 
     if isinstance(obj_or_cls, DType):

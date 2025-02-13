@@ -7,7 +7,7 @@ from typing import Sequence
 
 from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
-from narwhals._spark_like.utils import parse_exprs_and_named_exprs
+from narwhals._spark_like.utils import parse_exprs
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -192,8 +192,20 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def simple_select(self: Self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
-    def select(self: Self, *exprs: SparkLikeExpr) -> Self:
-        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs)
+    def aggregate(
+        self: Self,
+        *exprs: SparkLikeExpr,
+    ) -> Self:
+        new_columns, expr_kinds = parse_exprs(self, *exprs)
+
+        new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
+        return self._from_native_frame(self._native_frame.agg(*new_columns_list))
+
+    def select(
+        self: Self,
+        *exprs: SparkLikeExpr,
+    ) -> Self:
+        new_columns, expr_kinds = parse_exprs(self, *exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -204,22 +216,16 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
             return self._from_native_frame(spark_df)
 
-        if not any(expr_kind is ExprKind.TRANSFORM for expr_kind in expr_kinds):
-            new_columns_list = [
-                col.alias(col_name) for col_name, col in new_columns.items()
-            ]
-            return self._from_native_frame(self._native_frame.agg(*new_columns_list))
-        else:
-            new_columns_list = [
-                col.over(self._Window().partitionBy(self._F.lit(1))).alias(col_name)
-                if expr_kind is ExprKind.AGGREGATION
-                else col.alias(col_name)
-                for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
-            ]
-            return self._from_native_frame(self._native_frame.select(*new_columns_list))
+        new_columns_list = [
+            col.over(self._Window().partitionBy(self._F.lit(1))).alias(col_name)
+            if expr_kind is ExprKind.AGGREGATION
+            else col.alias(col_name)
+            for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
+        ]
+        return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
-        new_columns, expr_kinds = parse_exprs_and_named_exprs(self, *exprs)
+        new_columns, expr_kinds = parse_exprs(self, *exprs)
 
         new_columns_map = {
             col_name: col.over(self._Window().partitionBy(self._F.lit(1)))

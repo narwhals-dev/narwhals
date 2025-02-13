@@ -1,4 +1,4 @@
-name: Tests for TPCH Queries
+name: Type checking
 
 on:
   pull_request:
@@ -6,12 +6,11 @@ on:
     branches: [main]
 
 jobs:
-  validate-queries:
+  mypy:
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.11"]
         os: [ubuntu-latest]
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +23,18 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: local-install
-        run: uv pip install -U --pre -e ".[tests, core, dask]" --system
-      - name: generate-data
-        run: cd tpch && python generate_data.py
-      - name: tpch-tests 
-        run: cd tpch && pytest tests
+      - name: Create venv
+        run: uv venv .venv
+      - name: install-reqs
+        # TODO: add more dependencies/backends incrementally
+        run: |
+          source .venv/bin/activate
+          uv pip install -e ".[tests, typing, core]"
+      - name: show-deps
+        run: |
+          source .venv/bin/activate
+          uv pip freeze
+      - name: Run mypy
+        run: |
+          source .venv/bin/activate
+          make typing

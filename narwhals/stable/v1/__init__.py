@@ -270,6 +270,9 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         if isinstance(arg, Expr):
             # After stable.v1, we raise if arg._is_order_dependent or arg._changes_length
             return arg._to_compliant_expr(self.__narwhals_namespace__())
+        if isinstance(arg, str):
+            plx = self.__narwhals_namespace__()
+            return plx.col(arg)
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
@@ -2077,7 +2080,7 @@ def concat_str(
 class When(NwWhen):
     @classmethod
     def from_when(cls: type, when: NwWhen) -> When:
-        return cls(*when._predicates)  # type: ignore[no-any-return]
+        return cls(when._predicate)  # type: ignore[no-any-return]
 
     def then(self: Self, value: Any) -> Then:
         return Then.from_then(super().then(value))

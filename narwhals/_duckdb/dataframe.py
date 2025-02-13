@@ -7,12 +7,12 @@ from typing import Sequence
 
 import duckdb
 from duckdb import ColumnExpression
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import ExprKind
+from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
-from narwhals._duckdb.utils import parse_exprs_and_named_exprs
+from narwhals._duckdb.utils import parse_exprs
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -141,24 +141,26 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*column_names), validate_column_names=False
         )
 
+    def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
+        new_columns_map = parse_exprs(self, *exprs)
+        return self._from_native_frame(
+            self._native_frame.aggregate(
+                [val.alias(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
+            ),
+            validate_column_names=False,
+        )
+
     def select(
         self: Self,
         *exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
+        new_columns_map = parse_exprs(self, *exprs)
         if not new_columns_map:
             # TODO(marco): return empty relation with 0 columns?
             return self._from_native_frame(
                 self._native_frame.limit(0), validate_column_names=False
             )
 
-        if not any(expr._expr_kind is ExprKind.TRANSFORM for expr in exprs):
-            return self._from_native_frame(
-                self._native_frame.aggregate(
-                    [val.alias(col) for col, val in new_columns_map.items()]
-                ),
-                validate_column_names=False,
-            )
         if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
                 "Mixing expressions which aggregate and expressions which don't\n"
@@ -195,7 +197,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return self
 
     def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
-        new_columns_map = parse_exprs_and_named_exprs(self, *exprs)
+        new_columns_map = parse_exprs(self, *exprs)
 
         if any(expr._expr_kind is ExprKind.AGGREGATION for expr in exprs):
             msg = (
@@ -235,7 +237,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
@@ -300,7 +302,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 raise NotImplementedError(msg)
             rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
                 other._native_frame.set_alias("rhs")
-            )
+            )  # type: ignore[operator]
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
@@ -465,9 +467,9 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         rel = self._native_frame
         original_columns = self.columns
 
-        not_null_condition = (
-            col_to_explode.isnotnull() & FunctionExpression("len", col_to_explode) > 0
-        )
+        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
+            "len", col_to_explode
+        ) > lit(0)
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 FunctionExpression("unnest", col_to_explode).alias(col)
@@ -478,10 +480,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         )
 
         null_rel = rel.filter(~not_null_condition).select(
-            *(
-                ConstantExpression(None).alias(col) if col in columns else col
-                for col in original_columns
-            )
+            *(lit(None).alias(col) if col in columns else col for col in original_columns)
         )
 
         return self._from_native_frame(
