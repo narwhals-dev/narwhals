@@ -279,9 +279,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._session.createDataFrame(self._native_frame.take(num=n))
-        )
+        return self._from_native_frame(self._native_frame.limit(num=n))
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy

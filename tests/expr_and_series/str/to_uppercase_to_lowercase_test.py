@@ -37,6 +37,7 @@ def test_str_to_uppercase(
             "pyarrow_table_constructor",
             "modin_pyarrow_constructor",
             "duckdb_lazy_constructor",
+            "sqlframe_pyspark_lazy_constructor"
         )
         or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
@@ -44,7 +45,6 @@ def test_str_to_uppercase(
         # since the pyarrow backend will convert
         # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
         request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
 

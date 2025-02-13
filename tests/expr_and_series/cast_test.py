@@ -54,7 +54,7 @@ SCHEMA = {
     "p": nw.Int64,
 }
 
-SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 
 
@@ -72,7 +72,7 @@ def test_cast(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+        incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "duckdb" in str(constructor):
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
@@ -185,7 +185,7 @@ def test_cast_raises_for_unknown_dtype(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+        incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
