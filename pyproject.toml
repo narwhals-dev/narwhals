@@ -200,6 +200,7 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
+  'narwhals/_arrow/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13

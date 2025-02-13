@@ -1,8 +1,8 @@
 from __future__ import annotations  # pragma: no cover
 
 from typing import TYPE_CHECKING  # pragma: no cover
-from typing import Any
-from typing import TypeVar
+from typing import Any  # pragma: no cover
+from typing import TypeVar  # pragma: no cover
 
 if TYPE_CHECKING:
     import sys
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
 
-Incomplete: TypeAlias = Any
+Incomplete: TypeAlias = Any  # pragma: no cover
 """
 Marker for working code that fails on the stubs.
 
@@ -48,4 +48,4 @@ Common issues:
 """
 
 
-StringScalarT = TypeVar("StringScalarT", bound="StringScalar")
+StringScalarT = TypeVar("StringScalarT", bound="StringScalar")  # pragma: no cover
