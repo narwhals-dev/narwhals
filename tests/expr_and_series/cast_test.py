@@ -259,6 +259,58 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     assert result.schema == {"a": dtype}
 
 
+def test_cast_struct_pyspark() -> None:
+    pytest.importorskip("pyspark")
+
+    from pyspark.sql import SparkSession
+    from pyspark.sql.types import IntegerType
+    from pyspark.sql.types import StringType
+    from pyspark.sql.types import StructField
+    from pyspark.sql.types import StructType
+
+    session = (
+        SparkSession.builder.appName("struct-unit-tests")
+        .master("local[1]")
+        .config("spark.ui.enabled", "false")
+        # executing one task at a time makes the tests faster
+        .config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        # common timezone for all tests environments
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+
+    schema = StructType(
+        [
+            StructField(
+                name="a",
+                dataType=StructType(
+                    [
+                        StructField("movie", StringType()),
+                        StructField("rating", IntegerType()),
+                    ]
+                ),
+            )
+        ]
+    )
+
+    data = {
+        "a": [
+            {"movie ": "Cars", "rating": 4},
+            {"movie ": "Toy Story", "rating": 3},
+        ]
+    }
+
+    df_native = session.createDataFrame(
+        [*zip(*data.values())], schema=schema
+    ).repartition(2)
+
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
+    result = nw.from_native(df_native).select(nw.col("a").cast(dtype)).lazy().collect()
+
+    assert result.schema == {"a": dtype}
+
+
 @pytest.mark.parametrize("dtype", [pl.String, pl.String()])
 def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
