@@ -44,7 +44,10 @@ class PandasLikeGroupBy:
         self._keys = keys
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        native_frame = df._native_frame.reset_index(drop=True)
+        if set(df._native_frame.index.names).intersection(df.columns):
+            native_frame = df._native_frame.reset_index(drop=True)
+        else:
+            native_frame = df._native_frame
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 1)
