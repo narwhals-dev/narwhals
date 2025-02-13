@@ -1351,11 +1351,15 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         msg = "At least one expression must be passed to `sum_horizontal`"
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
+    kinds = [infer_expr_kind(expr, strings_are_column_names=True) for expr in flat_exprs]
+    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
     return Expr(
         lambda plx: plx.sum_horizontal(
             *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
+                extract_compliant(plx, v, strings_are_column_names=True).broadcast(kind)
+                if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+                else extract_compliant(plx, v, strings_are_column_names=True)
+                for v, kind in zip(flat_exprs, kinds)
             )
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
