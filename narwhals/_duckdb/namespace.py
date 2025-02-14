@@ -296,22 +296,11 @@ class DuckDBWhen:
         condition = self._condition(df)[0]
         condition = cast("duckdb.Expression", condition)
 
-        if isinstance(self._then_value, DuckDBExpr):
-            value = self._then_value(df)[0]
-        else:
-            # `self._otherwise_value` is a scalar
-            value = lit(self._then_value)
+        value = self._then_value(df)[0]
         value = cast("duckdb.Expression", value)
 
         if self._otherwise_value is None:
             return [CaseExpression(condition=condition, value=value)]
-        if not isinstance(self._otherwise_value, DuckDBExpr):
-            # `self._otherwise_value` is a scalar
-            return [
-                CaseExpression(condition=condition, value=value).otherwise(
-                    lit(self._otherwise_value)
-                )
-            ]
         otherwise = self._otherwise_value(df)[0]
         return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
 

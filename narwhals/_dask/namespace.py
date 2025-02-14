@@ -24,16 +24,16 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
 
 class DaskNamespace(CompliantNamespace["dx.Series"]):
@@ -153,11 +153,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [
-                s.fillna(0) if isinstance(s, dx.Series) else 0 if s is None else s
-                for _expr in exprs
-                for s in _expr(df)
-            ]
+            series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
             return [reduce(operator.add, series)]
 
         return DaskExpr(
@@ -358,11 +354,7 @@ class DaskWhen:
         condition = self._condition(df)[0]
         condition = cast("dx.Series", condition)
 
-        if isinstance(self._then_value, DaskExpr):
-            value_sequence: Sequence[Any] = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_sequence = self._then_value
+        value_sequence: Sequence[Any] = self._then_value(df)[0]
 
         _df = condition.to_frame("a")
         _df["literal"] = value_sequence
@@ -373,9 +365,6 @@ class DaskWhen:
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
-        if not isinstance(self._otherwise_value, DaskExpr):
-            # `self._otherwise_value` is a scalar
-            return [value_series.where(condition, self._otherwise_value)]
 
         otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]

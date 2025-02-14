@@ -15,6 +15,7 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
@@ -428,19 +429,9 @@ class PandasWhen:
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-        from narwhals._pandas_like.utils import align_and_extract_native
-
-        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        if isinstance(self._then_value, PandasLikeExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition.alias("literal")
-            )
-
+        value_series = self._then_value(df)[0]
         condition_native, value_series_native = align_and_extract_native(
             condition, value_series
         )
@@ -450,15 +441,7 @@ class PandasWhen:
                     value_series_native.where(condition_native)
                 )
             ]
-        if isinstance(self._otherwise_value, PandasLikeExpr):
-            otherwise_expr = self._otherwise_value
-        else:
-            # `self._otherwise_value` is a scalar
-            return [
-                value_series._from_native_series(
-                    value_series_native.where(condition_native, self._otherwise_value)
-                )
-            ]
+        otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
         _, otherwise_native = align_and_extract_native(condition, otherwise_series)
         return [

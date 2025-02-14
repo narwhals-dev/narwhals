@@ -97,20 +97,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             version=self._version,
         )
 
-    def broadcast_aggregation(
-        self, df: ArrowDataFrame, result: list[ArrowSeries]
-    ) -> list[ArrowSeries]:
-        return [
-            series._from_native_series(
-                pa.array(
-                    [series._native_series[0]] * len(df), type=series._native_series.type
-                )
-            )
-            for series in result
-        ]
-
-    broadcast_literal = broadcast_aggregation
-
     # --- not in spec ---
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
@@ -414,17 +400,9 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        if isinstance(self._then_value, ArrowExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition.alias("literal")
-            )
-
+        value_series = self._then_value(df)[0]
         condition_native, value_series_native = (
             condition._native_series,
             value_series._native_series,
@@ -439,17 +417,7 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_native)
                 )
             ]
-        if isinstance(self._otherwise_value, ArrowExpr):
-            otherwise_expr = self._otherwise_value
-        else:
-            # `self._otherwise_value` is a scalar
-            return [
-                value_series._from_native_series(
-                    pc.if_else(
-                        condition_native, value_series_native, self._otherwise_value
-                    )
-                )
-            ]
+        otherwise_expr = self._otherwise_value
         otherwise_native = otherwise_expr(df)[0]._native_series
         return [
             value_series._from_native_series(
