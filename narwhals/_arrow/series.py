@@ -50,6 +50,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import DataTypeT_co
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import Indices
+    from narwhals._arrow.typing import NullPlacement
+    from narwhals._arrow.typing import Order
+    from narwhals._arrow.typing import TieBreaker
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -805,8 +808,8 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
 
     def sort(self: Self, *, descending: bool, nulls_last: bool) -> ArrowSeries[Any]:
         series = self._native_series
-        order = "descending" if descending else "ascending"
-        null_placement = "at_end" if nulls_last else "at_start"
+        order: Order = "descending" if descending else "ascending"
+        null_placement: NullPlacement = "at_end" if nulls_last else "at_start"
         sorted_indices = pc.array_sort_indices(
             series, order=order, null_placement=null_placement
         )
@@ -1096,8 +1099,8 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
 
         # ignore-banned-import
 
-        sort_keys = "descending" if descending else "ascending"
-        tiebreaker = "first" if method == "ordinal" else method
+        sort_keys: Order = "descending" if descending else "ascending"
+        tiebreaker: TieBreaker = "first" if method == "ordinal" else method
 
         native_series: pa.ChunkedArray[_ScalarT_co] | pa.Array[_ScalarT_co]
         if self._backend_version < (14, 0, 0):  # pragma: no cover

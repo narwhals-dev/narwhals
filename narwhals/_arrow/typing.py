@@ -6,6 +6,7 @@ from typing import TypeVar  # pragma: no cover
 
 if TYPE_CHECKING:
     import sys
+    from typing import Literal
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
@@ -23,11 +24,16 @@ if TYPE_CHECKING:
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Mask,  # noqa: F401
     )
+    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
+        Order,  # noqa: F401
+    )
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
 
     IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries[Any]"
+    TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
+    NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
     StringScalar: TypeAlias = "pc.StringScalar"
     StringArray: TypeAlias = "pc.StringArray"

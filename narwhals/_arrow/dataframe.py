@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from pyarrow._stubs_typing import Order  # pyright: ignore[reportMissingModuleSource]
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import Indices
     from narwhals._arrow.typing import Mask
+    from narwhals._arrow.typing import Order
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
