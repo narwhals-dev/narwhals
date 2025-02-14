@@ -22,30 +22,25 @@ class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries[Any]) -> None:
         self._compliant_series: ArrowSeries[Any] = series
 
-    def len_chars(self: Self) -> ArrowSeries[Any]:
+    def len_chars(self: Self) -> ArrowSeries[pa.Int32Scalar]:
         return self._compliant_series._from_native_series(
             pc.utf8_length(self._compliant_series._native_series)
         )
 
     def replace(
         self: Self, pattern: str, value: str, *, literal: bool, n: int
-    ) -> ArrowSeries[Any]:
-        method = "replace_substring" if literal else "replace_substring_regex"
-        return self._compliant_series._from_native_series(
-            getattr(pc, method)(
-                self._compliant_series._native_series,
-                pattern=pattern,
-                replacement=value,
-                max_replacements=n,
-            )
-        )
+    ) -> ArrowSeries[StringScalar]:
+        compliant = self._compliant_series
+        fn = pc.replace_substring if literal else pc.replace_substring_regex
+        arr = fn(compliant._native_series, pattern, replacement=value, max_replacements=n)
+        return compliant._from_native_series(arr)
 
     def replace_all(
         self: Self, pattern: str, value: str, *, literal: bool
-    ) -> ArrowSeries[Any]:
+    ) -> ArrowSeries[StringScalar]:
         return self.replace(pattern, value, literal=literal, n=-1)
 
-    def strip_chars(self: Self, characters: str | None) -> ArrowSeries[Any]:
+    def strip_chars(self: Self, characters: str | None) -> ArrowSeries[StringScalar]:
         whitespace = string.whitespace
         return self._compliant_series._from_native_series(
             pc.utf8_trim(
