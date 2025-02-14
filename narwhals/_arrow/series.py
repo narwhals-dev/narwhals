@@ -40,9 +40,6 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from pyarrow.__lib_pxi import (  # pyright: ignore[reportMissingModuleSource]
-        types as pa_types,  # pyright: ignore[reportMissingModuleSource]
-    )
     from pyarrow.compute import NumericOrTemporalScalar
     from pyarrow.compute import NumericScalar
     from typing_extensions import Self
@@ -167,43 +164,43 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
     def __len__(self: Self) -> int:
         return len(self._native_series)
 
-    def __eq__(self: Self, other: object) -> ArrowSeries[Any]:  # type: ignore[override]
+    def __eq__(self: ArrowSeries[Any], other: object) -> ArrowSeries[pa.BooleanScalar]:  # type: ignore[override]
         ser, right = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.equal(ser, right))
 
-    def __ne__(self: Self, other: object) -> ArrowSeries[Any]:  # type: ignore[override]
-        ser, other = broadcast_and_extract_native(self, other, self._backend_version)
-        return self._from_native_series(pc.not_equal(ser, other))
+    def __ne__(self: ArrowSeries[Any], other: object) -> ArrowSeries[pa.BooleanScalar]:  # type: ignore[override]
+        ser, right = broadcast_and_extract_native(self, other, self._backend_version)
+        return self._from_native_series(pc.not_equal(ser, right))
 
-    def __ge__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __ge__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.greater_equal(ser, other))
 
-    def __gt__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __gt__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.greater(ser, other))
 
-    def __le__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __le__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.less_equal(ser, other))
 
-    def __lt__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __lt__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.less(ser, other))
 
-    def __and__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __and__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.and_kleene(ser, other))
 
-    def __rand__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __rand__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.and_kleene(other, ser))
 
-    def __or__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __or__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.or_kleene(ser, other))
 
-    def __ror__(self: Self, other: Any) -> ArrowSeries[Any]:
+    def __ror__(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         return self._from_native_series(pc.or_kleene(other, ser))
 
@@ -270,9 +267,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
 
-    def __invert__(
-        self: ArrowSeries[pa.Scalar[pa_types.BoolType]],
-    ) -> ArrowSeries[pa.Scalar[pa_types.BoolType]]:
+    def __invert__(self: ArrowSeries[pa.BooleanScalar]) -> ArrowSeries[pa.BooleanScalar]:
         return self._from_native_series(
             pc.invert(cast("pa.BooleanArray", self._native_series))
         )
@@ -509,11 +504,11 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         )
 
     def is_between(
-        self: Self,
+        self: ArrowSeries[Any],
         lower_bound: Any,
         upper_bound: Any,
         closed: Literal["left", "right", "none", "both"],
-    ) -> ArrowSeries[_ScalarT_co]:
+    ) -> ArrowSeries[pa.BooleanScalar]:
         ser = self._native_series
         _, lower_bound = broadcast_and_extract_native(
             self, lower_bound, self._backend_version
@@ -541,11 +536,11 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
             raise AssertionError
         return self._from_native_series(res)
 
-    def is_null(self: Self) -> ArrowSeries[_ScalarT_co]:
+    def is_null(self: ArrowSeries[Any]) -> ArrowSeries[pa.BooleanScalar]:
         ser = self._native_series
         return self._from_native_series(ser.is_null())
 
-    def is_nan(self: Self) -> ArrowSeries[_ScalarT_co]:
+    def is_nan(self: ArrowSeries[Any]) -> ArrowSeries[pa.BooleanScalar]:
         return self._from_native_series(pc.is_nan(self._native_series))
 
     def cast(self: Self, dtype: DType) -> ArrowSeries[Any]:
@@ -572,7 +567,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         else:
             return self._from_native_series(ser.slice(abs(n)))
 
-    def is_in(self: Self, other: Any) -> ArrowSeries[_ScalarT_co]:
+    def is_in(self: ArrowSeries[Any], other: Any) -> ArrowSeries[pa.BooleanScalar]:
         if isinstance(other, list) and isinstance(other[0], self.__class__):
             # We can't use `broadcast_and_align` because we don't want to align here.
             # `other` is just a sequence that all rows from `self` are checked against.
