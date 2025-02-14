@@ -5,6 +5,7 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
@@ -1276,16 +1277,21 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
+def _hasattr_static(obj: Any, attr: str) -> bool:
+    sentinel = object()
+    return getattr_static(obj, attr, sentinel) is not sentinel
+
+
 def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
-    return hasattr(obj, "__narwhals_dataframe__")
+    return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
-    return hasattr(obj, "__narwhals_lazyframe__")
+    return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
 def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
-    return hasattr(obj, "__narwhals_series__")
+    return _hasattr_static(obj, "__narwhals_series__")
 
 
 def is_compliant_expr(
