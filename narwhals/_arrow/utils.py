@@ -233,7 +233,7 @@ def broadcast_and_extract_native(
     from narwhals._arrow.series import ArrowSeries
 
     if rhs is None:  # DONE
-        return lhs._native_series, pa.scalar(None, type=lhs._native_series.type)
+        return lhs._native_series, lit(None, type=lhs._native_series.type)
 
     # If `rhs` is the output of an expression evaluation, then it is
     # a list of Series. So, we verify that that list is of length-1,
@@ -352,10 +352,10 @@ def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
     if isinstance(left, (int, float)):
-        left = pa.scalar(left)
+        left = lit(left)
 
     if isinstance(right, (int, float)):
-        right = pa.scalar(right)
+        right = lit(right)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)
@@ -363,16 +363,12 @@ def floordiv_compat(left: Any, right: Any) -> Any:
             # GH 56676
             has_remainder = pc.not_equal(pc.multiply(divided, right), left)
             has_one_negative_operand = pc.less(
-                pc.bit_wise_xor(left, right),
-                pa.scalar(0, type=divided.type),
+                pc.bit_wise_xor(left, right), lit(0, type=divided.type)
             )
             result = pc.if_else(
-                pc.and_(
-                    has_remainder,
-                    has_one_negative_operand,
-                ),
+                pc.and_(has_remainder, has_one_negative_operand),
                 # GH: 55561 ruff: ignore
-                pc.subtract(divided, pa.scalar(1, type=divided.type)),
+                pc.subtract(divided, lit(1, type=divided.type)),
                 divided,
             )
         else:

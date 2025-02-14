@@ -22,6 +22,7 @@ from narwhals._arrow.utils import broadcast_and_extract_native
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import chunked_array
 from narwhals._arrow.utils import floordiv_compat
+from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import pad_series
@@ -246,14 +247,14 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         ser, other = broadcast_and_extract_native(self, other, self._backend_version)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
-            other = pa.scalar(other)
+            other = lit(other)
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
     def __rtruediv__(self: Self, other: Any) -> ArrowSeries[_ScalarT_co]:
         ser, right = broadcast_and_extract_native(self, other, self._backend_version)
         if not isinstance(right, (pa.Array, pa.ChunkedArray)):
             # scalar
-            right = pa.scalar(right) if not isinstance(right, pa.Scalar) else right
+            right = lit(right) if not isinstance(right, pa.Scalar) else right
         return self._from_native_series(pc.divide(*cast_for_truediv(right, ser)))
 
     def __mod__(self: Self, other: Any) -> ArrowSeries[_ScalarT_co]:
@@ -371,9 +372,9 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
             m = cast(
                 "pc.NumericArray[Any]", pc.subtract(ser_not_null, pc.mean(ser_not_null))
             )
-            m2 = pc.mean(pc.power(m, pa.scalar(2)))
-            m3 = pc.mean(pc.power(m, pa.scalar(3)))
-            biased_population_skewness = pc.divide(m3, pc.power(m2, pa.scalar(1.5)))
+            m2 = pc.mean(pc.power(m, lit(2)))
+            m3 = pc.mean(pc.power(m, lit(3)))
+            biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
             return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
 
     def count(self: Self, *, _return_py_scalar: bool = True) -> int:
@@ -693,10 +694,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
                 )[::-1]
                 distance = valid_index - indices
             return pc.if_else(
-                pc.and_(
-                    pc.is_null(arr),
-                    pc.less_equal(distance, pa.scalar(limit)),
-                ),
+                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),
                 arr.take(valid_index),
                 arr,
             )
@@ -705,7 +703,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         dtype = ser.type
 
         if value is not None:
-            res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))  # type: ignore[attr-defined]
+            res_ser = self._from_native_series(pc.fill_null(ser, lit(value, dtype)))  # type: ignore[attr-defined]
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
@@ -1112,7 +1110,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
 
         rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
 
-        result = pc.if_else(null_mask, pa.scalar(None, native_series.type), rank)
+        result = pc.if_else(null_mask, lit(None, native_series.type), rank)
         return self._from_native_series(result)
 
     def hist(  # noqa: PLR0915
@@ -1135,15 +1133,15 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
             pad_lowest_bin = False
             pa_float = pa.type_for_alias("float")
             if lower == upper:
-                range_ = pa.scalar(1.0)
-                mid = pa.scalar(0.5)
-                width = pc.divide(range_, pa.scalar(bin_count))
+                range_ = lit(1.0)
+                mid = lit(0.5)
+                width = pc.divide(range_, lit(bin_count))
                 lower = pc.subtract(lower, mid)
                 upper = pc.add(upper, mid)
             else:
                 pad_lowest_bin = True
                 range_ = pc.subtract(upper, lower)
-                width = pc.divide(pc.cast(range_, pa_float), pa.scalar(float(bin_count)))
+                width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
             bin_proportions = pc.divide(
                 pc.subtract(
@@ -1185,7 +1183,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
             # empty bin intervals should have a 0 count
             counts_coalesce = cast(
                 "pa.Array[Any]",
-                pc.coalesce(cast("pa.Array[Any]", counts.column("counts")), pa.scalar(0)),
+                pc.coalesce(cast("pa.Array[Any]", counts.column("counts")), lit(0)),
             )
             counts = counts.set_column(0, "counts", counts_coalesce)
 
@@ -1196,8 +1194,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
                 # pad lowest bin by 1% of range
                 lowest_padded = [
                     pc.subtract(
-                        bin_left[0],
-                        pc.multiply(pc.cast(range_, pa_float), pa.scalar(0.001)),
+                        bin_left[0], pc.multiply(pc.cast(range_, pa_float), lit(0.001))
                     )
                 ]
                 bin_left = chunked_array([lowest_padded, cast("Any", bin_left[1:])])
@@ -1257,9 +1254,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         try:
             native_series = self._native_series
             other_ = (
-                pa.scalar(other)
-                if other is not None
-                else pa.scalar(None, type=native_series.type)
+                lit(other) if other is not None else lit(None, type=native_series.type)
             )
             return maybe_extract_py_scalar(
                 pc.is_in(other_, native_series), return_py_scalar=True

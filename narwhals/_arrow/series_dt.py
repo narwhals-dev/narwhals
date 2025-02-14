@@ -190,7 +190,7 @@ class ArrowSeriesDateTimeNamespace:
             "us": 60 * 1e6,  # micro
             "ns": 60 * 1e9,  # nano
         }
-        factor = pa.scalar(unit_to_minutes_factor[ser._type.unit], type=pa.int64())
+        factor = lit(unit_to_minutes_factor[ser._type.unit], type=pa.int64())
         return self._compliant_series._from_native_series(
             pc.cast(pc.divide(ser._native_series, factor), pa.int64())
         )
@@ -203,7 +203,7 @@ class ArrowSeriesDateTimeNamespace:
             "us": 1e6,  # micro
             "ns": 1e9,  # nano
         }
-        factor = pa.scalar(unit_to_seconds_factor[ser._type.unit], type=pa.int64())
+        factor = lit(unit_to_seconds_factor[ser._type.unit], type=pa.int64())
         return self._compliant_series._from_native_series(
             pc.cast(pc.divide(ser._native_series, factor), pa.int64())
         )
@@ -218,7 +218,7 @@ class ArrowSeriesDateTimeNamespace:
             "us": 1e3,  # micro
             "ns": 1e6,  # nano
         }
-        factor = pa.scalar(unit_to_milli_factor[unit], type=pa.int64())
+        factor = lit(unit_to_milli_factor[unit], type=pa.int64())
         if unit == "s":
             return self._compliant_series._from_native_series(
                 pc.cast(pc.multiply(arr, factor), pa.int64())
@@ -237,7 +237,7 @@ class ArrowSeriesDateTimeNamespace:
             "us": 1,  # micro
             "ns": 1e3,  # nano
         }
-        factor = pa.scalar(unit_to_micro_factor[unit], type=pa.int64())
+        factor = lit(unit_to_micro_factor[unit], type=pa.int64())
         if unit in {"s", "ms"}:
             return self._compliant_series._from_native_series(
                 pc.cast(pc.multiply(arr, factor), pa.int64())
@@ -254,7 +254,7 @@ class ArrowSeriesDateTimeNamespace:
             "us": 1e3,  # micro
             "ns": 1,  # nano
         }
-        factor = pa.scalar(unit_to_nano_factor[ser._type.unit], type=pa.int64())
+        factor = lit(unit_to_nano_factor[ser._type.unit], type=pa.int64())
         return self._compliant_series._from_native_series(
             pc.cast(pc.multiply(ser._native_series, factor), pa.int64())
         )
