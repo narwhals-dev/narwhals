@@ -225,8 +225,6 @@ files = ["narwhals", "tests"]
 
 [[tool.mypy.overrides]]
 module = [
-  # TODO: enable step by step when it makes sense
-  # e.g. the pandas API is just too inconsistent for type hinting to be useful.
   "cudf.*",
   "dask.*",
   "dask_expr.*",
@@ -234,7 +232,6 @@ module = [
   "ibis.*",
   "modin.*",
   "numpy.*",
-  "pandas.*",
   "pyarrow.*",
   "pyspark.*",
   "sklearn.*",
