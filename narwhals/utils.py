@@ -1277,11 +1277,8 @@ def dtype_matches_time_unit_and_time_zone(
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
-    try:
-        getattr_static(obj, attr)
-    except AttributeError:
-        return False
-    return True
+    sentinel = object()
+    return getattr_static(obj, attr, sentinel) is not sentinel
 
 
 def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
