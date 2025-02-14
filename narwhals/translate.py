@@ -741,9 +741,7 @@ def _from_native_impl(  # noqa: PLR0915
             level="lazy",
         )
 
-    # SQLFrame
-    # This one needs checking before extensions as `hasattr` always returns `True`.
-    if is_sqlframe_dataframe(native_object):  # pragma: no cover
+    elif is_sqlframe_dataframe(native_object):  # pragma: no cover
         from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
         if series_only:
