@@ -294,16 +294,15 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         return self._from_native_series(ser.filter(other))
 
     def mean(
-        self: ArrowSeries[pa.FloatScalar] | ArrowSeries[pa.DoubleScalar],
-        *,
-        _return_py_scalar: bool = True,
+        self: ArrowSeries[pc.NumericScalar], *, _return_py_scalar: bool = True
     ) -> float:
-        return maybe_extract_py_scalar(pc.mean(self._native_series), _return_py_scalar)
+        # NOTE: stub overly strict https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L274-L307
+        # docs say numeric https://arrow.apache.org/docs/python/generated/pyarrow.compute.mean.html
+        mean: Incomplete = pc.mean
+        return maybe_extract_py_scalar(mean(self._native_series), _return_py_scalar)
 
     def median(
-        self: ArrowSeries[pa.FloatScalar] | ArrowSeries[pa.DoubleScalar],
-        *,
-        _return_py_scalar: bool = True,
+        self: ArrowSeries[pc.NumericScalar], *, _return_py_scalar: bool = True
     ) -> float:
         from narwhals.exceptions import InvalidOperationError
 
