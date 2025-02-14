@@ -25,6 +25,7 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
@@ -341,9 +342,9 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
     ) -> ArrowSeries[pa.Scalar[DataTypeT_co]]:
         ca = self._native_series
         if n > 0:
-            arrays = [pa.repeat(None, n).cast(self._type), *ca[:-n].chunks]
+            arrays = [nulls_like(n, self), *ca[:-n].chunks]
         elif n < 0:
-            arrays = [*ca[-n:].chunks, pa.repeat(None, -n).cast(self._type)]
+            arrays = [*ca[-n:].chunks, nulls_like(-n, self)]
         else:
             return self._from_native_series(ca)
         return self._from_native_series(pa.concat_arrays(arrays))

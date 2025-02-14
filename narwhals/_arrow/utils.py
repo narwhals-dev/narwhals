@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import DataTypeT_co
     from narwhals._arrow.typing import StringArray
     from narwhals._arrow.typing import StringScalar
     from narwhals._arrow.typing import StringScalarT
@@ -82,6 +83,18 @@ def chunked_array(
         return pa.chunked_array(cast("Any", arr))
     else:
         return cast("pa.ChunkedArray[_ScalarT_co]", pa.chunked_array([arr], arr.type))
+
+
+def nulls_like(
+    n: int, series: ArrowSeries[pa.Scalar[DataTypeT_co]]
+) -> pa.Array[pa.Scalar[DataTypeT_co]]:
+    """Create a strongly-typed Array instance with all elements null.
+
+    Uses the type of `series`, without upseting `mypy`.
+    """
+    if TYPE_CHECKING:
+        return pa.repeat(None, n).cast(series._type)
+    return pa.nulls(n, series._type)
 
 
 @lru_cache(maxsize=16)
