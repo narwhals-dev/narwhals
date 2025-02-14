@@ -130,8 +130,8 @@ class Series(Generic[IntoSeriesT]):
             idx: The index, slice, or sequence of indices to retrieve.
 
                 - If `idx` is an integer, a single element is returned.
-                - If `idx` is a slice or a sequence of integers,
-                  a subset of the Series is returned.
+                - If `idx` is a slice, a sequence of integers, or another Series
+                    (with integer values) a subset of the Series is returned.
 
         Returns:
             A single element if `idx` is an integer, else a subset of the Series.
