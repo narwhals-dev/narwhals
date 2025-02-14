@@ -66,10 +66,6 @@ def test_sumh_transformations(
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
-        # If/when https://github.com/dask/dask/issues/11746 is
-        # addressed, we can think about supporting this.
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))
