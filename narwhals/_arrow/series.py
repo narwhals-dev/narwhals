@@ -872,7 +872,10 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         _, upper_bound = broadcast_and_extract_native(
             self, upper_bound, self._backend_version
         )
-        arr = pc.max_element_wise(arr, lower_bound)
+        # NOTE: stubs are missing `ChunkedArray` support
+        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
+        max_element_wise: Incomplete = pc.max_element_wise
+        arr = max_element_wise(arr, lower_bound)
         arr = pc.min_element_wise(arr, upper_bound)
 
         return self._from_native_series(arr)
@@ -1047,6 +1050,9 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(
             value=0, strategy=None, limit=None
         )
+        # NOTE: stubs are missing `ChunkedArray` support
+        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
+        max_element_wise: Incomplete = pc.max_element_wise
 
         result = self._from_native_series(
             pc.if_else(
@@ -1055,7 +1061,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
                 None,
             )
         ) / self._from_native_series(
-            pc.max_element_wise((count_in_window - ddof)._native_series, 0)  # pyright: ignore[reportArgumentType, reportCallIssue]
+            max_element_wise((count_in_window - ddof)._native_series, 0)
         )
 
         return result[offset:]
