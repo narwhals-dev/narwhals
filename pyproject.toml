@@ -60,7 +60,6 @@ core = [
   "pandas",
   "polars",
   "pyarrow",
-  #TODO: reintroduce when fixing #1961
   "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
@@ -235,7 +234,6 @@ module = [
   "modin.*",
   "numpy.*",
   "pandas.*",
-  # "pyarrow.*",
   "pyspark.*",
   "sklearn.*",
   "sqlframe.*",
