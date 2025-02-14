@@ -10,14 +10,14 @@ from tests.utils import NUMPY_VERSION
 
 
 def test_invalid() -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
     df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
-    with pytest.raises(TypeError, match="Perhaps you:"):
+    with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]
@@ -40,9 +40,10 @@ def test_validate_laziness() -> None:
         TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")

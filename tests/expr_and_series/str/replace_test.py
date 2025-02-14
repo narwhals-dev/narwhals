@@ -93,6 +93,7 @@ def test_str_replace_all_series(
 )
 def test_str_replace_expr(
     constructor: Constructor,
+    request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -100,8 +101,9 @@ def test_str_replace_expr(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
     )
@@ -121,7 +123,6 @@ def test_str_replace_all_expr(
     expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor(data))
-
     result = df.select(
         nw.col("a").str.replace_all(pattern=pattern, value=value, literal=literal)
     )

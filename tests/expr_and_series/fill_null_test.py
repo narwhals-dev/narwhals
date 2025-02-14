@@ -12,11 +12,13 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_fill_null(constructor: Constructor) -> None:
+def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
-        "a": [0.0, None, 2, 3, 4],
-        "b": [1.0, None, None, 5, 3],
-        "c": [5.0, None, 3, 2, 1],
+        "a": [0.0, None, 2.0, 3.0, 4.0],
+        "b": [1.0, None, None, 5.0, 3.0],
+        "c": [5.0, None, 3.0, 2.0, 1.0],
     }
     df = nw.from_native(constructor(data))
 
@@ -31,7 +33,7 @@ def test_fill_null(constructor: Constructor) -> None:
 
 def test_fill_null_exceptions(constructor: Constructor) -> None:
     data = {
-        "a": [0.0, None, 2, 3, 4],
+        "a": [0.0, None, 2.0, 3.0, 4.0],
     }
     df = nw.from_native(constructor(data))
 
@@ -47,7 +49,11 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
         df.with_columns(nw.col("a").fill_null(strategy="invalid"))  # type: ignore  # noqa: PGH003
 
 
-def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> None:
+def test_fill_null_strategies_with_limit_as_none(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
@@ -113,7 +119,11 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_limits(constructor: Constructor) -> None:
+def test_fill_null_limits(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
         if "cudf" in str(constructor)
@@ -136,7 +146,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
             nw.col("a", "b").fill_null(strategy="forward", limit=2)
         )
         expected_forward = {
-            "a": [1, 1, 1, float("nan"), 5, 6, 6, 6, float("nan"), 10],
+            "a": [1, 1, 1, None, 5, 6, 6, 6, None, 10],
             "b": ["a", "a", "a", None, "b", "c", "c", "c", None, "d"],
         }
         assert_equal_data(result_forward, expected_forward)
@@ -146,7 +156,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
         )
 
         expected_backward = {
-            "a": [1, float("nan"), 5, 5, 5, 6, float("nan"), 10, 10, 10],
+            "a": [1, None, 5, 5, 5, 6, None, 10, 10, 10],
             "b": ["a", None, "b", "b", "b", "c", None, "d", "d", "d"],
         }
         assert_equal_data(result_backward, expected_backward)
@@ -203,7 +213,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
                 "ignore", message="The 'downcast' keyword in fillna is deprecated"
             )
         expected_forward = {
-            "a_forward": [0.0, 1, 1, float("nan"), 2, 2, float("nan"), 3],
+            "a_forward": [0.0, 1, 1, None, 2, 2, None, 3],
             "b_forward": ["", "a", "a", None, "c", "c", None, "e"],
         }
         result_forward = df.select(
@@ -214,7 +224,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
         assert_equal_data(result_forward, expected_forward)
 
         expected_backward = {
-            "a_backward": [0.0, 1, float("nan"), 2, 2, float("nan"), 3, 3],
+            "a_backward": [0.0, 1, None, 2, 2, None, 3, 3],
             "b_backward": ["", "a", None, "c", "c", None, "e", "e"],
         }
 

@@ -96,12 +96,13 @@ Anything currently in `narwhals.stable.v1` will not be changed or removed in fut
 
 Here are exceptions to our backwards compatibility policy:
 
-- unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
+- Unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
   considering that to be a breaking change.
-- radical changes in backends. Suppose that Polars was to remove
+- Radical changes in backends. Suppose that Polars was to remove
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
-- we may consider making some type hints more precise.
+- We may consider making some type hints more precise.
+- Anything labelled "unstable".
 
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
@@ -109,6 +110,23 @@ before making any change.
 ## Breaking changes carried out so far
 
 ### After `stable.v1`
+
+The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
+
+- Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
+  be of dtype `String`. Previously, it would have been inferred as `Object`.
+
+- Since Narwhals 1.23:
+
+    - Passing an `ibis.Table` to `from_native` returns a `LazyFrame`. In
+      `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
+    - `eager_or_interchange_only` has been removed from `from_native` and `narwhalify`.
+    - Order-dependent expressions can no longer be used with `narwhals.LazyFrame`.
+    - The following expressions have been deprecated from the main namespace: `Expr.head`,
+      `Expr.tail`, `Expr.gather_every`, `Expr.sample`, `Expr.arg_true`, `Expr.sort`.
+
+- Since Narwhals 1.21, passing a `DuckDBPyRelation` to `from_native` returns a `LazyFrame`. In
+  `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
 
 - Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
   write:

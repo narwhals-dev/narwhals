@@ -17,22 +17,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
-      - name: install package
-        run: uv pip install -e . --system
+          cache-dependency-glob: "pyproject.toml"
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
-      - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools --system && uv pip install -r requirements-dev.txt --system
-      - name: uninstall scipy/sklearn
-        run: uv pip uninstall scipy scikit-learn --system
       - name: install-random-verions
         run: uv pip install -r random-requirements.txt --system
+      - name: install-narwhals
+        run: uv pip install -e ".[tests]" --system
       - name: show versions
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=80
+        run: |
+            pytest tests --cov=narwhals --cov=tests --cov-fail-under=80 \
+            --constructors=pandas,pyarrow,polars[eager],polars[lazy]

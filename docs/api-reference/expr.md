@@ -8,6 +8,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - count
@@ -30,6 +32,7 @@
         - is_first_distinct
         - is_in
         - is_last_distinct
+        - is_nan
         - is_null
         - is_unique
         - len
@@ -44,9 +47,12 @@
         - over
         - pipe
         - quantile
+        - rank
         - replace_strict
         - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - shift
@@ -56,5 +62,6 @@
         - sum
         - tail
         - unique
+        - var
       show_source: false
       show_bases: false

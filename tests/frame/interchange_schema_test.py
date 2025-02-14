@@ -4,8 +4,6 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
-import duckdb
-import pandas as pd
 import polars as pl
 import pytest
 
@@ -72,9 +70,13 @@ def test_interchange_schema() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*locale specific date formats")
 def test_interchange_schema_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(
         {
             "a": [1, 1, 2],
@@ -157,9 +159,11 @@ def test_interchange_schema_ibis(
     assert result == expected
     assert df["a"].dtype == nw.Int64
     assert df.columns == list(expected.keys())
+    assert df.collect_schema() == expected
 
 
 def test_interchange_schema_duckdb() -> None:
+    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(  # noqa: F841
         {
             "a": [1, 1, 2],
@@ -222,6 +226,7 @@ def test_interchange_schema_duckdb() -> None:
     assert result == expected
     assert df["a"].dtype == nw.Int64
     assert df.columns == list(expected.keys())
+    assert df.collect_schema() == expected
 
 
 def test_invalid() -> None:
@@ -243,10 +248,3 @@ def test_get_level() -> None:
         nw.get_level(nw.from_native(df.__dataframe__(), eager_or_interchange_only=True))
         == "interchange"
     )
-
-
-def test_unknown_dtype() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3]})
-    rel = duckdb.from_df(df).select("cast(a as int128) as a")
-    result = nw.from_native(rel).schema
-    assert result == {"a": nw.Unknown}

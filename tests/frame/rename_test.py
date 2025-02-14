@@ -6,8 +6,8 @@ from tests.utils import assert_equal_data
 
 
 def test_rename(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.rename({"a": "x", "b": "y"})
-    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8, 9]}
+    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     assert_equal_data(result, expected)

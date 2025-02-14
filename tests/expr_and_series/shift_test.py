@@ -3,7 +3,6 @@ from __future__ import annotations
 import pyarrow as pa
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -15,8 +14,8 @@ data = {
 }
 
 
-def test_shift(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_shift(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
         "i": [2, 3, 4],

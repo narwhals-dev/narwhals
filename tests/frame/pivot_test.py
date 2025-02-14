@@ -3,12 +3,13 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import NarwhalsError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -115,14 +116,14 @@ data_no_dups = {
 )
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     agg_func: str,
     expected: dict[str, list[Any]],
     on: str | list[str],
     index: str | list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
@@ -136,6 +137,7 @@ def test_pivot(
         index=index,
         values=["foo", "bar"],
         aggregate_function=agg_func,  # type: ignore[arg-type]
+        sort_columns=True,
     )
 
     assert_equal_data(result, expected)
@@ -145,11 +147,11 @@ def test_pivot(
     ("data_", "context"),
     [
         (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, pl.exceptions.ComputeError))),
+        (data, pytest.raises((ValueError, NarwhalsError))),
     ],
 )
 def test_pivot_no_agg(
-    request: Any, constructor_eager: Any, data_: Any, context: Any
+    request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
@@ -177,9 +179,12 @@ def test_pivot_no_agg(
     ],
 )
 def test_pivot_sort_columns(
-    request: Any, constructor_eager: Any, sort_columns: Any, expected: list[str]
+    request: Any,
+    constructor_eager: ConstructorEager,
+    sort_columns: Any,
+    expected: list[str],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
@@ -227,9 +232,9 @@ def test_pivot_sort_columns(
     ],
 )
 def test_pivot_names_out(
-    request: Any, constructor_eager: Any, kwargs: Any, expected: list[str]
+    request: Any, constructor_eager: ConstructorEager, kwargs: Any, expected: list[str]
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
         "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
@@ -243,3 +248,31 @@ def test_pivot_names_out(
         df.pivot(aggregate_function="min", index="ix", **kwargs).collect_schema().names()
     )
     assert result == expected
+
+
+def test_pivot_no_index_no_values(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    with pytest.raises(ValueError, match="At least one of `values` and `index` must"):
+        df.pivot(on="col")
+
+
+def test_pivot_no_index(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 0)) or (
+        "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1)
+    ):
+        # not implemented
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    with pytest.warns(UserWarning, match="has no effect"):
+        result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
+    expected = {
+        "ix": [1, 1, 2, 2],
+        "bar": ["x", "y", "w", "z"],
+        "a": [1.0, None, None, 3.0],
+        "b": [None, 2.0, 4.0, None],
+    }
+    assert_equal_data(result, expected)

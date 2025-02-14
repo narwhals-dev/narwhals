@@ -15,6 +15,8 @@ import narwhals.stable.v1 as nw
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.utils import Version
 
 data = {"a": [1, 2, 3]}
@@ -32,26 +34,26 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
-    def _change_version(self, _version: Version) -> MockDataFrame:
+    def _change_version(self: Self, _version: Version) -> MockDataFrame:
         return self
 
-    def __narwhals_dataframe__(self) -> Any:
+    def __narwhals_dataframe__(self: Self) -> Any:
         return self
 
 
 class MockLazyFrame:
-    def _change_version(self, _version: Version) -> MockLazyFrame:
+    def _change_version(self: Self, _version: Version) -> MockLazyFrame:
         return self
 
-    def __narwhals_lazyframe__(self) -> Any:
+    def __narwhals_lazyframe__(self: Self) -> Any:
         return self
 
 
 class MockSeries:
-    def _change_version(self, _version: Version) -> MockSeries:
+    def _change_version(self: Self, _version: Version) -> MockSeries:
         return self
 
-    def __narwhals_series__(self) -> Any:
+    def __narwhals_series__(self: Self) -> Any:
         return self
 
 
@@ -202,7 +204,6 @@ def test_init_already_narwhals_unstable() -> None:
 
 def test_series_only_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     dframe = dd.from_pandas(df_pd)
@@ -221,7 +222,6 @@ def test_series_only_dask() -> None:
 )
 def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     dframe = dd.from_pandas(df_pd)
@@ -242,7 +242,6 @@ def test_from_native_strict_false_typing() -> None:
     with pytest.deprecated_call(match="please use `pass_through` instead"):
         unstable_nw.from_native(df, strict=False)  # type: ignore[call-overload]
         unstable_nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
-        unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_false_invalid() -> None:

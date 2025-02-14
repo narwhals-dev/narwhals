@@ -10,12 +10,12 @@
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 [![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
+[![PYPI - Types](https://img.shields.io/pypi/types/narwhals)](https://pypi.org/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask
-- **Interchange-level support**: DuckDB, Ibis, Vaex, anything which implements the DataFrame Interchange Protocol
+- **Lazy-only support**: Dask. Work in progress: DuckDB, Ibis, PySpark.
 
 Seamlessly support all, without depending on any!
 
@@ -114,12 +114,14 @@ Join the party!
 - [marimo](https://github.com/marimo-team/marimo)
 - [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 - [plotly](https://plotly.com)
+- [pointblank](https://github.com/posit-dev/pointblank)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [tabmat](https://github.com/Quantco/tabmat)
+- [tea-tasting](https://github.com/e10v/tea-tasting)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
 - [vegafusion](https://github.com/vega/vegafusion)

@@ -11,6 +11,8 @@
         - alias
         - all
         - any
+        - arg_max
+        - arg_min
         - arg_true
         - cast
         - clip
@@ -28,6 +30,8 @@
         - filter
         - gather_every
         - head
+        - hist
+        - implementation
         - is_between
         - is_duplicated
         - is_empty
@@ -35,6 +39,7 @@
         - is_first_distinct
         - is_in
         - is_last_distinct
+        - is_nan
         - is_null
         - is_sorted
         - is_unique
@@ -50,10 +55,13 @@
         - null_count
         - pipe
         - quantile
+        - rank
         - rename
         - replace_strict
         - rolling_mean
+        - rolling_std
         - rolling_sum
+        - rolling_var
         - round
         - sample
         - scatter
@@ -70,9 +78,11 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_polars
         - to_native
         - unique
         - value_counts
+        - var
         - zip_with
       show_source: false
       show_bases: false

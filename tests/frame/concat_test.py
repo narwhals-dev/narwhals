@@ -7,8 +7,12 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_concat_horizontal(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+def test_concat_horizontal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = nw.from_native(constructor(data)).lazy()
 
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
@@ -18,7 +22,7 @@ def test_concat_horizontal(constructor: Constructor) -> None:
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
-        "z": [7.0, 8, 9],
+        "z": [7.0, 8.0, 9.0],
         "c": [6, 12, -1],
         "d": [0, -4, 2],
     }
@@ -29,7 +33,7 @@ def test_concat_horizontal(constructor: Constructor) -> None:
 
 
 def test_concat_vertical(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (
         nw.from_native(constructor(data)).lazy().rename({"a": "c", "b": "d"}).drop("z")
     )
@@ -44,13 +48,23 @@ def test_concat_vertical(constructor: Constructor) -> None:
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")
 
-    with pytest.raises((Exception, TypeError), match="unable to vstack"):
+    with pytest.raises(
+        (Exception, TypeError),
+        match="unable to vstack|inputs should all have the same schema",
+    ):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
-    with pytest.raises((Exception, TypeError), match="unable to vstack|unable to append"):
+    with pytest.raises(
+        (Exception, TypeError),
+        match="unable to vstack|unable to append|inputs should all have the same schema",
+    ):
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
 
-def test_concat_diagonal(constructor: Constructor) -> None:
+def test_concat_diagonal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {

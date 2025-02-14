@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
-from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import parse_into_exprs
-from narwhals._expression_parsing import reduce_output_names
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
@@ -18,18 +19,20 @@ from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
+from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from typing_extensions import Self
+
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
 
-class PandasLikeNamespace:
+class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     @property
-    def selectors(self) -> PandasSelectorNamespace:
+    def selectors(self: Self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -38,7 +41,7 @@ class PandasLikeNamespace:
 
     # --- not in spec ---
     def __init__(
-        self,
+        self: Self,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -48,27 +51,29 @@ class PandasLikeNamespace:
         self._version = version
 
     def _create_expr_from_callable(
-        self,
-        func: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
+        self: Self,
+        func: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        kwargs: dict[str, Any],
     ) -> PandasLikeExpr:
         return PandasLikeExpr(
             func,
             depth=depth,
             function_name=function_name,
-            root_names=root_names,
-            output_names=output_names,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs=kwargs,
         )
 
     def _create_series_from_scalar(
-        self, value: Any, *, reference_series: PandasLikeSeries
+        self: Self, value: Any, *, reference_series: PandasLikeSeries
     ) -> PandasLikeSeries:
         return PandasLikeSeries._from_iterable(
             [value],
@@ -79,19 +84,20 @@ class PandasLikeNamespace:
             version=self._version,
         )
 
-    def _create_expr_from_series(self, series: PandasLikeSeries) -> PandasLikeExpr:
+    def _create_expr_from_series(self: Self, series: PandasLikeSeries) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda _df: [series],
             depth=0,
             function_name="series",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda _df: [series.name],
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
-    def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
+    def _create_compliant_series(self: Self, value: Any) -> PandasLikeSeries:
         return create_compliant_series(
             value,
             implementation=self._implementation,
@@ -100,7 +106,7 @@ class PandasLikeNamespace:
         )
 
     # --- selection ---
-    def col(self, *column_names: str) -> PandasLikeExpr:
+    def col(self: Self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
             *column_names,
             implementation=self._implementation,
@@ -108,7 +114,7 @@ class PandasLikeNamespace:
             version=self._version,
         )
 
-    def nth(self, *column_indices: int) -> PandasLikeExpr:
+    def nth(self: Self, *column_indices: int) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_indices(
             *column_indices,
             implementation=self._implementation,
@@ -116,7 +122,7 @@ class PandasLikeNamespace:
             version=self._version,
         )
 
-    def all(self) -> PandasLikeExpr:
+    def all(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries(
@@ -129,14 +135,15 @@ class PandasLikeNamespace:
             ],
             depth=0,
             function_name="all",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=lambda df: df.columns,
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
-    def lit(self, value: Any, dtype: DType | None) -> PandasLikeExpr:
+    def lit(self: Self, value: Any, dtype: DType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
@@ -154,55 +161,15 @@ class PandasLikeNamespace:
             lambda df: [_lit_pandas_series(df)],
             depth=0,
             function_name="lit",
-            root_names=None,
-            output_names=["literal"],
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
-    # --- reduction ---
-    def sum(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).sum()
-
-    def mean(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).mean()
-
-    def median(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).median()
-
-    def max(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).max()
-
-    def min(self, *column_names: str) -> PandasLikeExpr:
-        return PandasLikeExpr.from_column_names(
-            *column_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        ).min()
-
-    def len(self) -> PandasLikeExpr:
+    def len(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries._from_iterable(
@@ -216,133 +183,130 @@ class PandasLikeNamespace:
             ],
             depth=0,
             function_name="len",
-            root_names=None,
-            output_names=["len"],
+            evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={},
         )
 
     # --- horizontal ---
-    def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
-            return [reduce(lambda x, y: x + y, series)]
+            series = (
+                s.fill_null(0, strategy=None, limit=None)
+                for _expr in exprs
+                for s in _expr(df)
+            )
+            return [reduce(operator.add, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
-    def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
-            return [reduce(lambda x, y: x & y, series)]
+            series = (s for _expr in exprs for s in _expr(df))
+            return [reduce(operator.and_, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
-    def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in parsed_exprs for s in _expr._call(df))
-            return [reduce(lambda x, y: x | y, series)]
+            series = (s for _expr in exprs for s in _expr(df))
+            return [reduce(operator.or_, series)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
-    def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
-            non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr._call(df))
-            return [
-                reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
-            ]
+            series = (
+                s.fill_null(0, strategy=None, limit=None)
+                for _expr in exprs
+                for s in _expr(df)
+            )
+            non_na = (1 - s.is_null() for _expr in exprs for s in _expr(df))
+            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
-    def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
+                    self.concat(
                         (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.min(axis=1)
-                    .rename(series[0].name, copy=False),
+                    )._native_frame.min(axis=1),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
-                )
+                ).alias(series[0].name)
             ]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
-    def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
+    def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            series = [s for _expr in exprs for s in _expr(df)]
 
             return [
                 PandasLikeSeries(
-                    native_series=self.concat(
+                    self.concat(
                         (s.to_frame() for s in series), how="horizontal"
-                    )
-                    ._native_frame.max(axis=1)
-                    .rename(series[0].name, copy=False),
+                    )._native_frame.max(axis=1),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
-                )
+                ).alias(series[0].name)
             ]
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={"exprs": exprs},
         )
 
     def concat(
-        self,
+        self: Self,
         items: Iterable[PandasLikeDataFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
@@ -358,6 +322,7 @@ class PandasLikeNamespace:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         if how == "vertical":
             return PandasLikeDataFrame(
@@ -369,6 +334,7 @@ class PandasLikeNamespace:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
 
         if how == "diagonal":
@@ -381,47 +347,29 @@ class PandasLikeNamespace:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
+                validate_column_names=True,
             )
         raise NotImplementedError
 
-    def when(
-        self,
-        *predicates: IntoPandasLikeExpr,
-    ) -> PandasWhen:
-        plx = self.__class__(
-            self._implementation, self._backend_version, version=self._version
-        )
-        if predicates:
-            condition = plx.all_horizontal(*predicates)
-        else:
-            msg = "at least one predicate needs to be provided"
-            raise TypeError(msg)
-
+    def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen(
-            condition, self._implementation, self._backend_version, version=self._version
+            predicate, self._implementation, self._backend_version, version=self._version
         )
 
     def concat_str(
-        self,
-        exprs: Iterable[IntoPandasLikeExpr],
-        *more_exprs: IntoPandasLikeExpr,
-        separator: str = "",
-        ignore_nulls: bool = False,
+        self: Self,
+        *exprs: PandasLikeExpr,
+        separator: str,
+        ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        parsed_exprs: list[PandasLikeExpr] = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
-        ]
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (
-                s for _expr in parsed_exprs for s in _expr.cast(dtypes.String())._call(df)
-            )
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
+            series = (s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
+            null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 result = reduce(lambda x, y: x + separator + y, series).zip_with(
                     ~null_mask_result, None
                 )
@@ -440,7 +388,7 @@ class PandasLikeNamespace:
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    lambda x, y: x + y,
+                    operator.add,
                     (s + v for s, v in zip(separators, values)),
                     init_value,
                 )
@@ -449,16 +397,21 @@ class PandasLikeNamespace:
 
         return self._create_expr_from_callable(
             func=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            kwargs={
+                "exprs": exprs,
+                "separator": separator,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
 
 class PandasWhen:
     def __init__(
-        self,
+        self: Self,
         condition: PandasLikeExpr,
         implementation: Implementation,
         backend_version: tuple[int, ...],
@@ -474,81 +427,79 @@ class PandasWhen:
         self._otherwise_value = otherwise_value
         self._version = version
 
-    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-        from narwhals._expression_parsing import parse_into_expr
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
+    def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         from narwhals._pandas_like.utils import broadcast_align_and_extract_native
 
-        plx = PandasLikeNamespace(
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        plx = df.__narwhals_namespace__()
+        condition = self._condition(df)[0]
 
-        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
-        try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            value_series = condition.__class__._from_iterable(
-                [self._then_value] * len(condition),
-                name="literal",
-                index=condition._native_series.index,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
+        if isinstance(self._then_value, PandasLikeExpr):
+            value_series = self._then_value(df)[0]
+        else:
+            # `self._then_value` is a scalar
+            value_series = plx._create_series_from_scalar(
+                self._then_value, reference_series=condition.alias("literal")
             )
-        value_series_native, condition_native = broadcast_align_and_extract_native(
-            value_series, condition
-        )
 
+        condition_native, value_series_native = broadcast_align_and_extract_native(
+            condition, value_series
+        )
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
                     value_series_native.where(condition_native)
                 )
             ]
-        try:
-            otherwise_series = parse_into_expr(
-                self._otherwise_value, namespace=plx
-            )._call(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+        if isinstance(self._otherwise_value, PandasLikeExpr):
+            otherwise_expr = self._otherwise_value
+        else:
+            # `self._otherwise_value` is a scalar
             return [
                 value_series._from_native_series(
                     value_series_native.where(condition_native, self._otherwise_value)
                 )
             ]
-        else:
-            return [value_series.zip_with(condition, otherwise_series)]
+        otherwise_series = otherwise_expr(df)[0]
+        _, otherwise_native = broadcast_align_and_extract_native(
+            condition, otherwise_series
+        )
+        return [
+            value_series._from_native_series(
+                value_series_native.where(condition_native, otherwise_native)
+            )
+        ]
 
-    def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
+    def then(self: Self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
 
         return PandasThen(
             self,
             depth=0,
             function_name="whenthen",
-            root_names=None,
-            output_names=None,
+            evaluate_output_names=getattr(
+                value, "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(value, "_alias_output_names", None),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
+            kwargs={"value": value},
         )
 
 
 class PandasThen(PandasLikeExpr):
     def __init__(
-        self,
+        self: Self,
         call: PandasWhen,
         *,
         depth: int,
         function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
+        evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
+        kwargs: dict[str, Any],
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
@@ -556,10 +507,13 @@ class PandasThen(PandasLikeExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
+        self._kwargs = kwargs
 
-    def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
+    def otherwise(
+        self: Self, value: PandasLikeExpr | PandasLikeSeries | Any
+    ) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `PandasWhen`, base class has the attribute as
         # only a `Callable`

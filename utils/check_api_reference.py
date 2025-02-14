@@ -6,17 +6,21 @@ import sys
 import polars as pl
 
 import narwhals as nw
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
 from narwhals.utils import remove_suffix
 
 ret = 0
 
-NAMESPACES = {"dt", "str", "cat", "name"}
+NAMESPACES = {"dt", "str", "cat", "name", "list"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
+    "implementation",
     "is_empty",
     "is_sorted",
+    "hist",
     "item",
     "name",
     "rename",
@@ -29,6 +33,7 @@ SERIES_ONLY_METHODS = {
     "to_native",
     "to_numpy",
     "to_pandas",
+    "to_polars",
     "value_counts",
     "zip_with",
     "__iter__",
@@ -131,7 +136,7 @@ if extra := set(documented).difference(series_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Series.{cat, dt, str} methods
+# Series.{cat, dt, list, str} methods
 for namespace in NAMESPACES.difference({"name"}):
     series_methods = [
         i
@@ -158,7 +163,11 @@ for namespace in NAMESPACES.difference({"name"}):
 
 # Expr methods
 expr_methods = [
-    i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Expr(
+        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
     content = fd.read()
@@ -176,11 +185,16 @@ if extra := set(documented).difference(expr_methods):
     print(extra)  # noqa: T201
     ret = 1
 
-# Expr.{cat, dt, name, str} methods
+# Expr.{cat, dt, list, name, str} methods
 for namespace in NAMESPACES:
     expr_methods = [
         i
-        for i in getattr(nw.Expr(lambda: 0), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(
+                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+            ),
+            namespace,
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
@@ -220,7 +234,13 @@ if extra := set(documented).difference(dtypes):
     ret = 1
 
 # Check Expr vs Series
-expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
+expr = [
+    i
+    for i in nw.Expr(
+        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
 series = [
     i
     for i in nw.from_native(pl.Series(), series_only=True).__dir__()
@@ -239,7 +259,12 @@ if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
 for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
-        for i in getattr(nw.Expr(lambda: 0), namespace).__dir__()
+        for i in getattr(
+            nw.Expr(
+                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+            ),
+            namespace,
+        ).__dir__()
         if not i[0].isupper() and i[0] != "_"
     ]
     series_internal = [

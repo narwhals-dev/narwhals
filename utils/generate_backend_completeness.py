@@ -28,17 +28,34 @@ class Backend(NamedTuple):
     type_: BackendType
 
 
-MODULES = ["dataframe", "series", "expr"]
+MODULES = [
+    "dataframe",
+    "series",
+    "expr",
+    "expr_dt",
+    "expr_cat",
+    "expr_str",
+    "expr_list",
+    "expr_name",
+    "series_dt",
+    "series_cat",
+    "series_str",
+    "series_list",
+]
 
 BACKENDS = [
-    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
     Backend(name="arrow", module="_arrow", type_=BackendType.EAGER),
     Backend(name="dask", module="_dask", type_=BackendType.LAZY),
+    Backend(name="duckdb", module="_duckdb", type_=BackendType.LAZY),
+    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
+    Backend(name="spark-like", module="_spark_like", type_=BackendType.LAZY),
 ]
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
-DIRECTLY_IMPLEMENTED_METHODS = ["pipe"]
+DIRECTLY_IMPLEMENTED_METHODS = ["pipe", "implementation", "to_native"]
+
+EXPR_STR_METHODS = ["tail", "head"]
 
 
 def get_class_methods(kls: type[Any]) -> list[str]:
@@ -50,13 +67,22 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
         module_ = importlib.import_module(f"narwhals.{backend}.{module_name}")
         class_ = inspect.getmembers(
             module_,
-            predicate=lambda c: inspect.isclass(c) and c.__name__.endswith(nw_class_name),
+            predicate=lambda c: (
+                inspect.isclass(c)
+                and c.__name__.endswith(nw_class_name)
+                and not c.__name__.startswith("Compliant")  # Exclude protocols
+                and not c.__name__.startswith("DuckDBInterchange")
+            ),
         )
+
         methods_ = (
             get_class_methods(class_[0][1]) + DIRECTLY_IMPLEMENTED_METHODS
             if class_
             else []
         )
+
+        if module_name == "expr_str" and class_:
+            methods_ += EXPR_STR_METHODS
 
     except ModuleNotFoundError:
         methods_ = []
@@ -67,14 +93,19 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
 def render_table_and_write_to_output(
     results: list[pl.DataFrame], title: str, output_filename: str
 ) -> None:
-    results = (
+    results: pl.DataFrame = (
         pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
-        .pivot(on="Backend", values="supported", index=["Class", "Method"])
+        .pivot(on="Backend", values="supported", index=["Method"])
         .filter(pl.col("narwhals").is_not_null())
         .drop("narwhals")
         .fill_null(":x:")
-        .sort("Class", "Method")
+        .sort("Method")
+    )
+
+    backends = [c for c in results.columns if c != "Method"] + ["polars"]
+    results = results.with_columns(polars=pl.lit(":white_check_mark:")).select(
+        "Method", *sorted(backends)
     )
 
     with pl.Config(
@@ -116,14 +147,11 @@ def get_backend_completeness_table() -> None:
 
             nw_methods = get_class_methods(nw_class)
 
-            narwhals = pl.DataFrame(
-                {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
-            )
+            narwhals = pl.DataFrame({"Backend": "narwhals", "Method": nw_methods})
 
             backend_methods = [
                 pl.DataFrame(
                     {
-                        "Class": nw_class_name,
                         "Backend": backend.name,
                         "Method": parse_module(
                             module_name,
@@ -150,7 +178,9 @@ def get_backend_completeness_table() -> None:
             continue
 
         render_table_and_write_to_output(
-            results=results, title=module_name.capitalize(), output_filename=module_name
+            results=results,
+            title=module_name.capitalize().replace("_", "."),
+            output_filename=module_name,
         )
 
 

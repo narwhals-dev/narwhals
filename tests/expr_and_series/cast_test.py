@@ -13,10 +13,11 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
-data = {
+DATA = {
     "a": [1],
     "b": [1],
     "c": [1],
@@ -34,7 +35,7 @@ data = {
     "o": ["a"],
     "p": [1],
 }
-schema = {
+SCHEMA = {
     "a": nw.Int64,
     "b": nw.Int32,
     "c": nw.Int16,
@@ -53,6 +54,9 @@ schema = {
     "p": nw.Int64,
 }
 
+SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
+
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(
@@ -63,31 +67,25 @@ def test_cast(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin_constructor" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
+
+    if "pyspark" in str(constructor):
+        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "duckdb" in str(constructor):
+        incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    else:
+        incompatible_columns = set()
+
+    data = {c: v for c, v in DATA.items() if c not in incompatible_columns}
+    schema = {c: t for c, t in SCHEMA.items() if c not in incompatible_columns}
+
     df = nw.from_native(constructor(data)).select(
-        nw.col(key).cast(value) for key, value in schema.items()
+        nw.col(col_).cast(dtype) for col_, dtype in schema.items()
     )
-    result = df.select(
-        nw.col("a").cast(nw.Int32),
-        nw.col("b").cast(nw.Int16),
-        nw.col("c").cast(nw.Int8),
-        nw.col("d").cast(nw.Int64),
-        nw.col("e").cast(nw.UInt32),
-        nw.col("f").cast(nw.UInt16),
-        nw.col("g").cast(nw.UInt8),
-        nw.col("h").cast(nw.UInt64),
-        nw.col("i").cast(nw.Float32),
-        nw.col("j").cast(nw.Float64),
-        nw.col("k").cast(nw.String),
-        nw.col("l").cast(nw.Datetime),
-        nw.col("m").cast(nw.Int8),
-        nw.col("n").cast(nw.Int8),
-        nw.col("o").cast(nw.String),
-        nw.col("p").cast(nw.Duration),
-    )
-    expected = {
+
+    cast_map = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -105,23 +103,26 @@ def test_cast(
         "o": nw.String,
         "p": nw.Duration,
     }
-    assert dict(result.collect_schema()) == expected
+    cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
+
+    result = df.select(*[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()])
+    assert dict(result.collect_schema()) == cast_map
 
 
 def test_cast_series(
-    constructor: Constructor,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
+    if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin_constructor" in str(constructor_eager):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
     df = (
-        nw.from_native(constructor(data))
-        .select(nw.col(key).cast(value) for key, value in schema.items())
+        nw.from_native(constructor_eager(DATA))
+        .select(nw.col(key).cast(value) for key, value in SCHEMA.items())
         .lazy()
         .collect()
     )
@@ -177,9 +178,20 @@ def test_cast_string() -> None:
 def test_cast_raises_for_unknown_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         # Unsupported cast from string to dictionary using function cast_dictionary
         request.applymarker(pytest.mark.xfail)
+
+    if "pyspark" in str(constructor):
+        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    else:
+        incompatible_columns = set()
+
+    data = {k: v for k, v in DATA.items() if k not in incompatible_columns}
+    schema = {k: v for k, v in SCHEMA.items() if k not in incompatible_columns}
+
     df = nw.from_native(constructor(data)).select(
         nw.col(key).cast(value) for key, value in schema.items()
     )
@@ -196,8 +208,10 @@ def test_cast_datetime_tz_aware(
 ) -> None:
     if (
         "dask" in str(constructor)
+        or "duckdb" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
+        or "pyspark" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -219,6 +233,30 @@ def test_cast_datetime_tz_aware(
         .str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
+
+
+def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "a": [
+            {"movie ": "Cars", "rating": 4.5},
+            {"movie ": "Toy Story", "rating": 4.9},
+        ]
+    }
+
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
+    result = (
+        nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
+    )
+
+    assert result.schema == {"a": dtype}
 
 
 @pytest.mark.parametrize("dtype", [pl.String, pl.String()])

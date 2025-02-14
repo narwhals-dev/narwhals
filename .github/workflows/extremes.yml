@@ -19,29 +19,36 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
       - name: install-reqs
         run: |
-          uv pip install -r requirements-dev.txt --system
-          : # pyspark >= 3.3.0 is not compatible with pandas==0.25.3
-          uv pip uninstall pyspark --system
+          uv pip install -e ".[tests]" --system
       - name: show-deps
         run: uv pip freeze
+      - name: Assert dependencies
+        run: |
+          DEPS=$(uv pip freeze)
+          echo "$DEPS" | grep 'pandas==0.25.3'
+          echo "$DEPS" | grep 'polars==0.20.3'
+          echo "$DEPS" | grep 'numpy==1.17.5'
+          echo "$DEPS" | grep 'pyarrow==11.0.0'
+          echo "$DEPS" | grep 'scipy==1.5.0'
+          echo "$DEPS" | grep 'scikit-learn==1.1.0'
+          echo "$DEPS" | grep 'duckdb==1.0'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy]
 
   pretty_old_versions:
     strategy:
       matrix:
         python-version: ["3.8"]
         os: [ubuntu-latest]
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -49,26 +56,38 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
-      - name: install-minimum-versions
-        run: uv pip install tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 pyspark==3.3.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-pretty-old-versions
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" pyspark==3.5.0 scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
       - name: install-reqs
-        run: uv pip install -r requirements-dev.txt --system
+        run: uv pip install -e ".[tests]" --system
       - name: show-deps
         run: uv pip freeze
+      - name: show-deptree
+        run: pipdeptree
+      - name: Assert pretty old versions dependencies
+        run : |
+          DEPS=$(uv pip freeze)
+          echo "$DEPS" | grep 'pandas==1.1.5'
+          echo "$DEPS" | grep 'polars==0.20.3'
+          echo "$DEPS" | grep 'numpy==1.17.5'
+          echo "$DEPS" | grep 'pyarrow==11.0.0'
+          echo "$DEPS" | grep 'pyspark==3.5.0'
+          echo "$DEPS" | grep 'scipy==1.5.0'
+          echo "$DEPS" | grep 'scikit-learn==1.1.0'
+          echo "$DEPS" | grep 'duckdb==1.0'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy]
 
   not_so_old_versions:
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         os: [ubuntu-latest]
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -76,19 +95,31 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
       - name: install-not-so-old-versions
-        run: uv pip install tox virtualenv setuptools pandas==2.0.3 polars==0.20.8 numpy==1.24.4 pyarrow==14.0.0 pyspark==3.4.0 scipy==1.8.0 scikit-learn==1.3.0 dask[dataframe]==2024.7 tzdata --system
+        run: uv pip install tox virtualenv setuptools pandas==2.0.3 polars==0.20.8 numpy==1.24.4 pyarrow==15.0.0 "pyarrow-stubs<17" pyspark==3.5.0 scipy==1.8.0 scikit-learn==1.3.0 duckdb==1.0 dask[dataframe]==2024.10 tzdata --system
       - name: install-reqs
-        run: uv pip install -r requirements-dev.txt --system
+        run: uv pip install -e ".[tests]" --system
       - name: show-deps
         run: uv pip freeze
+      - name: Assert not so old versions dependencies
+        run : |
+          DEPS=$(uv pip freeze)
+          echo "$DEPS" | grep 'pandas==2.0.3'
+          echo "$DEPS" | grep 'polars==0.20.8'
+          echo "$DEPS" | grep 'numpy==1.24.4'
+          echo "$DEPS" | grep 'pyarrow==15.0.0'
+          echo "$DEPS" | grep 'pyspark==3.5.0'
+          echo "$DEPS" | grep 'scipy==1.8.0'
+          echo "$DEPS" | grep 'scikit-learn==1.3.0'
+          echo "$DEPS" | grep 'dask==2024.10'
+          echo "$DEPS" | grep 'duckdb==1.0'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask
 
   nightlies:
     strategy:
@@ -103,11 +134,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "**requirements*.txt"
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        run: uv pip install -e ".[tests]" --system
       - name: install-kaggle
         run: uv pip install kaggle --system
       - name: Download Kaggle notebook artifact
@@ -117,31 +150,39 @@ jobs:
         run: |
           kaggle kernels output "marcogorelli/variable-brink-glacier"
       - name: install-polars
-        run: python -m pip install *.whl
+        run: |
+          uv pip uninstall polars --system
+          python -m pip install *.whl
       - name: install-pandas-nightly
-        run: pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
-      - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
-      - name: uninstall pyarrow
-        run: uv pip uninstall pyarrow --system
-      # - name: install pyarrow nightly
-      #   run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
-      - name: uninstall pandas
-        run: uv pip uninstall pandas --system
-      - name: show-deps
-        run: uv pip freeze
-      - name: uninstall numpy
-        run: uv pip uninstall numpy --system
+        run: |
+          uv pip uninstall pandas --system
+          pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
+      - name: install pyarrow nightly
+        run: |
+          uv pip uninstall pyarrow --system
+          uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
       - name: install numpy nightly
-        run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
+        run: |
+          uv pip uninstall numpy --system
+          uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
       - name: install dask
         run: |
-          python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask git+https://github.com/dask/dask-expr
+          uv pip uninstall dask dask-expr --system
+          python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask
+      - name: install duckdb
+        run: |
+          python -m pip install -U --pre duckdb
       - name: show-deps
         run: uv pip freeze
+      - name: Assert nightlies dependencies
+        run: |
+          DEPS=$(uv pip freeze)
+          echo "$DEPS" | grep 'polars.*@'
+          echo "$DEPS" | grep 'pandas.*dev'
+          echo "$DEPS" | grep 'pyarrow.*dev'
+          echo "$DEPS" | grep 'numpy.*dev'
+          echo "$DEPS" | grep 'dask.*@'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
-
-
+        run: |
+          pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow \
+          --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb

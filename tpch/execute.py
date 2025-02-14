@@ -5,12 +5,17 @@ from importlib import import_module
 from pathlib import Path
 
 import dask.dataframe as dd
+import duckdb
 import pandas as pd
 import polars as pl
-import pyarrow.parquet as pq
+import pyarrow as pa
+from polars.testing import assert_frame_equal
+
+import narwhals as nw
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
+pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
@@ -22,21 +27,15 @@ PARTSUPP_PATH = DATA_DIR / "partsupp.parquet"
 ORDERS_PATH = DATA_DIR / "orders.parquet"
 CUSTOMER_PATH = DATA_DIR / "customer.parquet"
 
-BACKEND_READ_FUNC_MAP = {
-    # "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"), # noqa: ERA001
-    "pandas[pyarrow]": lambda x: pd.read_parquet(
-        x, engine="pyarrow", dtype_backend="pyarrow"
-    ),
-    # "polars[eager]": lambda x: pl.read_parquet(x),
-    "polars[lazy]": lambda x: pl.scan_parquet(x),
-    "pyarrow": lambda x: pq.read_table(x),
-    "dask": lambda x: dd.read_parquet(x, engine="pyarrow", dtype_backend="pyarrow"),
+BACKEND_NAMESPACE_KWARGS_MAP = {
+    "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "polars[lazy]": (pl, {}),
+    "pyarrow": (pa, {}),
+    "duckdb": (duckdb, {}),
+    "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
 }
 
-BACKEND_COLLECT_FUNC_MAP = {
-    "polars[lazy]": lambda x: x.collect(),
-    "dask": lambda x: x.compute(),
-}
+DUCKDB_SKIPS = ["q15"]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
@@ -90,12 +89,29 @@ def execute_query(query_id: str) -> None:
     query_module = import_module(f"tpch.queries.{query_id}")
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
-    for backend, read_func in BACKEND_READ_FUNC_MAP.items():
+    expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
+
+    for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
+        if backend == "duckdb" and query_id in DUCKDB_SKIPS:
+            print(f"\nSkipping {query_id} for DuckDB")  # noqa: T201
+            continue
+
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result = query_module.query(*(read_func(path) for path in data_paths))
-        if collect_func := BACKEND_COLLECT_FUNC_MAP.get(backend):
-            result = collect_func(result)
-        print(result)  # noqa: T201
+        result: pl.DataFrame = (
+            query_module.query(
+                *(
+                    nw.scan_parquet(
+                        str(path), native_namespace=native_namespace, **kwargs
+                    )
+                    for path in data_paths
+                )
+            )
+            .lazy()
+            .collect(backend=nw.Implementation.POLARS)
+            .to_native()
+        )
+
+        assert_frame_equal(expected, result, check_dtypes=False)
 
 
 def main() -> None:

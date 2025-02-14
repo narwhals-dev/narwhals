@@ -2,23 +2,28 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Generic
+from typing import Literal
 from typing import Protocol
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
-    import sys
+    from types import ModuleType
 
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
+    import numpy as np
+    from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
+    from narwhals.utils import Implementation
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -34,6 +39,78 @@ if TYPE_CHECKING:
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
+class CompliantSeries(Protocol):
+    @property
+    def name(self) -> str: ...
+    def __narwhals_series__(self) -> CompliantSeries: ...
+    def alias(self, name: str) -> Self: ...
+
+
+class CompliantDataFrame(Protocol):
+    def __narwhals_dataframe__(self) -> Self: ...
+    def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> Self: ...  # `select` where all args are column names.
+    def aggregate(self, *exprs: Any) -> Self:
+        ...  # `select` where all args are aggregations or literals
+        # (so, no broadcasting is necessary).
+
+
+class CompliantLazyFrame(Protocol):
+    def __narwhals_lazyframe__(self) -> Self: ...
+    def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> Self: ...  # `select` where all args are column names.
+    def aggregate(self, *exprs: Any) -> Self:
+        ...  # `select` where all args are aggregations or literals
+        # (so, no broadcasting is necessary).
+
+
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
+)
+
+
+class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _evaluate_output_names: Callable[
+        [CompliantDataFrame | CompliantLazyFrame], Sequence[str]
+    ]
+    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
+    _depth: int
+    _function_name: str
+
+    def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
+    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
+    def is_null(self) -> Self: ...
+    def alias(self, name: str) -> Self: ...
+    def cast(self, dtype: DType) -> Self: ...
+    def __and__(self, other: Any) -> Self: ...
+    def __or__(self, other: Any) -> Self: ...
+    def __add__(self, other: Any) -> Self: ...
+    def __sub__(self, other: Any) -> Self: ...
+    def __mul__(self, other: Any) -> Self: ...
+    def __floordiv__(self, other: Any) -> Self: ...
+    def __truediv__(self, other: Any) -> Self: ...
+    def __mod__(self, other: Any) -> Self: ...
+    def __pow__(self, other: Any) -> Self: ...
+
+
+class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
+    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
+    def lit(
+        self, value: Any, dtype: DType | None
+    ) -> CompliantExpr[CompliantSeriesT_co]: ...
+
+
+class SupportsNativeNamespace(Protocol):
+    def __native_namespace__(self) -> ModuleType: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -120,7 +197,7 @@ Examples:
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 """TypeVar bound to object convertible to Narwhals DataFrame.
 
-Use this if your function accepts a function which can be converted to `nw.DataFrame`
+Use this if your function accepts an object which can be converted to `nw.DataFrame`
 and returns an object of the same class.
 
 Examples:
@@ -162,7 +239,7 @@ Examples:
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
 
-Use this if your function accepts a function which can be converted to `nw.Series`
+Use this if your function accepts an object which can be converted to `nw.Series`
 and returns an object of the same class.
 
 Examples:
@@ -173,12 +250,37 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
+SizeUnit: TypeAlias = Literal[
+    "b",
+    "kb",
+    "mb",
+    "gb",
+    "tb",
+    "bytes",
+    "kilobytes",
+    "megabytes",
+    "gigabytes",
+    "terabytes",
+]
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+
 
 class DTypes:
+    Decimal: type[dtypes.Decimal]
+    Int128: type[dtypes.Int128]
     Int64: type[dtypes.Int64]
     Int32: type[dtypes.Int32]
     Int16: type[dtypes.Int16]
     Int8: type[dtypes.Int8]
+    UInt128: type[dtypes.UInt128]
     UInt64: type[dtypes.UInt64]
     UInt32: type[dtypes.UInt32]
     UInt16: type[dtypes.UInt16]
@@ -200,7 +302,18 @@ class DTypes:
     Unknown: type[dtypes.Unknown]
 
 
+if TYPE_CHECKING:
+    # This one needs to be in TYPE_CHECKING to pass on 3.9,
+    # and can only be defined after CompliantExpr has been defined
+    IntoCompliantExpr: TypeAlias = (
+        CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co
+    )
+
+
 __all__ = [
+    "CompliantDataFrame",
+    "CompliantLazyFrame",
+    "CompliantSeries",
     "DataFrameT",
     "Frame",
     "FrameT",

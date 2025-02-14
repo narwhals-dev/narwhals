@@ -50,6 +50,8 @@ def test_timestamp_datetimes(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
@@ -90,6 +92,8 @@ def test_timestamp_datetimes_tz_aware(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     if (
         (any(x in str(constructor) for x in ("pyarrow",)) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
@@ -136,9 +140,16 @@ def test_timestamp_dates(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
+        for x in (
+            "pandas_constructor",
+            "pandas_nullable_constructor",
+            "cudf",
+            "modin_constructor",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -156,6 +167,8 @@ def test_timestamp_dates(
 def test_timestamp_invalid_date(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_str = {"a": ["x", "y", None]}
@@ -191,7 +204,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
         nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
 
 
-@given(  # type: ignore[misc]
+@given(
     inputs=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)),
     time_unit=st.sampled_from(["ms", "us", "ns"]),
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
@@ -199,6 +212,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
 @pytest.mark.skipif(POLARS_VERSION < (0, 20, 7), reason="bug in old Polars")
+@pytest.mark.slow
 def test_timestamp_hypothesis(
     inputs: datetime,
     time_unit: Literal["ms", "us", "ns"],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -56,20 +57,22 @@ def test_unpivot_on(
 )
 def test_unpivot_var_value_names(
     constructor: Constructor,
-    variable_name: str | None,
-    value_name: str | None,
-    request: pytest.FixtureRequest,
+    variable_name: str,
+    value_name: str,
 ) -> None:
-    if variable_name == "" and "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/16972
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
-    result = df.unpivot(
-        on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
+    context = (
+        pytest.raises(NotImplementedError)
+        if ("duckdb" in str(constructor) and any([variable_name == "", value_name == ""]))
+        else does_not_raise()
     )
 
-    assert result.collect_schema().names()[-2:] == [variable_name, value_name]
+    with context:
+        df = nw.from_native(constructor(data))
+        result = df.unpivot(
+            on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
+        )
+
+        assert result.collect_schema().names()[-2:] == [variable_name, value_name]
 
 
 def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
@@ -98,6 +101,7 @@ def test_unpivot_mixed_types(
         "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
     ):
         request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=["a", "b"], index="idx")
 

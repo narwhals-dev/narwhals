@@ -22,23 +22,23 @@ def test_with_columns_int_col_name_pandas() -> None:
 
 
 def test_with_columns_order(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
-    expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
+    expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "d": [0, 2, 1]}
     assert_equal_data(result, expected)
 
 
 def test_with_columns_empty(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.select().with_columns()
     assert_equal_data(result, {})
 
 
 def test_with_columns_order_single_row(constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "i": [0, 1, 2]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).filter(nw.col("i") < 1).drop("i")
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
@@ -51,6 +51,8 @@ def test_with_columns_dtypes_single_row(
     request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+        request.applymarker(pytest.mark.xfail)
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))

@@ -20,13 +20,15 @@ jobs:
           python-version: 3.x
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
 
-
       - uses: actions/cache@v4
         with:
           key: mkdocs-material-${{ env.cache_id }}
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install -r docs/requirements-docs.txt -e . pandas polars pyarrow
+      - name: griffe
+        # hopefully temporary until https://github.com/mkdocstrings/mkdocstrings/issues/716
+        run: pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
+      - run: pip install -e .[docs,dask,duckdb]
 
       - run: mkdocs gh-deploy --force

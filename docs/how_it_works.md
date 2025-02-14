@@ -111,6 +111,7 @@ df = PandasLikeDataFrame(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
+    validate_column_names=True,
 )
 expression = pn.col("a") + 1
 result = expression._call(df)
@@ -266,7 +267,6 @@ In order to tell whether an aggregation is simple, Narwhals uses the private `_d
 ```python exec="1" result="python" session="pandas_impl" source="above"
 print(pn.col("a").mean())
 print((pn.col("a") + 1).mean())
-print(pn.mean("a"))
 ```
 
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
