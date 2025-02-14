@@ -28,9 +28,8 @@ def test_is_ordered_categorical() -> None:
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     s = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=False))
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    s = pa.chunked_array(
-        [pa.array(["a", "b"], type=pa.dictionary(pa.int32(), pa.string()))]
-    )
+    tp = pa.dictionary(pa.int32(), pa.string())
+    s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
@@ -54,7 +53,6 @@ def test_is_definitely_not_ordered_categorical(
 
 @pytest.mark.xfail(reason="https://github.com/apache/arrow/issues/41017")
 def test_is_ordered_categorical_pyarrow() -> None:
-    s = pa.chunked_array(
-        [pa.array(["a", "b"], type=pa.dictionary(pa.int32(), pa.string(), ordered=True))]
-    )
+    tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
+    s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
