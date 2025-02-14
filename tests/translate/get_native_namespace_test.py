@@ -26,4 +26,4 @@ def test_native_namespace() -> None:
 
 def test_get_native_namespace_invalid() -> None:
     with pytest.raises(TypeError, match="Could not get native namespace"):
-        nw.get_native_namespace(1)
+        nw.get_native_namespace(1)  # type: ignore[arg-type]
