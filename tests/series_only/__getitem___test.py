@@ -52,12 +52,10 @@ def test_index(constructor_eager: ConstructorEager) -> None:
     assert snw[snw[0]] == 0
 
 
-def test_getitem_other_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
-    if "modin_pyarrow" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+@pytest.mark.filterwarnings(
+    "ignore:.*_array__ implementation doesn't accept a copy keyword.*:DeprecationWarning:modin"
+)
+def test_getitem_other_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager({"a": [1, None, 2, 3]}), eager_only=True)[
         "a"
     ]
