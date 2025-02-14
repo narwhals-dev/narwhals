@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -11,10 +12,12 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoSeries
     from tests.utils import ConstructorEager
 
 
 def test_is_ordered_categorical() -> None:
+    s: IntoSeries | Any
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     s = pl.Series(["a", "b"], dtype=pl.Categorical(ordering="lexical"))
