@@ -365,7 +365,9 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries[Any]]):
             compliant_series_list: list[ArrowSeries[pa.StringScalar]] = [
                 s for _expr in exprs for s in _expr.cast(dtypes.String())(df)
             ]
-            null_handling = "skip" if ignore_nulls else "emit_null"
+            null_handling: Literal["skip", "emit_null"] = (
+                "skip" if ignore_nulls else "emit_null"
+            )
             it = (s._native_series for s in compliant_series_list)
             if TYPE_CHECKING:
                 # NOTE: stubs indicate `separator` would get appended to the end, instead of between elements
