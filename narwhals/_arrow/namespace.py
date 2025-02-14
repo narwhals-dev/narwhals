@@ -8,7 +8,6 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -20,7 +19,7 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import horizontal_concat
-from narwhals._arrow.utils import lit
+from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -433,9 +432,7 @@ class ArrowWhen:
             [condition, value_series]
         )
         if self._otherwise_value is None:
-            # NOTE: Casting just to match *some overload*, as the series type isn't known statically
-            null_value = cast("pa.NullScalar", lit(None, type=value_series_native.type))
-            otherwise_null = pa.repeat(null_value, len(condition_native))
+            otherwise_null = nulls_like(len(condition_native), value_series)
             return [
                 value_series._from_native_series(
                     pc.if_else(condition_native, value_series_native, otherwise_null)
