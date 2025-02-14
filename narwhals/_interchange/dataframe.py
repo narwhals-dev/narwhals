@@ -127,6 +127,8 @@ class InterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         from pyarrow.interchange import from_dataframe  # ignore-banned-import()
 
+        # NOTE: mypy: error: Module not callable  [operator]
+        # NOTE: pyright: Module is not callable [reportCallIssue]
         return from_dataframe(self._interchange_frame)
 
     @property
