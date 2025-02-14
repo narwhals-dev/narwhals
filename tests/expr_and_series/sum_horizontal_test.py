@@ -65,5 +65,8 @@ def test_sumh_transformations(
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))
-    expected = {"d": [23, 25, 27]}
+    expected: dict[str, Any] = {"d": [23, 25, 27]}
+    assert_equal_data(result, expected)
+    result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))
+    expected = {"d": [8.0, 10.0, 12.0]}
     assert_equal_data(result, expected)
