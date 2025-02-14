@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import cast
 
 import dask.dataframe as dd
-import dask.dataframe.dask_expr as dx
 import pandas as pd
 
 from narwhals._dask.dataframe import DaskLazyFrame
@@ -25,16 +24,16 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
 
 class DaskNamespace(CompliantNamespace["dx.Series"]):
@@ -154,13 +153,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            # If any `s` was broadcasted, we need to temporarily unbroadcast
-            # so we can call fillna.
-            series = [
-                s.fillna(0) if isinstance(s, dx.Series) else s.to_series().fillna(0).min()
-                for _expr in exprs
-                for s in _expr(df)
-            ]
+            series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
             return [reduce(operator.add, series)]
 
         return DaskExpr(
