@@ -233,6 +233,40 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
         assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
+def test_series_only_sqlframe() -> None:  # pragma: no cover
+    pytest.importorskip("sqlframe")
+    from sqlframe.duckdb import DuckDBSession
+
+    session = DuckDBSession()
+    df = (  # type: ignore[no-any-return]
+        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
+    )
+
+    with pytest.raises(TypeError, match="Cannot only use `series_only`"):
+        nw.from_native(df, series_only=True)
+
+
+@pytest.mark.parametrize(
+    ("eager_only", "context"),
+    [
+        (False, does_not_raise()),
+        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+    ],
+)
+def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
+    pytest.importorskip("sqlframe")
+    from sqlframe.duckdb import DuckDBSession
+
+    session = DuckDBSession()
+    df = (  # type: ignore[no-any-return]
+        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
+    )
+
+    with context:
+        res = nw.from_native(df, eager_only=eager_only)
+        assert isinstance(res, nw.LazyFrame)
+
+
 def test_from_native_strict_false_typing() -> None:
     df = pl.DataFrame()
     nw.from_native(df, strict=False)
