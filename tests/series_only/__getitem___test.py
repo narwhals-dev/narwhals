@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import assert_equal_data
@@ -51,7 +52,12 @@ def test_index(constructor_eager: ConstructorEager) -> None:
     assert snw[snw[0]] == 0
 
 
-def test_getitem_other_series(constructor_eager: ConstructorEager) -> None:
+def test_getitem_other_series(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "modin_pyarrow" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
     series = nw.from_native(constructor_eager({"a": [1, None, 2, 3]}), eager_only=True)[
         "a"
     ]
