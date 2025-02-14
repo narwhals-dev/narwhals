@@ -121,9 +121,7 @@ class Series(Generic[IntoSeriesT]):
     @overload
     def __getitem__(self: Self, idx: slice | Sequence[int] | Self) -> Self: ...
 
-    def __getitem__(
-        self: Self, idx: int | slice | Sequence[int] | Self
-    ) -> Any | Self:
+    def __getitem__(self: Self, idx: int | slice | Sequence[int] | Self) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
