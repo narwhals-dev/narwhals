@@ -164,7 +164,7 @@ def test_pyarrow_infer_datetime_raise_invalid() -> None:
         NotImplementedError,
         match="Unable to infer datetime format, provided format is not supported.",
     ):
-        parse_datetime_format(pa.chunked_array([["2024-01-01", "abc"]]))
+        parse_datetime_format(pa.chunked_array([["2024-01-01", "abc"]]))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -181,7 +181,7 @@ def test_pyarrow_infer_datetime_raise_not_unique(
         ValueError,
         match=f"Found multiple {duplicate} values while inferring datetime format.",
     ):
-        parse_datetime_format(pa.chunked_array([data]))
+        parse_datetime_format(pa.chunked_array([data]))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("data", [["2024-01-01", "2024-12-01", "02-02-2024"]])
@@ -189,4 +189,4 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
     data: list[str | None],
 ) -> None:
     with pytest.raises(ValueError, match="Unable to infer datetime format. "):
-        parse_datetime_format(pa.chunked_array([data]))
+        parse_datetime_format(pa.chunked_array([data]))  # type: ignore[arg-type]
