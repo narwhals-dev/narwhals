@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
@@ -1351,16 +1352,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         msg = "At least one expression must be passed to `sum_horizontal`"
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
-    kinds = [infer_expr_kind(expr, strings_are_column_names=True) for expr in flat_exprs]
-    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
     return Expr(
-        lambda plx: plx.sum_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True).broadcast(kind)
-                if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-                else extract_compliant(plx, v, strings_are_column_names=True)
-                for v, kind in zip(flat_exprs, kinds)
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.sum_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )

@@ -431,15 +431,13 @@ def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> E
     return ExprKind.LITERAL
 
 
-def apply_expr_n_ary_operation(
+def apply_n_ary_operation(
     plx: CompliantNamespace,
-    expr: Expr,
     function: Any,
     *comparands: IntoExpr,
     strings_are_column_names: bool,
 ) -> CompliantExpr[Any]:
     compliant_exprs = [
-        expr._to_compliant_expr(plx),
         *(
             extract_compliant(
                 plx, comparand, strings_are_column_names=strings_are_column_names
@@ -448,7 +446,6 @@ def apply_expr_n_ary_operation(
         ),
     ]
     kinds = [
-        expr._metadata["kind"],
         *(
             infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
             for comparand in comparands
