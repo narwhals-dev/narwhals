@@ -679,6 +679,9 @@ def align_and_extract_series(series: Sequence[PandasLikeSeries]) -> list[pd.Seri
     idx = series[lengths.index(max_length)]._native_series.index
     reindexed = []
     for s in series:
+        if s._broadcast:
+            reindexed.append(s._native_series[0])
+            continue
         s_native = s._native_series
         if s_native.index is not idx:
             reindexed.append(

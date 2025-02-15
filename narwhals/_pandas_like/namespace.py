@@ -16,6 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_and_extract_native
+from narwhals._pandas_like.utils import align_and_extract_series
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
@@ -195,12 +196,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     # --- horizontal ---
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (
-                s.fill_null(0, strategy=None, limit=None)
-                for _expr in exprs
-                for s in _expr(df)
-            )
-            return [reduce(operator.add, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            native_series = align_and_extract_series(series)
+            return [series[0]._from_native_series(reduce(operator.add, native_series))]
 
         return self._create_expr_from_callable(
             func=func,
