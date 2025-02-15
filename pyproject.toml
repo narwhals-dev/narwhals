@@ -165,6 +165,7 @@ required-imports = ["from __future__ import annotations"]
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
 testpaths = ["tests"]
 filterwarnings = [
   "error",
