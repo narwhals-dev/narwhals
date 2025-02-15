@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import pyarrow as pa
+    from pyspark.sql import Column
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
@@ -410,16 +411,49 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
             raise NotImplementedError(msg)
 
-        return self._from_native_frame(
-            native_frame.select(
-                *[
-                    self._F.col(col_name).alias(col_name)
-                    if col_name != columns[0]
-                    else self._F.explode_outer(col_name).alias(col_name)
-                    for col_name in column_names
-                ]
+        if self._implementation.is_pyspark():
+            return self._from_native_frame(
+                native_frame.select(
+                    *[
+                        self._F.col(col_name).alias(col_name)
+                        if col_name != columns[0]
+                        else self._F.explode_outer(col_name).alias(col_name)
+                        for col_name in column_names
+                    ]
+                )
             )
-        )
+        elif self._implementation.is_sqlframe():
+            # Not every sqlframe dialect supports `explode_outer` function
+            # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
+            # therefore we simply explode the array column which will ignore nulls and
+            # zero sized arrays, and append these specific condition with nulls (to
+            # match polars behavior).
+
+            def null_condition(col_name: str) -> Column:
+                return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
+
+            return self._from_native_frame(
+                native_frame.select(
+                    *[
+                        self._F.col(col_name).alias(col_name)
+                        if col_name != columns[0]
+                        else self._F.explode(col_name).alias(col_name)
+                        for col_name in column_names
+                    ]
+                ).union(
+                    native_frame.filter(null_condition(columns[0])).select(
+                        *[
+                            self._F.col(col_name).alias(col_name)
+                            if col_name != columns[0]
+                            else self._F.lit(None).alias(col_name)
+                            for col_name in column_names
+                        ]
+                    )
+                )
+            )
+        else:  # pragma: no cover
+            msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"
+            raise AssertionError(msg)
 
     def unpivot(
         self: Self,

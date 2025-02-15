@@ -435,7 +435,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
-    Implementation.SQLFRAME: (3, 14, 2),
+    Implementation.SQLFRAME: (3, 21, 0),
 }
 
 
