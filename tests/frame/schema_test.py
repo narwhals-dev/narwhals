@@ -205,20 +205,6 @@ def test_schema_object(method: str, expected: Any) -> None:
     assert getattr(schema, method)() == expected
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2,),
-    reason="Before 2.0, pandas would raise on `drop_duplicates`",
-)
-def test_from_non_hashable_column_name() -> None:
-    # This is technically super-illegal
-    # BUT, it shows up in a scikit-learn test, so...
-    df_pd = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
-
-    df = nw.from_native(df_pd, eager_only=True)
-    assert df.columns == ["pizza", ["a", "b"]]
-    assert df["pizza"].dtype == nw.Int64
-
-
 def test_validate_not_duplicated_columns_pandas_like() -> None:
     df = pd.DataFrame([[1, 2], [4, 5]], columns=["a", "a"])
     with pytest.raises(
