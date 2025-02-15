@@ -1397,11 +1397,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.min_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.min_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
@@ -1446,11 +1443,8 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.max_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.max_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
@@ -1581,11 +1575,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.all_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.all_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
@@ -1676,11 +1667,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.any_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.any_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
@@ -1725,11 +1713,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.mean_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.mean_horizontal, *flat_exprs, strings_are_column_names=True
         ),
         combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
@@ -1788,12 +1773,15 @@ def concat_str(
         | 2          None  |
         └──────────────────┘
     """
-    exprs = flatten([*flatten([exprs]), *more_exprs])
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
-        lambda plx: plx.concat_str(
-            *(extract_compliant(plx, v, strings_are_column_names=True) for v in exprs),
-            separator=separator,
-            ignore_nulls=ignore_nulls,
+        lambda plx: apply_n_ary_operation(
+            plx,
+            lambda *args: plx.concat_str(
+                *args, separator=separator, ignore_nulls=ignore_nulls
+            ),
+            *flat_exprs,
+            strings_are_column_names=True,
         ),
-        combine_metadata(*exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, strings_are_column_names=True),
     )
