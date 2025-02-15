@@ -40,7 +40,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import AbstractSet
+    from typing import AbstractSet as Set
     from typing import Protocol
 
     import pandas as pd
@@ -1243,15 +1243,15 @@ def check_column_names_are_unique(columns: list[str]) -> None:
 def _parse_time_unit_and_time_zone(
     time_unit: TimeUnit | Iterable[TimeUnit] | None,
     time_zone: str | timezone | Iterable[str | timezone | None] | None,
-) -> tuple[set[TimeUnit], AbstractSet[str | None]]:
-    time_units: set[TimeUnit] = (
+) -> tuple[Set[TimeUnit], Set[str | None]]:
+    time_units: Set[TimeUnit] = (
         {"ms", "us", "ns", "s"}
         if time_unit is None
         else {time_unit}
         if isinstance(time_unit, str)
         else set(time_unit)
     )
-    time_zones: AbstractSet[str | None] = (
+    time_zones: Set[str | None] = (
         {None}
         if time_zone is None
         else {str(time_zone)}
@@ -1262,10 +1262,7 @@ def _parse_time_unit_and_time_zone(
 
 
 def dtype_matches_time_unit_and_time_zone(
-    dtype: DType,
-    dtypes: DTypes,
-    time_units: set[TimeUnit],
-    time_zones: AbstractSet[str | None],
+    dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
 ) -> bool:
     return (
         (dtype == dtypes.Datetime)
