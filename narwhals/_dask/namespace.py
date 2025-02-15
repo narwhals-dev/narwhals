@@ -294,14 +294,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def when(
-        self: Self,
-        *predicates: DaskExpr,
-    ) -> DaskWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: DaskExpr) -> DaskWhen:
         return DaskWhen(
-            condition, self._backend_version, returns_scalar=False, version=self._version
+            predicate, self._backend_version, returns_scalar=False, version=self._version
         )
 
     def concat_str(

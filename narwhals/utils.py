@@ -5,6 +5,7 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
@@ -13,6 +14,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
+from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
@@ -39,6 +41,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import AbstractSet as Set
     from typing import Protocol
 
     import pandas as pd
@@ -65,6 +68,9 @@ if TYPE_CHECKING:
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
     _T = TypeVar("_T")
+    _T1 = TypeVar("_T1")
+    _T2 = TypeVar("_T2")
+    _T3 = TypeVar("_T3")
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -515,7 +521,49 @@ def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ..
     return tuple(int(re.sub(r"\D", "", v)) for v in version_str.split("."))
 
 
-def isinstance_or_issubclass(obj_or_cls: object | type, cls_or_tuple: Any) -> bool:
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: type[_T]
+) -> TypeIs[type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: type[_T]
+) -> TypeIs[_T | type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[_T1 | _T2 | type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: Any, cls_or_tuple: tuple[type, ...]
+) -> TypeIs[Any]: ...
+
+
+def isinstance_or_issubclass(obj_or_cls: Any, cls_or_tuple: Any) -> bool:
     from narwhals.dtypes import DType
 
     if isinstance(obj_or_cls, DType):
@@ -1236,15 +1284,15 @@ def check_column_names_are_unique(columns: list[str]) -> None:
 def _parse_time_unit_and_time_zone(
     time_unit: TimeUnit | Iterable[TimeUnit] | None,
     time_zone: str | timezone | Iterable[str | timezone | None] | None,
-) -> tuple[set[str], set[str | None]]:
-    time_units = (
+) -> tuple[Set[TimeUnit], Set[str | None]]:
+    time_units: Set[TimeUnit] = (
         {"ms", "us", "ns", "s"}
         if time_unit is None
         else {time_unit}
         if isinstance(time_unit, str)
         else set(time_unit)
     )
-    time_zones: set[str | None] = (
+    time_zones: Set[str | None] = (
         {None}
         if time_zone is None
         else {str(time_zone)}
@@ -1255,10 +1303,7 @@ def _parse_time_unit_and_time_zone(
 
 
 def dtype_matches_time_unit_and_time_zone(
-    dtype: DType,
-    dtypes: DTypes,
-    time_units: set[str],
-    time_zones: set[str | None],
+    dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
 ) -> bool:
     return (
         (dtype == dtypes.Datetime)
@@ -1270,16 +1315,21 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
+def _hasattr_static(obj: Any, attr: str) -> bool:
+    sentinel = object()
+    return getattr_static(obj, attr, sentinel) is not sentinel
+
+
 def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
-    return hasattr(obj, "__narwhals_dataframe__")
+    return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
-    return hasattr(obj, "__narwhals_lazyframe__")
+    return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
 def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
-    return hasattr(obj, "__narwhals_series__")
+    return _hasattr_static(obj, "__narwhals_series__")
 
 
 def is_compliant_expr(

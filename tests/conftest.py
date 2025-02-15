@@ -224,7 +224,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         selected_constructors = [
             x
             for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x not in "modin"  # too slow
+            if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
         ]
     else:  # pragma: no cover
         selected_constructors = metafunc.config.getoption("constructors").split(",")

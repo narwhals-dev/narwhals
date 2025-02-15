@@ -2080,7 +2080,7 @@ def concat_str(
 class When(NwWhen):
     @classmethod
     def from_when(cls: type, when: NwWhen) -> When:
-        return cls(*when._predicates)  # type: ignore[no-any-return]
+        return cls(when._predicate)  # type: ignore[no-any-return]
 
     def then(self: Self, value: Any) -> Then:
         return Then.from_then(super().then(value))

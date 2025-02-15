@@ -351,13 +351,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             )
         raise NotImplementedError
 
-    def when(self: Self, *predicates: PandasLikeExpr) -> PandasWhen:
-        plx = self.__class__(
-            self._implementation, self._backend_version, version=self._version
-        )
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen(
-            condition, self._implementation, self._backend_version, version=self._version
+            predicate, self._implementation, self._backend_version, version=self._version
         )
 
     def concat_str(
