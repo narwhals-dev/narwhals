@@ -116,11 +116,17 @@ def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
 
+    if lhs._broadcast and not rhs._broadcast:
+        return lhs._native_series[0], rhs._native_series
+    lhs_native = lhs._native_series
+
     if isinstance(rhs, PandasLikeSeries):
+        if rhs._broadcast:
+            return (lhs_native, rhs._native_series[0])
         rhs_native = maybe_convert_dtypes_and_extract_native(lhs, rhs)
         if rhs_native.index is not lhs_index:
             return (
-                lhs._native_series,
+                lhs_native,
                 set_index(
                     rhs_native,
                     lhs_index,
@@ -128,10 +134,10 @@ def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs._native_series, rhs_native)
+        return (lhs_native, rhs_native)
 
     # `rhs` must be scalar, so just leave it as-is
-    return lhs._native_series, rhs
+    return lhs_native, rhs
 
 
 def maybe_convert_dtypes_and_extract_native(
@@ -160,6 +166,8 @@ def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
+        if other._broadcast:
+            return other._native_series[0]
         if other._native_series.index is not index:
             return set_index(
                 other._native_series,

@@ -105,6 +105,7 @@ class PandasLikeSeries(CompliantSeries):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+        self._broadcast = False
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
@@ -396,7 +397,7 @@ class PandasLikeSeries(CompliantSeries):
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__add__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __radd__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -408,7 +409,7 @@ class PandasLikeSeries(CompliantSeries):
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__sub__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __rsub__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
