@@ -723,11 +723,7 @@ class ArrowSeries(CompliantSeries, Generic[_ScalarT_co]):
         )
 
     def to_pandas(self: Self) -> pd.Series:
-        if TYPE_CHECKING:
-            return self._native_series.to_pandas()
-        import pandas as pd  # ignore-banned-import()
-
-        return pd.Series(self._native_series, name=self.name)
+        return self._native_series.to_pandas().rename(self._name)
 
     def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
