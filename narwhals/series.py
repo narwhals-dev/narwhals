@@ -17,6 +17,7 @@ from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
+from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
@@ -118,17 +119,17 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | Self) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(self: Self, idx: int | slice | Sequence[int] | Self) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
             idx: The index, slice, or sequence of indices to retrieve.
 
                 - If `idx` is an integer, a single element is returned.
-                - If `idx` is a slice or a sequence of integers,
-                  a subset of the Series is returned.
+                - If `idx` is a slice, a sequence of integers, or another Series
+                    (with integer values) a subset of the Series is returned.
 
         Returns:
             A single element if `idx` is an integer, else a subset of the Series.
@@ -156,7 +157,9 @@ class Series(Generic[IntoSeriesT]):
             is_numpy_scalar(idx) and idx.dtype.kind in ("i", "u")
         ):
             return self._compliant_series[idx]
-        return self._from_compliant_series(self._compliant_series[idx])
+        return self._from_compliant_series(
+            self._compliant_series[to_native(idx, pass_through=True)]
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
