@@ -466,11 +466,10 @@ def apply_n_ary_operation(
 def apply_rhs_arithmetic_operation(
     plx: CompliantNamespace[Any], expr: Expr, other: Any, attr: str
 ) -> CompliantExpr[Any]:
-    return apply_n_ary_operation(plx, lambda *args: getattr(args[1], attr)(args[0]), expr, other, strings_are_column_names=False)
-    expr_compliant = extract_compliant(plx, expr, strings_are_column_names=False)
-    other_compliant = plx.lit(
-        extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+    return apply_n_ary_operation(
+        plx,
+        lambda *args: getattr(args[1], attr)(args[0]),
+        expr,
+        other,
+        strings_are_column_names=False,
     )
-    if expr._metadata["kind"] is ExprKind.TRANSFORM:
-        return getattr(other_compliant.broadcast(ExprKind.LITERAL), attr)(expr_compliant)
-    return getattr(other_compliant, attr)(expr_compliant)

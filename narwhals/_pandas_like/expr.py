@@ -7,7 +7,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._expression_parsing import evaluate_output_names_and_aliases, ExprKind
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._pandas_like.expr_cat import PandasLikeExprCatNamespace
@@ -90,7 +90,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def broadcast(self, _kind: Any) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [
-                broadcast_dataframe_comparand(df._native_frame.index, result) if _kind is ExprKind.AGGREGATION else result[0]
+                broadcast_dataframe_comparand(df._native_frame.index, result)
                 for result in self(df)
             ]
 
