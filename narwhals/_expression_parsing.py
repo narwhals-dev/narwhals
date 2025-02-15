@@ -268,7 +268,7 @@ def extract_compliant(
     other: Any,
     *,
     strings_are_column_names: bool,
-) -> CompliantExpr[CompliantSeriesT_co] | Any:
+) -> CompliantExpr[CompliantSeriesT_co]:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -451,12 +451,7 @@ def apply_n_ary_operation(
     broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
-        # `compliant` expr could also be literal, hence the check is needed before calling `broadcast`.
-        # We can't (yet) use `plx.lit` for all literals due to dtype mismatches in pandas,
-        # see test failures in https://github.com/narwhals-dev/narwhals/pull/1999.
-        if broadcast
-        and is_compliant_expr(compliant_expr)
-        and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
