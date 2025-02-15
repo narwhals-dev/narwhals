@@ -437,23 +437,19 @@ def apply_n_ary_operation(
     *comparands: IntoExpr,
     strings_are_column_names: bool,
 ) -> CompliantExpr[Any]:
-    compliant_exprs = [
-        *(
-            extract_compliant(
-                plx, comparand, strings_are_column_names=strings_are_column_names
-            )
-            for comparand in comparands
-        ),
-    ]
+    compliant_exprs = (
+        extract_compliant(
+            plx, comparand, strings_are_column_names=strings_are_column_names
+        )
+        for comparand in comparands
+    )
     kinds = [
-        *(
-            infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
-            for comparand in comparands
-        ),
+        infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
+        for comparand in comparands
     ]
 
     broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
-    compliant_exprs = [
+    compliant_exprs = (
         compliant_expr.broadcast(kind)
         # `compliant` expr could also be literal, hence the check is needed before calling `broadcast`.
         # We can't (yet) use `plx.lit` for all literals due to dtype mismatches in pandas,
@@ -463,7 +459,7 @@ def apply_n_ary_operation(
         and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
-    ]
+    )
     return function(*compliant_exprs)
 
 
