@@ -257,7 +257,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         import pyspark.sql.functions as F  # noqa: N812
         import pyspark.sql.types as T  # noqa: N812
 
-        native_df = native_df.withColumn(
+        native_df = native_df.withColumn(  # type: ignore[union-attr]
             "a",
             F.struct(
                 F.col("a.movie ").alias("movie ").cast(T.StringType()),
