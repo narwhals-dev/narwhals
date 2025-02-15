@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.typing import Incomplete
 
 POLARS_TO_ARROW_AGGREGATIONS = {
     "sum": "sum",
@@ -148,18 +149,12 @@ class ArrowGroupBy:
             "Iterator[pa.StringArray]",
             (table[key].cast(pa.string()) for key in self._keys),
         )
-        if TYPE_CHECKING:
-            # NOTE: stubs indicate `separator` would get appended to the end, instead of between elements
-            key_values = pc.binary_join_element_wise(
-                *it, null_handling="replace", null_replacement=null_token
-            )
-        else:
-            key_values = pc.binary_join_element_wise(
-                *it,
-                "",
-                null_handling="replace",
-                null_replacement=null_token,
-            )
+        # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
+        # Reality: `str` is fine
+        concat_str: Incomplete = pc.binary_join_element_wise
+        key_values = concat_str(
+            *it, "", null_handling="replace", null_replacement=null_token
+        )
         table = table.add_column(i=0, field_=col_token, column=key_values)
 
         yield from (

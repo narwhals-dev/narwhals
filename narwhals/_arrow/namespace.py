@@ -368,18 +368,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries[Any]]):
                 "skip" if ignore_nulls else "emit_null"
             )
             it = (s._native_series for s in compliant_series_list)
-            if TYPE_CHECKING:
-                # NOTE: stubs indicate `separator` would get appended to the end, instead of between elements
-                result_series = pc.binary_join_element_wise(
-                    *it, null_handling=null_handling
-                )
-            else:
-                result_series = pc.binary_join_element_wise(
-                    *it, separator, null_handling=null_handling
-                )
+            # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
+            # Reality: `str` is fine
+            concat_str: Incomplete = pc.binary_join_element_wise
             return [
                 ArrowSeries(
-                    native_series=result_series,
+                    native_series=concat_str(*it, separator, null_handling=null_handling),
                     name=compliant_series_list[0].name,
                     backend_version=self._backend_version,
                     version=self._version,
