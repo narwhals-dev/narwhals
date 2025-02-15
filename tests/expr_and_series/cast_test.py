@@ -236,9 +236,7 @@ def test_cast_datetime_tz_aware(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -251,62 +249,24 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         ]
     }
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
-    result = (
-        nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
-    )
+    native_df = constructor(data)
 
-    assert result.schema == {"a": dtype}
+    if "spark" in str(constructor):
+        # Special handling for pyspark as it natively maps the input to
+        # a column of type MAP<STRING, STRING>
+        import pyspark.sql.functions as F  # noqa: N812
+        import pyspark.sql.types as T  # noqa: N812
 
-
-def test_cast_struct_pyspark() -> None:  # pragma: no cover
-    pytest.importorskip("pyspark")
-
-    from pyspark.sql import SparkSession
-    from pyspark.sql.types import IntegerType
-    from pyspark.sql.types import StringType
-    from pyspark.sql.types import StructField
-    from pyspark.sql.types import StructType
-
-    session = (
-        SparkSession.builder.appName("struct-unit-tests")
-        .master("local[1]")
-        .config("spark.ui.enabled", "false")
-        # executing one task at a time makes the tests faster
-        .config("spark.default.parallelism", "1")
-        .config("spark.sql.shuffle.partitions", "2")
-        # common timezone for all tests environments
-        .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
-    )
-
-    schema = StructType(
-        [
-            StructField(
-                name="a",
-                dataType=StructType(
-                    [
-                        StructField("movie", StringType()),
-                        StructField("rating", IntegerType()),
-                    ]
-                ),
-            )
-        ]
-    )
-
-    data = {
-        "a": [
-            {"movie ": "Cars", "rating": 4},
-            {"movie ": "Toy Story", "rating": 3},
-        ]
-    }
-
-    df_native = session.createDataFrame(
-        [*zip(*data.values())], schema=schema
-    ).repartition(2)
+        native_df = native_df.withColumn(
+            "a",
+            F.struct(
+                F.col("a.movie ").alias("movie ").cast(T.StringType()),
+                F.col("a.rating").alias("rating").cast(T.DoubleType()),
+            ),
+        )
 
     dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
-    result = nw.from_native(df_native).select(nw.col("a").cast(dtype)).lazy().collect()
+    result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
 
     assert result.schema == {"a": dtype}
 
