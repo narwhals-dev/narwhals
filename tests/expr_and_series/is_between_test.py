@@ -1,6 +1,6 @@
 from __future__ import annotations
-from datetime import datetime
 
+from datetime import datetime
 from typing import Literal
 
 import pytest
@@ -67,6 +67,7 @@ def test_is_between_expressified_series(constructor_eager: ConstructorEager) -> 
     result = df["a"].is_between(df["b"], df["c"]).to_frame()
     expected_dict = {"a": [True, False, True, True]}
     assert_equal_data(result, expected_dict)
+
 
 @pytest.mark.parametrize(
     ("closed", "expected"),

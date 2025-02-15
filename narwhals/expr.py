@@ -1,5 +1,4 @@
 from __future__ import annotations
-from narwhals.translate import to_native
 
 from typing import TYPE_CHECKING
 from typing import Any
@@ -14,7 +13,6 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import apply_rhs_arithmetic_operation
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -23,6 +21,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
@@ -1968,7 +1967,10 @@ class Expr:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
-                lambda *exprs: exprs[0].clip(exprs[1] if lower_bound is not None else None, exprs[2] if upper_bound is not None else None),
+                lambda *exprs: exprs[0].clip(
+                    exprs[1] if lower_bound is not None else None,
+                    exprs[2] if upper_bound is not None else None,
+                ),
                 self,
                 lower_bound,  # type: ignore[arg-type]
                 upper_bound,  # type: ignore[arg-type]

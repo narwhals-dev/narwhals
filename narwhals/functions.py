@@ -1458,7 +1458,11 @@ class When:
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
-                plx, lambda *args: plx.when(args[0]).then(args[1]), self._predicate, value, strings_are_column_names=True
+                plx,
+                lambda *args: plx.when(args[0]).then(args[1]),
+                self._predicate,
+                value,
+                strings_are_column_names=True,
             ),
             combine_metadata(self._predicate, value, strings_are_column_names=True),
         )
