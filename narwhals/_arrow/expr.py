@@ -13,7 +13,7 @@ from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import broadcast_dataframe_comparand
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_output_names_and_aliases, ExprKind
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
@@ -64,7 +64,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def broadcast(self, _kind: Any) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
-                broadcast_dataframe_comparand(len(df), result, self._backend_version)
+                broadcast_dataframe_comparand(len(df), result, self._backend_version) if _kind is ExprKind.AGGREGATION else result[0]
                 for result in self(df)
             ]
 

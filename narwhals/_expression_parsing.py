@@ -281,7 +281,7 @@ def extract_compliant(
     if is_numpy_array(other):
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
         return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
-    return other
+    return plx.lit(other, dtype=None)
 
 
 def evaluate_output_names_and_aliases(
@@ -466,6 +466,7 @@ def apply_n_ary_operation(
 def apply_rhs_arithmetic_operation(
     plx: CompliantNamespace[Any], expr: Expr, other: Any, attr: str
 ) -> CompliantExpr[Any]:
+    return apply_n_ary_operation(plx, lambda *args: getattr(args[1], attr)(args[0]), expr, other, strings_are_column_names=False)
     expr_compliant = extract_compliant(plx, expr, strings_are_column_names=False)
     other_compliant = plx.lit(
         extract_compliant(plx, other, strings_are_column_names=False), dtype=None

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 
 from typing import Literal
 
@@ -65,4 +66,26 @@ def test_is_between_expressified_series(constructor_eager: ConstructorEager) -> 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].is_between(df["b"], df["c"]).to_frame()
     expected_dict = {"a": [True, False, True, True]}
+    assert_equal_data(result, expected_dict)
+
+@pytest.mark.parametrize(
+    ("closed", "expected"),
+    [
+        ("left", [False, False]),
+        ("right", [False, True]),
+        ("both", [False, True]),
+        ("none", [False, False]),
+    ],
+)
+def test_is_between_datetimes(
+    constructor: Constructor,
+    closed: Literal["left", "right", "none", "both"],
+    expected: list[bool],
+) -> None:
+    data = {"a": [datetime(2020, 1, 1), datetime(2020, 6, 1)]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("a").is_between(datetime(2020, 3, 1), datetime(2020, 6, 1), closed=closed)
+    )
+    expected_dict = {"a": expected}
     assert_equal_data(result, expected_dict)

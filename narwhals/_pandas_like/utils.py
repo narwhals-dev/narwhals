@@ -117,20 +117,26 @@ def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series
         return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, PandasLikeSeries):
-        if rhs._native_series.index is not lhs_index:
+        rhs_native = rhs._native_series
+        if rhs_native.index is not lhs_index:
             return (
                 lhs._native_series,
                 set_index(
-                    rhs._native_series,
+                    rhs_native,
                     lhs_index,
                     implementation=rhs._implementation,
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs._native_series, rhs._native_series)
+        return (lhs._native_series, rhs_native)
 
     # `rhs` must be scalar, so just leave it as-is
     return lhs._native_series, rhs
+
+def maybe_convert_dtype_and_extract_native(lhs: PandasLikeSeries, rhs: PandasLikeSeries) -> pd.Series:
+    if get_dtype_backend(lhs._native_series.dtype, lhs._implementation) == 'pyarrow' and get_dtype_backend(rhs._native_series.dtype, rhs._implementation) is None:
+        return rhs._native_series.convert_dtypes(dtype_backend='pyarrow')
+    return rhs._native_series
 
 
 def extract_dataframe_comparand(index: Any, other: Any) -> Any:

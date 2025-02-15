@@ -195,6 +195,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     # --- horizontal ---
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            breakpoint()
             series = (
                 s.fill_null(0, strategy=None, limit=None)
                 for _expr in exprs

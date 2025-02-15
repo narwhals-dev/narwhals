@@ -1456,20 +1456,10 @@ class When:
         check_expressions_transform(self._predicate, function_name="when")
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
-        kind = infer_expr_kind(value, strings_are_column_names=True)
-
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            compliant_predicate = self._predicate._to_compliant_expr(plx)
-            compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
-            if kind is not ExprKind.TRANSFORM:
-                if not is_compliant_expr(compliant_value):
-                    # We don't (yet) always return CompliantExpr from `extract_compliant`.
-                    compliant_value = plx.lit(compliant_value, dtype=None)
-                compliant_value = compliant_value.broadcast(kind)
-            return plx.when(compliant_predicate).then(compliant_value)  # type: ignore[attr-defined]
-
         return Then(
-            func,
+            lambda plx: apply_n_ary_operation(
+                plx, lambda *args: plx.when(args[0]).then(args[1]), self._predicate, value, strings_are_column_names=True
+            ),
             combine_metadata(self._predicate, value, strings_are_column_names=True),
         )
 

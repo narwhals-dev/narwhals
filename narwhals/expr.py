@@ -1,4 +1,5 @@
 from __future__ import annotations
+from narwhals.translate import to_native
 
 from typing import TYPE_CHECKING
 from typing import Any
@@ -1222,7 +1223,7 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other, strings_are_column_names=False)
+                    to_native(other, pass_through=True)
                 ),
                 self._metadata,
             )
@@ -1967,7 +1968,7 @@ class Expr:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
-                lambda *exprs: exprs[0].clip(exprs[1], exprs[2]),
+                lambda *exprs: exprs[0].clip(exprs[1] if lower_bound is not None else None, exprs[2] if upper_bound is not None else None),
                 self,
                 lower_bound,  # type: ignore[arg-type]
                 upper_bound,  # type: ignore[arg-type]
