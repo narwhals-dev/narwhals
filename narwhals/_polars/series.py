@@ -120,9 +120,11 @@ class PolarsSeries:
     def __getitem__(self: Self, item: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: slice | Sequence[int] | pl.Series) -> Self: ...
 
-    def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(
+        self: Self, item: int | slice | Sequence[int] | pl.Series
+    ) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self: Self, dtype: DType) -> Self:
