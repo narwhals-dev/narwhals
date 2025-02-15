@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import DataTypeT_co
+    from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import StringArray
     from narwhals._arrow.typing import StringScalar
     from narwhals._arrow.typing import StringScalarT
@@ -92,9 +93,8 @@ def nulls_like(
 
     Uses the type of `series`, without upseting `mypy`.
     """
-    if TYPE_CHECKING:
-        return pa.repeat(None, n).cast(series._type)
-    return pa.nulls(n, series._type)
+    nulls: Incomplete = pa.nulls
+    return nulls(n, series._type)
 
 
 @lru_cache(maxsize=16)
