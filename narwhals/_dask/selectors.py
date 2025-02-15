@@ -147,7 +147,7 @@ class DaskSelectorNamespace:
                 )
             ]
 
-        def evalute_output_names(df: DaskLazyFrame) -> Sequence[str]:
+        def evaluate_output_names(df: DaskLazyFrame) -> Sequence[str]:
             return [
                 col
                 for col in df.columns
@@ -163,7 +163,7 @@ class DaskSelectorNamespace:
             func,
             depth=0,
             function_name="selector",
-            evaluate_output_names=evalute_output_names,
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,

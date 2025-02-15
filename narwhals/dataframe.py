@@ -242,12 +242,11 @@ class BaseFrame(Generic[_FrameT]):
         right_on: str | list[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
-        _supported_joins = ("inner", "left", "cross", "anti", "semi")
         on = [on] if isinstance(on, str) else on
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
 
-        if how not in _supported_joins:
+        if how not in (_supported_joins := ("inner", "left", "cross", "anti", "semi")):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 

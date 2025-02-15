@@ -327,14 +327,16 @@ class ArrowSeries(CompliantSeries):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | pa.ChunkedArray) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(
+        self: Self, idx: int | slice | Sequence[int] | pa.ChunkedArray
+    ) -> Any | Self:
         if isinstance(idx, int):
             return maybe_extract_py_scalar(
                 self._native_series[idx], return_py_scalar=True
             )
-        if isinstance(idx, Sequence):
+        if isinstance(idx, (Sequence, pa.ChunkedArray)):
             return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
 
