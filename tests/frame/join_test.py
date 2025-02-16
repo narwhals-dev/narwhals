@@ -676,6 +676,8 @@ def test_join_duplicate_column_names(
         # TODO(unassigned): cudf doesn't raise here for some reason,
         # need to investigate.
         request.applymarker(pytest.mark.xfail)
+
+    exception: type[Exception]
     if "pyspark" in str(constructor):
         from pyspark.errors import AnalysisException
 

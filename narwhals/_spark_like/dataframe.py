@@ -137,7 +137,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 else:  # pragma: no cover
                     raise
         else:
-            native_pyarrow_frame = self._native_frame.toArrow()
+            native_pyarrow_frame = self._native_frame.toArrow()  # type: ignore[operator]
         return native_pyarrow_frame
 
     @property
@@ -352,7 +352,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 for colname in list(set(right_columns).difference(set(right_on or [])))
             },
         }
-        other = other_native.select(
+        other_native = other_native.select(
             [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
         )
 
@@ -370,7 +370,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 ]
             )
         return self._from_native_frame(
-            self_native.join(other, on=left_on, how=how).select(col_order)
+            self_native.join(other_native, on=left_on, how=how).select(col_order)
         )
 
     def explode(self: Self, columns: list[str]) -> Self:

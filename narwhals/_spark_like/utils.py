@@ -144,7 +144,7 @@ def narwhals_to_native_dtype(
 def parse_exprs(
     df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
 ) -> tuple[dict[str, Column], list[ExprKind]]:
-    native_results: dict[str, list[Column]] = {}
+    native_results: dict[str, Column] = {}
 
     expr_kinds: list[ExprKind] = []
     for expr in exprs:
