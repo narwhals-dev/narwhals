@@ -2237,14 +2237,7 @@ def from_numpy(
     Returns:
         A new DataFrame.
     """
-    return _stableify(  # type: ignore[no-any-return]
-        _from_numpy_impl(
-            data,
-            schema,
-            native_namespace=native_namespace,
-            version=Version.V1,
-        )
-    )
+    return _stableify(_from_numpy_impl(data, schema, native_namespace=native_namespace))
 
 
 def read_csv(
