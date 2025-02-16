@@ -235,7 +235,6 @@ module = [
   "numpy.*",
   "pandas.*",
   "pyarrow.*",
-  "pyspark.*",
   "sklearn.*",
   "sqlframe.*",
 ]
