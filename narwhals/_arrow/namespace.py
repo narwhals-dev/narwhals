@@ -237,14 +237,9 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
-                s.fill_null(0, strategy=None, limit=None)
-                for _expr in exprs
-                for s in _expr(df)
-            )
-            non_na = (
-                1 - s.is_null().cast(dtypes.Int64()) for _expr in exprs for s in _expr(df)
-            )
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            non_na = (1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
