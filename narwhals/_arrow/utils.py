@@ -190,7 +190,7 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
 
     if isinstance(rhs, ArrowDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
-    
+
     if lhs._broadcast and not rhs._broadcast:
         return lhs._native_series[0], rhs._native_series
 
@@ -199,6 +199,29 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
             return lhs._native_series, rhs._native_series[0]
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
+
+
+def broadcast_series_and_extract_native(*series: ArrowSeries) -> list[Any]:
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+    fast_path = all(_len == max_length for _len in lengths)
+
+    if fast_path:
+        return [s._native_series for s in series]
+
+    is_max_length_gt_1 = max_length > 1
+    reshaped = []
+    for s, length in zip(series, lengths):
+        s_native = s._native_series
+        if is_max_length_gt_1 and length == 1:
+            value = s_native[0]
+            if s._backend_version < (13,) and hasattr(value, "as_py"):
+                value = value.as_py()
+            reshaped.append(pa.chunked_array([[value] * max_length], type=s_native.type))
+        else:
+            reshaped.append(s_native)
+
+    return reshaped
 
 
 def extract_dataframe_comparand(
