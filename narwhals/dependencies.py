@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     import sqlframe
+    from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
@@ -247,8 +248,11 @@ def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     return is_numpy_array(arr) and arr.ndim == 2
 
 
-def is_numpy_scalar(scalar: Any) -> TypeIs[np.generic]:
+def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
     """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
+# NOTE: Needs to stay as `TypeGuard`
+    # - Used in `Series.__getitem__`, but not annotated
+    # - `TypeGuard` is *hiding* that the check introduces an intersection
     return (np := get_numpy()) is not None and np.isscalar(scalar)
 
 
