@@ -251,7 +251,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     native_df = constructor(data)
 
-    if "spark" in str(constructor):
+    if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
         import pyspark.sql.functions as F  # noqa: N812
