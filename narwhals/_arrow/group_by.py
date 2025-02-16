@@ -70,7 +70,7 @@ class ArrowGroupBy:
             )
             raise ValueError(msg)
 
-        aggs: list[Any] = []
+        aggs: list[tuple[str, str, Any]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
 
