@@ -196,7 +196,7 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
     return lhs._native_series, rhs
 
 
-def broadcast_dataframe_comparand(
+def extract_dataframe_comparand(
     length: int,
     other: ArrowSeries,
     backend_version: tuple[int, ...],

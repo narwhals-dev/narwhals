@@ -357,6 +357,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
         native_frame = self._native_frame
         new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
+        # need a `broadcast_series` here
 
         columns = self.columns
 

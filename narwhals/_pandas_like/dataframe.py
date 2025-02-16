@@ -17,7 +17,7 @@ from narwhals._pandas_like.utils import align_and_extract_native_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
-from narwhals._pandas_like.utils import extract_dataframe_comparand
+from narwhals._pandas_like.utils import extract_dataframe_comparand_full_broadcast
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
@@ -442,7 +442,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
-            mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
+            mask_native = extract_dataframe_comparand_full_broadcast(self._native_frame.index, mask)
 
         return self._from_native_frame(
             self._native_frame.loc[mask_native], validate_column_names=False
@@ -460,17 +460,16 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         for name in self._native_frame.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    extract_dataframe_comparand(
+                    extract_dataframe_comparand_full_broadcast(
                         index,
-                        new_column_name_to_new_column_map.pop(name),
-                        allow_full_broadcast=True,
+                        new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            extract_dataframe_comparand(
-                index, new_column_name_to_new_column_map[s], allow_full_broadcast=True
+            extract_dataframe_comparand_full_broadcast(
+                index, new_column_name_to_new_column_map[s]
             )
             for s in new_column_name_to_new_column_map
         )

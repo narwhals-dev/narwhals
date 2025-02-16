@@ -64,6 +64,7 @@ class ArrowSeries(CompliantSeries):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+        self._broadcast = False
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
