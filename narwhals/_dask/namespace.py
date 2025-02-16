@@ -153,8 +153,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
-            return [reduce(operator.add, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+
+            return [dd.concat(series, axis=1).sum(axis=1)]
 
         return DaskExpr(
             call=func,

@@ -72,7 +72,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def broadcast(self, kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [df._native_frame.assign(tmp=result[0])["tmp"] for result in self(df)]
+            return [result[0] for result in self(df)]
 
         return self.__class__(
             func,
