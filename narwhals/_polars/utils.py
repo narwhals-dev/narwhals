@@ -14,6 +14,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -190,10 +191,9 @@ def narwhals_to_native_dtype(
     if dtype == dtypes.Decimal:
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
-    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
-        dt_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
-        dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        # [s] is not allowed for polars
+        return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
     if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
         du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)  # type: ignore[arg-type]

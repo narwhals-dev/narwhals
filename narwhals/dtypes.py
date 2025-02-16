@@ -448,7 +448,17 @@ class Unknown(DType):
     """
 
 
-class Datetime(TemporalType):
+class _DatetimeMeta(type):
+    @property
+    def time_unit(cls) -> TimeUnit:
+        return "us"
+
+    @property
+    def time_zone(cls) -> str | None:
+        return None
+
+
+class Datetime(TemporalType, metaclass=_DatetimeMeta):
     """Data type representing a calendar date and time of day.
 
     Arguments:
@@ -504,12 +514,12 @@ class Datetime(TemporalType):
         if isinstance(time_zone, timezone):
             time_zone = str(time_zone)
 
-        self.time_unit = time_unit
-        self.time_zone = time_zone
+        self.time_unit: TimeUnit = time_unit
+        self.time_zone: str | None = time_zone
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is type and issubclass(other, self.__class__):
+        if type(other) is _DatetimeMeta and issubclass(other, self.__class__):
             return True
         elif isinstance(other, self.__class__):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
