@@ -30,6 +30,7 @@ from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 from narwhals.utils import validate_native_namespace_and_backend
@@ -434,7 +435,7 @@ def _from_dict_impl(
 
 def from_numpy(
     data: _2DArray,
-    schema: dict[str, DType] | Schema | list[str] | None = None,
+    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> DataFrame[Any]:
@@ -448,7 +449,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
@@ -485,7 +486,7 @@ def from_numpy(
 
 def _from_numpy_impl(
     data: _2DArray,
-    schema: dict[str, DType] | Schema | list[str] | None = None,
+    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
     native_namespace: ModuleType,
     version: Version,
@@ -498,7 +499,7 @@ def _from_numpy_impl(
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
-        if isinstance(schema, (dict, Schema)):
+        if isinstance(schema, (Mapping, Schema)):
             from narwhals._polars.utils import (
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
@@ -514,17 +515,17 @@ def _from_numpy_impl(
             }
         elif schema is None:
             native_frame = native_namespace.from_numpy(data)
-        elif not isinstance(schema, list):
+        elif not is_sequence_but_not_str(schema):
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "dict[str, DType] | Schema | list[str]. "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
         native_frame = native_namespace.from_numpy(data, schema=schema)
 
     elif implementation.is_pandas_like():
-        if isinstance(schema, (dict, Schema)):
+        if isinstance(schema, (Mapping, Schema)):
             from narwhals._pandas_like.utils import get_dtype_backend
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
@@ -544,8 +545,8 @@ def _from_numpy_impl(
             native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
                 pd_schema
             )
-        elif isinstance(schema, list):
-            native_frame = native_namespace.DataFrame(data, columns=schema)
+        elif is_sequence_but_not_str(schema):
+            native_frame = native_namespace.DataFrame(data, columns=list(schema))
         elif schema is None:
             native_frame = native_namespace.DataFrame(
                 data, columns=["column_" + str(x) for x in range(data.shape[1])]
@@ -553,14 +554,14 @@ def _from_numpy_impl(
         else:
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "dict[str, DType] | Schema | list[str]. "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
 
     elif implementation is Implementation.PYARROW:
         pa_arrays = [native_namespace.array(val) for val in data.T]
-        if isinstance(schema, (dict, Schema)):
+        if isinstance(schema, (Mapping, Schema)):
             from narwhals._arrow.utils import (
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
@@ -572,8 +573,10 @@ def _from_numpy_impl(
                 ]
             )
             native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema)
-        elif isinstance(schema, list):
-            native_frame = native_namespace.Table.from_arrays(pa_arrays, names=schema)
+        elif is_sequence_but_not_str(schema):
+            native_frame = native_namespace.Table.from_arrays(
+                pa_arrays, names=list(schema)
+            )
         elif schema is None:
             native_frame = native_namespace.Table.from_arrays(
                 pa_arrays, names=["column_" + str(x) for x in range(data.shape[1])]
@@ -581,7 +584,7 @@ def _from_numpy_impl(
         else:
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "dict[str, DType] | Schema | list[str]. "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)

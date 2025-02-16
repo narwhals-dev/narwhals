@@ -2217,7 +2217,7 @@ def from_dict(
 
 def from_numpy(
     data: _2DArray,
-    schema: dict[str, DType] | Schema | list[str] | None = None,
+    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> DataFrame[Any]:
@@ -2231,7 +2231,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
