@@ -201,7 +201,7 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
     return lhs._native_series, rhs
 
 
-def broadcast_series(*series: ArrowSeries) -> Sequence[ArrowSeries]:
+def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)

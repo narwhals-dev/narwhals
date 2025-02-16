@@ -16,7 +16,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import broadcast_series
+from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
@@ -223,7 +223,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
                 for _expr in exprs
                 for s in _expr(df)
             ]
-            return [reduce(operator.add, broadcast_series(*series))]
+            return [reduce(operator.add, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
             func=func,
