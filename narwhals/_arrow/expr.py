@@ -12,7 +12,6 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
