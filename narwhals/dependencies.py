@@ -25,7 +25,10 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import IntoSeries
+    from narwhals.typing import DataFrameT
+    from narwhals.typing import FrameT
+    from narwhals.typing import IntoDataFrameT
+    from narwhals.typing import IntoSeriesT
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
@@ -250,7 +253,7 @@ def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
 
 def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
     """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
-# NOTE: Needs to stay as `TypeGuard`
+    # NOTE: Needs to stay as `TypeGuard`
     # - Used in `Series.__getitem__`, but not annotated
     # - `TypeGuard` is *hiding* that the check introduces an intersection
     return (np := get_numpy()) is not None and np.isscalar(scalar)
@@ -282,7 +285,7 @@ def is_pandas_like_index(index: Any) -> bool:
     )  # pragma: no cover
 
 
-def is_into_series(native_series: IntoSeries) -> bool:
+def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """Check whether `native_series` can be converted to a Narwhals Series.
 
     Arguments:
@@ -319,7 +322,7 @@ def is_into_series(native_series: IntoSeries) -> bool:
     )
 
 
-def is_into_dataframe(native_dataframe: Any) -> bool:
+def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
     """Check whether `native_dataframe` can be converted to a Narwhals DataFrame.
 
     Arguments:
@@ -356,7 +359,9 @@ def is_into_dataframe(native_dataframe: Any) -> bool:
     )
 
 
-def is_narwhals_dataframe(df: Any) -> TypeIs[DataFrame[Any]]:
+def is_narwhals_dataframe(
+    df: Any | DataFrame[DataFrameT],
+) -> TypeIs[DataFrame[DataFrameT]]:
     """Check whether `df` is a Narwhals DataFrame.
 
     This is useful if you expect a user to pass in a Narwhals
@@ -368,7 +373,7 @@ def is_narwhals_dataframe(df: Any) -> TypeIs[DataFrame[Any]]:
     return isinstance(df, DataFrame)
 
 
-def is_narwhals_lazyframe(lf: Any) -> TypeIs[LazyFrame[Any]]:
+def is_narwhals_lazyframe(lf: Any | LazyFrame[FrameT]) -> TypeIs[LazyFrame[FrameT]]:
     """Check whether `lf` is a Narwhals LazyFrame.
 
     This is useful if you expect a user to pass in a Narwhals
@@ -380,7 +385,7 @@ def is_narwhals_lazyframe(lf: Any) -> TypeIs[LazyFrame[Any]]:
     return isinstance(lf, LazyFrame)
 
 
-def is_narwhals_series(ser: Any) -> TypeIs[Series[Any]]:
+def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeriesT]]:
     """Check whether `ser` is a Narwhals Series.
 
     This is useful if you expect a user to pass in a Narwhals
