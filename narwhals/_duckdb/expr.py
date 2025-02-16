@@ -317,7 +317,10 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
                     condition=(count == lit(1)), value=lit(float("nan"))
                 ).otherwise(
                     CaseExpression(condition=(count == lit(2)), value=lit(0.0)).otherwise(
+                        # Adjust population skewness by correction factor to get sample skewness
                         FunctionExpression("skewness", _input)
+                        * (count - lit(2))
+                        / FunctionExpression("sqrt", count * (count - lit(1)))
                     )
                 )
             )
