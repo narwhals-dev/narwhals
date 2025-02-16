@@ -449,7 +449,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
