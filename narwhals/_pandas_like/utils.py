@@ -677,8 +677,14 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def align_and_extract_series(*series: PandasLikeSeries) -> list[pd.Series[Any]]:
-    # Ensure all of `series` have the same length and index.
+def align_and_extract_native_full_broadcast(
+    *series: PandasLikeSeries,
+) -> list[pd.Series[Any]]:
+    # Ensure all of `series` have the same length and index. Scalars get broadcasted to
+    # the full length of the longest Series. This is useful when you need to construct a
+    # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
+    # such as `nw.col('a') - nw.col('a').mean()`, because then it's more efficient to extract
+    # the right-hand-side's single element as a scalar.
     native_namespace = series[0].__native_namespace__()
 
     lengths = [len(s) for s in series]
