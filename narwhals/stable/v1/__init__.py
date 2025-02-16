@@ -84,6 +84,7 @@ from narwhals.utils import validate_strict_and_pass_though
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Mapping
 
     from typing_extensions import Self
 
@@ -2169,8 +2170,8 @@ def from_arrow(
 
 
 def from_dict(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: Mapping[str, Any],
+    schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
