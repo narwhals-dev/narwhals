@@ -397,7 +397,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return self._from_native_frame(
                 self._native_frame.__class__(), validate_column_names=False
             )
-        new_series = align_and_extract_series(new_series)
+        new_series = align_and_extract_series(*new_series)
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
@@ -461,13 +461,17 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     extract_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name), allow_full_broadcast=True
+                        index,
+                        new_column_name_to_new_column_map.pop(name),
+                        allow_full_broadcast=True,
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s], allow_full_broadcast=True)
+            extract_dataframe_comparand(
+                index, new_column_name_to_new_column_map[s], allow_full_broadcast=True
+            )
             for s in new_column_name_to_new_column_map
         )
 

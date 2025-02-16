@@ -56,9 +56,9 @@ def evaluate_into_expr(
     """
     _, aliases = evaluate_output_names_and_aliases(expr, df, [])
     result = expr(df)
-    # if list(aliases) != [s.name for s in result]:  # pragma: no cover
-    #     msg = f"Safety assertion failed, expected {aliases}, got {result}"
-    #     raise AssertionError(msg)
+    if list(aliases) != [s.name for s in result]:  # pragma: no cover
+        msg = f"Safety assertion failed, expected {aliases}, got {result}"
+        raise AssertionError(msg)
     return result
 
 

@@ -154,7 +154,9 @@ def maybe_convert_dtypes_and_extract_native(
     return rhs._native_series
 
 
-def extract_dataframe_comparand(index: Any, other: Any, *, allow_full_broadcast: bool = False) -> Any:
+def extract_dataframe_comparand(
+    index: Any, other: Any, *, allow_full_broadcast: bool = False
+) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -675,29 +677,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def align_and_extract_series(series: Sequence[PandasLikeSeries]) -> list[pd.Series[Any]]:
-    # lengths = [len(s) for s in series]
-    # max_length = max(lengths)
-
-    # idx = series[lengths.index(max_length)]._native_series.index
-    # reindexed = []
-    # for s in series:
-    #     if s._broadcast:
-    #         reindexed.append(s._native_series[0])
-    #         continue
-    #     s_native = s._native_series
-    #     if s_native.index is not idx:
-    #         reindexed.append(
-    #             set_index(
-    #                 s_native,
-    #                 idx,
-    #                 implementation=s._implementation,
-    #                 backend_version=s._backend_version,
-    #             )
-    #         )
-    #     else:
-    #         reindexed.append(s_native)
-    # return reindexed
+def align_and_extract_series(*series: PandasLikeSeries) -> list[pd.Series[Any]]:
+    # Ensure all of `series` have the same length and index.
     native_namespace = series[0].__native_namespace__()
 
     lengths = [len(s) for s in series]

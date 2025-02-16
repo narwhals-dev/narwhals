@@ -15,7 +15,6 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import align_and_extract_series
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
@@ -197,8 +196,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
-            native_series = (s.fillna(0) for s in align_and_extract_series(series))
-            return [series[0]._from_native_series(reduce(operator.add, native_series)).alias(series[0].name)]
+            native_series = (s.fillna(0) for s in align_and_extract_series(*series))
+            return [
+                series[0]
+                ._from_native_series(reduce(operator.add, native_series))
+                .alias(series[0].name)
+            ]
 
         return self._create_expr_from_callable(
             func=func,
@@ -430,12 +433,8 @@ class PandasWhen:
         condition = self._condition(df)[0]
 
         value_series = self._then_value(df)[0]
-        # condition_native, value_series_native = align_and_extract_native(
-        #     condition, value_series
-        # )
-        # to do: avoid full broadcast here
         condition_native, value_series_native = align_and_extract_series(
-            [condition, value_series]
+            condition, value_series
         )
         if self._otherwise_value is None:
             return [
@@ -445,7 +444,7 @@ class PandasWhen:
             ]
         otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = align_and_extract_series([condition, otherwise_series])
+        _, otherwise_native = align_and_extract_series(condition, otherwise_series)
         return [
             value_series._from_native_series(
                 value_series_native.where(condition_native, otherwise_native)

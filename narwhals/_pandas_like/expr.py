@@ -93,10 +93,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                 result._broadcast = True
                 results.append(result)
             return results
-            # return [
-            #     broadcast_dataframe_comparand(df._native_frame.index, result)
-            #     for result in self(df)
-            # ]
 
         return self.__class__(
             func,
