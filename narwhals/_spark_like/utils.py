@@ -58,8 +58,7 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.ByteType):
         return dtypes.Int8()
     if isinstance(
-        dtype,
-        (spark_types.StringType, spark_types.VarcharType, spark_types.CharType),
+        dtype, (spark_types.StringType, spark_types.VarcharType, spark_types.CharType)
     ):
         return dtypes.String()
     if isinstance(dtype, spark_types.BooleanType):
@@ -70,14 +69,25 @@ def native_to_narwhals_dtype(
         return dtypes.Datetime()
     if isinstance(dtype, spark_types.TimestampType):
         return dtypes.Datetime(time_zone="UTC")
-    if isinstance(dtype, spark_types.DecimalType):  # pragma: no cover
-        # TODO(unassigned): cover this in dtypes_test.py
+    if isinstance(dtype, spark_types.DecimalType):
         return dtypes.Decimal()
-    if isinstance(dtype, spark_types.ArrayType):  # pragma: no cover
+    if isinstance(dtype, spark_types.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
                 dtype.elementType, version=version, spark_types=spark_types
             )
+        )
+    if isinstance(dtype, spark_types.StructType):
+        return dtypes.Struct(
+            fields=[
+                dtypes.Field(
+                    name=name,
+                    dtype=native_to_narwhals_dtype(
+                        dtype[name], version=version, spark_types=spark_types
+                    ),
+                )
+                for name in dtype.fieldNames()
+            ]
         )
     return dtypes.Unknown()
 
@@ -113,28 +123,41 @@ def narwhals_to_native_dtype(
             msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
             raise ValueError(msg)
         return spark_types.TimestampType()
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        inner = narwhals_to_native_dtype(
-            dtype.inner,  # type: ignore[union-attr]
-            version=version,
-            spark_types=spark_types,
+    if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
+        return spark_types.ArrayType(
+            elementType=narwhals_to_native_dtype(
+                dtype.inner,  # type: ignore[union-attr]
+                version=version,
+                spark_types=spark_types,
+            )
         )
-        return spark_types.ArrayType(elementType=inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        inner = narwhals_to_native_dtype(
-            dtype.inner,  # type: ignore[union-attr]
-            version=version,
-            spark_types=spark_types,
+        return spark_types.StructType(
+            fields=[
+                spark_types.StructField(
+                    name=field.name,
+                    dataType=narwhals_to_native_dtype(
+                        field.dtype,
+                        version=version,
+                        spark_types=spark_types,
+                    ),
+                )
+                for field in dtype.fields  # type: ignore[union-attr]
+            ]
         )
-        return spark_types.ArrayType(elementType=inner)
 
     if isinstance_or_issubclass(
-        dtype, (dtypes.UInt64, dtypes.UInt32, dtypes.UInt16, dtypes.UInt8)
+        dtype,
+        (
+            dtypes.UInt64,
+            dtypes.UInt32,
+            dtypes.UInt16,
+            dtypes.UInt8,
+            dtypes.Enum,
+            dtypes.Categorical,
+        ),
     ):  # pragma: no cover
-        msg = "Unsigned integer types are not supported by PySpark"
+        msg = "Unsigned integer, Enum and Categorical types are not supported by spark-like backend"
         raise UnsupportedDTypeError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
