@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
@@ -291,8 +292,8 @@ def _new_series_impl(
 
 
 def from_dict(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: Mapping[str, Any],
+    schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
@@ -348,8 +349,8 @@ def from_dict(
 
 
 def _from_dict_impl(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: Mapping[str, Any],
+    schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
 ) -> DataFrame[Any]:
