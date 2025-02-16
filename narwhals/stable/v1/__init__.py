@@ -84,6 +84,7 @@ from narwhals.utils import validate_strict_and_pass_though
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Mapping
 
     from typing_extensions import Self
 
@@ -2169,8 +2170,8 @@ def from_arrow(
 
 
 def from_dict(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: Mapping[str, Any],
+    schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
@@ -2216,7 +2217,7 @@ def from_dict(
 
 def from_numpy(
     data: _2DArray,
-    schema: dict[str, DType] | Schema | list[str] | None = None,
+    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> DataFrame[Any]:
@@ -2230,20 +2231,13 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a list of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
         native_namespace: The native library to use for DataFrame creation.
 
     Returns:
         A new DataFrame.
     """
-    return _stableify(  # type: ignore[no-any-return]
-        _from_numpy_impl(
-            data,
-            schema,
-            native_namespace=native_namespace,
-            version=Version.V1,
-        )
-    )
+    return _stableify(_from_numpy_impl(data, schema, native_namespace=native_namespace))
 
 
 def read_csv(
