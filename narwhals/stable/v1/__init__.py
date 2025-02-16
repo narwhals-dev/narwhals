@@ -2170,8 +2170,8 @@ def from_arrow(
 
 
 def from_dict(
-    data: dict[str, Any],
-    schema: dict[str, DType] | Schema | None = None,
+    data: Mapping[str, Any],
+    schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
